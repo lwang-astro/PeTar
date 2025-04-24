@@ -21,30 +21,24 @@ public:
 
     IOParamsAgama(): input_par_store(),
                      config_filename(input_par_store, "__NONE__", "agama-conf-file", "A configure file of agama potential"),
-                     //unit_set(input_par_store, "unscale", "agama-units", "Units conversion set: 'unscale': no conversion; all scale factors are 1.0; 'bovy': radial unit: 8 kpc; velocity unit: 220 km/s"),
-                     rscale(input_par_store, 1.0, "agama-rscale", "Radius scale factor from unit of the input particle data (IN) to Agama distance unit (1.0)"),
-                     //tscale(input_par_store, 1.0, "agama-tscale", "Time scale factor (rscale/vscale) from unit of the input particle data (IN) to Agama time (1.0)"),
-                     vscale(input_par_store, 1.0, "agama-vscale", "Velocity scale factor from unit of the input particle data (IN) to Agama velocity unit (1.0)"),
-                     //fscale(input_par_store, 1.0, "agama-fscale", "Acceleration scale factor (vscale^2/rscale) from unit of the input particle data (IN) to Agama acceleration unit (1.0)"),
-                     //pscale(input_par_store, 1.0, "agama-pscale", "Potential scale factor (vscale^2) from unit of the input particle data (IN) to Agama potential unit (1.0)"),
+                     rscale(input_par_store, 1.0, "agama-rscale", "Radius scale factor from unit of the input particle data (IN) to Agama distance unit"),
+                     vscale(input_par_store, 1.0, "agama-vscale", "Velocity scale factor from unit of the input particle data (IN) to Agama velocity unit"),
                      print_flag(false) {}
 
     //! reading parameters from GNU option API
     /*!
       @param[in] argc: number of options
       @param[in] argv: string of options
+      @param[in] print_format_info: print format information
       @param[in] opt_used_pre: already used option number from previous reading, use to correctly count the remaining argument number
       \return -1 if help is used; else the used number of argv
      */
-    int read(int argc, char *argv[], const int opt_used_pre=0) {
+    int read(int argc, char *argv[], const bool print_format_info=true, const int opt_used_pre=0) {
         static int agama_flag=-1;
         const struct option long_options[] = {
             {config_filename.key, required_argument, &agama_flag, 0}, 
             {rscale.key,     required_argument, &agama_flag, 1}, 
-            //{tscale.key,     required_argument, &agama_flag, 4}, 
             {vscale.key,     required_argument, &agama_flag, 2}, 
-            //{fscale.key,     required_argument, &agama_flag, 6}, 
-            //{pscale.key,     required_argument, &agama_flag, 7}, 
             {"help", no_argument, 0, 'h'},
             {0,0,0,0}
         };
@@ -68,25 +62,10 @@ public:
                     if(print_flag) rscale.print(std::cout);
                     opt_used+=2;
                     break;
-                //case 4:
-                //    tscale.value = atof(optarg);
-                //    if(print_flag) tscale.print(std::cout);
-                //    opt_used+=2;
-                //    break;
                 case 2:
                     vscale.value = atof(optarg);
                     if(print_flag) vscale.print(std::cout);
                     opt_used+=2;
-                    break;
-                //case 6:
-                //    fscale.value = atof(optarg);
-                //    if(print_flag) fscale.print(std::cout);
-                //    opt_used+=2;
-                //    break;
-                //case 7:
-                //    pscale.value = atof(optarg);
-                //    if(print_flag) pscale.print(std::cout);
-                //    opt_used+=2;
                     break;
                 default:
                     break;
@@ -112,8 +91,8 @@ public:
                 break;
             case 'h':
                 if(print_flag){
-                    std::cout<<"Agama options:"<<std::endl;
-                    input_par_store.printHelp(std::cout, 2, 10, 23);
+                    std::cout<<"----- Agama options: -----"<<std::endl;
+                    input_par_store.printHelp(std::cout, print_format_info);
                     std::cout<<std::endl;
                 }
                 return -1;

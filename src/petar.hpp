@@ -2400,7 +2400,7 @@ public:
 #ifdef AGAMA
         if (my_rank==0) agama_parameters.print_flag=true;
         else agama_parameters.print_flag=false;
-        agama_parameters.read(argc,argv);
+        agama_parameters.read(argc,argv,false);
 #endif
 
         // help case, return directly

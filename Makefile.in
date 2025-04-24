@@ -132,16 +132,20 @@ GALPY_INCLUDE = -I ./galpy-interface $(addprefix -I, $(GALPY_INCLUDE_PATH)) @GSL
 PETAR_INCLUDE += $(EXTFLAGS)
 
 EXT_SRC = $(GALPY_SRC)
-EXTFLAGS = $(GALPY_INCLUDE) 
+EXTFLAGS = -D GALPY $(GALPY_OPT) $(GALPY_INCLUDE) 
 EXTLIBFILES = $(GALPYLIBFILES)
 EXTLIBS = $(GALPYLIBS)
 
 galpy-interface/libgalpy.a: galpy-interface
 	$(MAKE) -C galpy-interface
-EXT_INSTALL: build/petar.ext
+EXT_INSTALL:
 	$(MAKE) -C galpy-interface install
 EXT_CLEAN:
 	$(MAKE) -C galpy-interface clean
+
+TARGET += build/petar.external
+all: $(TARGET)
+
 endif # galpy
 
 ifeq ($(ext_mode),agama)
@@ -159,11 +163,12 @@ AGAMA_INCLUDE = -I$(AGAMA_PATH)/src -I./agama-interface
 PETAR_INCLUDE += $(AGAMA_INCLUDE)
 
 EXT_SRC = $(AGAMA_SRC)
-EXTFLAGS = $(AGAMA_INCLUDE) 
+EXTFLAGS = -D AGAMA $(AGAMA_INCLUDE) 
 EXTLIBFILES = $(AGAMALIBFILES)
 EXTLIBS = $(AGAMALIBS)
 
-EXT_INSTALL: build/petar.ext
+TARGET += build/petar.external
+all: $(TARGET)
 
 endif
 
@@ -296,9 +301,8 @@ HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_TREE -D AR_SLOWDOWN_TIMESCALE -D HARD_
 build/petar.format.transfer: format_transfer.cxx |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS)
 
-
-build/petar.ext: external_test.cxx $(EXTLIBFILES) $(EXT_SRC) |build
-	$(CXX) $(CXXFLAGS) $(EXTFLAGS) $< -o $@ $(EXTLIBS)
+build/petar.external: external_test.cxx $(EXTLIBFILES) $(EXT_SRC) |build
+	$(CXX) $(OPTFLAGS) $(CXXFLAGS) $(EXTFLAGS) $< -o $@ $(EXTLIBS)
 
 build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(BSELIBFILES) |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)

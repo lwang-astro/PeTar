@@ -1,12 +1,13 @@
 #include <iostream>
 #include <fstream>
 #include <getopt.h>
+#include <cassert>
 #ifdef GALPY
 #include "galpy_interface.h"
 #elif AGAMA
 #include "agama_interface.h"
 #endif
-#include "../src/io.hpp"
+#include "io.hpp"
 
 struct Particle{
     double mass;
