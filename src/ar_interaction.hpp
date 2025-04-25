@@ -1297,6 +1297,9 @@ public:
 #ifdef DISK_STAR_MERGER
                         // use disk star merger
                         disk_star_merger_manager.calcMergerProperties(p1, p2, _bin_interrupt.time_now);
+
+                        if (p1->mass ==0.0) p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+                        if (p2->mass ==0.0) p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
 #else
                         // merge two particles
                         Float mcm = p1->mass + p2->mass;
@@ -1313,13 +1316,12 @@ public:
                         p2->radius = 0.0;
                         p1->mass += p2->mass 
 
+                        p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
 #endif
 
                         // reset collision state since binary orbit changes
                         p1->setBinaryInterruptState(BinaryInterruptState::none);
                         p2->setBinaryInterruptState(BinaryInterruptState::none);
-
-                        p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
 
                     }
                     // record particle information, only set status
