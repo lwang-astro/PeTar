@@ -20,15 +20,17 @@ public:
     IOParams<double> merger_time_delay; //!< time delay for merger to increase mass and change radius
     IOParams<double> target_mass; //!< equilibrium mass
     IOParams<double> mass_growth_factor; //!< mass growth factor (c) for increasing mass to equlibrium (dM/dt = c M^2)
+    IOParams<double> mass_loss_rate; //!< mass decrease rate dM/dt for decreasing mass to equlibrium 
 
     bool print_flag; //!< print flag
     //! Constructor
     IOParamsDiskStarMerger(): input_par_store(),
-                              merger_mass_loss_rate(input_par_store, 30.0, "merger-mass-loss-rate", "mass loss rate for merger"),
+                              merger_mass_loss_rate(input_par_store, 0.0, "merger-mass-loss-rate", "mass loss rate for merger"),
                               stellar_radius_power_index(input_par_store, 0.6, "stellar-radius-power-index", "stellar radius power index"),
                               merger_time_delay(input_par_store, 0.0, "merger-time-delay", "time delay for merger to increase mass"),
                               target_mass(input_par_store, 300.0, "target-mass", "mass for star approaching equilibrium"),
                               mass_growth_factor(input_par_store, 0.0, "mass-growth-factor", "mass growth factor (c) for increasing mass to equlibrium (dM/dt = c M^2)"),
+                              mass_loss_rate(input_par_store, 0.0, "mass-loss-rate", "mass loss rate dM/dt for decreasing mass to equlibrium"), 
                               print_flag(false) {}
 
     //! reading parameters from GNU option API
@@ -46,6 +48,7 @@ public:
             {merger_time_delay.key, required_argument, &merger_flag, 2},  
             {target_mass.key, required_argument, &merger_flag, 3},
             {mass_growth_factor.key, required_argument, &merger_flag, 4},
+            {mass_loss_rate.key, required_argument, &merger_flag, 5},
             {"help",      no_argument,       0, 'h'},
             {0,0,0,0}
         };
@@ -83,6 +86,11 @@ public:
                     if(print_flag) mass_growth_factor.print(std::cout);
                     opt_used+=2;
                     break;
+                case 5:
+                    mass_loss_rate.value = atof(optarg);
+                    if(print_flag) mass_loss_rate.print(std::cout);
+                    opt_used+=2;
+                    break;
                 default:
                     break;
                 }
@@ -114,9 +122,10 @@ public:
     Float merger_time_delay; //!< time delay for merger to increase mass
     Float target_mass; //!< equilibrium mass
     Float mass_growth_factor; //!< mass growth factor (c) for increasing mass to equlibrium (dM/dt = c M^2)
+    Float mass_loss_rate; //!< mass decrease rate dM/dt for decreasing mass to equlibrium
     
     //! Constructor
-    DiskStarMergerManager(): merger_mass_loss_rate(0.0), stellar_radius_power_index(0.6), merger_time_delay(0.0), target_mass(0.0), mass_growth_factor(0.0) {}
+    DiskStarMergerManager(): merger_mass_loss_rate(0.0), stellar_radius_power_index(0.6), merger_time_delay(0.0), target_mass(0.0), mass_growth_factor(0.0), mass_loss_rate(0.0) {}
 
     //! (Necessary) check whether publicly initialized parameters are correctly set
     /*! \return true: all parmeters are correct. In this case no parameters, return true;
@@ -127,6 +136,7 @@ public:
         assert(merger_time_delay>=0.0);
         assert(target_mass>=0.0);
         assert(mass_growth_factor>=0.0);
+        assert(mass_loss_rate>=0.0);
         return true;
     }
 
@@ -136,7 +146,8 @@ public:
              <<"stellar_radius_power_index : "<<stellar_radius_power_index<<std::endl
              <<"merger_time_delay : "<<merger_time_delay<<std::endl
              <<"target_mass : "<<target_mass<<std::endl
-             <<"mass_growth_factor : "<<mass_growth_factor<<std::endl;
+             <<"mass_growth_factor : "<<mass_growth_factor<<std::endl
+             <<"mass_loss_rate : "<<mass_loss_rate<<std::endl;
     }
 
     //! initial parameters for disk star mergers
@@ -150,6 +161,7 @@ public:
         merger_time_delay = _input.merger_time_delay.value;
         target_mass = _input.target_mass.value;
         mass_growth_factor = _input.mass_growth_factor.value;
+        mass_loss_rate = _input.mass_loss_rate.value;
     }
 
     //! calcMergerProperties
@@ -209,7 +221,7 @@ public:
     template <class TParticle>
     int calcMassChange(TParticle* p, const Float& time) {
         // if type is star with growth, increase mass    
-        if (p->star.type==2) {
+        if (p->star.type==2 && mass_growth_factor>0) {
             Float dt = time - p->star.last_mass_change_time;
             if (dt>0 && p->mass < target_mass) {
                 Float new_mass = p->mass + mass_growth_factor*p->mass*p->mass*dt;
@@ -225,10 +237,10 @@ public:
             }
         }
         // if mass > target mass, decrease mass
-        if (p->star.type>=1) {
+        if (p->star.type>=1 && mass_loss_rate>0) {
             if (p->mass > target_mass) {
                 Float dt = time - p->star.last_mass_change_time;
-                Float new_mass = p->mass - merger_mass_loss_rate * dt;
+                Float new_mass = p->mass - mass_loss_rate * dt;
                 if (new_mass<target_mass) {
                     new_mass = target_mass;
                 }
