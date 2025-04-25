@@ -47,6 +47,9 @@ int main(int argc, char **argv){
   std::string fbse_suffix = BSEManager::getBSEOutputFilenameSuffix();
 
   std::string fbsepar = "input.par" + fbse_suffix;
+#elif DISK_STAR_MERGER
+  std::string fdsmpar = "input.par.disk_star_merger";
+  int interrupt_detection_option = -1;
 #else
   int interrupt_detection_option = -1;
 #endif
@@ -94,7 +97,7 @@ int main(int argc, char **argv){
       {0,0,0,0}
   };
 
-  while ((copt = getopt_long(argc, argv, "m:n:b:e:g:p:Sh", long_options, &option_index)) != -1)
+  while ((copt = getopt_long(argc, argv, "m:n:b:e:g:p:d:Sh", long_options, &option_index)) != -1)
     switch (copt) {
     case 0:
         switch (opt_flag) {
@@ -191,6 +194,11 @@ int main(int argc, char **argv){
         fgalpypar = optarg;
         break;
 #endif
+#ifdef DISK_STAR_MERGER
+    case 'd':
+        fdsmpar = optarg;
+        break;
+#endif
 #endif
     case 'h':
         std::cout<<"A tool to integrate a dumped cluster of neighbor particles using particle-particle method (Hermite/SDAR)\n"
@@ -211,6 +219,9 @@ int main(int argc, char **argv){
 #endif                 
 #ifdef SOFT_PERT
                  <<"    -S:           suppress soft perturbation (tidal tensor)\n"
+#endif
+#ifdef DISK_STAR_MERGER
+                 <<"    -d [string]:  disk star merger parameter file name: "<<fdsmpar<<std::endl
 #endif
                  <<"    -h (--help):  help"<<std::endl
                  <<"long options (if no default values, use values from input.par.hard):\n"
@@ -297,6 +308,18 @@ int main(int argc, char **argv){
       hard_manager.ar_manager.interaction.fout_interrupt<<std::setprecision(WRITE_PRECISION);
   }
 #endif 
+#ifdef DISK_STAR_MERGER
+  IOParamsDiskStarMerger disk_star_merger_parameters;
+  std::cerr<<"DSM parameter file:"<<fdsmpar<<std::endl;
+  if( (fpar_in = fopen(fdsmpar.c_str(),"r")) == NULL) {
+      fprintf(stderr,"Error: Cannot open file %s.\n", fdsmpar.c_str());
+      abort();
+  }  
+  disk_star_merger_parameters.input_par_store.readAscii(fpar_in);
+  fclose(fpar_in);
+
+  hard_manager.ar_manager.interaction.disk_star_merger_manager.initial(disk_star_merger_parameters);
+#endif
 #endif //STELLAR_EVOLUTION
 
 #ifdef EXTERNAL_HARD
