@@ -1286,9 +1286,6 @@ public:
                     // set return flag >0
                     modify_return = 2;
 
-                    if (_bin_interrupt.status == AR::InterruptStatus::none) 
-                        _bin_interrupt.status = AR::InterruptStatus::merge;
-
                     // merge two particles
                     if (interrupt_detection_option == 1) {
                         p1->time_record = _bin_interrupt.time_now;
@@ -1323,6 +1320,8 @@ public:
                         p1->setBinaryInterruptState(BinaryInterruptState::none);
                         p2->setBinaryInterruptState(BinaryInterruptState::none);
 
+                        if (_bin_interrupt.status != AR::InterruptStatus::destroy) 
+                            _bin_interrupt.status = AR::InterruptStatus::merge;
                     }
                     // record particle information, only set status
                     else if (interrupt_detection_option == 2) {
