@@ -16,21 +16,19 @@ class IOParamsDiskStarMerger{
 public:
     IOParamsContainer input_par_store;
     IOParams<double> merger_mass_loss_rate; //!< mass loss rate after merger
-    IOParams<double> merger_radius_amplifier_rate; //!< radius amplifier rate
+    IOParams<double> stellar_radius_power_index; //!< stellar radius power index
     IOParams<double> merger_time_delay; //!< time delay for merger to increase mass and change radius
     IOParams<double> target_mass; //!< equilibrium mass
-    IOParams<double> initial_mass; //!< initial mass
-    IOParams<double> growth_time; //!< growth time to target mass    
+    IOParams<double> mass_growth_factor; //!< mass growth factor (c) for increasing mass to equlibrium (dM/dt = c M^2)
 
     bool print_flag; //!< print flag
     //! Constructor
     IOParamsDiskStarMerger(): input_par_store(),
-                              merger_mass_loss_rate(input_par_store, 0.0, "merger-mass-loss-rate", "mass loss rate for merger"),
-                              merger_radius_amplifier_rate(input_par_store, 1.0, "merger-radius-rate", "particle radius amplifier rate after merger"),
+                              merger_mass_loss_rate(input_par_store, 30.0, "merger-mass-loss-rate", "mass loss rate for merger"),
+                              stellar_radius_power_index(input_par_store, 0.6, "stellar-radius-power-index", "stellar radius power index"),
                               merger_time_delay(input_par_store, 0.0, "merger-time-delay", "time delay for merger to increase mass"),
-                              target_mass(input_par_store, 0.0, "target-mass", "mass for star approaching equilibrium"),
-                              initial_mass(input_par_store, 0.0, "init-mass", "initial mass for star growth"),
-                              growth_time(input_par_store, 0.0, "growth-time", "time scale for mass growth"),
+                              target_mass(input_par_store, 300.0, "target-mass", "mass for star approaching equilibrium"),
+                              mass_growth_factor(input_par_store, 0.0, "mass-growth-factor", "mass growth factor (c) for increasing mass to equlibrium (dM/dt = c M^2)"),
                               print_flag(false) {}
 
     //! reading parameters from GNU option API
@@ -44,11 +42,10 @@ public:
         static int merger_flag=-1;
         const struct option long_options[] = {
             {merger_mass_loss_rate.key, required_argument, &merger_flag, 0},  
-            {merger_radius_amplifier_rate.key, required_argument, &merger_flag, 1},  
+            {stellar_radius_power_index.key, required_argument, &merger_flag, 1},  
             {merger_time_delay.key, required_argument, &merger_flag, 2},  
             {target_mass.key, required_argument, &merger_flag, 3},
-            {initial_mass.key, required_argument, &merger_flag, 4},
-            {growth_time.key, required_argument, &merger_flag, 5},
+            {mass_growth_factor.key, required_argument, &merger_flag, 4},
             {"help",      no_argument,       0, 'h'},
             {0,0,0,0}
         };
@@ -67,8 +64,8 @@ public:
                     opt_used+=2;
                     break;            
                 case 1:
-                    merger_radius_amplifier_rate.value = atof(optarg);
-                    if(print_flag) merger_radius_amplifier_rate.print(std::cout);
+                    stellar_radius_power_index.value = atof(optarg);
+                    if(print_flag) stellar_radius_power_index.print(std::cout);
                     opt_used+=2;
                     break;            
                 case 2:
@@ -82,13 +79,8 @@ public:
                     opt_used+=2;
                     break;
                 case 4:
-                    initial_mass.value = atof(optarg);
-                    if(print_flag) initial_mass.print(std::cout);
-                    opt_used+=2;
-                    break;
-                case 5:
-                    growth_time.value = atof(optarg);
-                    if(print_flag) growth_time.print(std::cout);
+                    mass_growth_factor.value = atof(optarg);
+                    if(print_flag) mass_growth_factor.print(std::cout);
                     opt_used+=2;
                     break;
                 default:
@@ -118,36 +110,33 @@ public:
 class DiskStarMergerManager {
 public:
     Float merger_mass_loss_rate; //!< mass loss rate
-    Float merger_radius_amplifier_rate; //!< radius amplifier
+    Float stellar_radius_power_index; //!< radius amplifier
     Float merger_time_delay; //!< time delay for merger to increase mass
     Float target_mass; //!< equilibrium mass
-    Float initial_mass; //!< initial mass
-    Float growth_time; //!< growth timescale
+    Float mass_growth_factor; //!< mass growth factor (c) for increasing mass to equlibrium (dM/dt = c M^2)
     
     //! Constructor
-    DiskStarMergerManager(): merger_mass_loss_rate(0.0), merger_radius_amplifier_rate(1.0), merger_time_delay(0.0), target_mass(0.0), initial_mass(0.0) {}
+    DiskStarMergerManager(): merger_mass_loss_rate(0.0), stellar_radius_power_index(0.6), merger_time_delay(0.0), target_mass(0.0), mass_growth_factor(0.0) {}
 
     //! (Necessary) check whether publicly initialized parameters are correctly set
     /*! \return true: all parmeters are correct. In this case no parameters, return true;
      */
     bool checkParams() {
         assert(merger_mass_loss_rate>=0.0);
-        assert(merger_radius_amplifier_rate>=0.0);
+        assert(stellar_radius_power_index>=0.0);
         assert(merger_time_delay>=0.0);
         assert(target_mass>=0.0);
-        assert(initial_mass>=0.0);
-        assert(growth_time>=0.0);
+        assert(mass_growth_factor>=0.0);
         return true;
     }
 
     //! print parameters
     void print(std::ostream & _fout) const{
         _fout<<"merger_mass_loss_rate : "<<merger_mass_loss_rate<<std::endl
-             <<"merger_radius_amplifier_rate : "<<merger_radius_amplifier_rate<<std::endl
+             <<"stellar_radius_power_index : "<<stellar_radius_power_index<<std::endl
              <<"merger_time_delay : "<<merger_time_delay<<std::endl
              <<"target_mass : "<<target_mass<<std::endl
-             <<"initial_mass : "<<initial_mass<<std::endl
-             <<"growth_time : "<<growth_time<<std::endl;
+             <<"mass_growth_factor : "<<mass_growth_factor<<std::endl;
     }
 
     //! initial parameters for disk star mergers
@@ -157,11 +146,10 @@ public:
      */
     void initial(const IOParamsDiskStarMerger& _input, const bool _print_flag=false) {
         merger_mass_loss_rate = _input.merger_mass_loss_rate.value;
-        merger_radius_amplifier_rate = _input.merger_radius_amplifier_rate.value;
+        stellar_radius_power_index = _input.stellar_radius_power_index.value;
         merger_time_delay = _input.merger_time_delay.value;
         target_mass = _input.target_mass.value;
-        initial_mass = _input.initial_mass.value;
-        growth_time = _input.growth_time.value;
+        mass_growth_factor = _input.mass_growth_factor.value;
     }
 
     //! calcMergerProperties
@@ -194,26 +182,25 @@ public:
             Float new_mass = mcm * (1 - merger_mass_loss_rate);    
             pm->dm += new_mass - pm->mass;
             pm->mass = new_mass;
-            pm->radius = merger_radius_amplifier_rate * pm->radius;
+            pm->radius = std::pow(new_mass, stellar_radius_power_index);
         }
 
         p0->dm -= p0->mass;
         p0->mass = 0.0;
         p0->radius = 0.0;
 
-        if (p0->star.type == 0) pm->star.merger_bh_times++;
-        else pm->star.merger_star_times++;
+        if (p0->star.type == 0) pm->star.n_merger_bh++;
+        else pm->star.n_merger_star++;
 
         pm->star.last_merger_time = time;
+        pm->star.last_mass_change_time = time;
     }
 
     //! calculate mass change
     /*! Calculate mass change, for mass < target mass, increase mass; for mass > equilibrium mass, decrease mass
         Increase mass formula:  
-        dM/dt = c M^2,   c = (Me-Mi)/(2 Me Mi tf),   M(t) = Mi/( 1 - (Me-Mi)/(Me tf) t)
-        Mi: initial mass; 
-        Me: equilibrium mass; 
-        tf: growth timescale;
+        dM/dt = c M^2
+        c: mass growth factor
         @param[in] p: particle
         @param[in] time: current time
 
@@ -221,19 +208,38 @@ public:
         */
     template <class TParticle>
     int calcMassChange(TParticle* p, const Float& time) {
+        // if type is star with growth, increase mass    
         if (p->star.type==2) {
-            Float dt = time - p->star.growth_time_start;
+            Float dt = time - p->star.last_mass_change_time;
             if (dt>0 && p->mass < target_mass) {
-                Float new_mass = initial_mass/(1 - (target_mass-initial_mass)/(target_mass*growth_time)*dt);
+                Float new_mass = p->mass + mass_growth_factor*p->mass*p->mass*dt;
                 if (new_mass>target_mass) {
                     new_mass = target_mass;
                 }
                 p->dm += new_mass - p->mass;
                 p->mass = new_mass;
+                p->radius = std::pow(new_mass, stellar_radius_power_index);
+                p->star.last_mass_change_time = time;
 
                 return 1;
             }
         }
+        // if mass > target mass, decrease mass
+        if (p->star.type>=1) {
+            if (p->mass > target_mass) {
+                Float dt = time - p->star.last_mass_change_time;
+                Float new_mass = p->mass - merger_mass_loss_rate * dt;
+                if (new_mass<target_mass) {
+                    new_mass = target_mass;
+                }
+                p->dm += new_mass - p->mass;
+                p->mass = new_mass;
+                p->radius = std::pow(new_mass, stellar_radius_power_index);
+                p->star.last_mass_change_time = time;
+                return 1;
+            }                
+        }
+
         return 0;
     }
     
@@ -243,16 +249,16 @@ public:
 class StarParameter{
 public:
     long long int type; //!< type of star; 0: black hole; 1: star no growth; 2: star with growth
-    long long int merger_star_times; //!< times of merger with star
-    long long int merger_bh_times; //!< times of merger with black hole
-    Float growth_time_start; //!< time delay for mass approach target
+    long long int n_merger_star; //!< times of merger with star
+    long long int n_merger_bh; //!< times of merger with black hole
+    Float last_mass_change_time; //!< time delay for mass approach target
     Float last_merger_time; //!< last merger time
 
     //! Constructor
     StarParameter():  type(-1),
-                      merger_star_times(0),
-                      merger_bh_times(0),
-                      growth_time_start(0.0),
+                      n_merger_star(0),
+                      n_merger_bh(0),
+                      last_mass_change_time(0.0),
                       last_merger_time(0.0)                    
                       {}
 
@@ -260,25 +266,25 @@ public:
     //! initial parameters for disk star merger
     /*!
       @param[in] _type: type of star; 0: black hole; 1: star no growth; 2: star with growth
-      @param[in] _growth_time_start: time delay for mass approach target
+      @param[in] _last_mass_change_time: time delay for mass approach target
      */
-    void initial(const long long int _type, const Float& _growth_time_start=0.0) {
+    void initial(const long long int _type, const Float& _last_mass_change_time=0.0) {
         type = _type;
-        merger_star_times = 0;
-        merger_bh_times = 0;
-        growth_time_start = _growth_time_start;
+        n_merger_star = 0;
+        n_merger_bh = 0;
+        last_mass_change_time = _last_mass_change_time;
         last_merger_time = 0;
     }
 
     //! write class data with ASCII format
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld %lld %lld %26.17e %26.17e\n", type, merger_star_times, merger_bh_times, growth_time_start, last_merger_time);
+        fprintf(fp, "%lld %lld %lld %26.17e %26.17e\n", type, n_merger_star, n_merger_bh, last_mass_change_time, last_merger_time);
     }
 
     //! read class data with ASCII format
     void readAscii(FILE* fp) {
         int rcount=fscanf(fp, "%lld %lld %lld %lf %lf ", 
-                          &type, &merger_star_times, &merger_bh_times, &growth_time_start, &last_merger_time);
+                          &type, &n_merger_star, &n_merger_bh, &last_mass_change_time, &last_merger_time);
         if(rcount<5) {
             std::cerr<<"Error: Data reading fails! requiring data number is 5, only obtain "<<rcount<<".\n";
             abort();
@@ -288,9 +294,9 @@ public:
     //! for print in one line
     void print(std::ostream & fout) const{
         fout<<" type= "<<type
-            <<" merger_star_times= "<<merger_star_times
-            <<" merger_bh_times= "<<merger_bh_times
-            <<" growth_time_start= "<<growth_time_start
+            <<" n_merger_star= "<<n_merger_star
+            <<" n_merger_bh= "<<n_merger_bh
+            <<" last_mass_change_time= "<<last_mass_change_time
             <<" last_merger_time= "<<last_merger_time;
     }
 
@@ -301,9 +307,9 @@ public:
      */
     static void printColumnTitle(std::ostream & _fout, const int _width=20) {
         _fout<<std::setw(_width)<<"type"
-             <<std::setw(_width)<<"merger_star_times"
-             <<std::setw(_width)<<"merger_bh_times"
-             <<std::setw(_width)<<"growth_time_start"
+             <<std::setw(_width)<<"n_merger_star"
+             <<std::setw(_width)<<"n_merger_bh"
+             <<std::setw(_width)<<"last_mass_change_time"
              <<std::setw(_width)<<"last_merger_time";
     }
 
@@ -314,9 +320,9 @@ public:
      */
     void printColumn(std::ostream & _fout, const int _width=20) const{
         _fout<<std::setw(_width)<<type
-             <<std::setw(_width)<<merger_star_times
-             <<std::setw(_width)<<merger_bh_times
-             <<std::setw(_width)<<growth_time_start
+             <<std::setw(_width)<<n_merger_star
+             <<std::setw(_width)<<n_merger_bh
+             <<std::setw(_width)<<last_mass_change_time
              <<std::setw(_width)<<last_merger_time;
     }
 
@@ -329,9 +335,9 @@ public:
     static int printTitleWithMeaning(std::ostream & _fout, const int _counter=0, const int _offset=0) {
         int counter = _counter;
         _fout<<std::setw(_offset)<<" "<<++counter<<". type: type of star; 0: black hole; 1: star no growth; 2: star with growth\n";
-        _fout<<std::setw(_offset)<<" "<<++counter<<". merger_star_times: times of merger with star\n";
-        _fout<<std::setw(_offset)<<" "<<++counter<<". merger_bh_times: times of merger with black hole\n";
-        _fout<<std::setw(_offset)<<" "<<++counter<<". growth_time_start: time delay for mass approach target\n";
+        _fout<<std::setw(_offset)<<" "<<++counter<<". n_merger_star: times of merger with star\n";
+        _fout<<std::setw(_offset)<<" "<<++counter<<". n_merger_bh: times of merger with black hole\n";
+        _fout<<std::setw(_offset)<<" "<<++counter<<". last_mass_change_time: last mass change time\n";
         _fout<<std::setw(_offset)<<" "<<++counter<<". last_merger_time: last merger time\n";
         return counter;
     }
