@@ -179,17 +179,32 @@ public:
             p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
         }
 
-        // only increase4mass and change radius after time delay
-        if (time>merger_time_delay) {
-            Float new_mass = mcm*(1-merger_mass_loss_rate);    
-            p1->dm += new_mass - p1->mass;
-            p1->mass = new_mass;
-            p1->radius = merger_radius_amplifier_rate*p1->radius;
+        TParticle *pm, *p0; // set final merger to star or first BH
+        if (p1->star.type==0 && p2->star.type!=0) {
+            pm = p2;
+            p0 = p1;
+        }
+        else {
+            pm = p1;
+            p0 = p2;
+        }
+        
+        // only increase mass and change radius after time delay
+        if (time > merger_time_delay) {
+            Float new_mass = mcm * (1 - merger_mass_loss_rate);    
+            pm->dm += new_mass - pm->mass;
+            pm->mass = new_mass;
+            pm->radius = merger_radius_amplifier_rate * pm->radius;
         }
 
-        p2->dm -= p2->mass;
-        p2->mass = 0.0;
-        p2->radius = 0.0;
+        p0->dm -= p0->mass;
+        p0->mass = 0.0;
+        p0->radius = 0.0;
+
+        if (p0->star.type == 0) pm->star.merger_bh_times++;
+        else pm->star.merger_star_times++;
+
+        pm->star.last_merger_time = time;
     }
 
     //! calculate mass change
