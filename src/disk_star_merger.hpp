@@ -173,12 +173,6 @@ public:
     template <class TParticle>
     void calcMergerProperties(TParticle* p1, TParticle* p2, const Float& time) {
 
-        Float mcm = p1->mass + p2->mass;
-        for (int k=0; k<3; k++) {
-            p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
-            p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
-        }
-
         TParticle *pm, *p0; // set final merger to star or first BH
         if (p1->star.type==0 && p2->star.type!=0) {
             pm = p2;
@@ -187,6 +181,12 @@ public:
         else {
             pm = p1;
             p0 = p2;
+        }
+
+        Float mcm = p1->mass + p2->mass;
+        for (int k=0; k<3; k++) {
+            pm->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
+            pm->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
         }
         
         // only increase mass and change radius after time delay
