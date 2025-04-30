@@ -14,7 +14,7 @@
 #ifdef DISK_STAR_MERGER
 #include "disk_star_merger.hpp"
 #endif
-#include "external_force.hpp"
+#include "external_hard.hpp"
 
 //! AR interaction clas
 class ARInteraction{

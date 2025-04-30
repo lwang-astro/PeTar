@@ -301,21 +301,26 @@ public:
       \f$ W_pot(x) = \frac{x^5}{2 R_a + 1} (5 x^3 - 20 x^2 + 28 x - 14) \f$ 
       \return \f$ W_pot(x) \f$
      */
-    inline Float calcPotW(const Float& _dr) const {
+    inline Float calcPotW(const Float& _dr, const bool for_soft=false) const {
 #ifdef CHANGEOVER_DEBUG
         assert(r_in_>0.0);
         assert(r_out_>r_in_);
 #endif
         Float x = (_dr - r_in_)/(r_out_-r_in_);
         Float coff = (r_out_-r_in_)/(r_out_+r_in_);
-        Float k = coff*(1.0 - 2*x);
-        if(x >= 1.0 ) k = 0.0;
+
+        // For hard part, k = 1.0 when x<0
+        Float k = 1;
+        if(x >= 1.0 ) k = 1 - coff*(1.0 - 2*x);
         else if(x > 0.0) {
             Float x2 = x*x;
             Float x3 = x2*x;
             Float x5 = x2*x3;
             k -= coff*x5*(5.0*x3 - 20.0*x2 + 28.0*x - 14.0);
         }
+
+        // For soft part, k = 0.0 when x>=1
+        if (for_soft) k += coff*(1.0 - 2*x) - 1;
         return k;
     }
 
@@ -377,9 +382,9 @@ public:
 #endif
 
     //! calculate changeover function Pot by selecting maximum rout
-    static Float calcPotWTwo(const ChangeOver& _ch1, const ChangeOver& _ch2, const Float& _dr) {
-        if (_ch1.getRout()> _ch2.getRout()) return _ch1.calcPotW(_dr);
-        else return _ch2.calcPotW(_dr);
+    static Float calcPotWTwo(const ChangeOver& _ch1, const ChangeOver& _ch2, const Float& _dr, const bool for_soft=false) {
+        if (_ch1.getRout()> _ch2.getRout()) return _ch1.calcPotW(_dr, for_soft);
+        else return _ch2.calcPotW(_dr, for_soft);
     }
 
     //! calculate changeover function Acc0 by selecting maximum rout
