@@ -1900,7 +1900,7 @@ private:
 #endif
 
         auto& pj_artificial = _pj.group_data.artificial;
-        const PS::F64 kpot  = 1.0 - ChangeOver::calcPotWTwo(_pi.changeover, _pj.changeover, dr_eps);
+        const PS::F64 kpot  = 1.0 - ChangeOver::calcPotWTwo(_pi.changeover, _pj.changeover, dr_eps, true);
         // single, remove linear cutoff, obtain changeover soft and total potential
         if (pj_artificial.isSingle()) {
             //_pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
