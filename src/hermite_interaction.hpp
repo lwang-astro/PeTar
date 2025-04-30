@@ -2,7 +2,7 @@
 
 #include "Common/Float.h"
 #include "changeover.hpp"
-#include "external_force.hpp"
+#include "external_hard.hpp"
 
 //! hermite interaction class 
 class HermiteInteraction{

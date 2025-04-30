@@ -119,7 +119,8 @@ GALPY_OPT= -D GALPY_VERSION_1_7_9
 endif # 1.7.9
 endif # 1.7.1
 
-SRC += ${shell ls ./galpy-interface/*.h}
+GALPY_SRC = ${shell ls ./galpy-interface/*.h}
+SRC += $(GALPY_SRC)
 MT_FLAGS += -D GALPY $(GALPY_OPT)
 GALPYLIBS = -L ./galpy-interface -lgalpy @GSL_LIBS@
 CXXLIBS += $(GALPYLIBS)
@@ -127,15 +128,49 @@ GALPYLIBFILES=galpy-interface/libgalpy.a galpy-interface/galpy_interface.h
 LIBFILES+= $(GALPYLIBFILES)
 GALPY_PATH=@GALPY_PATH@
 GALPY_INCLUDE_PATH= $(shell find $(GALPY_PATH) -type d )
-GALPY_INCLUDE = $(addprefix -I, $(GALPY_INCLUDE_PATH))
-PETAR_INCLUDE += -I ./galpy-interface $(GALPY_INCLUDE) @GSL_CFLAGS@
+GALPY_INCLUDE = -I ./galpy-interface $(addprefix -I, $(GALPY_INCLUDE_PATH)) @GSL_CFLAGS@
+PETAR_INCLUDE += $(EXTFLAGS)
+
+EXT_SRC = $(GALPY_SRC)
+EXTFLAGS = -D GALPY $(GALPY_OPT) $(GALPY_INCLUDE) 
+EXTLIBFILES = $(GALPYLIBFILES)
+EXTLIBS = $(GALPYLIBS)
+
 galpy-interface/libgalpy.a: galpy-interface
 	$(MAKE) -C galpy-interface
 EXT_INSTALL:
 	$(MAKE) -C galpy-interface install
 EXT_CLEAN:
 	$(MAKE) -C galpy-interface clean
+
+TARGET += build/petar.external
+all: $(TARGET)
+
 endif # galpy
+
+ifeq ($(ext_mode),agama)
+MT_FLAGS += -D AGAMA
+# the following line is user-dependent
+AGAMA_PATH = ../Agama
+AGAMA_SRC = ./agama-interface/agama_interface.h
+SRC += $(AGAMA_SRC)
+FLAGS1 := $(shell grep -e LINK_FLAGS_ALL $(AGAMA_PATH)/Makefile.local | sed 's/^.*= //g' | sed 's!extras/lib!$(AGAMA_PATH)/extras/lib!g')
+FLAGS2 := $(shell grep -e LINK_FLAGS_LIB_AND_EXE_STATIC $(AGAMA_PATH)/Makefile.local | sed 's/^.*= //g' | sed 's!extras/lib!$(AGAMA_PATH)/extras/lib!g')
+AGAMALIBFILES = $(AGAMA_PATH)/agama.a
+AGAMALIBS = $(AGAMALIBFILES) $(FLAGS1) $(FLAGS2)
+CXXLIBS += $(AGAMALIBS)
+AGAMA_INCLUDE = -I$(AGAMA_PATH)/src -I./agama-interface
+PETAR_INCLUDE += $(AGAMA_INCLUDE)
+
+EXT_SRC = $(AGAMA_SRC)
+EXTFLAGS = -D AGAMA $(AGAMA_INCLUDE) 
+EXTLIBFILES = $(AGAMALIBFILES)
+EXTLIBS = $(AGAMALIBS)
+
+TARGET += build/petar.external
+all: $(TARGET)
+
+endif
 
 ifeq ($(ext_hard_mode), gasdrag)
 MT_FLAGS += -D EXTERNAL_HARD -D HERMITE_PERT_FORCE
@@ -266,6 +301,9 @@ HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_TREE -D AR_SLOWDOWN_TIMESCALE -D HARD_
 build/petar.format.transfer: format_transfer.cxx |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS)
 
+build/petar.external: external_test.cxx $(EXTLIBFILES) $(EXT_SRC) |build
+	$(CXX) $(OPTFLAGS) $(CXXFLAGS) $(EXTFLAGS) $< -o $@ $(EXTLIBS)
+
 build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(BSELIBFILES) |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
@@ -298,6 +336,7 @@ install_script_tool:
 	install -m 755 tools/get_object_snapshot.py @prefix@/bin/petar.get.object.snap
 	install -m 755 tools/format_transfer.py @prefix@/bin/petar.format.transfer.post
 	install -m 755 tools/galev_process.py @prefix@/bin/petar.galev.process
+	install -m 755 tools/external_pot_movie.py @prefix@/bin/petar.external.pot.movie
 	install -d @prefix@/include/
 	install -d @prefix@/include/petar
 	install -m 644 tools/analysis/*.py @prefix@/include/petar/
