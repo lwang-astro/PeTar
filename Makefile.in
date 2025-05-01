@@ -151,7 +151,7 @@ endif # galpy
 ifeq ($(ext_mode),agama)
 MT_FLAGS += -D AGAMA
 # the following line is user-dependent
-AGAMA_PATH = ../Agama
+AGAMA_PATH = @AGAMA_PATH@
 AGAMA_SRC = ./agama-interface/agama_interface.h
 SRC += $(AGAMA_SRC)
 FLAGS1 := $(shell grep -e LINK_FLAGS_ALL $(AGAMA_PATH)/Makefile.local | sed 's/^.*= //g' | sed 's!extras/lib!$(AGAMA_PATH)/extras/lib!g')

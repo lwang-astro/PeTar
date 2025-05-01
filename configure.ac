@@ -100,14 +100,14 @@ AX_CHECK_COMPILE_FLAG([-Wall],
 
 AC_ARG_WITH([cpp-std],
 	    [AS_HELP_STRING([--with-cpp-std],
-                            [version of c++ standard (11, 17). Default: 17])],
-            [],
+                          [version of c++ standard (11, 17). Default: 17])],
+          [],
 	    [with_cpp_std=17])
 
 AX_CHECK_COMPILE_FLAG([-std=c++$with_cpp_std],
                       [OPTFLAGS=$OPTFLAGS" -std=c++"$with_cpp_std
                        DEBFLAGS=$DEBFLAGS" -std=c++"$with_cpp_std
-		       CUDAFLAGS=$CUDAFLAGS" -std=c++"$with_cpp_std],
+                       CUDAFLAGS=$CUDAFLAGS" -std=c++"$with_cpp_std],
                       [AC_MSG_FAILURE([c++$with_cpp_std support is required for the compiler])])
 
 # OpenMP
@@ -126,8 +126,8 @@ AS_IF([test x"$use_omp" != xno],
 # x86
 AC_ARG_WITH([arch],
 	    [AS_HELP_STRING([--with-arch],
-                            [compile with architecture type (x86, fugaku). Default: x86])],
-            [],
+                          [compile with architecture type (x86, fugaku). Default: x86])],
+          [],
 	    [with_arch=x86])
 
 AC_ARG_WITH([simd],
@@ -144,7 +144,7 @@ AS_IF([test x"$with_arch" == xx86],
                       [avx2],[arch=core-avx2],
 		      [avx512],[arch=skylake-avx512],
 		      [AC_MSG_FAILURE([$with_simd is not support by the compiler])])
-	      AX_CHECK_COMPILE_FLAG([-march=$arch],
+              AX_CHECK_COMPILE_FLAG([-march=$arch],
                                     [SIMDFLAGS=" -march=$arch"
                                      SIMD_TYPE=$with_simd
                                      use_simd=yes],[])],
@@ -177,7 +177,7 @@ AC_ARG_ENABLE([simd-64],
               [AS_HELP_STRING([--enable-simd-64],
                               [enable x86 SIMD 64 bits floating point support for long-distant tree force])],
               [PROG_NAME=$PROG_NAME".64b"
-	       use_simd_64=yes],
+               use_simd_64=yes],
               [use_simd_64=no])
 
 # QUAD
@@ -196,15 +196,15 @@ AC_ARG_ENABLE([cuda],
 
 AC_ARG_WITH([cuda-prefix], 
             [AS_HELP_STRING([--with-cuda-prefix],
-	                    [Prefix of your CUDA installation])],
+                            [Prefix of your CUDA installation])],
             [],
-	    [cuda_prefix="/usr/local/cuda"])
+            [cuda_prefix="/usr/local/cuda"])
 
 #AC_ARG_WITH([cuda-sdk-prefix], 
 #            [AS_HELP_STRING([--with-cuda-sdk-prefix],
-# 	                    [Prefix of your CUDA samples (SDK) installation])],
+# 	                       [Prefix of your CUDA samples (SDK) installation])],
 #            [cuda_sdk_prefix=$withval],
-# 	    [cuda_sdk_prefix="/usr/local/cuda/samples"])
+#            [cuda_sdk_prefix="/usr/local/cuda/samples"])
 
 AS_IF([test "x$use_cuda" != xno],
       [AC_CHECK_PROG([NVCC], [nvcc], [nvcc], [none])
@@ -237,8 +237,8 @@ AS_IF([test "x$use_cuda" != xno],
                                    [AC_MSG_FAILURE([can't find CUDA library -lcudart, please provide correct cuda PREFIX by using --with-cuda-prefix])])])
        AC_CHECK_LIB([gomp], 
                     [main],
-		    [CUDALIBS=$CUDALIBS' -lgomp'],
-		    [AC_CHECK_FILE(["$cuda_prefix/lib64/libgomp.so"],
+                    [CUDALIBS=$CUDALIBS' -lgomp'],
+                    [AC_CHECK_FILE(["$cuda_prefix/lib64/libgomp.so"],
                                    [CUDALIBS=$CUDALIBS" -lgomp"],
                                    [AC_MSG_FAILURE([can't find CUDA library -lgomp, please provide correct cuda PREFIX by using --with-cuda-prefix])])])],
        [use_cuda=no])
@@ -252,41 +252,41 @@ AC_ARG_ENABLE([gperf],
 
 AC_ARG_WITH([gperf-prefix], 
             [AS_HELP_STRING([--with-gperf-prefix],
-	                    [Prefix of your gperftools installation])],
+                            [Prefix of your gperftools installation])],
             [gperf_prefix=$withval],
-	    [gperf_prefix=$HOME])
+            [gperf_prefix=$HOME])
 
 AS_IF([test x"$use_gperf" != xno],
       [use_gperf=yes
        AC_CHECK_LIB([profiler],
                     [main],
-		    [GPERFLIBS=' -ltcmalloc_and_profiler'],
-		    [AC_CHECK_FILE(["$gperf_prefix/lib/libtcmalloc_and_profiler.so"],
+                    [GPERFLIBS=' -ltcmalloc_and_profiler'],
+                    [AC_CHECK_FILE(["$gperf_prefix/lib/libtcmalloc_and_profiler.so"],
                                    [GPERFFLAGS=" -I$gperf_prefix/include"
                                     GPERFLIBS=" -L$gperf_prefix/lib -ltcmalloc_and_profiler"],
-				   [AC_MSG_FAILURE([can't find gperftools library -ltcmalloc_and_profiler, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])
+                                   [AC_MSG_FAILURE([can't find gperftools library -ltcmalloc_and_profiler, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])
        #AC_CHECK_LIB([tcmalloc],
        #             [main],
-       #	    [GPERFLIBS=' -ltcmalloc'],
-       #	    [AC_CHECK_FILE(["$gperf_prefix/lib/libtcmalloc.so"],
-       #                           [GPERFLIBS=$GPERFLIBS" -ltcmalloc"],
-       #			   [AC_MSG_FAILURE([can't find gperftools library -ltcmalloc, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])],
+       #             [GPERFLIBS=' -ltcmalloc'],
+       #             [AC_CHECK_FILE(["$gperf_prefix/lib/libtcmalloc.so"],
+       #                            [GPERFLIBS=$GPERFLIBS" -ltcmalloc"],
+       #             [AC_MSG_FAILURE([can't find gperftools library -ltcmalloc, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])],
        [use_gperf=no])
 
 # FDPS
 AC_ARG_WITH([fdps-prefix], 
             [AS_HELP_STRING([--with-fdps-prefix],
-	                    [Prefix of your FDPS installation. Default: ../FDPS])],
+                            [Prefix of your FDPS installation. Default: ../FDPS])],
             [fdps_prefix=$withval],
-	    [fdps_prefix="../FDPS"])
+            [fdps_prefix="../FDPS"])
 
 AC_CHECK_FILE(["$fdps_prefix/src/particle_simulator.hpp"],
-	      [PETAR_INCLUDE=$PETAR_INCLUDE" -I$fdps_prefix/src"],
-	      [AC_MSG_FAILURE([can't find FDPS library, please provide correct PREFIX by using --with-fdps-prefix])])
+              [PETAR_INCLUDE=$PETAR_INCLUDE" -I$fdps_prefix/src"],
+              [AC_MSG_FAILURE([can't find FDPS library, please provide correct PREFIX by using --with-fdps-prefix])])
 
 AC_CHECK_FILE(["$fdps_prefix/src/ps_defs.hpp"],
-	      [FDPS_VERSION=`egrep 'Version' $fdps_prefix/src/ps_defs.hpp | sed 's:.*Version\ \(\S\+\).*:\1:'`],
-	      [AC_MSG_FAILURE([can't find FDPS ps_defs.hpp, please check the completeness of the FDPS library])])
+              [FDPS_VERSION=`egrep 'Version' $fdps_prefix/src/ps_defs.hpp | sed 's:.*Version\ \(\S\+\).*:\1:'`],
+              [AC_MSG_FAILURE([can't find FDPS ps_defs.hpp, please check the completeness of the FDPS library])])
 
 AS_IF([test ${FDPS_VERSION%%.*} -ge 7 ],
       [use_fdps_comm=yes],
@@ -295,9 +295,9 @@ AS_IF([test ${FDPS_VERSION%%.*} -ge 7 ],
 # SDAR
 AC_ARG_WITH([sdar-prefix], 
             [AS_HELP_STRING([--with-sdar-prefix],
-	                    [Prefix of your FDPS installation. Default: ../SDAR])],
+                            [Prefix of your FDPS installation. Default: ../SDAR])],
             [sdar_prefix=$withval],
-	    [sdar_prefix="../SDAR"])
+            [sdar_prefix="../SDAR"])
 
 AC_CHECK_FILE(["$sdar_prefix/src/Hermite/hermite_integrator.h"],
 	      [PETAR_INCLUDE=$PETAR_INCLUDE" -I$sdar_prefix/src"],
@@ -306,37 +306,44 @@ AC_CHECK_FILE(["$sdar_prefix/src/Hermite/hermite_integrator.h"],
 # GALPY
 AC_ARG_WITH([galpy-prefix],
             [AS_HELP_STRING([--with-galpy-prefix],
-	                    [Prefix of your Galpy installation. Default: search ../galpy, $HOME/.local, $VIRTUAL_ENV])],
+                            [Prefix of your Galpy installation. Default: search ../galpy, $HOME/.local, $VIRTUAL_ENV])],
             [galpy_prefix=$withval],
-	    [galpy_prefix="__search__"])
+            [galpy_prefix="__search__"])
+
+# Agama
+AC_ARG_WITH([agama-prefix],
+            [AS_HELP_STRING([--with-agama-prefix],
+                            [Prefix of your Agama installation. Default: search ../Agama])],
+            [agama_prefix=$withval],
+	      [agama_prefix="__search__"])
 
 # Leap frog step method
 AC_ARG_WITH([step-mode],
-	    [AS_HELP_STRING([--with-step-mode],
-	                    [Tree step mode (kdk: K[0.5]-D[1.0]-K[0.5]; kdkdk: K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6]; kdkdk4: Chin-4th). Default: kdk])],
+            [AS_HELP_STRING([--with-step-mode],
+                            [Tree step mode (kdk: K[0.5]-D[1.0]-K[0.5]; kdkdk: K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6]; kdkdk4: Chin-4th). Default: kdk])],
             [PROG_NAME=$PROG_NAME'.'$with_step_mode],
-	    [with_step_mode=kdk])
+            [with_step_mode=kdk])
 
 # interruption options
 FCFLAGS_BK=$FCFLAGS
 AC_ARG_WITH([interrupt],
-	    [AS_HELP_STRING([--with-interrupt],
-	                    [Interruption detection mode (base, bse, mobse, bseEmp). Default: off])],
+            [AS_HELP_STRING([--with-interrupt],
+                            [Interruption detection mode (base, bse, mobse, bseEmp). Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_interrupt
-	     AS_IF([[test x"$with_interrupt" == xbse] || [test x"$with_interrupt" == xmobse] || [test x"$with_interrupt" == xbseEmp]],
-	           [use_fortran=yes
-		    AC_LANG([Fortran])
+             AS_IF([[test x"$with_interrupt" == xbse] || [test x"$with_interrupt" == xmobse] || [test x"$with_interrupt" == xbseEmp]],
+                   [use_fortran=yes
+                    AC_LANG([Fortran])
                     #AC_PROG_FC([gfortran ifort flang])
-		    AS_IF([test x"$FC" == xgfortran],
-		          [FCLIBS=$FCLIBS' -lgfortran'],[])
-		    AS_IF([test x"$FC" == xflang],
-		          [#AX_CHECK_COMPILE_FLAG([-static-flang-libs],
-                          #                       [FCFLAGS=$FCFLAGS" -static-flang-libs"])
-		          FCLIBS=$FCLIBS' -lflang -lpgmath'],[])
-		    AS_IF([test x"$FC" == x],
+                    AS_IF([test x"$FC" == xgfortran],
+                          [FCLIBS=$FCLIBS' -lgfortran'],[])
+                    AS_IF([test x"$FC" == xflang],
+                          [#AX_CHECK_COMPILE_FLAG([-static-flang-libs],
+                           #                      [FCFLAGS=$FCFLAGS" -static-flang-libs"])
+                           FCLIBS=$FCLIBS' -lflang -lpgmath'],[])
+                    AS_IF([test x"$FC" == x],
                           [AC_MSG_FAILURE([can't find Fortran compiler, please install it. For example, in Ubuntu, to install GNU Fortran compiler, use 'sudo apt install gfortran'])],[])
                     FCFLAGS=$FCFLAGS_BK
-		    AS_IF([test x"$with_debug" == xg],
+                    AS_IF([test x"$with_debug" == xg],
                           [AX_CHECK_COMPILE_FLAG([-g],
                                                  [FCFLAGS=$FCFLAGS" -g"])
                            AX_CHECK_COMPILE_FLAG([-O0],
@@ -353,14 +360,14 @@ AC_ARG_WITH([interrupt],
 
 # external potential
 AC_ARG_WITH([external],
-	    [AS_HELP_STRING([--with-external],
-	                    [External potential (galpy). Default: off])],
+            [AS_HELP_STRING([--with-external],
+                            [External potential (galpy,agama). Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_external
-	     AS_IF([test x"$with_external" == xgalpy],
-	           [AC_LANG([C])
-		    #AC_PROG_CC([fcc gcc icc cc])
+	       AS_IF([test x"$with_external" == xgalpy],
+	             [AC_LANG([C])
+                    #AC_PROG_CC([fcc gcc icc cc])
                     use_c=yes
-		    AS_IF([test x"$with_debug" == xg],
+                    AS_IF([test x"$with_debug" == xg],
                           [AX_CHECK_COMPILE_FLAG([-g],
                                                  [COPTFLAGS=$COPTFLAGS" -g"])
                            AX_CHECK_COMPILE_FLAG([-O0],
@@ -374,51 +381,63 @@ AC_ARG_WITH([external],
                                                  [COPTFLAGS=$COPTFLAGS" -Kfast -Nclang"])])
                     AS_IF([test x"$galpy_prefix" == x__search__],
                           [AC_CHECK_PROG([FIND_CHECK], [find], [find])
-			   AS_IF([test x"$FIND_CHECK" == xfind],
-                                 [galpy_prefix=`pwd`'/'`find ../galpy -type d -name galpy|tail -1`
+                           AS_IF([test x"$FIND_CHECK" == xfind],
+                                 [rpath=`pwd`
+                                  galpy_prefix=`find $HOME/.local $VIRTUAL_ENV $rpath/.. -type d -name galpy|tail -1`
                                   AS_IF([test x"$galpy_prefix" == x],
-                                        [galpy_prefix=`find $HOME/.local $VIRTUAL_ENV -type d -name galpy|tail -1`])])])
+                                        [AC_MSG_FAILURE([can't find Galpy path, please provide correct PREFIX by using --with-galpy-prefix])])])])
                     AC_CHECK_FILE(["$galpy_prefix/potential/potential_c_ext/galpy_potentials.h"],
                                   [GALPY_PATH=$galpy_prefix],
                                   [AC_MSG_FAILURE([can't find Galpy library, please provide correct PREFIX by using --with-galpy-prefix])])
                     AC_CHECK_FILE(["$galpy_prefix/__init__.py"],
-		                  [GALPY_VERSION=`head -1 $galpy_prefix/__init__.py|cut -d'"' -f2 `],
-				  [AC_MSG_FAILURE([can't find Galpy __init__.py, which contains the version number])])
+                                  [GALPY_VERSION=`head -1 $galpy_prefix/__init__.py|cut -d'"' -f2 `],
+                                  [AC_MSG_FAILURE([can't find Galpy __init__.py, which contains the version number])])
                     AC_CHECK_PROG([GSL_CFLAGS],[gsl-config],[`gsl-config --cflags`],[])
                     AC_CHECK_PROG([GSL_LIBS],[gsl-config],[`gsl-config --libs`],[none])
-		    AS_IF([test x"$GSL_LIBS" == xnone],
+                    AS_IF([test x"$GSL_LIBS" == xnone],
                           [AC_CHECK_LIB([gslcblas],[main],
                                         [],
                                         [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt install libgsl-dev])])
                            AC_CHECK_LIB([gsl],[main],
                                         [],
                                         [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt install libgsl-dev])],[-lgslcblas])
-                           GSL_LIBS='-lgsl -lgslcblas'])])],
-	    [with_external=off])
+                           GSL_LIBS='-lgsl -lgslcblas'])])
+             AS_IF([test x"$with_external" == xagama],
+                   [AS_IF([test x"$agama_prefix" == x__search__],
+                          [AC_CHECK_PROG([FIND_CHECK], [find], [find])
+                           AS_IF([test x"$FIND_CHECK" == xfind],
+                                 [rpath=`pwd`
+                                  agama_prefix=`find $rpath/.. -type d -name Agama|tail -1`
+                                  AS_IF([test x"$agama_prefix" == x],
+                                        [AC_MSG_FAILURE([can't find Agama directory in ../, please provide correct PREFIX by using --with-agama-prefix])])])])
+                    AC_CHECK_FILE(["$agama_prefix/agama.a"],
+                                  [AGAMA_PATH=$agama_prefix],
+                                  [AC_MSG_FAILURE([can't find agama.a in Agama path, please compile Agama code first])])])],
+	      [with_external=off])
 
 # external force of hard part
 AC_ARG_WITH([external-hard],
-	    [AS_HELP_STRING([--with-external-hard],
-	                    [External force for hard (short-range) integration (gasdrag). Default: none])],
+            [AS_HELP_STRING([--with-external-hard],
+                            [External force for hard (short-range) integration (gasdrag). Default: none])],
             [with_external_hard=$withval
-	     PROG_NAME=$PROG_NAME'.'$with_external_hard],
-	    [with_external_hard=none])
+             PROG_NAME=$PROG_NAME'.'$with_external_hard],
+            [with_external_hard=none])
             
 
 # tidal tensor 3rd order mode
 AC_ARG_WITH([tidal-tensor],
-	    [AS_HELP_STRING([--with-tidal-tensor],
-	                    [Tidal tensor accuracy mode (2nd, 3rd). Default: 3rd])],
+            [AS_HELP_STRING([--with-tidal-tensor],
+                            [Tidal tensor accuracy mode (2nd, 3rd). Default: 3rd])],
             [with_tidal_tensor=$withval
-	     PROG_NAME=$PROG_NAME'.'tt$with_tidal_tensor],
-	    [with_tidal_tensor=3rd])
+             PROG_NAME=$PROG_NAME'.'tt$with_tidal_tensor],
+            [with_tidal_tensor=3rd])
 
 # orbit particle methods
 AC_ARG_WITH([orbit],
-	    [AS_HELP_STRING([--with-orbit],
-	                    [Orbit particle method for counter force (os: orbit-sampling; pm: pseudoparticle multipole). Default: pm])],
+            [AS_HELP_STRING([--with-orbit],
+                            [Orbit particle method for counter force (os: orbit-sampling; pm: pseudoparticle multipole). Default: pm])],
             [PROG_NAME=$PROG_NAME'.'$with_orbit],
-	    [with_orbit=pm])
+            [with_orbit=pm])
 
 # mpfrc
 AC_ARG_ENABLE([mpfrc],
@@ -466,11 +485,11 @@ AC_CHECK_FUNCS([pow sqrt])
 
 # version
 AC_CHECK_FILE([$sdar_prefix/VERSION],
-	      [sdar_version=`cat $sdar_prefix/VERSION`],
-	      [AC_MSG_FAILURE([can't find the file VERSION in SDAR directory, please update SDAR])])
+              [sdar_version=`cat $sdar_prefix/VERSION`],
+              [AC_MSG_FAILURE([can't find the file VERSION in SDAR directory, please update SDAR])])
 AC_CHECK_FILE([VERSION],
-	      [petar_version=`cat VERSION`],
-	      [AC_MSG_FAILURE([can't find the file VERSION])])
+              [petar_version=`cat VERSION`],
+              [AC_MSG_FAILURE([can't find the file VERSION])])
 VERSION=$petar_version'_'$sdar_version
 
 AC_SUBST([with_arch])
@@ -505,6 +524,7 @@ AC_SUBST([GPERFLIBS])
 AC_SUBST([MPFRCFLAGS])
 AC_SUBST([MPFRCLIBS])
 AC_SUBST([GALPY_PATH])
+AC_SUBST([AGAMA_PATH])
 AC_SUBST([GSL_CFLAGS])
 AC_SUBST([GSL_LIBS])
 AC_SUBST([PETAR_INCLUDE])

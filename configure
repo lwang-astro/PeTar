@@ -632,6 +632,7 @@ VERSION
 CXXNOMPI
 PROG_NAME
 PETAR_INCLUDE
+AGAMA_PATH
 GALPY_PATH
 MPFRCLIBS
 MPFRCFLAGS
@@ -743,6 +744,7 @@ with_gperf_prefix
 with_fdps_prefix
 with_sdar_prefix
 with_galpy_prefix
+with_agama_prefix
 with_step_mode
 with_interrupt
 with_external
@@ -1417,12 +1419,14 @@ Optional Packages:
   --with-sdar-prefix      Prefix of your FDPS installation. Default: ../SDAR
   --with-galpy-prefix     Prefix of your Galpy installation. Default: search
                           ../galpy, $HOME/.local, $VIRTUAL_ENV
+  --with-agama-prefix     Prefix of your Agama installation. Default: search
+                          ../Agama
   --with-step-mode        Tree step mode (kdk: K[0.5]-D[1.0]-K[0.5]; kdkdk:
                           K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6]; kdkdk4:
                           Chin-4th). Default: kdk
   --with-interrupt        Interruption detection mode (base, bse, mobse,
                           bseEmp). Default: off
-  --with-external         External potential (galpy). Default: off
+  --with-external         External potential (galpy,agama). Default: off
   --with-external-hard    External force for hard (short-range) integration
                           (gasdrag). Default: none
   --with-tidal-tensor     Tidal tensor accuracy mode (2nd, 3rd). Default: 3rd
@@ -3745,7 +3749,7 @@ $as_echo "$ac_res" >&6; }
 if test x"`eval 'as_val=${'$as_CACHEVAR'};$as_echo "$as_val"'`" = xyes; then :
   OPTFLAGS=$OPTFLAGS" -std=c++"$with_cpp_std
                        DEBFLAGS=$DEBFLAGS" -std=c++"$with_cpp_std
-		       CUDAFLAGS=$CUDAFLAGS" -std=c++"$with_cpp_std
+                       CUDAFLAGS=$CUDAFLAGS" -std=c++"$with_cpp_std
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
@@ -3871,7 +3875,7 @@ $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "$with_simd is not support by the compiler
 See \`config.log' for more details" "$LINENO" 5; } ;;
 esac
-	      as_CACHEVAR=`$as_echo "ax_cv_check_cxxflags__-march=$arch" | $as_tr_sh`
+              as_CACHEVAR=`$as_echo "ax_cv_check_cxxflags__-march=$arch" | $as_tr_sh`
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -march=$arch" >&5
 $as_echo_n "checking whether C++ compiler accepts -march=$arch... " >&6; }
 if eval \${$as_CACHEVAR+:} false; then :
@@ -4126,7 +4130,7 @@ fi
 # Check whether --enable-simd-64 was given.
 if test "${enable_simd_64+set}" = set; then :
   enableval=$enable_simd_64; PROG_NAME=$PROG_NAME".64b"
-	       use_simd_64=yes
+               use_simd_64=yes
 else
   use_simd_64=no
 fi
@@ -4161,9 +4165,9 @@ fi
 
 #AC_ARG_WITH([cuda-sdk-prefix],
 #            [AS_HELP_STRING([--with-cuda-sdk-prefix],
-# 	                    [Prefix of your CUDA samples (SDK) installation])],
+# 	                       [Prefix of your CUDA samples (SDK) installation])],
 #            [cuda_sdk_prefix=$withval],
-# 	    [cuda_sdk_prefix="/usr/local/cuda/samples"])
+#            [cuda_sdk_prefix="/usr/local/cuda/samples"])
 
 if test "x$use_cuda" != xno; then :
   # Extract the first word of "nvcc", so it can be a program name with args.
@@ -4551,10 +4555,10 @@ fi
 
        #AC_CHECK_LIB([tcmalloc],
        #             [main],
-       #	    [GPERFLIBS=' -ltcmalloc'],
-       #	    [AC_CHECK_FILE(["$gperf_prefix/lib/libtcmalloc.so"],
-       #                           [GPERFLIBS=$GPERFLIBS" -ltcmalloc"],
-       #			   [AC_MSG_FAILURE([can't find gperftools library -ltcmalloc, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])
+       #             [GPERFLIBS=' -ltcmalloc'],
+       #             [AC_CHECK_FILE(["$gperf_prefix/lib/libtcmalloc.so"],
+       #                            [GPERFLIBS=$GPERFLIBS" -ltcmalloc"],
+       #             [AC_MSG_FAILURE([can't find gperftools library -ltcmalloc, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])
 else
   use_gperf=no
 fi
@@ -4673,6 +4677,16 @@ if test "${with_galpy_prefix+set}" = set; then :
   withval=$with_galpy_prefix; galpy_prefix=$withval
 else
   galpy_prefix="__search__"
+fi
+
+
+# Agama
+
+# Check whether --with-agama-prefix was given.
+if test "${with_agama_prefix+set}" = set; then :
+  withval=$with_agama_prefix; agama_prefix=$withval
+else
+  agama_prefix="__search__"
 fi
 
 
@@ -4903,30 +4917,30 @@ ac_compiler_gnu=$ac_cv_fc_compiler_gnu
 # Check whether --with-interrupt was given.
 if test "${with_interrupt+set}" = set; then :
   withval=$with_interrupt; PROG_NAME=$PROG_NAME'.'$with_interrupt
-	     if test x"$with_interrupt" == xbse || test x"$with_interrupt" == xmobse || test x"$with_interrupt" == xbseEmp; then :
+             if test x"$with_interrupt" == xbse || test x"$with_interrupt" == xmobse || test x"$with_interrupt" == xbseEmp; then :
   use_fortran=yes
-		    ac_ext=${ac_fc_srcext-f}
+                    ac_ext=${ac_fc_srcext-f}
 ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
 ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_fc_compiler_gnu
 
                     #AC_PROG_FC([gfortran ifort flang])
-		    if test x"$FC" == xgfortran; then :
+                    if test x"$FC" == xgfortran; then :
   FCLIBS=$FCLIBS' -lgfortran'
 fi
-		    if test x"$FC" == xflang; then :
+                    if test x"$FC" == xflang; then :
   #AX_CHECK_COMPILE_FLAG([-static-flang-libs],
-                          #                       [FCFLAGS=$FCFLAGS" -static-flang-libs"])
-		          FCLIBS=$FCLIBS' -lflang -lpgmath'
+                           #                      [FCFLAGS=$FCFLAGS" -static-flang-libs"])
+                           FCLIBS=$FCLIBS' -lflang -lpgmath'
 fi
-		    if test x"$FC" == x; then :
+                    if test x"$FC" == x; then :
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "can't find Fortran compiler, please install it. For example, in Ubuntu, to install GNU Fortran compiler, use 'sudo apt install gfortran'
 See \`config.log' for more details" "$LINENO" 5; }
 fi
                     FCFLAGS=$FCFLAGS_BK
-		    if test x"$with_debug" == xg; then :
+                    if test x"$with_debug" == xg; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether Fortran compiler accepts -g" >&5
 $as_echo_n "checking whether Fortran compiler accepts -g... " >&6; }
 if ${ax_cv_check_fcflags___g+:} false; then :
@@ -5654,16 +5668,16 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 # Check whether --with-external was given.
 if test "${with_external+set}" = set; then :
   withval=$with_external; PROG_NAME=$PROG_NAME'.'$with_external
-	     if test x"$with_external" == xgalpy; then :
+	       if test x"$with_external" == xgalpy; then :
   ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
-		    #AC_PROG_CC([fcc gcc icc cc])
+                    #AC_PROG_CC([fcc gcc icc cc])
                     use_c=yes
-		    if test x"$with_debug" == xg; then :
+                    if test x"$with_debug" == xg; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C compiler accepts -g" >&5
 $as_echo_n "checking whether C compiler accepts -g... " >&6; }
 if ${ax_cv_check_cflags___g+:} false; then :
@@ -5883,10 +5897,14 @@ $as_echo "no" >&6; }
 fi
 
 
-			   if test x"$FIND_CHECK" == xfind; then :
-  galpy_prefix=`pwd`'/'`find ../galpy -type d -name galpy|tail -1`
+                           if test x"$FIND_CHECK" == xfind; then :
+  rpath=`pwd`
+                                  galpy_prefix=`find $HOME/.local $VIRTUAL_ENV $rpath/.. -type d -name galpy|tail -1`
                                   if test x"$galpy_prefix" == x; then :
-  galpy_prefix=`find $HOME/.local $VIRTUAL_ENV -type d -name galpy|tail -1`
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "can't find Galpy path, please provide correct PREFIX by using --with-galpy-prefix
+See \`config.log' for more details" "$LINENO" 5; }
 fi
 fi
 fi
@@ -6017,7 +6035,7 @@ $as_echo "no" >&6; }
 fi
 
 
-		    if test x"$GSL_LIBS" == xnone; then :
+                    if test x"$GSL_LIBS" == xnone; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lgslcblas" >&5
 $as_echo_n "checking for main in -lgslcblas... " >&6; }
 if ${ac_cv_lib_gslcblas_main+:} false; then :
@@ -6109,6 +6127,83 @@ fi
                            GSL_LIBS='-lgsl -lgslcblas'
 fi
 fi
+             if test x"$with_external" == xagama; then :
+  if test x"$agama_prefix" == x__search__; then :
+  # Extract the first word of "find", so it can be a program name with args.
+set dummy find; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_FIND_CHECK+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$FIND_CHECK"; then
+  ac_cv_prog_FIND_CHECK="$FIND_CHECK" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_FIND_CHECK="find"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+FIND_CHECK=$ac_cv_prog_FIND_CHECK
+if test -n "$FIND_CHECK"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $FIND_CHECK" >&5
+$as_echo "$FIND_CHECK" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+                           if test x"$FIND_CHECK" == xfind; then :
+  rpath=`pwd`
+                                  agama_prefix=`find $rpath/.. -type d -name Agama|tail -1`
+                                  if test x"$agama_prefix" == x; then :
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "can't find Agama directory in ../, please provide correct PREFIX by using --with-agama-prefix
+See \`config.log' for more details" "$LINENO" 5; }
+fi
+fi
+fi
+                    as_ac_File=`$as_echo "ac_cv_file_"$agama_prefix/agama.a"" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for \"$agama_prefix/agama.a\"" >&5
+$as_echo_n "checking for \"$agama_prefix/agama.a\"... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r ""$agama_prefix/agama.a""; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+  AGAMA_PATH=$agama_prefix
+else
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "can't find agama.a in Agama path, please compile Agama code first
+See \`config.log' for more details" "$LINENO" 5; }
+fi
+
+fi
 else
   with_external=off
 fi
@@ -6119,7 +6214,7 @@ fi
 # Check whether --with-external-hard was given.
 if test "${with_external_hard+set}" = set; then :
   withval=$with_external_hard; with_external_hard=$withval
-	     PROG_NAME=$PROG_NAME'.'$with_external_hard
+             PROG_NAME=$PROG_NAME'.'$with_external_hard
 else
   with_external_hard=none
 fi
@@ -6131,7 +6226,7 @@ fi
 # Check whether --with-tidal-tensor was given.
 if test "${with_tidal_tensor+set}" = set; then :
   withval=$with_tidal_tensor; with_tidal_tensor=$withval
-	     PROG_NAME=$PROG_NAME'.'tt$with_tidal_tensor
+             PROG_NAME=$PROG_NAME'.'tt$with_tidal_tensor
 else
   with_tidal_tensor=3rd
 fi
@@ -6980,6 +7075,7 @@ See \`config.log' for more details" "$LINENO" 5; }
 fi
 
 VERSION=$petar_version'_'$sdar_version
+
 
 
 
