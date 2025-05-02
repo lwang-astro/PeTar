@@ -166,12 +166,12 @@ class SDARInterruptBinary(DictNpArrayMix):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         ----------
         keyword arguments:
-            particle_type: type (SDARParticle)
+            particle_type: type (IsolatedSDARParticle)
                 particle data type
         """
 
         if (not 'particle_type' in kwargs.keys()):
-            kwargs['particle_type'] = SDARParticle
+            kwargs['particle_type'] = IsolatedSDARParticle
         particle_type = kwargs['particle_type']
         
         keys = [['time_now',np.float64],['time_end', np.float64],['status',np.int64],['cm',particle_type],['bin', SDARBinary],['sd', SlowDown], ['p1',particle_type],['p2',particle_type]]
