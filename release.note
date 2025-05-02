@@ -34,7 +34,7 @@
 32. Updated the data analysis Jupyter notebook example to demonstrate the use of a status file for recording snapshots.
 33. Implement IOParamHard to separate hard parameters input from the main input. Save hard parameters to input.par.hard and save hard manager parameters to input.par.hard.dump for petar.hard.debug
 34. Move static parameters for group radius and search group search radius to PtclHard class; move regular time step calculation function to kickdriftstep.hpp.
-35. Update hard integration to allow OMP parallel for one large cluster with n_group>=2 (partically modified in SDAR update)
+35. Update hard integration to allow nested OMP parallel for one large cluster with n_group>=2 (partically modified in SDAR update)
 36. Fix the error in the changeover potential calculation.
 37. Update BSEEMP for computing spin values (implemented by Ataru Tanikawa).
 38. Add phi and t arguments to galpy evaluatePotentials function argument lists. After this version, users should use modified galpy version from https://github.com/lwang-astro/galpy. In the official version, c++ interface do not support calculation of 3D potential values, and several potential types miss potentialEval functions, which causes segmentational fault when use them in PeTar.

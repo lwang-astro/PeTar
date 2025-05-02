@@ -300,7 +300,13 @@ public:
                     const bool append_flag=false, 
                     const bool dump_once_flag = true, 
                     const bool print_flag=true){
-        const PS::S32 ith = PS::Comm::getThreadNum();
+#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
+        int level = omp_get_level();
+        const PS::S32 ith = omp_get_ancestor_thread_num(level-1);
+#else
+        const PS::S32 ith = 0;
+#endif
+        //const PS::S32 ith = PS::Comm::getThreadNum();
         if (hard_dump[ith].backup_flag) {
             std::string point("_");
             std::time_t tnow = std::time(nullptr);

@@ -423,7 +423,7 @@ class HardParticle(BaseParticle):
         if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
         else: float_type = np.float64
 
-        keys = [['r_search',float_type], ['id',np.int64], ['mass_bk',np.int64], ['status',np.int64], ['r_in',float_type], ['r_out',float_type]]
+        keys = [['r_search',float_type], ['id',np.int64], ['mass_bk',np.float64], ['status',np.float64], ['r_in',float_type], ['r_out',float_type]]
 
         BaseParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
