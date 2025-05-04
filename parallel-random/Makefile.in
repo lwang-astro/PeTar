@@ -1,4 +1,4 @@
-TARGET:	librand.a test_randc
+TARGET:	librand.a librandnomp.a test_randc test_randcnomp
 
 FC=@FC@
 CXX=@CXX@
@@ -13,17 +13,26 @@ ifeq ($(use_mpi),yes)
 CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
 endif # mpi
 
+OMPFLAGS = 
 ifeq ($(use_omp),yes)
-CXXFLAGS += @OPENMP_CXXFLAGS@
-FFLAGS += @OPENMP_CXXFLAGS@
-CXXFLAGS += -D PARTICLE_SIMULATOR_THREAD_PARALLEL
+OMPFLAGS += @OPENMP_CXXFLAGS@
+OMPFLAGS += -D PARTICLE_SIMULATOR_THREAD_PARALLEL
 endif # omp
 
-randc.o: rand.cxx rand.hpp 
+randcnomp.o: rand.cxx rand.hpp 
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-randf.o: rand.f
+randfnomp.o: rand.f
 	$(FC) $(FFLAGS) -c $< -o $@
+
+librandnomp.a: randcnomp.o randfnomp.o
+	ar rcs $@ $^
+
+randc.o: rand.cxx rand.hpp 
+	$(CXX) $(CXXFLAGS) $(OMPFLAGS) -c $< -o $@
+
+randf.o: rand.f
+	$(FC) $(FFLAGS) $(OMPFLAGS) -c $< -o $@
 
 librand.a: randc.o randf.o
 	ar rcs $@ $^
@@ -32,7 +41,10 @@ test_randf: test_rand.f librand.a
 	$(FC) $(FFLAGS) $< -o $@ -L./ -lrand -lstdc++ 
 
 test_randc: test_rand.cxx librand.a 
-	$(CXX) $(CXXFLAGS) $< -o $@ -L./ -lrand $(FCLIBS)
+	$(CXX) $(CXXFLAGS) $(OMPFLAGS) $< -o $@ -L./ -lrand $(FCLIBS)
+
+test_randcnomp: test_rand.cxx librandnomp.a 
+	$(CXX) $(CXXFLAGS) $< -o $@ -L./ -lrandnomp $(FCLIBS)
 
 clean:
 	rm -f *.o *.so *.gch *.a

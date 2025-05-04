@@ -80,8 +80,12 @@ BSE_FLAG=on
 endif
 ifeq ($(BSE_FLAG),on)
 FCLIBS = @FCLIBS@
-BSELIBFILES= parallel-random/librand.a bse-interface/libbse.a bse-interface/bse_interface.h 
-BSELIBS = -L ./bse-interface -L ./parallel-random -lbse -lrand $(FCLIBS)
+RANDFILES = parallel-random/librand.a 
+RANDLIBS = -L ./parallel-random -lrand 
+RANDNOMPFILES = parallel-random/librandnomp.a 
+RANDNOMPLIBS = -L ./parallel-random -lrandnomp
+BSELIBFILES= bse-interface/libbse.a bse-interface/bse_interface.h 
+BSELIBS = -L ./bse-interface -lbse $(FCLIBS)
 CXXLIBS += $(BSELIBS)
 LIBFILES+= $(BSELIBFILES)
 PETAR_INCLUDE += -I ./bse-interface -I ./parallel-random
@@ -95,6 +99,8 @@ SE_CLEAN:
 	$(MAKE) -C bse-interface clean
 parallel-random/librand.a: parallel-random
 	$(MAKE) -C parallel-random librand.a
+parallel-random/librandnomp.a: parallel-random
+	$(MAKE) -C parallel-random librandnomp.a
 bse-interface/libbse.a: bse-interface
 	$(MAKE) -C bse-interface 
 endif
@@ -157,6 +163,7 @@ SRC += $(AGAMA_SRC)
 FLAGS1 := $(shell grep -e LINK_FLAGS_ALL $(AGAMA_PATH)/Makefile.local | sed 's/^.*= //g' | sed 's!extras/lib!$(AGAMA_PATH)/extras/lib!g')
 FLAGS2 := $(shell grep -e LINK_FLAGS_LIB_AND_EXE_STATIC $(AGAMA_PATH)/Makefile.local | sed 's/^.*= //g' | sed 's!extras/lib!$(AGAMA_PATH)/extras/lib!g')
 AGAMALIBFILES = $(AGAMA_PATH)/agama.a
+LIBFILES += $(AGAMALIBFILES)
 AGAMALIBS = $(AGAMALIBFILES) $(FLAGS1) $(FLAGS2)
 CXXLIBS += $(AGAMALIBS)
 AGAMA_INCLUDE = -I$(AGAMA_PATH)/src -I./agama-interface
@@ -285,8 +292,8 @@ CUDA_INCLUDE += -I./src @PETAR_INCLUDE@
 build:
 	[ -d build ] || mkdir build
 
-build/@PROG_NAME@:  $(SRC) $(OBJS) $(LIBFILES) |build
-	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(OMPFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(OBJS) $(CXXLIBS)
+build/@PROG_NAME@:  $(SRC) $(OBJS) $(LIBFILES) $(RANDFILES) |build
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(OMPFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(OBJS) $(CXXLIBS) $(RANDLIBS) 
 
 SIMD_DEBFLAGS += -DRSQRT_NR_EPJ_X2
 SIMD_DEBFLAGS += -DAVX_PRELOAD
@@ -305,11 +312,11 @@ build/petar.format.transfer: format_transfer.cxx |build
 build/petar.external: external_test.cxx $(EXTLIBFILES) $(EXT_SRC) |build
 	$(CXX) $(OPTFLAGS) $(CXXFLAGS) $(EXTFLAGS) $< -o $@ $(EXTLIBS)
 
-build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(BSELIBFILES) |build
-	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
+build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(LIBFILES) $(RANDNOMPFILES) |build
+	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS) $(RANDNOMPLIBS)
 
-build/petar.hard.test: hard_test.cxx $(HARD_SRC) |build
-	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(OMPFLAGS) $(HARD_MT_FLAGS) -o $@ $< $(CXXLIBS)
+build/petar.hard.test: hard_test.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) |build
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(OMPFLAGS) $(HARD_MT_FLAGS) -o $@ $< $(CXXLIBS) $(RANDLIBS)
 
 build/petar.simd.test: simd_test.cxx $(OBJS) |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS) $^ -o $@  $(CXXLIBS)
