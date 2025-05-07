@@ -45,7 +45,11 @@ int main (int argc, char** argv) {
                 double sf64 = rand_f64_();
 #pragma omp critical
                 {
+#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
                     int i_omp = omp_get_thread_num();
+#else
+                    int i_omp = 0;
+#endif
                     std::cout<<"Rank["<<rank<<"] OMP["<<i_omp<<"] seed:"<<RAND_SEED[0]<<" rand_uint64: "<<si64<<" rand_f64: "<<sf64<<std::endl;
                 }
             }
@@ -87,7 +91,11 @@ int main (int argc, char** argv) {
                 double sf64 = rand_f64();
 #pragma omp critical
                 {
+#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
                     int i_omp = omp_get_thread_num();
+#else
+                    int i_omp = 0;
+#endif
                     std::cout<<"Rank["<<rank<<"] OMP["<<i_omp<<"] seed:"<<RAND_SEED[0]<<" rand_uint64: "<<si64<<" rand_f64: "<<sf64<<std::endl;
                 }
             }
@@ -123,7 +131,11 @@ int main (int argc, char** argv) {
                 double sf64 = rand_f64();
 #pragma omp critical
                 {
+#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
                     int i_omp = omp_get_thread_num();
+#else
+                    int i_omp = 0;
+#endif
                     std::cout<<"Rank["<<rank<<"] OMP["<<i_omp<<"] seed:"<<RAND_SEED[0]<<" rand_uint64: "<<si64<<" rand_f64: "<<sf64<<std::endl;
                 }
             }

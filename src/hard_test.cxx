@@ -323,8 +323,8 @@ int main(int argc, char** argv)
         for(int i=0; i<n_hard; i++) {
             auto& pi_artificial = hard_ptcl[i].group_data.artificial;
             if(pi_artificial.isMember()){
-                const PS::S64 cm_adr= hard_ptcl[i].getParticleCMAddress(); // notice status is negative 
 #ifdef HARD_DEBUG
+                const PS::S64 cm_adr= hard_ptcl[i].getParticleCMAddress(); // notice status is negative 
                 assert(cm_adr>0);
                 assert(pi_artificial.getMassBackup()>0); 
 #endif
