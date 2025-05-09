@@ -2370,6 +2370,27 @@ public:
 
         //assert(initial_fdps_flag);
         assert(!read_parameters_flag);
+
+        // Check whether all options are defined
+        std::vector<IOParamsContainer*> all_pars;
+        all_pars.push_back(&input_parameters.input_par_store);
+        all_pars.push_back(&hard_parameters.input_par_store);
+#ifdef BSE_BASE
+        all_pars.push_back(&bse_parameters.input_par_store);
+        all_pars.push_back(&rand_parameters.input_par_store);
+#endif
+#ifdef GALPY
+        all_pars.push_back(&galpy_parameters.input_par_store);
+#endif
+#ifdef EXTERNAL_HARD
+        all_pars.push_back(&external_hard_parameters.input_par_store);
+#endif
+#ifdef AGAMA
+        all_pars.push_back(&agama_parameters.input_par_store);
+#endif
+        // Check whether all options are defined
+        FindUndefinedOptions(all_pars, argc, argv);
+
         // reading parameters
         opterr = 0;
         read_parameters_flag = true;

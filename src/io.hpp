@@ -241,6 +241,17 @@ public:
         for(auto iter=d_i64.begin(); iter!=d_i64.end(); iter++) iter->second->printHelp(os, print_help, false, print_all_flag);
         for(auto iter=d_str.begin(); iter!=d_str.end(); iter++) iter->second->printHelp(os, print_help, false, print_all_flag);
     }
+
+    //! check whether the key is defined
+    bool isDefined(const char* _key) const {
+        auto search_f64 = d_f64.find(_key);
+        if (search_f64 != d_f64.end()) return true;
+        auto search_i64 = d_i64.find(_key);
+        if (search_i64 != d_i64.end()) return true;
+        auto search_str = d_str.find(_key);
+        if (search_str != d_str.end()) return true;
+        return false;
+    }    
 };
 
 
@@ -317,3 +328,36 @@ public:
         fwrite(this, sizeof(FileHeader), 1, fp);
     }
 };
+
+
+//! check if the options are defined
+/*! If option is not defined, print error message and abort
+
+    @param[in] io_par_list list of IOParamsContainer
+    @param[in] argc number of arguments
+    @param[in] argv argument list
+*/
+static void FindUndefinedOptions(std::vector<IOParamsContainer*> io_par_list, const int argc, char* argv[]) {
+    for (int i=1; i<argc; i++) {
+        if (argv[i][0]=='-') {
+            std::string arg(argv[i]);
+            if (arg[0]=='-' && arg[1]=='-') {
+                arg = arg.substr(2);
+            }
+            else if (arg[0]=='-') {
+                arg = arg.substr(1);
+            }
+            bool found = false;
+            for (auto iter = io_par_list.begin(); iter != io_par_list.end(); ++iter) { 
+                if ((*iter)->isDefined(arg.c_str())) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                std::cerr<<"Error: option "<<arg<<" is not defined!\n";
+                abort();
+            }
+        }
+    }
+}
