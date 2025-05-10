@@ -22,7 +22,7 @@ class SingleEscaper(Particle):
                 PeTar interrupt mode: base, bse, mobse, none
                 This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
-               PeTar external mode (set in configure): galpy, none 
+               PeTar external mode (set in configure): galpy, agama, none 
                This option indicates whether the column of externa potential exist
             use_mpfrc: bool (False)
                 If true, add three columns of pos_high indicating the high-precision parts of position
@@ -90,7 +90,7 @@ class BinaryEscaper(Binary):
             interrupt_mode: string (none)
                 PeTar interrupt mode: base, bse, mobse, none
             external_mode: string (none)
-               PeTar external mode (set in configure): galpy, none 
+               PeTar external mode (set in configure): galpy, agama, none 
                This option indicates whether the column of externa potential exist
             use_mpfrc: bool (False)
                 If true, add three columns of pos_high indicating the high-precision parts of position

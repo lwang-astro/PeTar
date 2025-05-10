@@ -223,7 +223,7 @@ class Lagrangian(DictNpArrayMix):
             calc_energy: bool (False)
                 If true, add kinetic, potential energies and virial ratio calculation
             external_mode: string (none)
-                PeTar external mode (set in configure): galpy, none 
+                PeTar external mode (set in configure): galpy, agama, none 
                 If it is not none, epot_ext will be added if calc_energy=True
             calc_multi_rc: bool (False)
                 If true, calculate core radius using KDTree and correct the central position
@@ -565,7 +565,7 @@ class LagrangianMultiple(DictNpArrayMix):
             calc_energy: bool (False)
                 If true, add kinetic, potential energies and virial ratio calculation
             external_mode: string (none)
-                PeTar external mode (set in configure): galpy, none 
+                PeTar external mode (set in configure): galpy, agama, none 
                 If it is not none, epot_ext will be added if calc_energy=True
             calc_multi_rc: bool (False)
                 If true, calculate core radius using KDTree and correct the central position
