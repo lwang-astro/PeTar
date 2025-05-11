@@ -2389,7 +2389,11 @@ public:
         all_pars.push_back(&agama_parameters.input_par_store);
 #endif
         // Check whether all options are defined
-        FindUndefinedOptions(all_pars, argc, argv);
+        std::vector<std::string> known_options;
+        known_options.push_back("help");
+        known_options.push_back("h");
+        known_options.push_back("disable-print-info");
+        FindUndefinedOptions(all_pars, argc, argv, &known_options);
 
         // reading parameters
         opterr = 0;

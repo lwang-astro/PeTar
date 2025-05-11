@@ -337,7 +337,7 @@ public:
     @param[in] argc number of arguments
     @param[in] argv argument list
 */
-static void FindUndefinedOptions(std::vector<IOParamsContainer*> io_par_list, const int argc, char* argv[]) {
+static void FindUndefinedOptions(std::vector<IOParamsContainer*> io_par_list, const int argc, char* argv[], std::vector<std::string>* known_options=NULL) {
     for (int i=1; i<argc; i++) {
         if (argv[i][0]=='-') {
             std::string arg(argv[i]);
@@ -348,6 +348,14 @@ static void FindUndefinedOptions(std::vector<IOParamsContainer*> io_par_list, co
                 arg = arg.substr(1);
             }
             bool found = false;
+            if (known_options != NULL) {
+                for (auto iter = known_options->begin(); iter != known_options->end(); ++iter) {
+                    if (arg == *iter) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
             for (auto iter = io_par_list.begin(); iter != io_par_list.end(); ++iter) { 
                 if ((*iter)->isDefined(arg.c_str())) {
                     found = true;
