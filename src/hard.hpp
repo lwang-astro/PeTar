@@ -2695,7 +2695,13 @@ public:
 
         // integrate one cluster function
         auto integrateOneCluster = [&](const PS::S32 i) {
+#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
             const PS::S32 ith = PS::Comm::getThreadNum();
+            hard_dump.omp_level = omp_get_level();
+#else
+            const PS::S32 ith = 0;
+#endif
+
 #ifdef OMP_PROFILE
             time_thread[ith] -= PS::GetWtime();
 #endif
