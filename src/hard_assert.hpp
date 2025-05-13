@@ -121,27 +121,6 @@ public:
 #endif
     }
 
-    //! Dumping one cluster data and random seed for a given file name
-    /* 
-       @param[in] _fname: file name to write
-       @param[in] _append_flag: if true, append data into existing file and do not seperate random seed to different file
-       @param[in] _dump_once_flag: if true, only dump once for the same data
-     */
-    void dumpOneClusterAndSeed(const char* _fname, const bool _append_flag, const bool _dump_once_flag=true) {
-        std::FILE* fp;
-        if (_append_flag) 
-            fp = std::fopen(_fname,"a");
-        else
-            fp = std::fopen(_fname,"w");
-        if (fp==NULL) {
-            std::cerr<<"Error: filename "<<_fname<<" cannot be open!\n";
-            abort();
-        }
-        writeOneClusterBinary(fp);
-        fclose(fp);
-        if (_dump_once_flag) backup_flag = false;
-    }
-
     //! read one cluster data with BINARY format
     /*! @param[in] _fin: file IO for read
      */
@@ -212,24 +191,9 @@ public:
             ptcl_arti_bk.resizeNoInitialize(n_arti);
             for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].readBinary(fp);
         }
-
 #ifdef BSE_BASE
         rand_manager.readRandSeedLocalBinary(fp);
 #endif
-    }
-
-    //! reading one cluster data and random seed for a given filename
-    /* 
-       @param[in]  _fname: file name to read
-     */
-    void loadOneClusterAndSeed(const char* _fname) {
-        std::FILE* fp = std::fopen(_fname,"r");
-        if (fp==NULL) {
-            std::cerr<<"Error: filename "<<_fname<<" cannot be open!\n";
-            abort();
-        }
-        readOneClusterBinary(fp);
-        fclose(fp);
     }
 
 };
@@ -279,33 +243,23 @@ public:
                  const bool append_flag=false, 
                  const bool dump_once_flag = true, 
                  const bool print_flag=true) {
-        std::string point("_");
-        for (int i=0; i<size; i++) {
-            if (hard_dump[i].backup_flag) {
-                std::time_t tnow = std::time(nullptr);
-                std::string fname = filename;
-                if (long_suffix_flag) fname = filename + point + std::to_string(hard_dump[i].time_offset) + point + std::to_string(mpi_rank) + point + std::to_string(i) + point + std::to_string(dump_number++) + point + std::to_string(tnow);
-                hard_dump[i].dumpOneClusterAndSeed(fname.c_str(), append_flag, dump_once_flag);
-#ifdef EXTERNAL_HARD
-#ifdef GALPY
-                galpy_manager->writePotentialPars((fname+".galpy").c_str(), hard_dump[i].time_offset, false);
-#endif
-#endif            
-                if (print_flag) std::cerr<<"Dump file: "<<fname.c_str()<<std::endl;
-            }
-        }
+        for (int i=0; i<size; i++) 
+            dumpThread(filename, i, long_suffix_flag, append_flag, dump_once_flag, print_flag);
     }
 
     void dumpThread(const char *filename, 
+                    int ith = -1,    
                     const bool long_suffix_flag=true, 
                     const bool append_flag=false, 
                     const bool dump_once_flag = true, 
                     const bool print_flag=true){
+        if (ith<0) {    
 #ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
-        const PS::S32 ith = omp_get_ancestor_thread_num(omp_level);
+            ith = omp_get_ancestor_thread_num(omp_level);
 #else
-        const PS::S32 ith = 0;
+            ith = 0;
 #endif
+        }
         //const PS::S32 ith = PS::Comm::getThreadNum();
         if (hard_dump[ith].backup_flag) {
             std::string point("_");
@@ -313,12 +267,23 @@ public:
             //std::tm *local_time = localtime(&tnow);
             std::string fname = filename;
             if (long_suffix_flag) fname = filename + point + std::to_string(hard_dump[ith].time_offset) + point + std::to_string(mpi_rank) + point + std::to_string(ith) + point + std::to_string(dump_number++) + point + std::to_string(tnow);
-            hard_dump[ith].dumpOneClusterAndSeed(fname.c_str(), append_flag, dump_once_flag);
+            std::FILE* fp;
+            if (append_flag) 
+                fp = std::fopen(fname.c_str(),"a");
+            else
+                fp = std::fopen(fname.c_str(),"w");
+            if (fp==NULL) {
+                std::cerr<<"Error: filename "<<fname.c_str()<<" cannot be open!\n";
+                abort();
+            }
+            hard_dump[ith].writeOneClusterBinary(fp);
 #ifdef EXTERNAL_HARD
 #ifdef GALPY
             galpy_manager->writePotentialPars((fname+".galpy").c_str(), hard_dump[ith].time_offset, false);
 #endif
 #endif            
+            fclose(fp);
+            if (dump_once_flag) hard_dump[ith].backup_flag = false;
             if (print_flag) std::cerr<<"Thread: "<<ith<<" Dump file: "<<fname.c_str()<<std::endl;
         }
     }
@@ -333,7 +298,7 @@ static HardDumpList hard_dump;
 
 #ifdef HARD_DUMP
 #define DATADUMP(expr) hard_dump.dumpThread(expr)
-#define DATADUMPAPP(expr) hard_dump.dumpThread(expr, false, true, false, false)
+#define DATADUMPAPP(expr) hard_dump.dumpThread(expr, -1, false, true, false, false)
 #else
 #define DATADUMP(expr) 
 #define DATADUMPAPP(expr) 
