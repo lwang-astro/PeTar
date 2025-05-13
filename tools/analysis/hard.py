@@ -328,7 +328,7 @@ class HermiteData(DictNpArrayMix):
             kwargs['data_type'] = 'hard'
 
         if (kwargs['data_type'] == 'hard'):
-            kwargs['member_type'] = HardParticle
+            kwargs['member_type'] = HermiteParticle
             kwargs['cm_type'] = HermiteParticle
         elif (kwargs['data_type'] == 'hermite'):
             kwargs['member_type'] = IsolatedHermiteParticle

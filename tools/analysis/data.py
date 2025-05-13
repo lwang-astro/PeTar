@@ -42,7 +42,7 @@ class PeTarDataHeader():
             snapshot_format: string (ascii)
                 Data format of snapshot files: binary or ascii
             external_mode: string (none)
-                PeTar external mode (set in configure): galpy, none 
+                PeTar external mode (set in configure): galpy, agama, none 
                 If not none, this option indicates the pos_offset and vel_offset exists 
         """
         self.file_id = int(0)
@@ -68,7 +68,7 @@ class PeTarDataHeader():
             snapshot_format: string (ascii)
                 Data format of snapshot files: binary or ascii
             external_mode: string (none)
-                PeTar external mode (set in configure): galpy, none 
+                PeTar external mode (set in configure): galpy, agama, none 
                 If not none, this option indicates the pos_offset and vel_offset exists 
         """
         snapshot_format='ascii'
@@ -495,7 +495,7 @@ class Particle(HardParticle):
                PeTar interrupt mode (set in configure): base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
-               PeTar external mode (set in configure): galpy, none 
+               PeTar external mode (set in configure): galpy, agama, none 
                This option indicates whether the column of externa potential exist
             use_mpfrc: bool (False)
                If true, add three columns of pos_high indicating the high-precision parts of position
@@ -692,7 +692,7 @@ class Binary(SimpleParticle):
                PeTar interrupt mode (set in configure): base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
-               PeTar external mode (set in configure): galpy, none 
+               PeTar external mode (set in configure): galpy, agama, none 
                This option indicates whether the column of externa potential exist
             use_mpfrc: bool (False)
                If true, add three columns of pos_high indicating the high-precision parts of position
