@@ -239,6 +239,7 @@ class HardDumpList{
 public:
     int size;
     int mpi_rank;
+    int omp_level;
     int dump_number;
 #ifdef EXTERNAL_HARD
 #ifdef GALPY
@@ -247,7 +248,7 @@ public:
 #endif
     HardDump* hard_dump;
 
-    HardDumpList(): size(0), mpi_rank(0), dump_number(0), 
+    HardDumpList(): size(0), mpi_rank(0), omp_level(0), dump_number(0), 
 #ifdef EXTERNAL_HARD
 #ifdef GALPY
                     galpy_manager(NULL),
@@ -301,8 +302,7 @@ public:
                     const bool dump_once_flag = true, 
                     const bool print_flag=true){
 #ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
-        int level = omp_get_level();
-        const PS::S32 ith = omp_get_ancestor_thread_num(level-1);
+        const PS::S32 ith = omp_get_ancestor_thread_num(omp_level);
 #else
         const PS::S32 ith = 0;
 #endif
