@@ -147,7 +147,7 @@ public:
                      nstep_dt_soft_kepler(input_par_store, 0.0, "nstep-dt-soft-kepler", "Determines the dt_soft by P(r_in)/nstep; P(r_in) is the binary period with the semi-major axis of r_in; nstep is the argument of this option (e.g., 32.0)", "not used"),
                      search_vel_factor (input_par_store, 3.0,  "search-vel-factor", "Neighbor search coefficient for velocity check (v*dt)"),
                      search_peri_factor(input_par_store, 1.5, "search-peri-factor", "Neighbor search coefficient for periapsis check"),
-                     r_search_min     (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters","auto"),
+                     r_search_min     (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters; = 0: auto-determine by max(search-vel-factor*sigma_1D*dt_soft + rout, 1.2 r_out)","auto"),
                      r_escape         (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Object escape radius criterion; 0: no escaper removal; <0: remove objects when r>-r_escape; >0: remove objects when r>r_escape and energy>0"),
                      dt_snap          (input_par_store, 1.0,  "o", "Output time interval for particle dataset snapshots"),
                      data_format      (input_par_store, 1,    "i", "Data file reading and writing format; 0: read and write in BINARY; 1: read and write in ASCII; 2: read in ASCII, write in BINARY; 3: read in BINARY, write in ASCII"),
@@ -3079,7 +3079,7 @@ public:
         }
 
         // if r_search_min is not defined, calculate by search_vel_factor*velocity_dispersion*tree_time_step + r_out
-        if (r_search_min==0.0) r_search_min = search_vel_factor*vel_disp*dt_soft + r_out;
+        if (r_search_min==0.0) r_search_min = std::max(search_vel_factor*vel_disp*dt_soft + r_out, 1.2*r_out);
         // if r_search_max is not defined, calcualte by 5*r_out
 //        if (r_search_max==0.0) r_search_max = 5*r_out;
         // calculate v_max based on r_search_max, tree time step and search_vel_factor
