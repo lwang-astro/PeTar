@@ -32,6 +32,7 @@ public:
     IOParams<double> gas_density; 
     IOParams<double> decay_time;
 #endif
+    IOParams<double> gravitational_constant;
     IOParams<std::string> fname_par;
     
     bool print_flag;
@@ -48,6 +49,7 @@ public:
                             gas_density  (input_par_store, 1.0, "ext-gas-density",  "gas density in units of PeTar input"),
                             decay_time   (input_par_store, 0.0, "ext-decay-time",  "gas density decay time scale in units of PeTar input"),
 #endif
+                            gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant", NULL, false),
                             fname_par    (input_par_store, "input.par", "p", "Input parameter file for external force (this option should be used first before any other options)",NULL,false),
     
                             print_flag(false) {}
@@ -139,6 +141,12 @@ public:
                     break;
                 }
                 break;
+            case 'G':
+                gravitational_constant.value = atof(optarg);
+                if(print_flag) gravitational_constant.print(std::cout);
+                opt_used += 2;
+                assert(gravitational_constant.value>0.0);
+                break;
             case 'p':
                 fname_par.value = optarg;
                 if(print_flag) {
@@ -194,6 +202,7 @@ public:
     Float coulomb_log;
     Float polytropic_constant;
     Float polytropic_exponent;
+    Float gravitational_constant;
     bool calc_sound_speed;
 
     ExternalHardForce(): mode(0),
@@ -202,7 +211,7 @@ public:
 #else
                          gas_density(1.0), gas_density_init(1.0), decay_time(0.0), time(0.0),
 #endif
-                         sound_speed(0.0), coulomb_log(3.1), polytropic_constant(1.0), polytropic_exponent(4.0/3.0), calc_sound_speed(true) {}
+                         sound_speed(0.0), coulomb_log(3.1), polytropic_constant(1.0), polytropic_exponent(4.0/3.0), gravitational_constant(1.0), calc_sound_speed(true) {}
 
 #ifdef GALPY
     //! initial parameters for perturbation
@@ -222,6 +231,7 @@ public:
         coulomb_log = _input.coulomb_log.value;
         polytropic_constant = _input.polytropic_constant.value;
         polytropic_exponent = _input.polytropic_exponent.value;
+        gravitational_constant = _input.gravitational_constant.value;
         if (sound_speed>0.0) calc_sound_speed = false;
         else calc_sound_speed = true;
     }
@@ -236,6 +246,7 @@ public:
         coulomb_log = _input.coulomb_log.value;
         polytropic_constant = _input.polytropic_constant.value;
         polytropic_exponent = _input.polytropic_exponent.value;
+        gravitational_constant = _input.gravitational_constant.value;
         if (sound_speed>0.0) calc_sound_speed = false;
         else calc_sound_speed = true;
         updateTime(_time);
@@ -272,7 +283,7 @@ public:
         Float v3 = v2*v;
 
         const Float PI = 4.0*atan(1.0);
-        const Float G2 = ForceSoft::grav_const*ForceSoft::grav_const;
+        const Float G2 = gravitational_constant*gravitational_constant;
 
 #ifdef GALPY
         auto& pos = _particle.pos;
@@ -357,7 +368,7 @@ public:
         //_force.acc1[2] += c2*vel[2] - c1*_force.acc0[2];
         
         const Float PI = 4.0*atan(1.0);
-        Float G2 = ForceSoft::grav_const*ForceSoft::grav_const;
+        const Float G2 = gravitational_constant*gravitational_constant;
 
 #ifdef GALPY
         auto& pos = _particle.pos;

@@ -2895,6 +2895,9 @@ public:
         if (input_parameters.unit_set.value==1) {
             input_parameters.gravitational_constant.value = G_ASTRO;
             hard_parameters.gravitational_constant.value = G_ASTRO;
+#ifdef EXTERNAL_HARD
+            external_hard_parameters.gravitational_constant.value = G_ASTRO;
+#endif
 #ifdef BSE_BASE
             bse_parameters.tscale.value = 1.0; // Myr
             bse_parameters.rscale.value = PC_TO_RSUN;
