@@ -1703,7 +1703,7 @@ private:
 #else
                 v8df vrcrit = _mm512_max_pd(rsi, _mm512_set1_pd(rsearchj[j]));
 #endif
-                v8df vrcrit2 = _mm512_max_pd(vrcrit, vrcrit);
+                v8df vrcrit2 = _mm512_mul_pd(vrcrit, vrcrit);
                 //v8df mask = _mm256_cmp_pd(vrcrit2, r2_real, 0x01); // for neighbour search
                 //nngb += _mm256_and_pd( vone, _mm256_xor_pd(mask, allbits) ); // can remove
                 nngb = _mm512_add_pd(

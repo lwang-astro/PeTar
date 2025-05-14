@@ -40,6 +40,7 @@
 38. Add phi and t arguments to galpy evaluatePotentials function argument lists. After this version, users should use modified galpy version from https://github.com/lwang-astro/galpy. In the official version, c++ interface do not support calculation of 3D potential values, and several potential types miss potentialEval functions, which causes segmentational fault when use them in PeTar.
 39. Add Agama library interface with help from Eugene Vasiliev. 
 40. Add option check function, if option is not defined in petar commander, print error message and abort.
+41. Fix a bug of neighbor searching for SIMD 64b mode.
 
 **Some existing issues include**
 
