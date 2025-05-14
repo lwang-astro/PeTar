@@ -421,6 +421,9 @@ int main(int argc, char **argv){
       if (c == EOF) break;
       ungetc(c, fp);
       hard_dump.readOneClusterBinary(fp);
+#ifdef EXTERNAL_HARD
+      hard_manager.h4_manager.interaction.ext_force.center.readBinary(fp);
+#endif
 
 #ifdef BSE_BASE
       if (seed!=0) hard_dump.rand_manager.initialFromSeed(seed, 0);

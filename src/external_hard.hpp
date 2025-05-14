@@ -33,6 +33,7 @@ public:
     IOParams<double> gas_density; 
     IOParams<double> decay_time;
 #endif
+    IOParams<double> gravitational_constant;
     IOParams<long long int> center_id; // id of the center object 
     IOParams<std::string> fname_par;
     
@@ -50,6 +51,7 @@ public:
                             gas_density  (input_par_store, 1.0, "ext-gas-density",  "gas density in units of PeTar input"),
                             decay_time   (input_par_store, 0.0, "ext-decay-time",  "gas density decay time scale in units of PeTar input"),
 #endif
+                            gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant", NULL, false),
                             center_id    (input_par_store, -1, "ext-center-id", "id of the central object, if given, the central object does not feel gas drag; and gas is assumed to rotating in kepler orbit around the center", "None"),
                             fname_par    (input_par_store, "input.par", "p", "Input parameter file for external force (this option should be used first before any other options)",NULL,false),
     
@@ -148,6 +150,12 @@ public:
                     break;
                 }
                 break;
+            case 'G':
+                gravitational_constant.value = atof(optarg);
+                if(print_flag) gravitational_constant.print(std::cout);
+                opt_used += 2;
+                assert(gravitational_constant.value>0.0);
+                break;
             case 'p':
                 fname_par.value = optarg;
                 if(print_flag) {
@@ -203,6 +211,7 @@ public:
     Float coulomb_log;
     Float polytropic_constant;
     Float polytropic_exponent;
+    Float gravitational_constant;
     FPSoft center;
     bool calc_sound_speed;
 
@@ -212,7 +221,7 @@ public:
 #else
                          gas_density(1.0), gas_density_init(1.0), decay_time(0.0), time(0.0),
 #endif
-                         sound_speed(0.0), coulomb_log(3.1), polytropic_constant(1.0), polytropic_exponent(4.0/3.0), center(), calc_sound_speed(true) {}
+                         sound_speed(0.0), coulomb_log(3.1), polytropic_constant(1.0), polytropic_exponent(4.0/3.0), gravitational_constant(1.0), center(), calc_sound_speed(true) {}
 
 #ifdef GALPY
     //! initial parameters for perturbation
@@ -232,6 +241,7 @@ public:
         coulomb_log = _input.coulomb_log.value;
         polytropic_constant = _input.polytropic_constant.value;
         polytropic_exponent = _input.polytropic_exponent.value;
+        gravitational_constant = _input.gravitational_constant.value;
         center.id = _input.center_id.value;
         if (sound_speed>0.0) calc_sound_speed = false;
         else calc_sound_speed = true;
@@ -247,6 +257,7 @@ public:
         coulomb_log = _input.coulomb_log.value;
         polytropic_constant = _input.polytropic_constant.value;
         polytropic_exponent = _input.polytropic_exponent.value;
+        gravitational_constant = _input.gravitational_constant.value;
         center.id = _input.center_id.value;
         if (sound_speed>0.0) calc_sound_speed = false;
         else calc_sound_speed = true;
@@ -318,7 +329,7 @@ public:
         auto& vel = _particle.vel;
         
         const Float PI = 4.0*atan(1.0);
-        Float G = ForceSoft::grav_const;
+        Float G = gravitational_constant;
         Float G2 = G*G;
         
         Float pos_rel[3] = {pos[0], pos[1], pos[2]};
@@ -347,7 +358,7 @@ public:
             Float pot_vel[3];
             galpy_manager->getSetVel(galpy_gaspot_index, pot_vel);
             vel_rel[0] += status->pcm.vel[0] - pot_vel[0];
-            vel_rel[2] += status->pcm.vel[1] - pot_vel[1], 
+            vel_rel[2] += status->pcm.vel[1] - pot_vel[1];
             vel_rel[3] += status->pcm.vel[2] - pot_vel[2];
         }
 
