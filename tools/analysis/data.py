@@ -41,7 +41,7 @@ class PeTarDataHeader():
             snapshot_format: string (ascii)
                 Data format of snapshot files: binary or ascii
             external_mode: string (none)
-                PeTar external mode (set in configure): galpy, none 
+                PeTar external mode (set in configure): galpy, agama, none 
                 If not none, this option indicates the pos_offset and vel_offset exists 
         """
         self.file_id = int(0)
@@ -67,7 +67,7 @@ class PeTarDataHeader():
             snapshot_format: string (ascii)
                 Data format of snapshot files: binary or ascii
             external_mode: string (none)
-                PeTar external mode (set in configure): galpy, none 
+                PeTar external mode (set in configure): galpy, agama, none 
                 If not none, this option indicates the pos_offset and vel_offset exists 
         """
         snapshot_format='ascii'
@@ -423,7 +423,7 @@ class HardParticle(BaseParticle):
         if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
         else: float_type = np.float64
 
-        keys = [['r_search',float_type], ['id',np.int64], ['mass_bk',np.int64], ['status',np.int64], ['r_in',float_type], ['r_out',float_type]]
+        keys = [['r_search',float_type], ['id',np.int64], ['mass_bk',np.float64], ['status',np.float64], ['r_in',float_type], ['r_out',float_type]]
 
         BaseParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
@@ -490,7 +490,7 @@ class Particle(HardParticle):
                PeTar interrupt mode (set in configure): base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
-               PeTar external mode (set in configure): galpy, none 
+               PeTar external mode (set in configure): galpy, agama, none 
                This option indicates whether the column of externa potential exist
             use_mpfrc: bool (False)
                If true, add three columns of pos_high indicating the high-precision parts of position
@@ -687,7 +687,7 @@ class Binary(SimpleParticle):
                PeTar interrupt mode (set in configure): base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
-               PeTar external mode (set in configure): galpy, none 
+               PeTar external mode (set in configure): galpy, agama, none 
                This option indicates whether the column of externa potential exist
             use_mpfrc: bool (False)
                If true, add three columns of pos_high indicating the high-precision parts of position

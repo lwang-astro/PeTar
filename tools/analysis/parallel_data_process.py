@@ -84,8 +84,12 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         start_time = time.time()
         core_read = result['core_read']    
         tsel = (core_read.time==header.time)
-        single_file_available = (os.path.getsize(file_path+'.single')>0)
-        binary_file_available = (os.path.getsize(file_path+'.binary')>0)
+        if (output_format=='npy'):
+            single_file_available = (os.path.getsize(file_path+'.single.npy')>0)
+            binary_file_available = (os.path.getsize(file_path+'.binary.npy')>0)
+        else:
+            single_file_available = (os.path.getsize(file_path+'.single')>0)
+            binary_file_available = (os.path.getsize(file_path+'.binary')>0)
 
         # check whether the core data for given time is available
         # if both core data and single/binary files available, set detect_single_binary to False
@@ -196,16 +200,15 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         p2 = Particle(**kwargs)
         binary = Binary(p1,p2,**kwargs)
 
-        if os.path.getsize(file_path+'.single')>0:
-            if (output_format=='ascii'): single.loadtxt(file_path+'.single')   
-            elif (output_format=='binary'): single.fromfile(file_path+'.single')
-            elif (output_format=='npy'): single.load(file_path+'.single')
-            else: raise ValueError('Output format %s is not supported, should be ascii, binary or npy' % output_format)
-        if os.path.getsize(file_path+'.binary')>0:
-            if (output_format=='ascii'): binary.loadtxt(file_path+'.binary')
-            elif (output_format=='binary'): binary.fromfile(file_path+'.binary')
-            elif (output_format=='npy'): binary.load(file_path+'.binary')
-            else: raise ValueError('Output format %s is not supported, should be ascii, binary or npy' % output_format)
+        if (output_format=='ascii'): single.loadtxt(file_path+'.single')   
+        elif (output_format=='binary'): single.fromfile(file_path+'.single')
+        elif (output_format=='npy'): single.load(file_path+'.single.npy')
+        else: raise ValueError('Output format %s is not supported, should be ascii, binary or npy' % output_format)
+
+        if (output_format=='ascii'): binary.loadtxt(file_path+'.binary')
+        elif (output_format=='binary'): binary.fromfile(file_path+'.binary')
+        elif (output_format=='npy'): binary.load(file_path+'.binary.npy')
+        else: raise ValueError('Output format %s is not supported, should be ascii, binary or npy' % output_format)
 
         time_profile['read'] += time.time() - start_time
 

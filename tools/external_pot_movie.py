@@ -81,9 +81,9 @@ if __name__ == '__main__':
     kwargs=dict()
 
     def usage():
-        print("A tool to generate a movie for the evolution of galpy potential")
-        print("Need to use petar.galpy first to generate snapshots of potential map")
-        print("Usage: petar.galpy.pot.movie [options] [petar.galpy parameter file]")
+        print("A tool to generate a movie for the evolution of external potential")
+        print("Need to use petar.external first to generate snapshots of potential map")
+        print("Usage: petar.external.pot.movie [options] [petar.external parameter file]")
         print("Options:")
         print("  -h(--help): help")
         print("  -f [F]: output frame FPS: ",fps)

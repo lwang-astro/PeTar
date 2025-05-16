@@ -140,7 +140,7 @@ def printSpliter():
 def listPot():
     printPotTitle()
     printSpliter()
-    pot_list=[p for p in dir(galpy.potential)] 
+    pot_list = [p for p in dir(galpy.potential) if p.endswith('Potential') and 'Wrapper' not in p]
     for pot_name in pot_list:
         pot_module, pot_instance = getPotInstance(pot_name)
         if (pot_instance!=None):

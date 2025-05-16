@@ -88,6 +88,9 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #ifdef BSE_BASE
 #include"rand_interface.hpp"
 #endif
+#ifdef AGAMA
+#include "agama_interface.h"
+#endif
 
 //! IO parameters for Petar
 class IOParamsPeTar{
@@ -126,11 +129,11 @@ public:
 
     IOParamsPeTar(): input_par_store(), 
                      theta            (input_par_store, 0.3,  "T",  "Particle-tree opening angle theta"),
-                     n_leaf_limit     (input_par_store, 20,   "number-leaf-limit", "Particle-tree leaf number limit", "Optimal value should be slightly >= 11 + N_bin_sample (20)"),
+                     n_leaf_limit     (input_par_store, 20,   "number-leaf-limit", "Particle-tree leaf number limit; Optimal value should be slightly >= artificial particle number (tidal tensor 8 + anti-force sample 3) + 2 (binary member) + 1 (binary c.m.)"),
 #ifdef USE__AVX512
-                     n_group_limit    (input_par_store, 1024, "number-group-limit", "Particle-tree group number limit", "Optimized for x86-AVX512 (1024)"),    
+                     n_group_limit    (input_par_store, 1024, "number-group-limit", "Particle-tree group number limit; Optimal value for x86-AVX512 is 1024"),    
 #else
-                     n_group_limit    (input_par_store, 512,  "number-group-limit", "Particle-tree group number limit", "Optimized for x86-AVX2 (512)"),
+                     n_group_limit    (input_par_store, 512,  "number-group-limit", "Particle-tree group number limit; Optimal value for x86-AVX2 is 512"),
 #endif
                      n_smp_ave        (input_par_store, 100,  "number-sample-average", "Average target number of sample particles per process"),
                      n_bin            (input_par_store, 0,    "b", "Number of primordial binaries (n_bin) for initialization (assuming the binaries' IDs are 1,2*n_bin)"),
@@ -138,14 +141,14 @@ public:
                      unit_set         (input_par_store, 0,    "u", "Input data unit; 0: based on the value of G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr, modify G to fit this unit set"),
                      gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant, if -u 1, G = 0.00449830997959438 pc^3/(Msun*Myr^2)"),
                      n_glb            (input_par_store, 100000, "n", "Total number of particles, used only when the input data filename is __Plummer"),
-                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft); = 0: without --nstep-dt-soft-kepler, dt_soft = 0.1*r_out/sigma_1D, where sigma_1D is 1D half-mass radius velocity dispersion; = 0: with '--nstep-dt-soft-kepler nstep', dt_soft = P(r_in)/nstep"),
-                     r_out            (input_par_store, 0.0,  "r", "Outer changeover radius (r_out); = 0: without -s, r_out = 0.1 GM/[N^(1/3) sigma_3D^2], where sigma_3D is 3D half-mass radius velocity dispersion; = 0: with '-s dt_soft', r_out = 10*dt_soft*sigma_1D"),
+                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft); = 0: without --nstep-dt-soft-kepler, dt_soft = 0.1*r_out/sigma_1D, where sigma_1D is 1D half-mass radius velocity dispersion; = 0: with '--nstep-dt-soft-kepler nstep', dt_soft = P(r_in)/nstep; > 0: custom dt_soft value"),
+                     r_out            (input_par_store, 0.0,  "r", "Outer changeover radius (r_out); = 0: without -s, r_out = 0.1 GM/[N^(1/3) sigma_3D^2], where sigma_3D is 3D half-mass radius velocity dispersion; = 0: with '-s dt_soft', r_out = 10*dt_soft*sigma_1D; > 0: custom r_out value"),
                      r_in_over_out    (input_par_store, 0.1,  "r-ratio", "Ratio between inner (r_in) and outer (r_out) changeover radii"),
                      nstep_dt_soft_kepler(input_par_store, 0.0, "nstep-dt-soft-kepler", "Determines the dt_soft by P(r_in)/nstep; P(r_in) is the binary period with the semi-major axis of r_in; nstep is the argument of this option (e.g., 32.0)", "not used"),
                      search_vel_factor (input_par_store, 3.0,  "search-vel-factor", "Neighbor search coefficient for velocity check (v*dt)"),
                      search_peri_factor(input_par_store, 1.5, "search-peri-factor", "Neighbor search coefficient for periapsis check"),
-                     r_search_min     (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters","auto"),
-                     r_escape         (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Object escape radius criterion; 0: no escaper removal; <0: remove objects when r>-r_escape; >0: remove objects when r>r_escape and energy>0"),
+                     r_search_min     (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters; = 0: auto-determine by max(search-vel-factor*sigma_1D*dt_soft + rout, 1.2 r_out); > 0: custom search radius value"),
+                     r_escape         (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Object escape radius criterion; = 0: no escaper removal; < 0: remove objects when r>-r_escape; > 0: remove objects when r>r_escape and energy>0"),
                      dt_snap          (input_par_store, 1.0,  "o", "Output time interval for particle dataset snapshots"),
                      data_format      (input_par_store, 1,    "i", "Data file reading and writing format; 0: read and write in BINARY; 1: read and write in ASCII; 2: read in ASCII, write in BINARY; 3: read in BINARY, write in ASCII"),
                      write_style      (input_par_store, 1,    "w", "Data file writing style; 0: no output; 1: write all files separately; 2. write snapshots in status files in one line per step (no MPI support); 3. write files except snapshots"),
@@ -440,6 +443,9 @@ public:
 #ifdef GALPY
     IOParamsGalpy galpy_parameters;
 #endif
+#ifdef AGAMA
+    IOParamsAgama agama_parameters;
+#endif
 #ifdef EXTERNAL_HARD
     IOParamsExternalHard external_hard_parameters;
 #endif
@@ -493,6 +499,9 @@ public:
 #ifdef GALPY
     GalpyManager galpy_manager;
 #endif
+#ifdef AGAMA
+    AgamaManager agama_manager;
+#endif
 
     // hard integrator
     HardManager hard_manager;
@@ -538,6 +547,9 @@ public:
 #ifdef GALPY
         galpy_parameters(),
 #endif
+#ifdef AGAMA
+        agama_parameters(),
+#endif
 #ifdef EXTERNAL_HARD
         external_hard_parameters(),
 #endif
@@ -556,6 +568,9 @@ public:
 #endif
 #ifdef GALPY
         galpy_manager(),
+#endif
+#ifdef AGAMA
+        agama_manager(),
 #endif
         hard_manager(), system_hard_one_cluster(), system_hard_isolated(), 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
@@ -851,7 +866,9 @@ public:
 
         galpy_manager.resetPotAcc();
         galpy_manager.calcMovePotAccFromPot(stat.time, &stat.pcm.pos[0]);
+#endif
 
+#if (defined GALPY || defined AGAMA)
         PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
 #pragma omp parallel for
         for (int i=0; i<n_loc_all; i++) {
@@ -865,7 +882,11 @@ public:
             auto& pos_origin = pi.pos;
             PS::F64vec pos_cluster = pi.pos - stat.pcm.pos;
 #endif
+#ifdef GALPY
             galpy_manager.calcAccPot(&acc.x, pot, stat.time, hard_parameters.gravitational_constant.value*pi.mass, &pos_origin[0], &pos_cluster[0]);
+#elif AGAMA
+            agama_manager.calcAccPot(&acc.x, pot, stat.time, hard_parameters.gravitational_constant.value*pi.mass, &pos_origin[0], &pos_cluster[0]);
+#endif
             assert(!std::isinf(acc[0]));
             assert(!std::isnan(acc[0]));
             assert(!std::isinf(pot));
@@ -879,7 +900,7 @@ public:
             pi.pot_ext = pot;
 #endif
         }
-#endif //GALPY
+#endif //GALPY||AGAMA
 
 #ifdef EXTERNAL_HARD
 #ifndef GALPY
@@ -902,7 +923,7 @@ public:
         profile.other.start();
 #endif
 
-#ifdef GALPY
+#if (defined GALPY || defined AGAMA)
         PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
 
 #pragma omp parallel for
@@ -939,7 +960,11 @@ public:
             pos_cluster_box[5][2] -= dr;
 
             for (int k=0; k<6; k++) {
+#ifdef GALPY            
                 galpy_manager.calcAccPot(&(acc_box[k].x), pot, stat.time, input_parameters.gravitational_constant.value*pi.mass, &pos_origin_box[k][0], &pos_cluster_box[k][0]);
+#elif AGAMA
+                agama_manager.calcAccPot(&(acc_box[k].x), pot, stat.time, input_parameters.gravitational_constant.value*pi.mass, &pos_origin_box[k][0], &pos_cluster_box[k][0]);
+#endif
                 acc2_box[k] = acc_box[k]*acc_box[k];
             }
                 
@@ -961,13 +986,17 @@ public:
     void correctPtclVelCM(const PS::F64& _dt) {
         PS::F64vec dv=PS::F64vec(0.0);
  
-#ifdef GALPY
+#if (defined GALPY || defined AGAMA)
         PS::F64vec acc;
         PS::F64 pot;
         // evaluate center of mass acceleration
         PS::F64vec pos_zero=PS::F64vec(0.0);
         // set zero mass to avoid duplicate anti force to potential set
+#ifdef GALPY
         galpy_manager.calcAccPot(&acc[0], pot, stat.time, 0, &stat.pcm.pos[0], &pos_zero[0]);
+#elif AGAMA
+        agama_manager.calcAccPot(&acc[0], pot, stat.time, 0, &stat.pcm.pos[0], &pos_zero[0]);
+#endif
         dv = acc*_dt;
 #endif        
 
@@ -2192,6 +2221,9 @@ public:
 #ifdef GALPY
         GalpyManager::printReference(fout);
 #endif
+#ifdef AGAMA
+        AgamaManager::printReference(fout);
+#endif
         fout<<" Copyright (C) 2017\n"
             <<"    Long Wang, Masaki Iwasawa, Keigo Nitadori, Junichiro Makino and many others\n";
         fout<<"====================================="
@@ -2234,6 +2266,9 @@ public:
 #ifdef GALPY
         fout<<"Use external potential: Galpy\n";
 #endif 
+#ifdef AGAMA
+        fout<<"Use external potential: Agama\n";
+#endif
 
 #ifdef KDKDK_2ND
         fout<<"Use 2nd-order KDKDK mode for tree step\n";
@@ -2335,6 +2370,31 @@ public:
 
         //assert(initial_fdps_flag);
         assert(!read_parameters_flag);
+
+        // Check whether all options are defined
+        std::vector<IOParamsContainer*> all_pars;
+        all_pars.push_back(&input_parameters.input_par_store);
+        all_pars.push_back(&hard_parameters.input_par_store);
+#ifdef BSE_BASE
+        all_pars.push_back(&bse_parameters.input_par_store);
+        all_pars.push_back(&rand_parameters.input_par_store);
+#endif
+#ifdef GALPY
+        all_pars.push_back(&galpy_parameters.input_par_store);
+#endif
+#ifdef EXTERNAL_HARD
+        all_pars.push_back(&external_hard_parameters.input_par_store);
+#endif
+#ifdef AGAMA
+        all_pars.push_back(&agama_parameters.input_par_store);
+#endif
+        // Check whether all options are defined
+        std::vector<std::string> known_options;
+        known_options.push_back("help");
+        known_options.push_back("h");
+        known_options.push_back("disable-print-info");
+        FindUndefinedOptions(all_pars, argc, argv, &known_options);
+
         // reading parameters
         opterr = 0;
         read_parameters_flag = true;
@@ -2361,6 +2421,11 @@ public:
         if (my_rank==0) external_hard_parameters.print_flag=true;
         else external_hard_parameters.print_flag=false;
         external_hard_parameters.read(argc,argv,false);
+#endif
+#ifdef AGAMA
+        if (my_rank==0) agama_parameters.print_flag=true;
+        else agama_parameters.print_flag=false;
+        agama_parameters.read(argc,argv,false);
 #endif
 
         // help case, return directly
@@ -2830,11 +2895,18 @@ public:
         if (input_parameters.unit_set.value==1) {
             input_parameters.gravitational_constant.value = G_ASTRO;
             hard_parameters.gravitational_constant.value = G_ASTRO;
+#ifdef EXTERNAL_HARD
+            external_hard_parameters.gravitational_constant.value = G_ASTRO;
+#endif
 #ifdef BSE_BASE
             bse_parameters.tscale.value = 1.0; // Myr
             bse_parameters.rscale.value = PC_TO_RSUN;
             bse_parameters.mscale.value = 1.0; // Msun
             bse_parameters.vscale.value = PCMYR_TO_KMS;
+#endif
+#ifdef AGAMA
+            agama_parameters.rscale.value = 0.001; // kpc
+            agama_parameters.vscale.value = PCMYR_TO_KMS;
 #endif
             if(print_flag) {
                 std::cout<<"----- Unit set 1: Msun, pc, Myr -----\n"
@@ -2845,6 +2917,11 @@ public:
                          <<" mscale = "<<bse_parameters.mscale.value<<"  Msun / Msun\n"
                          <<" rscale = "<<bse_parameters.rscale.value<<"  Rsun / pc\n"
                          <<" vscale = "<<bse_parameters.vscale.value<<"  [km/s] / [pc/Myr]\n";
+#endif
+#ifdef AGAMA
+                std::cout<<"----- Unit conversion for Agama ----- \n"
+                         <<" rscale = "<<agama_parameters.rscale.value<<"  kpc / pc\n"
+                         <<" vscale = "<<agama_parameters.vscale.value<<"  [km/s] / [pc/Myr]\n";
 #endif
 
             }
@@ -3002,7 +3079,7 @@ public:
         }
 
         // if r_search_min is not defined, calculate by search_vel_factor*velocity_dispersion*tree_time_step + r_out
-        if (r_search_min==0.0) r_search_min = search_vel_factor*vel_disp*dt_soft + r_out;
+        if (r_search_min==0.0) r_search_min = std::max(search_vel_factor*vel_disp*dt_soft + r_out, 1.2*r_out);
         // if r_search_max is not defined, calcualte by 5*r_out
 //        if (r_search_max==0.0) r_search_max = 5*r_out;
         // calculate v_max based on r_search_max, tree time step and search_vel_factor
@@ -3113,6 +3190,9 @@ public:
 #ifdef GALPY
         std::string galpy_conf_filename = input_parameters.fname_inp.value+".galpy";
         galpy_manager.initial(galpy_parameters, stat.time, galpy_conf_filename, restart_flag, print_flag);
+#endif
+#ifdef AGAMA
+        agama_manager.initial(agama_parameters, stat.time, print_flag);
 #endif
 
         // initial tree step manager
@@ -3236,8 +3316,20 @@ public:
             fclose(fpar_out);
 #endif
 
+#ifdef AGAMA
+            // save agama parameters
+            std::string fagama_par = input_parameters.fname_par.value + ".agama";
+            if (print_flag) std::cout<<"Save agama_parameters to file "<<fagama_par<<std::endl;
+            if( (fpar_out = fopen(fagama_par.c_str(),"w")) == NULL) {
+                fprintf(stderr,"Error: Cannot open file %s.\n", fagama_par.c_str());
+                abort();
+            }
+            agama_parameters.input_par_store.writeAscii(fpar_out);
+            fclose(fpar_out);
+#endif
+
 #ifdef EXTERNAL_HARD
-            // save galpy parameters
+            // save exthard parameters
             std::string fexthard_par = input_parameters.fname_par.value + ".exthard";
             if (print_flag) std::cout<<"Save external_hard_parameters to file "<<fexthard_par<<std::endl;
             if( (fpar_out = fopen(fexthard_par.c_str(),"w")) == NULL) {

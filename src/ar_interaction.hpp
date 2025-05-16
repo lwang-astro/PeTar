@@ -14,7 +14,7 @@
 #include "two_body_tide.hpp"
 #include "gw_kick.hpp"
 #endif
-#include "external_force.hpp"
+#include "external_hard.hpp"
 
 //! AR interaction clas
 class ARInteraction{
