@@ -95,8 +95,8 @@ public:
 #endif
                     gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant", NULL, false),
                     eps              (input_par_store, 0.0,  "soft-eps", "Softening epsilon"),
-                    r_group          (input_par_store,-1.0,  "r-group", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.)","0.8*r_in"),
-                    r_search_group   (input_par_store,-1.0,  "r-search-group", "The radial criterion for detecting multiple group candidates", "1.0*r_in"),
+                    r_group          (input_par_store,-1.0,  "r-group", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.); = -1: auto-determine by 0.8*r_in; = 0: switch off SDAR; > 0: custom criterion value"),
+                    r_search_group   (input_par_store,-1.0,  "r-search-group", "The radial criterion for detecting multiple group candidates; = -1: auto-determine by 1.0*r_in; = 0: switch off SDAR; > 0: custom criterion value"),
                     n_step_per_orbit (input_par_store, 8,    "tt-nstep", "Number of steps per slow-down binary orbits (period/dt_soft) for isolated binaries; also the maximum criterion for activating tidal tensor method"),
                     tidal_tensor_switcher(input_par_store, 1,"tt-switch", "Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0: off, 1: on"),
 #ifdef ORBIT_SAMPLING
@@ -200,13 +200,13 @@ public:
                         r_group.value = atof(optarg);
                         if(print_flag) r_group.print(std::cout);
                         opt_used += 2;
-                        assert(r_group.value>=0.0);
+                        //assert(r_group.value>=0.0);
                         break;
                     case 4:
                         r_search_group.value = atof(optarg);
                         if(print_flag) r_search_group.print(std::cout);
                         opt_used += 2;
-                        assert(r_search_group.value>=0.0);
+                        //assert(r_search_group.value>=0.0);
                         break;
                     case 5:
                         n_step_per_orbit.value = atof(optarg);
@@ -511,6 +511,19 @@ public:
 
         // link global status 
         status = &_stat;
+
+        // print parameters
+        if(_print_flag) {
+            std::cout<<"----- Hard Parameter list: -----\n";
+            std::cout<<" Mean search group radius:         = "<<_input.r_search_group.value<<std::endl
+                     <<" Mean group radius                 = "<<_input.r_group.value       <<std::endl
+                     <<" Hermite timestep coefficient 4th  = "<<_input.eta.value <<std::endl
+                     <<" Hermite timestep coefficient init = "<<_input.eta_init.value <<std::endl
+                     <<" Hermite maximum timestep          = "<<_input.dt_max_hermite.value <<std::endl
+                     <<" AR slowdown maximum timescale     = "<<ar_manager.slowdown_timescale_max<<std::endl
+                     <<" AR slowdown perturbation criterion= "<<ar_manager.slowdown_pert_ratio_ref<<std::endl
+                     <<" Artificial particle ID offset     = "<<ap_manager.id_offset<<std::endl;
+        }
 
         checkParams();
     }    

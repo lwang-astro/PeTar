@@ -346,6 +346,8 @@ static void FindUndefinedOptions(std::vector<IOParamsContainer*> io_par_list, co
             }
             else if (arg[0]=='-') {
                 arg = arg.substr(1);
+                // exclude negative number arg with '-'
+                if (arg[0]>='0' && arg[0]<='9') continue;
             }
             bool found = false;
             if (known_options != NULL) {
