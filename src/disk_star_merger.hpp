@@ -19,9 +19,11 @@ public:
     IOParams<double> stellar_radius_power_index; //!< stellar radius power index
     IOParams<double> stellar_radius_scale; //!< stellar radius scale
     IOParams<double> merger_time_delay; //!< time delay for merger to increase mass and change radius
+    IOParams<double> initial_mass; //!< initial mass of star seed
     IOParams<double> target_mass; //!< equilibrium mass
     IOParams<double> mass_growth_factor; //!< mass growth factor (c) for increasing mass to equlibrium (dM/dt = c M^2)
     IOParams<double> mass_loss_rate; //!< mass decrease rate dM/dt for decreasing mass to equlibrium 
+    IOParams<long long int> redistribute_star_mode; //!< redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity to opposite side of the center
 
     bool print_flag; //!< print flag
     //! Constructor
@@ -30,9 +32,11 @@ public:
                               stellar_radius_power_index(input_par_store, 0.6, "stellar-radius-power", "stellar radius power index 'n', rs = s M^n"),
                               stellar_radius_scale(input_par_store, 0.0046, "stellar-radius-scale", "stellar radius scale 's', rs = s M^n"),
                               merger_time_delay(input_par_store, 0.0, "merger-time-delay", "time delay for merger to increase mass"),
+                              initial_mass(input_par_store, 10.0, "initial-mass", "initial mass for star approaching equilibrium"),
                               target_mass(input_par_store, 300.0, "target-mass", "mass for star approaching equilibrium"),
                               mass_growth_factor(input_par_store, 0.0, "mass-growth-factor", "mass growth factor (c) for increasing mass to equlibrium (dM/dt = c M^2)"),
                               mass_loss_rate(input_par_store, 0.0, "mass-loss-rate", "mass loss rate dM/dt for decreasing mass to equlibrium"), 
+                              redistribute_star_mode(input_par_store, 1, "redistribute-star-mode", "redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity to opposite side of the center"),
                               print_flag(false) {}
 
     //! reading parameters from GNU option API
@@ -49,9 +53,11 @@ public:
             {stellar_radius_power_index.key, required_argument, &merger_flag, 1},  
             {stellar_radius_scale.key, required_argument, &merger_flag, 2},
             {merger_time_delay.key, required_argument, &merger_flag, 3},  
-            {target_mass.key, required_argument, &merger_flag, 4},
-            {mass_growth_factor.key, required_argument, &merger_flag, 5},
-            {mass_loss_rate.key, required_argument, &merger_flag, 6},
+            {initial_mass.key, required_argument, &merger_flag, 4},
+            {target_mass.key, required_argument, &merger_flag, 5},
+            {mass_growth_factor.key, required_argument, &merger_flag, 6},
+            {mass_loss_rate.key, required_argument, &merger_flag, 7},
+            {redistribute_star_mode.key, required_argument, &merger_flag, 8},
             {"help",      no_argument,       0, 'h'},
             {0,0,0,0}
         };
@@ -85,18 +91,28 @@ public:
                     opt_used+=2;
                     break;
                 case 4:
+                    initial_mass.value = atof(optarg);
+                    if(print_flag) initial_mass.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 5:
                     target_mass.value = atof(optarg);
                     if(print_flag) target_mass.print(std::cout);
                     opt_used+=2;
                     break;
-                case 5:
+                case 6:
                     mass_growth_factor.value = atof(optarg);
                     if(print_flag) mass_growth_factor.print(std::cout);
                     opt_used+=2;
                     break;
-                case 6:
+                case 7:
                     mass_loss_rate.value = atof(optarg);
                     if(print_flag) mass_loss_rate.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 8:
+                    redistribute_star_mode.value = atoi(optarg);
+                    if(print_flag) redistribute_star_mode.print(std::cout);
                     opt_used+=2;
                     break;
                 default:
@@ -129,12 +145,14 @@ public:
     Float stellar_radius_power_index; //!< radius amplifier
     Float stellar_radius_scale; //!< radius scale
     Float merger_time_delay; //!< time delay for merger to increase mass
+    Float initial_mass; //!< initial mass
     Float target_mass; //!< equilibrium mass
     Float mass_growth_factor; //!< mass growth factor (c) for increasing mass to equlibrium (dM/dt = c M^2)
     Float mass_loss_rate; //!< mass decrease rate dM/dt for decreasing mass to equlibrium
+    int redistribute_star_mode; //!< redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity to opposite side of the center
     
     //! Constructor
-    DiskStarMergerManager(): merger_mass_loss_rate(0.0), stellar_radius_power_index(0.6), stellar_radius_scale(0.0046), merger_time_delay(0.0), target_mass(0.0), mass_growth_factor(0.0), mass_loss_rate(0.0) {}
+    DiskStarMergerManager(): merger_mass_loss_rate(0.0), stellar_radius_power_index(0.6), stellar_radius_scale(0.0046), merger_time_delay(0.0), target_mass(0.0), mass_growth_factor(0.0), mass_loss_rate(0.0), redistribute_star_mode(1) {}
 
     //! (Necessary) check whether publicly initialized parameters are correctly set
     /*! \return true: all parmeters are correct. In this case no parameters, return true;
@@ -144,9 +162,11 @@ public:
         assert(stellar_radius_power_index>=0.0);
         assert(stellar_radius_scale>=0.0);
         assert(merger_time_delay>=0.0);
+        assert(initial_mass>=0.0);
         assert(target_mass>=0.0);
         assert(mass_growth_factor>=0.0);
         assert(mass_loss_rate>=0.0);
+        assert(redistribute_star_mode>=0 && redistribute_star_mode<=1);
         return true;
     }
 
@@ -156,9 +176,11 @@ public:
              <<"stellar_radius_power_index : "<<stellar_radius_power_index<<std::endl
              <<"stellar_radius_scale : "<<stellar_radius_scale<<std::endl
              <<"merger_time_delay : "<<merger_time_delay<<std::endl
+             <<"initial_mass : "<<initial_mass<<std::endl
              <<"target_mass : "<<target_mass<<std::endl
              <<"mass_growth_factor : "<<mass_growth_factor<<std::endl
-             <<"mass_loss_rate : "<<mass_loss_rate<<std::endl;
+             <<"mass_loss_rate : "<<mass_loss_rate<<std::endl
+             <<"redistribute_star_mode : "<<redistribute_star_mode<<std::endl;
     }
 
     //! initial parameters for disk star mergers
@@ -171,9 +193,11 @@ public:
         stellar_radius_power_index = _input.stellar_radius_power_index.value;
         stellar_radius_scale = _input.stellar_radius_scale.value;
         merger_time_delay = _input.merger_time_delay.value;
+        initial_mass = _input.initial_mass.value;
         target_mass = _input.target_mass.value;
         mass_growth_factor = _input.mass_growth_factor.value;
         mass_loss_rate = _input.mass_loss_rate.value;
+        redistribute_star_mode = _input.redistribute_star_mode.value;
     }
 
     //! calcMergerProperties
@@ -199,6 +223,8 @@ public:
         for (int k=0; k<3; k++) {
             pm->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
             pm->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
+            p0->pos[k] = pm->pos[k]*(1+1e-8)+1e-12;
+            p0->vel[k] = pm->vel[k]*(1+1e-8)+1e-12;
         }
         
         // only increase mass and change radius after time delay
@@ -221,6 +247,9 @@ public:
 
         pm->star.last_merger_time = time;
         pm->star.last_mass_change_time = time;
+        p0->star.last_mass_change_time = time;
+        p0->star.n_merger_star = 0;
+        p0->star.n_merger_bh = 0;
     }
 
     //! calculate mass change
@@ -270,6 +299,40 @@ public:
         return 0;
     }
     
+
+    //! redistribute star position and velocity
+    /*!
+        redistribute star position and velocity to opposite side of the center     
+        @param[in,out] p: particle to redistribute
+        @param[in] center: center particle
+        @return 0: no change; 1: modified position and velocity
+    */
+    template <class TParticle>
+    int redistributeStar(TParticle* p, TParticle* center) {
+        // if type is star with growth, increase mass    
+        if (p->star.type>=1 && redistribute_star_mode == 1) {
+            Float pos[3];
+            Float vel[3];
+            for (int k=0; k<3; k++) {
+                pos[k] = p->pos[k] - center->pos[k];
+                vel[k] = p->vel[k] - center->vel[k];
+            }
+            Float r = std::sqrt(pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2]);
+            if (r>0) {
+                for (int k=0; k<3; k++) {
+                    p->pos[k] = center->pos[k] - pos[k];
+                    p->vel[k] = center->vel[k] - vel[k];
+                }
+                p->star.type = 2;
+                p->mass = initial_mass;
+                p->dm = 0.0;
+                p->radius = stellar_radius_scale * std::pow(initial_mass, stellar_radius_power_index);
+                return 1;
+            }
+        }
+        return 0;
+    } 
+
 };
 
 //! class for disk star merger parameters of individual stars

@@ -2040,8 +2040,15 @@ public:
 #endif                    
                 }
                 // Registered removed particles have already done energy correction
-                else if (pi.mass==0.0&&pi.group_data.artificial.isUnused()) 
+                else if (pi.mass==0.0&&pi.group_data.artificial.isUnused()) {
+#ifdef DISK_STAR_MERGER
+                    int modify_flag = hard_manager.ar_manager.interaction.disk_star_merger_manager.redistributeStar(&pi, &hard_manager.h4_manager.interaction.ext_force.center);
+                    if (modify_flag == 1) pi.group_data.artificial.setParticleTypeToSingle(); 
+                    else remove_list_thx[ith].push_back(i);
+#else
                     remove_list_thx[ith].push_back(i);
+#endif                
+                }
             }
         }
 
