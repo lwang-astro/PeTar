@@ -2042,7 +2042,7 @@ public:
                 // Registered removed particles have already done energy correction
                 else if (pi.mass==0.0&&pi.group_data.artificial.isUnused()) {
 #ifdef DISK_STAR_MERGER
-                    int modify_flag = hard_manager.ar_manager.interaction.disk_star_merger_manager.redistributeStar(&pi, &hard_manager.h4_manager.interaction.ext_force.center);
+                    int modify_flag = hard_manager.ar_manager.interaction.disk_star_merger_manager.redistributeStar(&pi, &hard_manager.h4_manager.interaction.ext_force.center, &system_soft[0], stat.n_real_loc);
                     if (modify_flag == 1) pi.group_data.artificial.setParticleTypeToSingle(); 
                     else remove_list_thx[ith].push_back(i);
 #else

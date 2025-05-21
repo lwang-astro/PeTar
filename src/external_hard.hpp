@@ -486,11 +486,36 @@ public:
      */
     bool checkParams() {
         ASSERT(mode>=0 && mode<=2);
+        if (mode>0) {
+            ASSERT(sound_speed>=0.0);
+#ifdef GALPY        
+            ASSERT(galpy_gaspot_index>=0);
+            ASSERT(galpy_manager!=NULL);
+            ASSERT(status!=NULL);
+#endif
+        }
         return true;
     }    
 
     //! print parameters
     void print(std::ostream & _fout) const{
+        _fout<<"----- External perturbation for hard integration parameters -----\n"
+             <<"external mode: "<<mode<<std::endl
+             <<"sound speed: "<<sound_speed<<std::endl
+             <<"coulomb log: "<<coulomb_log<<std::endl
+             <<"polytropic constant: "<<polytropic_constant<<std::endl
+             <<"polytropic exponent: "<<polytropic_exponent<<std::endl
+             <<"center id: "<<center.id<<std::endl
+             <<"center mass: "<<center.mass<<std::endl;
+#ifdef GALPY
+        _fout<<"galpy gaspot index: "<<galpy_gaspot_index<<std::endl
+             <<"scale density: "<<scale_density<<std::endl;
+#else
+        _fout<<"gas density init: "<<gas_density_init<<std::endl
+             <<"decay time: "<<decay_time<<std::endl;
+#endif
+        _fout<<"gravitational constant: "<<gravitational_constant<<std::endl
+             <<"----- Finish reading input options of external perturbation for hard integration -----\n";  
     }    
 
     //! write class data to file with binary format

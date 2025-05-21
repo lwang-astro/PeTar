@@ -181,7 +181,7 @@ public:
         star.initial(0.0);
 #endif
 #ifdef DISK_STAR_MERGER
-        star.initial(0);
+        star.initial(StarType::none);
 #endif
 #endif
     }

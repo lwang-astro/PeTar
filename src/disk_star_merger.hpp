@@ -8,6 +8,9 @@
 #include <cassert>
 #include "Common/Float.h"
 
+//! Class for managing mergers
+enum class StarType:int {none = -1, smbh = 0, bh = 1, star = 2, seed = 3, star_remnant = 4, bh_remnant = 5};
+
 //! IO parameters manager for external perturbation in hard integration
 /*! For initializing the COMMON block variables from the commander option.
   The description of each parameter is also provided.
@@ -36,7 +39,7 @@ public:
                               target_mass(input_par_store, 300.0, "target-mass", "mass for star approaching equilibrium"),
                               mass_growth_factor(input_par_store, 0.0, "mass-growth-factor", "mass growth factor (c) for increasing mass to equlibrium (dM/dt = c M^2)"),
                               mass_loss_rate(input_par_store, 0.0, "mass-loss-rate", "mass loss rate dM/dt for decreasing mass to equlibrium"), 
-                              redistribute_star_mode(input_par_store, 1, "redistribute-star-mode", "redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity to opposite side of the center"),
+                              redistribute_star_mode(input_par_store, 1, "redistribute-star-mode", "redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity to opposite side of the center; 2: redistribute star by choosing next type 3 star"),
                               print_flag(false) {}
 
     //! reading parameters from GNU option API
@@ -138,7 +141,6 @@ public:
     }
 };
 
-//! Class for managing mergers
 class DiskStarMergerManager {
 public:
     Float merger_mass_loss_rate; //!< mass loss rate
@@ -166,7 +168,7 @@ public:
         assert(target_mass>=0.0);
         assert(mass_growth_factor>=0.0);
         assert(mass_loss_rate>=0.0);
-        assert(redistribute_star_mode>=0 && redistribute_star_mode<=1);
+        assert(redistribute_star_mode>=0 && redistribute_star_mode<=2);
         return true;
     }
 
@@ -210,7 +212,15 @@ public:
     void calcMergerProperties(TParticle* p1, TParticle* p2, const Float& time) {
 
         TParticle *pm, *p0; // set final merger to star or first BH
-        if (p1->star.type==0 && p2->star.type!=0) {
+        if (p1->star.getType()==StarType::bh && p2->star.getType()==StarType::star) {
+            pm = p2;
+            p0 = p1;
+        }
+        else if(p1->star.getType()==StarType::seed && p2->star.getType()<=StarType::bh) {
+            pm = p2;
+            p0 = p1;
+        }
+        else if(p1->star.getType()!=StarType::smbh && p2->star.getType()==StarType::smbh) {
             pm = p2;
             p0 = p1;
         }
@@ -239,10 +249,14 @@ public:
         p0->mass = 0.0;
         p0->radius = 0.0;
 
-        if (p0->star.type == 0) pm->star.n_merger_bh++;
-        else {
+        if (p0->star.getType() == StarType::bh) {
+            pm->star.n_merger_bh++;
+            p0->star.setType(StarType::bh_remnant);
+        }
+        else if (p0->star.getType() == StarType::star) {
             pm->star.n_merger_star++;
             pm->star.n_merger_bh += p0->star.n_merger_bh;
+            p0->star.setType(StarType::star_remnant);
         }
 
         pm->star.last_merger_time = time;
@@ -264,36 +278,35 @@ public:
         */
     template <class TParticle>
     int calcMassChange(TParticle* p, const Float& time) {
-        // if type is star with growth, increase mass    
-        if (p->star.type==2 && mass_growth_factor>0) {
+        // if type is star, evolve mass to equilibrium mass    
+        if (p->star.getType()==StarType::star) {
             Float dt = time - p->star.last_mass_change_time;
-            if (dt>0 && p->mass < target_mass) {
-                Float new_mass = p->mass + mass_growth_factor*p->mass*p->mass*dt;
-                if (new_mass>target_mass) {
-                    new_mass = target_mass;
+            if (dt>0) {
+                // increase mass
+                if (p->mass < target_mass && mass_growth_factor > 0) {
+                    Float new_mass = p->mass + mass_growth_factor*p->mass*p->mass*dt;
+                    if (new_mass > target_mass) {
+                        new_mass = target_mass;
+                    }
+                    p->dm += new_mass - p->mass;
+                    p->mass = new_mass;
+                    p->radius = stellar_radius_scale * std::pow(new_mass, stellar_radius_power_index);
+                    p->star.last_mass_change_time = time;
+                    return 1;
                 }
-                p->dm += new_mass - p->mass;
-                p->mass = new_mass;
-                p->radius = stellar_radius_scale * std::pow(new_mass, stellar_radius_power_index);
-                p->star.last_mass_change_time = time;
-
-                return 1;
-            }
-        }
-        // if mass > target mass, decrease mass
-        if (p->star.type>=1 && mass_loss_rate>0) {
-            if (p->mass > target_mass) {
-                Float dt = time - p->star.last_mass_change_time;
-                Float new_mass = p->mass - mass_loss_rate * dt;
-                if (new_mass<target_mass) {
-                    new_mass = target_mass;
+                // decrease mass
+                else if (p->mass > target_mass && mass_loss_rate > 0) {
+                    Float new_mass = p->mass - mass_loss_rate * dt;
+                    if (new_mass < target_mass) {
+                        new_mass = target_mass;
+                    }
+                    p->dm += new_mass - p->mass;
+                    p->mass = new_mass;
+                    p->radius = stellar_radius_scale * std::pow(new_mass, stellar_radius_power_index);
+                    p->star.last_mass_change_time = time;
+                    return 1;
                 }
-                p->dm += new_mass - p->mass;
-                p->mass = new_mass;
-                p->radius = stellar_radius_scale * std::pow(new_mass, stellar_radius_power_index);
-                p->star.last_mass_change_time = time;
-                return 1;
-            }                
+            }         
         }
 
         return 0;
@@ -305,29 +318,72 @@ public:
         redistribute star position and velocity to opposite side of the center     
         @param[in,out] p: particle to redistribute
         @param[in] center: center particle
-        @return 0: no change; 1: modified position and velocity
+        @param[in] system: particle system for search star seed
+        @param[in] n_system: number of particles in system
+        @return 0: no redistribute or need to delete star; 1: redistribute star
     */
     template <class TParticle>
-    int redistributeStar(TParticle* p, TParticle* center) {
-        // if type is star with growth, increase mass    
-        if (p->star.type>=1 && redistribute_star_mode == 1) {
-            Float pos[3];
-            Float vel[3];
-            for (int k=0; k<3; k++) {
-                pos[k] = p->pos[k] - center->pos[k];
-                vel[k] = p->vel[k] - center->vel[k];
-            }
-            Float r = std::sqrt(pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2]);
-            if (r>0) {
+    int redistributeStar(TParticle* p, TParticle* center, TParticle* system, const int n_system) {
+        // if type is star, redistribute 
+        if (p->star.getType() == StarType::star_remnant) {
+            if (redistribute_star_mode == 1) {
+                Float pos[3];
+                Float vel[3];
                 for (int k=0; k<3; k++) {
-                    p->pos[k] = center->pos[k] - pos[k];
-                    p->vel[k] = center->vel[k] - vel[k];
+                    pos[k] = p->pos[k] - center->pos[k];
+                    vel[k] = p->vel[k] - center->vel[k];
                 }
-                p->star.type = 2;
-                p->mass = initial_mass;
-                p->dm = 0.0;
-                p->radius = stellar_radius_scale * std::pow(initial_mass, stellar_radius_power_index);
-                return 1;
+                Float r = std::sqrt(pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2]);
+                if (r>0) {
+                    for (int k=0; k<3; k++) {
+                        p->pos[k] = center->pos[k] - pos[k];
+                        p->vel[k] = center->vel[k] - vel[k];
+                    }
+                    p->star.setType(StarType::star);
+                    p->mass = initial_mass;
+                    p->dm = 0.0;
+                    p->radius = stellar_radius_scale * std::pow(initial_mass, stellar_radius_power_index);
+                    return 1;
+                }
+            }
+            else if (redistribute_star_mode == 2) {
+                // redistribute star by choosing a star seed with a similar distance to center
+                Float pos[3] = {p->pos[0] - center->pos[0], 
+                                p->pos[1] - center->pos[1], 
+                                p->pos[2] - center->pos[2]};
+                Float r = std::sqrt(pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2]);
+                // Search next 10 star seeds and pickup one with the closest r
+                int index_seed = -1;
+                Float dr = NUMERIC_FLOAT_MAX;
+                int n_found = 0;
+                for (int i=0; i<n_system; i++) {
+                    auto pi = &system[i];
+                    if (pi->star.getType() == StarType::seed) {
+                        Float pos_seed[3] = {pi->pos[0] - center->pos[0], 
+                                             pi->pos[1] - center->pos[1], 
+                                             pi->pos[2] - center->pos[2]};
+                        Float ri = std::sqrt(pos_seed[0]*pos_seed[0] + pos_seed[1]*pos_seed[1] + pos_seed[2]*pos_seed[2]);
+                        Float dri = std::abs(r - ri);
+                        if (dri<dr) {
+                            dr = dri;
+                            index_seed = i;
+                        }
+                        n_found++;
+                        if (n_found>=10) break;
+                    }
+                }
+                if (index_seed >= 0) {
+                    auto pi = &system[index_seed];
+                    pi->star.setType(StarType::star);
+                    pi->mass = initial_mass;
+                    pi->dm = 0.0;
+                    pi->radius = stellar_radius_scale * std::pow(initial_mass, stellar_radius_power_index);
+                    pi->star.last_mass_change_time = p->star.last_mass_change_time;
+                        
+                    pi->star.n_merger_star = 0;
+                    pi->star.n_merger_bh = 0;
+                    return 0;
+                }
             }
         }
         return 0;
@@ -335,10 +391,11 @@ public:
 
 };
 
+
 //! class for disk star merger parameters of individual stars
 class StarParameter{
 public:
-    long long int type; //!< type of star; 0: black hole; 1: star no growth; 2: star with growth
+    long long int type; //!< type of object; 0: supermassive black hole; 1: black hole; 2: star; 3: star seed; 4: star zero mass remnant; 5: black hole zero mass remnant
     long long int n_merger_star; //!< times of merger with star
     long long int n_merger_bh; //!< times of merger with black hole
     Float last_mass_change_time; //!< time delay for mass approach target
@@ -352,14 +409,29 @@ public:
                       last_merger_time(0.0)                    
                       {}
 
+    //! set type
+    /*!
+      @param[in] _type: type of object; 0: supermassive black hole; 1: black hole; 2: star; 3: star seed; 4: star zero mass remnant; 5: black hole zero mass remnant
+     */
+    void setType(const StarType _type) {
+        type = static_cast<long long int>(_type);
+    }
+
+    //! get type
+    /*!
+      @return type of object; 0: supermassive black hole; 1: black hole; 2: star; 3: star seed; 4: star zero mass remnant; 5: black hole zero mass remnant
+     */
+    StarType getType() const {
+        return static_cast<StarType>(type);
+    }
 
     //! initial parameters for disk star merger
     /*!
-      @param[in] _type: type of star; 0: black hole; 1: star no growth; 2: star with growth
+      @param[in] _type: type of object; 0: supermassive black hole; 1: black hole; 2: star; 3: star seed; 4: star zero mass remnant; 5: black hole zero mass remnant
       @param[in] _last_mass_change_time: time delay for mass approach target
      */
-    void initial(const long long int _type, const Float& _last_mass_change_time=0.0) {
-        type = _type;
+    void initial(const StarType _type, const Float& _last_mass_change_time=0.0) {
+        type = static_cast<long long int>(_type);
         n_merger_star = 0;
         n_merger_bh = 0;
         last_mass_change_time = _last_mass_change_time;
@@ -424,7 +496,7 @@ public:
      */
     static int printTitleWithMeaning(std::ostream & _fout, const int _counter=0, const int _offset=0) {
         int counter = _counter;
-        _fout<<std::setw(_offset)<<" "<<++counter<<". type: type of star; 0: black hole; 1: star no growth; 2: star with growth\n";
+        _fout<<std::setw(_offset)<<" "<<++counter<<". type: type of object; 0: SMBH; 1: stellar-mass BH; 2: star; 3: star seed; 4: star remnant; 5: BH remnant\n";
         _fout<<std::setw(_offset)<<" "<<++counter<<". n_merger_star: times of merger with star\n";
         _fout<<std::setw(_offset)<<" "<<++counter<<". n_merger_bh: times of merger with black hole\n";
         _fout<<std::setw(_offset)<<" "<<++counter<<". last_mass_change_time: last mass change time\n";
