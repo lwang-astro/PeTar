@@ -216,7 +216,7 @@ public:
             pm = p2;
             p0 = p1;
         }
-        else if(p1->star.getType()==StarType::seed && p2->star.getType()<=StarType::bh) {
+        else if(p1->star.getType()==StarType::seed) {
             pm = p2;
             p0 = p1;
         }
