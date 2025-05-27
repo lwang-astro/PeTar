@@ -12,18 +12,20 @@ until [[ `echo x$1` == 'x' ]]
 do
     case $1 in
  	-h) shift;
- 	    echo 'Update input parameter from version before Oct 18, 2020 to the new version';
+ 	    echo 'A tool to update an input parameter file'
+	    echo '    Used to update the input parameter file before the PeTar version of Oct 18, 2020 on GitHub';
  	    echo 'Usage: petar.update.par [options] [input parameter filename]';
- 	    echo 'Options:';
- 	    echo '   -p: initial parameters of petar';
- 	    echo '   -a: no append option (in versions before Aug 8, 2020 on Github; for -p)';
- 	    echo '   -s: stellar evolution is used (for -p)';
- 	    echo '   -o: orbit-samping is used (for -p)';
- 	    echo '   -h: no hard-check-energy (for -p)';
- 	    echo '   -g: no adjust group print (for -p)';
- 	    echo 'PS: -o, -h, -g are used for non-default case (when users switch on/off special features in configure)';
- 	    echo '   -b: initial parameters of bse';
- 	    echo '   -t: initial parameters of galpy';
+            echo 'Options (default arguments shown in parentheses at the end):';
+ 	    echo '   -p  read the input parameter file for petar';
+ 	    echo '   -b  read the input parameter file for SSE/BSE';
+ 	    echo '   -t  read the input parameter file for Galpy';
+	    echo 'The following options are used when the option "-p" is used';
+ 	    echo '   -a  no append option (For PeTar versions before Aug 8, 2020 on Github)';
+ 	    echo '   -s  when stellar evolution is used';
+ 	    echo 'The following options are used when specific options are enabled during compiling of PeTar';
+ 	    echo '   -o  when "--with-orbit=os" is used in configuration';
+ 	    echo '   -h  when "MT_FLAGS += -D HARD_CHECK_ENERGY" is suppressed in Makefile.in';
+ 	    echo '   -g  when "MT_FLAGS += -D ADJUST_GROUP_PRINT" is suppressed in Makefile.in';
  	    exit;;
  	-p) mode='p'; shift;;
  	-b) mode='b'; shift;;

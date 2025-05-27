@@ -1,0 +1,323 @@
+\hypertarget{classStability}{}\doxysection{Stability$<$ Tptcl $>$ Class Template Reference}
+\label{classStability}\index{Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}}
+
+
+stability checker for binary tree  
+
+
+
+
+{\ttfamily \#include $<$stability.\+hpp$>$}
+
+\doxysubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+typedef C\+O\+M\+M\+::\+Binary\+Tree$<$ Tptcl, C\+O\+M\+M\+::\+Binary $>$ \mbox{\hyperlink{classStability_aa9b4ca6418a1e1f35a72ad0b00d3e415}{Bin\+Tree}}
+\item 
+typedef C\+O\+M\+M\+::\+Binary \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classStability_a6eafc9741a84b15ba83a3f5c5794e487}{Stability}} ()
+\item 
+void \mbox{\hyperlink{classStability_adbdf0d26008fb181558ba962c6cbfb67}{clear}} ()
+\item 
+void \mbox{\hyperlink{classStability_aa14561ced4c6f52711990b4d4065e519}{find\+Closed\+Tree}} (\mbox{\hyperlink{classStability_aa9b4ca6418a1e1f35a72ad0b00d3e415}{Bin\+Tree}} \&\+\_\+bin)
+\begin{DoxyCompactList}\small\item\em Check binary tree and collect closed systems subtree root. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classStability_a5a905e57057b65f66e778ef3b8070878}{find\+Stable\+Tree}} (\mbox{\hyperlink{classStability_aa9b4ca6418a1e1f35a72ad0b00d3e415}{Bin\+Tree}} \&\+\_\+bin)
+\begin{DoxyCompactList}\small\item\em Check binary tree and collect stable subtree. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static P\+S\+::\+F64 \mbox{\hyperlink{classStability_aa40ca7cd2b05a549f8e539aab549a8ad}{stable3body}} (const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&\+\_\+bin\+\_\+in, const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&\+\_\+bin\+\_\+out, const P\+S\+::\+F64 \+\_\+incline, const P\+S\+::\+F64 \+\_\+t\+\_\+crit, const bool is\+\_\+cm\+\_\+in\+\_\+first)
+\begin{DoxyCompactList}\small\item\em Three-\/body stability function. \end{DoxyCompactList}\item 
+static bool \mbox{\hyperlink{classStability_a19a8ec8fb26e8de9360fec51db67c8ce}{stable2check}} (const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&\+\_\+bin, const P\+S\+::\+F64 \+\_\+r\+\_\+crit, const P\+S\+::\+F64 \+\_\+t\+\_\+crit)
+\begin{DoxyCompactList}\small\item\em check two-\/body stability \end{DoxyCompactList}\item 
+static bool \mbox{\hyperlink{classStability_af78b60bacc16c71e2c09f36cb4c39834}{stable3check}} (const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&\+\_\+bin, const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&\+\_\+bout, const P\+S\+::\+F64 \+\_\+r\+\_\+crit, const P\+S\+::\+F64 \+\_\+t\+\_\+crit, const P\+S\+::\+F64 \+\_\+is\+\_\+cm\+\_\+in\+\_\+first)
+\begin{DoxyCompactList}\small\item\em Three-\/body (B-\/S) stability check. \end{DoxyCompactList}\item 
+static bool \mbox{\hyperlink{classStability_acb687089da1eb3788a3c320e32855381}{stable4check}} (const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&\+\_\+bin1, const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&\+\_\+bin2, const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&\+\_\+bout, const P\+S\+::\+F64 \+\_\+r\+\_\+crit, const P\+S\+::\+F64 \+\_\+t\+\_\+crit)
+\begin{DoxyCompactList}\small\item\em Four-\/body (B-\/B) stability check. \end{DoxyCompactList}\item 
+static P\+S\+::\+S32 \mbox{\hyperlink{classStability_af7837504b63ebe02eae8c808806014e4}{closed\+System\+Check\+Iter}} (\mbox{\hyperlink{classStability}{Stability}} \&\+\_\+stab, const P\+S\+::\+S32 \&\+\_\+stab\+\_\+res1, const P\+S\+::\+S32 \&\+\_\+stab\+\_\+res2, \mbox{\hyperlink{classStability_aa9b4ca6418a1e1f35a72ad0b00d3e415}{Bin\+Tree}} \&\+\_\+bin)
+\begin{DoxyCompactList}\small\item\em Closed system check iteration function for Binary\+Tree. \end{DoxyCompactList}\item 
+static P\+S\+::\+S32 \mbox{\hyperlink{classStability_a40355024253599fc1df4d7d1c719412a}{stability\+Check\+Iter}} (\mbox{\hyperlink{classStability}{Stability}} \&\+\_\+stab, const P\+S\+::\+S32 \&\+\_\+stab\+\_\+res1, const P\+S\+::\+S32 \&\+\_\+stab\+\_\+res2, \mbox{\hyperlink{classStability_aa9b4ca6418a1e1f35a72ad0b00d3e415}{Bin\+Tree}} \&\+\_\+bin)
+\begin{DoxyCompactList}\small\item\em \mbox{\hyperlink{classStability}{Stability}} check iteraction function for Binary\+Tree. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classStability_ae40c3df2bdf88016a585ae5e6443efce}{t\+\_\+crit}}
+\item 
+P\+S\+::\+Reallocatable\+Array$<$ \mbox{\hyperlink{classStability_aa9b4ca6418a1e1f35a72ad0b00d3e415}{Bin\+Tree}} $\ast$ $>$ \mbox{\hyperlink{classStability_a4635884af0129706c41b875ae6acae29}{stable\+\_\+binary\+\_\+tree}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$class Tptcl$>$\newline
+class Stability$<$ Tptcl $>$}
+
+stability checker for binary tree 
+
+\doxysubsection{Member Typedef Documentation}
+\mbox{\Hypertarget{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}\label{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}} 
+\index{Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}!Bin@{Bin}}
+\index{Bin@{Bin}!Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}}
+\doxysubsubsection{\texorpdfstring{Bin}{Bin}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+typedef C\+O\+M\+M\+::\+Binary \mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$\+::\mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}}}
+
+\mbox{\Hypertarget{classStability_aa9b4ca6418a1e1f35a72ad0b00d3e415}\label{classStability_aa9b4ca6418a1e1f35a72ad0b00d3e415}} 
+\index{Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}!BinTree@{BinTree}}
+\index{BinTree@{BinTree}!Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}}
+\doxysubsubsection{\texorpdfstring{BinTree}{BinTree}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+typedef C\+O\+M\+M\+::\+Binary\+Tree$<$Tptcl,C\+O\+M\+M\+::\+Binary$>$ \mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$\+::\mbox{\hyperlink{classStability_aa9b4ca6418a1e1f35a72ad0b00d3e415}{Bin\+Tree}}}
+
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classStability_a6eafc9741a84b15ba83a3f5c5794e487}\label{classStability_a6eafc9741a84b15ba83a3f5c5794e487}} 
+\index{Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}!Stability@{Stability}}
+\index{Stability@{Stability}!Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}}
+\doxysubsubsection{\texorpdfstring{Stability()}{Stability()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+\mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$\+::\mbox{\hyperlink{classStability}{Stability}} (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classStability_adbdf0d26008fb181558ba962c6cbfb67}\label{classStability_adbdf0d26008fb181558ba962c6cbfb67}} 
+\index{Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}!clear@{clear}}
+\index{clear@{clear}!Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}}
+\doxysubsubsection{\texorpdfstring{clear()}{clear()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+void \mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$\+::clear (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classStability_af7837504b63ebe02eae8c808806014e4}\label{classStability_af7837504b63ebe02eae8c808806014e4}} 
+\index{Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}!closedSystemCheckIter@{closedSystemCheckIter}}
+\index{closedSystemCheckIter@{closedSystemCheckIter}!Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}}
+\doxysubsubsection{\texorpdfstring{closedSystemCheckIter()}{closedSystemCheckIter()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+static P\+S\+::\+S32 \mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$\+::closed\+System\+Check\+Iter (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$ \&}]{\+\_\+stab,  }\item[{const P\+S\+::\+S32 \&}]{\+\_\+stab\+\_\+res1,  }\item[{const P\+S\+::\+S32 \&}]{\+\_\+stab\+\_\+res2,  }\item[{\mbox{\hyperlink{classStability_aa9b4ca6418a1e1f35a72ad0b00d3e415}{Bin\+Tree}} \&}]{\+\_\+bin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+Closed system check iteration function for Binary\+Tree. 
+
+check whether the orbit is closed system with apo-\/center distance less than r\+\_\+group 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+stab} & stability class \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+stab\+\_\+res1/2} & results from iteration of two branches. -\/1\+: branch is one particle; 0\+: unstable branch; 1\+: stable branch \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+bins} & binary tree data \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStability_af7837504b63ebe02eae8c808806014e4_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classStability_aa14561ced4c6f52711990b4d4065e519}\label{classStability_aa14561ced4c6f52711990b4d4065e519}} 
+\index{Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}!findClosedTree@{findClosedTree}}
+\index{findClosedTree@{findClosedTree}!Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}}
+\doxysubsubsection{\texorpdfstring{findClosedTree()}{findClosedTree()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+void \mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$\+::find\+Closed\+Tree (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classStability_aa9b4ca6418a1e1f35a72ad0b00d3e415}{Bin\+Tree}} \&}]{\+\_\+bin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Check binary tree and collect closed systems subtree root. 
+
+Check the orbit of each binary and if apo-\/center distance is positive and $<$ bin.\+get\+R\+Group(), selected as candidates. subtrees are stored in stable\+\_\+binary\+\_\+tree. 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+bins} & binary tree data \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStability_aa14561ced4c6f52711990b4d4065e519_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStability_aa14561ced4c6f52711990b4d4065e519_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classStability_a5a905e57057b65f66e778ef3b8070878}\label{classStability_a5a905e57057b65f66e778ef3b8070878}} 
+\index{Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}!findStableTree@{findStableTree}}
+\index{findStableTree@{findStableTree}!Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}}
+\doxysubsubsection{\texorpdfstring{findStableTree()}{findStableTree()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+void \mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$\+::find\+Stable\+Tree (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classStability_aa9b4ca6418a1e1f35a72ad0b00d3e415}{Bin\+Tree}} \&}]{\+\_\+bin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Check binary tree and collect stable subtree. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+bins} & binary tree data \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStability_a5a905e57057b65f66e778ef3b8070878_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classStability_a40355024253599fc1df4d7d1c719412a}\label{classStability_a40355024253599fc1df4d7d1c719412a}} 
+\index{Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}!stabilityCheckIter@{stabilityCheckIter}}
+\index{stabilityCheckIter@{stabilityCheckIter}!Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}}
+\doxysubsubsection{\texorpdfstring{stabilityCheckIter()}{stabilityCheckIter()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+static P\+S\+::\+S32 \mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$\+::stability\+Check\+Iter (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$ \&}]{\+\_\+stab,  }\item[{const P\+S\+::\+S32 \&}]{\+\_\+stab\+\_\+res1,  }\item[{const P\+S\+::\+S32 \&}]{\+\_\+stab\+\_\+res2,  }\item[{\mbox{\hyperlink{classStability_aa9b4ca6418a1e1f35a72ad0b00d3e415}{Bin\+Tree}} \&}]{\+\_\+bin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+\mbox{\hyperlink{classStability}{Stability}} check iteraction function for Binary\+Tree. 
+
+Check stability of binary, triple and B-\/B for given binarytree, for sub branch of stable systems, save to stable\+\_\+binary\+\_\+tree 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+stab} & stability class \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+stab\+\_\+res1/2} & results from iteration of two branches. -\/1\+: branch is one particle; 0\+: unstable branch; 1\+: stable branch \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+bins} & binary tree data \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStability_a40355024253599fc1df4d7d1c719412a_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStability_a40355024253599fc1df4d7d1c719412a_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classStability_a19a8ec8fb26e8de9360fec51db67c8ce}\label{classStability_a19a8ec8fb26e8de9360fec51db67c8ce}} 
+\index{Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}!stable2check@{stable2check}}
+\index{stable2check@{stable2check}!Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}}
+\doxysubsubsection{\texorpdfstring{stable2check()}{stable2check()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+static bool \mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$\+::stable2check (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&}]{\+\_\+bin,  }\item[{const P\+S\+::\+F64}]{\+\_\+r\+\_\+crit,  }\item[{const P\+S\+::\+F64}]{\+\_\+t\+\_\+crit }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+check two-\/body stability 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStability_a19a8ec8fb26e8de9360fec51db67c8ce_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classStability_aa40ca7cd2b05a549f8e539aab549a8ad}\label{classStability_aa40ca7cd2b05a549f8e539aab549a8ad}} 
+\index{Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}!stable3body@{stable3body}}
+\index{stable3body@{stable3body}!Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}}
+\doxysubsubsection{\texorpdfstring{stable3body()}{stable3body()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+static P\+S\+::\+F64 \mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$\+::stable3body (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&}]{\+\_\+bin\+\_\+in,  }\item[{const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&}]{\+\_\+bin\+\_\+out,  }\item[{const P\+S\+::\+F64}]{\+\_\+incline,  }\item[{const P\+S\+::\+F64}]{\+\_\+t\+\_\+crit,  }\item[{const bool}]{is\+\_\+cm\+\_\+in\+\_\+first }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+Three-\/body stability function. 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=306pt]{classStability_aa40ca7cd2b05a549f8e539aab549a8ad_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStability_aa40ca7cd2b05a549f8e539aab549a8ad_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classStability_af78b60bacc16c71e2c09f36cb4c39834}\label{classStability_af78b60bacc16c71e2c09f36cb4c39834}} 
+\index{Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}!stable3check@{stable3check}}
+\index{stable3check@{stable3check}!Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}}
+\doxysubsubsection{\texorpdfstring{stable3check()}{stable3check()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+static bool \mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$\+::stable3check (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&}]{\+\_\+bin,  }\item[{const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&}]{\+\_\+bout,  }\item[{const P\+S\+::\+F64}]{\+\_\+r\+\_\+crit,  }\item[{const P\+S\+::\+F64}]{\+\_\+t\+\_\+crit,  }\item[{const P\+S\+::\+F64}]{\+\_\+is\+\_\+cm\+\_\+in\+\_\+first }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+Three-\/body (B-\/S) stability check. 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStability_af78b60bacc16c71e2c09f36cb4c39834_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStability_af78b60bacc16c71e2c09f36cb4c39834_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classStability_acb687089da1eb3788a3c320e32855381}\label{classStability_acb687089da1eb3788a3c320e32855381}} 
+\index{Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}!stable4check@{stable4check}}
+\index{stable4check@{stable4check}!Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}}
+\doxysubsubsection{\texorpdfstring{stable4check()}{stable4check()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+static bool \mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$\+::stable4check (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&}]{\+\_\+bin1,  }\item[{const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&}]{\+\_\+bin2,  }\item[{const \mbox{\hyperlink{classStability_a0d0af5c892a66bc1d8c9911c90439fb2}{Bin}} \&}]{\+\_\+bout,  }\item[{const P\+S\+::\+F64}]{\+\_\+r\+\_\+crit,  }\item[{const P\+S\+::\+F64}]{\+\_\+t\+\_\+crit }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+Four-\/body (B-\/B) stability check. 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStability_acb687089da1eb3788a3c320e32855381_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStability_acb687089da1eb3788a3c320e32855381_icgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classStability_a4635884af0129706c41b875ae6acae29}\label{classStability_a4635884af0129706c41b875ae6acae29}} 
+\index{Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}!stable\_binary\_tree@{stable\_binary\_tree}}
+\index{stable\_binary\_tree@{stable\_binary\_tree}!Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}}
+\doxysubsubsection{\texorpdfstring{stable\_binary\_tree}{stable\_binary\_tree}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+P\+S\+::\+Reallocatable\+Array$<$\mbox{\hyperlink{classStability_aa9b4ca6418a1e1f35a72ad0b00d3e415}{Bin\+Tree}}$\ast$$>$ \mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$\+::stable\+\_\+binary\+\_\+tree}
+
+\mbox{\Hypertarget{classStability_ae40c3df2bdf88016a585ae5e6443efce}\label{classStability_ae40c3df2bdf88016a585ae5e6443efce}} 
+\index{Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}!t\_crit@{t\_crit}}
+\index{t\_crit@{t\_crit}!Stability$<$ Tptcl $>$@{Stability$<$ Tptcl $>$}}
+\doxysubsubsection{\texorpdfstring{t\_crit}{t\_crit}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+P\+S\+::\+F64 \mbox{\hyperlink{classStability}{Stability}}$<$ Tptcl $>$\+::t\+\_\+crit}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{stability_8hpp}{stability.\+hpp}}\end{DoxyCompactItemize}

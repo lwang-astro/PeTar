@@ -1421,8 +1421,8 @@
          bpp(jp,20) = ospin(2)
          if(kstar(1).eq.15) then
             bpp(jp,2) = zero
-            bpp(jp,6) = zero
-            bpp(jp,7) = ngtv
+*            bpp(jp,6) = zero
+*            bpp(jp,7) = ngtv
             bpp(jp,8) = zero
             bpp(jp,11) = zero
             bpp(jp,13) = zero
@@ -1432,8 +1432,8 @@
          endif
          if(kstar(2).eq.15) then
             bpp(jp,3) = zero
-            bpp(jp,6) = zero
-            bpp(jp,7) = ngtv
+*            bpp(jp,6) = zero
+*            bpp(jp,7) = ngtv
             bpp(jp,9) = zero
             bpp(jp,12) = zero
             bpp(jp,14) = zero
@@ -2426,7 +2426,8 @@
          rrl2 = MIN(rrl2,0.99d0)
          bpp(jp,8) = rrl1
          bpp(jp,9) = rrl2
-         bpp(jp,10) = 7.0
+*         bpp(jp,10) = 7.0
+         bpp(jp,10) = 8.0
 *         btype = 8
          bpp(jp,11) = lumin(1)
          bpp(jp,12) = lumin(2)
@@ -2440,8 +2441,8 @@
          bpp(jp,20) = ospin(2)
          if(kstar(1).eq.15) then
             bpp(jp,2) = zero
-            bpp(jp,6) = zero
-            bpp(jp,7) = ngtv
+*            bpp(jp,6) = zero
+*            bpp(jp,7) = ngtv
             bpp(jp,8) = zero
             bpp(jp,11) = zero
             bpp(jp,13) = zero
@@ -2451,8 +2452,8 @@
          endif
          if(kstar(2).eq.15) then
             bpp(jp,3) = zero
-            bpp(jp,6) = zero
-            bpp(jp,7) = ngtv
+*            bpp(jp,6) = zero
+*            bpp(jp,7) = ngtv
             bpp(jp,9) = zero
             bpp(jp,12) = zero
             bpp(jp,14) = zero
@@ -2537,8 +2538,8 @@
             endif
             if(kstar(1).eq.15) then
                bpp(jp,2) = zero
-               bpp(jp,6) = zero
-               bpp(jp,7) = ngtv
+*               bpp(jp,6) = zero
+*               bpp(jp,7) = ngtv
                bpp(jp,8) = zero
                bpp(jp,11) = zero
                bpp(jp,13) = zero
@@ -2548,8 +2549,8 @@
             endif
             if(kstar(2).eq.15) then
                bpp(jp,3) = zero
-               bpp(jp,6) = zero
-               bpp(jp,7) = ngtv
+*               bpp(jp,6) = zero
+*               bpp(jp,7) = ngtv
                bpp(jp,9) = zero
                bpp(jp,12) = zero
                bpp(jp,14) = zero
@@ -2569,6 +2570,7 @@
          endif
          ecc = -1.d0
          sep = 0.d0
+         tb = 0.d0
          dtm = 0.d0
          coel = .false.
          goto 4
@@ -2615,20 +2617,20 @@
             bpp(jp,3) = zero
             bpp(jp,4) = float(kstar(1))
             bpp(jp,5) = float(kstar(2))
-            bpp(jp,6) = zero
-            bpp(jp,7) = zero
+*            bpp(jp,6) = zero
+*            bpp(jp,7) = zero
             bpp(jp,8) = zero
             bpp(jp,9) = zero
-*            bpp(jp,10) = 11.0
-            bpp(jp,10) = 13.0
-*            btype = 13
+*            bpp(jp,10) = 9.0
+            bpp(jp,10) = 12.0
+*            btype = 12
          else
             bpp(jp,10) = -1.0
          endif
          if(kstar(1).eq.15)then
             bpp(jp,2) = zero
-            bpp(jp,6) = zero
-            bpp(jp,7) = ngtv
+*            bpp(jp,6) = zero
+*            bpp(jp,7) = ngtv
             bpp(jp,8) = zero
             bpp(jp,11) = zero
             bpp(jp,13) = zero
@@ -2638,8 +2640,8 @@
          endif
          if(kstar(2).eq.15)then
             bpp(jp,3) = zero
-            bpp(jp,6) = zero
-            bpp(jp,7) = ngtv
+*            bpp(jp,6) = zero
+*            bpp(jp,7) = ngtv
             bpp(jp,9) = zero
             bpp(jp,12) = zero
             bpp(jp,14) = zero

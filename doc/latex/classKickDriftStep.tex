@@ -1,0 +1,263 @@
+\hypertarget{classKickDriftStep}{}\doxysection{Kick\+Drift\+Step Class Reference}
+\label{classKickDriftStep}\index{KickDriftStep@{KickDriftStep}}
+
+
+{\ttfamily \#include $<$kickdriftstep.\+hpp$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classKickDriftStep_a4c630d693188da70a43dfdad16c6c8d4}{Kick\+Drift\+Step}} ()
+\item 
+void \mbox{\hyperlink{classKickDriftStep_a732e101465727a952678479c20c1d932}{reset\+Count\+One\+Step}} ()
+\begin{DoxyCompactList}\small\item\em reset step count for one full step case \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classKickDriftStep_a859d90578119703a841b27da4ff6e195}{reset\+Count\+Continue}} ()
+\begin{DoxyCompactList}\small\item\em reset step count for continuing case \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classKickDriftStep_a2a64d927d55b291b46d4092dd20508f7}{next\+One\+Step}} ()
+\begin{DoxyCompactList}\small\item\em advance step count for one full step case \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classKickDriftStep_a66510cbd00fe10a923aa1846f83f1451}{next\+Continue}} ()
+\begin{DoxyCompactList}\small\item\em advance step count for continuing case \end{DoxyCompactList}\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classKickDriftStep_a09a5f8c2d65f571ca210e19b4b18d29e}{get\+Count\+One\+Step}} () const
+\begin{DoxyCompactList}\small\item\em get step count for one full step case \end{DoxyCompactList}\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classKickDriftStep_a6ba6476cb397b9177ce4e175d947d3de}{get\+Count\+Continue}} () const
+\begin{DoxyCompactList}\small\item\em get step count for continue case \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classKickDriftStep_a0aa807896e745226bf95167114bfe523}{set\+D\+K\+D\+Mode}} ()
+\begin{DoxyCompactList}\small\item\em set D\+KD mode (default is K\+DK) \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classKickDriftStep_a31da641094322c1d3e95a220450a02da}{set\+K\+D\+K\+Mode}} ()
+\begin{DoxyCompactList}\small\item\em set D\+KD mode (default is K\+DK) \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classKickDriftStep_af9cec4bb5599c16ca82eb4b11eb4e773}{set\+Step}} (const P\+S\+::\+F64 \+\_\+ds)
+\begin{DoxyCompactList}\small\item\em set base step size \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classKickDriftStep_a2d3302ea2190553e73fe1094e71d87ea}{get\+Step}} () const
+\begin{DoxyCompactList}\small\item\em get base step size \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classKickDriftStep_a1c9185e8f305d03f4668e55c8080bd10}{get\+Dt\+Kick\+One\+Step}} () const
+\begin{DoxyCompactList}\small\item\em Get kick step size for one full step. \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classKickDriftStep_a6917bfbea4ed29cec5bcdb966201e8ca}{get\+Dt\+Drift\+One\+Step}} () const
+\begin{DoxyCompactList}\small\item\em Get drift step size for one full step ~\newline
+ \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classKickDriftStep_aab1d155c3b9c827a131539d82925794a}{get\+Dt\+Kick\+Continue}} ()
+\begin{DoxyCompactList}\small\item\em Get kick step size for continue case. \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classKickDriftStep_ac13b3a09c5626975c412cdf331316c92}{get\+Dt\+Drift\+Continue}} ()
+\begin{DoxyCompactList}\small\item\em Get drift step size for continue case. \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classKickDriftStep_a59127c2c2bf117e0687726ebcf43d6f0}{get\+Dt\+Start\+Continue}} ()
+\begin{DoxyCompactList}\small\item\em Get staring step size for continue case. \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classKickDriftStep_aa2ca643bb9ff0dd17a27968b0b3a3d16}{get\+Dt\+End\+Continue}} ()
+\begin{DoxyCompactList}\small\item\em Get ending step size for continue case. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classKickDriftStep_a6a0d5294c1a8b179b73282c56a0ede0c}{is\+Next\+Start}} () const
+\begin{DoxyCompactList}\small\item\em get whether next is start \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classKickDriftStep_a41d3e9e230a42bf0ddc5c419d7b70aaa}{is\+Next\+End\+Possible}} () const
+\begin{DoxyCompactList}\small\item\em get whether next can be end \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classKickDriftStep_a4c630d693188da70a43dfdad16c6c8d4}\label{classKickDriftStep_a4c630d693188da70a43dfdad16c6c8d4}} 
+\index{KickDriftStep@{KickDriftStep}!KickDriftStep@{KickDriftStep}}
+\index{KickDriftStep@{KickDriftStep}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{KickDriftStep()}{KickDriftStep()}}
+{\footnotesize\ttfamily Kick\+Drift\+Step\+::\+Kick\+Drift\+Step (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classKickDriftStep_a6ba6476cb397b9177ce4e175d947d3de}\label{classKickDriftStep_a6ba6476cb397b9177ce4e175d947d3de}} 
+\index{KickDriftStep@{KickDriftStep}!getCountContinue@{getCountContinue}}
+\index{getCountContinue@{getCountContinue}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{getCountContinue()}{getCountContinue()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Kick\+Drift\+Step\+::get\+Count\+Continue (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get step count for continue case 
+
+\begin{DoxyReturn}{Returns}
+index of step array, 0 indicate the starting/ending step 
+\end{DoxyReturn}
+\mbox{\Hypertarget{classKickDriftStep_a09a5f8c2d65f571ca210e19b4b18d29e}\label{classKickDriftStep_a09a5f8c2d65f571ca210e19b4b18d29e}} 
+\index{KickDriftStep@{KickDriftStep}!getCountOneStep@{getCountOneStep}}
+\index{getCountOneStep@{getCountOneStep}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{getCountOneStep()}{getCountOneStep()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Kick\+Drift\+Step\+::get\+Count\+One\+Step (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get step count for one full step case 
+
+\mbox{\Hypertarget{classKickDriftStep_ac13b3a09c5626975c412cdf331316c92}\label{classKickDriftStep_ac13b3a09c5626975c412cdf331316c92}} 
+\index{KickDriftStep@{KickDriftStep}!getDtDriftContinue@{getDtDriftContinue}}
+\index{getDtDriftContinue@{getDtDriftContinue}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{getDtDriftContinue()}{getDtDriftContinue()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Kick\+Drift\+Step\+::get\+Dt\+Drift\+Continue (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get drift step size for continue case. 
+
+\mbox{\Hypertarget{classKickDriftStep_a6917bfbea4ed29cec5bcdb966201e8ca}\label{classKickDriftStep_a6917bfbea4ed29cec5bcdb966201e8ca}} 
+\index{KickDriftStep@{KickDriftStep}!getDtDriftOneStep@{getDtDriftOneStep}}
+\index{getDtDriftOneStep@{getDtDriftOneStep}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{getDtDriftOneStep()}{getDtDriftOneStep()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Kick\+Drift\+Step\+::get\+Dt\+Drift\+One\+Step (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get drift step size for one full step ~\newline
+ 
+
+\mbox{\Hypertarget{classKickDriftStep_aa2ca643bb9ff0dd17a27968b0b3a3d16}\label{classKickDriftStep_aa2ca643bb9ff0dd17a27968b0b3a3d16}} 
+\index{KickDriftStep@{KickDriftStep}!getDtEndContinue@{getDtEndContinue}}
+\index{getDtEndContinue@{getDtEndContinue}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{getDtEndContinue()}{getDtEndContinue()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Kick\+Drift\+Step\+::get\+Dt\+End\+Continue (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get ending step size for continue case. 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classKickDriftStep_aa2ca643bb9ff0dd17a27968b0b3a3d16_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classKickDriftStep_aab1d155c3b9c827a131539d82925794a}\label{classKickDriftStep_aab1d155c3b9c827a131539d82925794a}} 
+\index{KickDriftStep@{KickDriftStep}!getDtKickContinue@{getDtKickContinue}}
+\index{getDtKickContinue@{getDtKickContinue}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{getDtKickContinue()}{getDtKickContinue()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Kick\+Drift\+Step\+::get\+Dt\+Kick\+Continue (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get kick step size for continue case. 
+
+\mbox{\Hypertarget{classKickDriftStep_a1c9185e8f305d03f4668e55c8080bd10}\label{classKickDriftStep_a1c9185e8f305d03f4668e55c8080bd10}} 
+\index{KickDriftStep@{KickDriftStep}!getDtKickOneStep@{getDtKickOneStep}}
+\index{getDtKickOneStep@{getDtKickOneStep}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{getDtKickOneStep()}{getDtKickOneStep()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Kick\+Drift\+Step\+::get\+Dt\+Kick\+One\+Step (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get kick step size for one full step. 
+
+\mbox{\Hypertarget{classKickDriftStep_a59127c2c2bf117e0687726ebcf43d6f0}\label{classKickDriftStep_a59127c2c2bf117e0687726ebcf43d6f0}} 
+\index{KickDriftStep@{KickDriftStep}!getDtStartContinue@{getDtStartContinue}}
+\index{getDtStartContinue@{getDtStartContinue}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{getDtStartContinue()}{getDtStartContinue()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Kick\+Drift\+Step\+::get\+Dt\+Start\+Continue (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get staring step size for continue case. 
+
+\mbox{\Hypertarget{classKickDriftStep_a2d3302ea2190553e73fe1094e71d87ea}\label{classKickDriftStep_a2d3302ea2190553e73fe1094e71d87ea}} 
+\index{KickDriftStep@{KickDriftStep}!getStep@{getStep}}
+\index{getStep@{getStep}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{getStep()}{getStep()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Kick\+Drift\+Step\+::get\+Step (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get base step size 
+
+\mbox{\Hypertarget{classKickDriftStep_a41d3e9e230a42bf0ddc5c419d7b70aaa}\label{classKickDriftStep_a41d3e9e230a42bf0ddc5c419d7b70aaa}} 
+\index{KickDriftStep@{KickDriftStep}!isNextEndPossible@{isNextEndPossible}}
+\index{isNextEndPossible@{isNextEndPossible}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{isNextEndPossible()}{isNextEndPossible()}}
+{\footnotesize\ttfamily bool Kick\+Drift\+Step\+::is\+Next\+End\+Possible (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get whether next can be end 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classKickDriftStep_a41d3e9e230a42bf0ddc5c419d7b70aaa_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classKickDriftStep_a6a0d5294c1a8b179b73282c56a0ede0c}\label{classKickDriftStep_a6a0d5294c1a8b179b73282c56a0ede0c}} 
+\index{KickDriftStep@{KickDriftStep}!isNextStart@{isNextStart}}
+\index{isNextStart@{isNextStart}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{isNextStart()}{isNextStart()}}
+{\footnotesize\ttfamily bool Kick\+Drift\+Step\+::is\+Next\+Start (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get whether next is start 
+
+\mbox{\Hypertarget{classKickDriftStep_a66510cbd00fe10a923aa1846f83f1451}\label{classKickDriftStep_a66510cbd00fe10a923aa1846f83f1451}} 
+\index{KickDriftStep@{KickDriftStep}!nextContinue@{nextContinue}}
+\index{nextContinue@{nextContinue}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{nextContinue()}{nextContinue()}}
+{\footnotesize\ttfamily void Kick\+Drift\+Step\+::next\+Continue (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+advance step count for continuing case 
+
+\mbox{\Hypertarget{classKickDriftStep_a2a64d927d55b291b46d4092dd20508f7}\label{classKickDriftStep_a2a64d927d55b291b46d4092dd20508f7}} 
+\index{KickDriftStep@{KickDriftStep}!nextOneStep@{nextOneStep}}
+\index{nextOneStep@{nextOneStep}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{nextOneStep()}{nextOneStep()}}
+{\footnotesize\ttfamily void Kick\+Drift\+Step\+::next\+One\+Step (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+advance step count for one full step case 
+
+\mbox{\Hypertarget{classKickDriftStep_a859d90578119703a841b27da4ff6e195}\label{classKickDriftStep_a859d90578119703a841b27da4ff6e195}} 
+\index{KickDriftStep@{KickDriftStep}!resetCountContinue@{resetCountContinue}}
+\index{resetCountContinue@{resetCountContinue}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{resetCountContinue()}{resetCountContinue()}}
+{\footnotesize\ttfamily void Kick\+Drift\+Step\+::reset\+Count\+Continue (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+reset step count for continuing case 
+
+\mbox{\Hypertarget{classKickDriftStep_a732e101465727a952678479c20c1d932}\label{classKickDriftStep_a732e101465727a952678479c20c1d932}} 
+\index{KickDriftStep@{KickDriftStep}!resetCountOneStep@{resetCountOneStep}}
+\index{resetCountOneStep@{resetCountOneStep}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{resetCountOneStep()}{resetCountOneStep()}}
+{\footnotesize\ttfamily void Kick\+Drift\+Step\+::reset\+Count\+One\+Step (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+reset step count for one full step case 
+
+\mbox{\Hypertarget{classKickDriftStep_a0aa807896e745226bf95167114bfe523}\label{classKickDriftStep_a0aa807896e745226bf95167114bfe523}} 
+\index{KickDriftStep@{KickDriftStep}!setDKDMode@{setDKDMode}}
+\index{setDKDMode@{setDKDMode}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{setDKDMode()}{setDKDMode()}}
+{\footnotesize\ttfamily void Kick\+Drift\+Step\+::set\+D\+K\+D\+Mode (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set D\+KD mode (default is K\+DK) 
+
+\mbox{\Hypertarget{classKickDriftStep_a31da641094322c1d3e95a220450a02da}\label{classKickDriftStep_a31da641094322c1d3e95a220450a02da}} 
+\index{KickDriftStep@{KickDriftStep}!setKDKMode@{setKDKMode}}
+\index{setKDKMode@{setKDKMode}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{setKDKMode()}{setKDKMode()}}
+{\footnotesize\ttfamily void Kick\+Drift\+Step\+::set\+K\+D\+K\+Mode (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set D\+KD mode (default is K\+DK) 
+
+\mbox{\Hypertarget{classKickDriftStep_af9cec4bb5599c16ca82eb4b11eb4e773}\label{classKickDriftStep_af9cec4bb5599c16ca82eb4b11eb4e773}} 
+\index{KickDriftStep@{KickDriftStep}!setStep@{setStep}}
+\index{setStep@{setStep}!KickDriftStep@{KickDriftStep}}
+\doxysubsubsection{\texorpdfstring{setStep()}{setStep()}}
+{\footnotesize\ttfamily void Kick\+Drift\+Step\+::set\+Step (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+ds }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set base step size 
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{kickdriftstep_8hpp}{kickdriftstep.\+hpp}}\end{DoxyCompactItemize}

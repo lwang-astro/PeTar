@@ -1,0 +1,8 @@
+<map id="ArtificialParticleInformation::isArtificial" name="ArtificialParticleInformation::isArtificial">
+<area shape="rect" id="node1" title="return whether the particle type is artificial" alt="" coords="496,71,696,112"/>
+<area shape="rect" id="node2" href="$classArtificialParticleInformation.html#a995d580f346d45ca6e72bea2678ceb77" title="get stored data (only in artificial particles)" alt="" coords="248,5,448,47"/>
+<area shape="rect" id="node3" href="$classArtificialParticleInformation.html#a5270d8aa4301b8236c1247592c8c9512" title="set status" alt="" coords="248,71,448,112"/>
+<area shape="rect" id="node6" href="$classArtificialParticleInformation.html#aaf1294fdff785ba8b92e343a8c2366d6" title="store one data (only in artificial particles)" alt="" coords="248,136,448,177"/>
+<area shape="rect" id="node4" href="$classPtcl.html#a89616cec78415e73c6b7f7af16f8c72e" title="set status to c.m. particle address" alt="" coords="5,53,200,79"/>
+<area shape="rect" id="node5" href="$classPtclHard.html#a4d0d63ab5d6469bd8a547f354372be78" title=" " alt="" coords="6,103,199,130"/>
+</map>

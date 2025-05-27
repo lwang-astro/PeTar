@@ -1,4 +1,4 @@
-TARGET: libgalpy.a petar.galpy petar.galpy.help petar.galpy.pot.movie
+TARGET: libgalpy.a petar.galpy.help
 
 CXX=@CXX@
 CC=@CC@
@@ -27,18 +27,12 @@ OBJ:= $(SRC:.c=.o)
 libgalpy.a: $(OBJ)
 	ar rcs $@ $^
 
-petar.galpy: galpy_test.cxx libgalpy.a galpy_interface.h 
-	$(CXX) $(CXXFLAGS) @GSL_CFLAGS@ $(GALPY_INCLUDE) $< -o $@ -L./ -lgalpy @GSL_LIBS@
-
 petar.galpy.help: galpy_help.py
 	ln -sf galpy_help.py petar.galpy.help
 
-petar.galpy.pot.movie: galpy_pot_movie.py
-	ln -sf galpy_pot_movie.py petar.galpy.pot.movie
-
 install:
 	install -d @prefix@/bin/
-	install -m 755 petar.galpy petar.galpy.help petar.galpy.pot.movie @prefix@/bin/
+	install -m 755 petar.galpy.help @prefix@/bin/
 
 clean: 
-	rm -f $(OBJ) petar.galpy libgalpy.a petar.galpy.help
+	rm -f $(OBJ) libgalpy.a petar.galpy.help

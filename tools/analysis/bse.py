@@ -55,6 +55,47 @@ class SSETypeChange(DictNpArrayMix):
         keys = [['id',np.int64],['init',SSEStarParameter],['final',SSEStarParameter]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
+    def printTable(self, column_format = 'final', print_title = True):
+        """ Print merger information in a formated table
+
+        Parameters:
+        ----------
+        column_format: a list of column label (class member name), format and column title, enclosed by tuple, for sub-member, use . to access
+                       For exmaple: [(key1,'%s',title1), (key2,'%12.7f',title2), (key3.subkey1,'%d',title3), (key3.subkey2,'%e',title4)]
+                       Some pre-defined choices (default: final):
+                       final: [('id', '%10d', 'id'),
+                               ('final.time','%12.4g','timef[Myr]'),('final.type','%4d','kf'),
+                               ('final.mass0','%10.3f','mass0[M*]'),('final.mass','%10.3f','mass[M*]'), 
+                               ('final.rad','%8.2g','r[R*]'),('final.lum','%8.2g','Lf[L*]'),
+                               ('final.mcore','%9.3f','mcf[M*]'),('final.rcore','%8.2g','rcf[R*]'),
+                               ('final.spin','%8.2g','spinf'),('final.epoch','%11.3g','epoch[Myr]')]
+                       init-final: [('id', '%10d', 'id'),
+                               ('init.time','%12.4g','timei[Myr]'),('init.type','%4d','ki'),
+                               ('init.mass','%11.4f','mi[M*]'),('init.mcore','%9.3f','mci[M*]'),
+                               ('final.time','%12.4g','timef[Myr]'),('final.type','%4d','kf'),
+                               ('final.mass','%11.4f','mf[M*]'),('final.mcore','%9.3f','mcf[M*]')]
+        print_title: print title of keys (default: True)
+        """
+        
+        if (column_format == 'final'):
+            column_format = [('id', '%10d', 'id'),
+                             ('final.time','%12.4g','timef[Myr]'),('final.type','%4d','kf'),
+                             ('final.mass0','%10.3f','mass0[M*]'),('final.mass','%10.3f','mass[M*]'), 
+                             ('final.rad','%8.2g','r[R*]'),('final.lum','%8.2g','Lf[L*]'),
+                             ('final.mcore','%9.3f','mcf[M*]'),('final.rcore','%8.2g','rcf[R*]'),
+                             ('final.spin','%8.2g','spinf'),('final.epoch','%11.3g','epoch[Myr]')]
+
+        elif (column_format =='init-final'):
+            column_format = [('id', '%10d', 'id'),
+                             ('init.time','%12.4g','timei[Myr]'),('init.type','%4d','ki'),
+                             ('init.mass','%11.4f','mi[M*]'),('init.mcore','%9.3f','mci[M*]'),
+                             ('final.time','%12.4g','timef[Myr]'),('final.type','%4d','kf'),
+                             ('final.mass','%11.4f','mf[M*]'),('final.mcore','%9.3f','mcf[M*]')]
+        elif (type(column_format) != list):
+            raise ValueError('Error, column_format should be "final","init-final" or list of manually defined column format; given ',column_format)
+
+        DictNpArrayMix.printTable(self, column_format, print_title)
+
 class SSESNKick(DictNpArrayMix):
     """ SSE SN kick output data from PeTar
     Keys: (class members)
@@ -167,6 +208,47 @@ class BSETypeChange(DictNpArrayMix):
         """
         bid = cantorPairing(self.id1, self.id2)
         self.addNewMember('bid',bid)
+
+    def printTable(self, column_format = 'final', print_title = True):
+        """ Print merger information in a formated table
+
+        Parameters:
+        ----------
+        column_format: a list of column label (class member name), format and column title, enclosed by tuple, for sub-member, use . to access
+                       For exmaple: [(key1,'%s',title1), (key2,'%12.7f',title2), (key3.subkey1,'%d',title3), (key3.subkey2,'%e',title4)]
+                       Some pre-defined choices (default: final):
+                       init-final: [('type', '%3d', 'kb'), ('init.type1','%4d','k1i'),('init.type2','%4d','k2i'),
+                                    ('init.time','%12.4g','timei[Myr]'),('init.m1','%11.4f','m1i[M*]'),('init.m2','%11.4f','m2i[M*]'),
+                                    ('init.semi','%12.4g','ai[R*]'),('init.ecc','%13.8f','ecci'),
+                                    ('final.type1','%4d','k1f'),('final.type2','%4d','k2f'), 
+                                    ('final.m1','%11.4f','m1f[M*]'),('final.m2','%11.4f','m2f[M*]'),('final.semi','%12.4g','af[R*]'),('final.ecc','%13.8f','eccf')]
+                       final: [('type', '%3d', 'kb'),('id1','%9d','id1'), ('id2','%9d','id2'),
+                              ('final.time','%12.4g','timef[Myr]'),('final.type1','%4d','k1f'),('final.type2','%4d','k2f'), 
+                              ('final.m1','%10.3f','m1f[M*]'),('final.m2','%10.3f','m2f[M*]'),
+                              ('final.semi','%8.2g','af[R*]'),('final.ecc','%12.7f','eccf'),
+                              ('final.rad1','%8.2g','r1[R*]'),('final.rad2','%8.2g','r2[R*]'),
+                              ('final.mcore1','%9.3f','mc1f[M*]'),('final.mcore2','%9.3f','mc2f[M*]'),
+                              ('final.spin1','%8.2g','spin1f'),('final.spin2','%8.2g','spin2f')]
+        print_title: print title of keys (default: True)
+        """
+        if (column_format == 'final'):
+            column_format = [('type', '%3d', 'kb'), ('id1','%9d','id1'), ('id2','%9d','id2'),
+                             ('final.time','%12.4g','timef[Myr]'), ('final.type1','%4d','k1f'),('final.type2','%4d','k2f'), 
+                             ('final.m1','%10.3f','m1f[M*]'),('final.m2','%10.3f','m2f[M*]'),('final.semi','%8.2g','af[R*]'),('final.ecc','%13.8f','eccf'),
+                             ('final.rad1','%8.2g','r1[R*]'),('final.rad2','%8.2g','r2[R*]'),#('final.lum1','%8.2g','L1f[L*]'),('final.lum2','%8.2g','L2f[L*]'),
+                             ('final.mcore1','%9.3f','mc1f[M*]'),('final.mcore2','%9.3f','mc2f[M*]'),#('final.rcore1','%9.2g','rc1f[R*]'),('final.rcore2','%9.2g','rc2f[R*]'),
+                             ('final.spin1','%8.2g','spin1f'),('final.spin2','%8.2g','spin2f')]
+
+        elif (column_format =='init-final'):
+            column_format = [('type', '%3d', 'kb'), ('id1','%8d','id1'), ('id2','%8d','id2'), 
+                             ('init.time','%12.4g','timei[Myr]'),('init.type1','%4d','k1i'),('init.type2','%4d','k2i'), 
+                             ('init.m1','%10.3f','m1i[M*]'),('init.m2','%10.3f','m2i[M*]'),('init.semi','%8.2g','ai[R*]'),('init.ecc','%13.8f','ecci'),
+                             ('final.type1','%4d','k1f'),('final.type2','%4d','k2f'), 
+                             ('final.m1','%10.3f','m1f[M*]'),('final.m2','%10.3f','m2f[M*]'),('final.semi','%8.2g','af[R*]'),('final.ecc','%13.8f','eccf')]
+        elif (type(column_format) != list):
+            raise ValueError('Error, column_format should be "final","init-final" or list of manually defined column format; given ',column_format)
+
+        DictNpArrayMix.printTable(self, column_format, print_title)
 
 class BSESNKick(DictNpArrayMix):
     """ BSE SN kick output data from PeTar
@@ -435,6 +517,7 @@ class BSEMerge(DictNpArrayMix):
     """ BSE binary mergers 
     Keys: (class members)
         time  (1D): current physical time (Myr)
+        bid   (1D): binary id obtained from CantorPairing of two component IDs.
         id1   (1D): particle id of component 1
         id2   (1D): particle id of component 2
         semi  (1D): semi-major axis (Rsun)
@@ -450,9 +533,9 @@ class BSEMerge(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation using key list, see help(DictNpArrayMix.__init__)
         """
-        keys=[['time',np.float64],['id1',np.int64],['id2',np.int64],['semi',np.float64],['ecc',np.float64],
-              ['kw1',np.int64],['kw2',np.int64],
-              ['m1',np.float64],['m2',np.float64],['kwf',np.int64],['mf',np.float64]]
+        keys=[['time',np.float64],['bid', np.int64],['id1',np.int64],['id2',np.int64],['semi',np.float64],['ecc',np.float64],
+              ['type1',np.int64],['type2',np.int64],
+              ['m1',np.float64],['m2',np.float64],['typef',np.int64],['mf',np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 
@@ -470,17 +553,29 @@ class BSEMerge(DictNpArrayMix):
         
         # find mergers
         type_change.generateBinaryID()
-        sel_merge = ((type_change.final.m1==0) & (type_change.init.m1>0))| ((type_change.final.m2==0) & (type_change.init.m2>0))
+        # select events where one component becomes massless type and the other has mass increase.
+        sel_merge = ((type_change.final.m1==0) & (type_change.init.m1>0) & (type_change.final.m2 > type_change.init.m2)) | ((type_change.final.m2==0) & (type_change.init.m2>0) & (type_change.final.m1 > type_change.init.m1))
         merge_final = type_change[sel_merge]
         bid_merge = merge_final.bid
         
         # if no merger
         if (bid_merge.size==0): return merge_final
         
-        # get ubid and sort merger by ubid
-        ubid_merge = calc_ubid(merge_final)
+        # get ubid
+        ubid_merge_all = calc_ubid(merge_final)
+        # validate whether the ubid of init and final data match
+        ubid_merge, indices, counts = np.unique(ubid_merge_all, return_counts=True, return_index=True)
+        if (ubid_merge.size != ubid_merge_all.size):
+            repeat_ubid = ubid_merge[counts>1]
+            for i in repeat_ubid:
+                sel = (ubid_merge_all == i)
+                print('Find repeat mergers, bid:', merge_final.bid[sel], ' time:', merge_final.final.time[sel])
+                merge_final[sel].printTable('init-final')
+            #raise ValueError(f'Find merger ubid_merge repeated id found!')
+
+        # sort merger by ubid        
         sindex = ubid_merge.argsort()
-        merge_final = merge_final[sindex]
+        merge_final = merge_final[indices][sindex]
         ubid_merge = ubid_merge[sindex]
         
         # get merger progenitor history
@@ -533,8 +628,8 @@ class BSEMerge(DictNpArrayMix):
         merge['id2']=np.concatenate((se_merge.id2,dyn_merge.id2))[tsort]
         merge['semi']=np.concatenate((se_merge.init.semi,dyn_merge.semi))[tsort]
         merge['ecc']=np.concatenate((se_merge.init.ecc,dyn_merge.ecc))[tsort]
-        merge['kw1']=np.concatenate((se_merge.init.type1,dyn_merge.init.p1.type))[tsort]
-        merge['kw2']=np.concatenate((se_merge.init.type2,dyn_merge.init.p2.type))[tsort]
+        merge['type1']=np.concatenate((se_merge.init.type1,dyn_merge.init.p1.type))[tsort]
+        merge['type2']=np.concatenate((se_merge.init.type2,dyn_merge.init.p2.type))[tsort]
         merge['m1']=np.concatenate((se_merge.init.m1,dyn_merge.init.p1.mass))[tsort]
         merge['m2']=np.concatenate((se_merge.init.m2,dyn_merge.init.p2.mass))[tsort]
 
@@ -550,76 +645,134 @@ class BSEMerge(DictNpArrayMix):
         dyn_kwf[dyn_mf2_sel] = dyn_merge.final.p2.type[dyn_mf2_sel]
         dyn_mf[dyn_mf2_sel] = dyn_merge.final.p2.mass[dyn_mf2_sel]
 
-        merge['kwf']=np.concatenate((se_kwf, dyn_kwf))[tsort]
+        merge['typef']=np.concatenate((se_kwf, dyn_kwf))[tsort]
         merge['mf']=np.concatenate((se_mf, dyn_mf))[tsort]
         self.size=merge['time'].size
 
-    def printTableTitle(self):
-        """ Print table title for the merger information (default column_format for printTable)
-        """
-        print("%12s %8s %8s %10s %10s %8s %8s %12s %12s %8s %12s" %('Time[Myr]','id1','id2','semi[R*]','ecc','kw1(i)','kw2(i)','m1[M*](i)','m2[M*](i)','kw(f)','m[M*](f)'))
-     
     def printTable(self, 
-                   column_format = [('time','%12.7f '), 
-                                    ('id1','%8d '), ('id2','%8d '), 
-                                    ('semi','%10.7g '), ('ecc','%10.7g '),
-                                    ('kw1','%8d '), ('kw2','%8d '),
-                                    ('m1','%12.7f '), ('m2','%12.7f '),
-                                    ('kwf','%8d '), ('mf','%12.7f')]):
+                   column_format = [('time','%12.7f','time[Myr]'), ('bid','%14d','bid'),
+                                    ('id1','%8d','id1'), ('id2','%8d','id2'), 
+                                    ('semi','%10.7g','semi[R*]'), ('ecc','%15.10f','ecc'),
+                                    ('type1','%4d','k1i'), ('type2','%4d','k2i'),
+                                    ('m1','%12.4f','m1i[M*]'), ('m2','%12.4f','m2i[M*]'),
+                                    ('typef','%4d','kf'), ('mf','%12.7f','mf[M*]')],
+                   print_title = True):
         """ Print merger information in a formated table
 
         Parameters:
         ----------
-        column_format: a list of column label (class member name) and format, enclosed by tuple, for sub-member, use . to access
-                       For exmaple: [(key1,'%s'), (key2,'%12.7f'), (key3.subkey1,'%d'), (key3.subkey2,'%e')]
-                       Default: [('time','%12.7f '), 
-                                 ('id1','%8d '), ('id2','%8d '), 
-                                 ('semi','%10.7g '), ('ecc','%10.7g '),
-                                 ('kw1','%8d '), ('kw2','%8d '),
-                                 ('m1','%12.7f '), ('m2','%12.7f '),
-                                 ('kwf','%8d '), ('mf','%12.7f')]
-        """
-        DictNpArrayMix.printTable(self, column_format)
+        column_format: a list of column label (class member name), format and column title, enclosed by tuple, for sub-member, use . to access
+                       For exmaple: [(key1,'%s',title1), (key2,'%12.7f',title2), (key3.subkey1,'%d',title3), (key3.subkey2,'%e',title4)]
+                       Default: [('time','%12.7f','time[Myr]'), ('bid','%14d','bid'),
+                                 ('id1','%8d','id1'), ('id2','%8d','id2'), 
+                                 ('semi','%10.7g','semi[R*]'), ('ecc','%15.10f','ecc'),
+                                 ('type1','%4d','k1i'), ('type2','%4d','k2i'),
+                                 ('m1','%12.4f','m1i[M*]'), ('m2','%12.4f','m2i[M*]'),
+                                 ('typef','%4d','kf'), ('mf','%12.7f','mf[M*]')]
+        print_title: print title of keys (default: True)
 
-def find_merge_tree(merger_list, merger_root):
-    """ Find the merger tree for a given merger
-    Parameters:
-    -----------
-    merger_list: BSEMerge data
-    merger_root: the target merger to find tree
-    Return:
-    ------------
-    merger_tree: numpy.ndarray(3D)
-        The merger tree table for plotting, each row is one tree branch 
-        The row contains 4 pair of data pointing from the leaf to the root:
-           1. The position in the tree branch. The value of the leaf is based on that of the root +- 0.5^{level+1}, where the level refers to the root.
-           2. indice counting from the left to the right of all leaves and roots
-           3. times of components (leaves) and mergers (roots)
-           4. masses of components (leaves) and mergers (roots)
-    """
-    def find_merge_tree_iter(merger_list, merger_root, merger_tree, binary_tree_base, binary_tree_interval, indebinary_tree_base):
         """
+        DictNpArrayMix.printTable(self, column_format, print_title)
+
+class MergerTree():
+    """
+    Merger Tree to store the information of hierarchical mergers
+
+    Class members:
+    ------------------
+    n (int): number of total mergers to produce the final (root) merger
+    data (petar.BSEMerge): the final (root) merger event parameter data
+    left (None or MergeTree): if None: no sub merger; else the sub-merger to generate the left component of the final merger
+    right (None or MergeTree): if None: no sub merger; else the sub-merger to generate the right component of the final merger
+    """
+    
+    def __init__(self):
+        self.n = 0
+        self.data = None
+        self.left = None
+        self.right = None
+
+    def __getitem__(self, k):
+        if k == 0:
+            return self.left
+        elif k == 1:
+            return self.right
+        else:
+            raise ValueError('Error: the input index to get MergerTree member should be either 0 (left) or 1 (right), given ',k)
+
+    def __setitem__(self, k, data):
+        if (type(data) != MergerTree) & (data != None):
+            raise ValueError('Error: the input data should be MergerTree type or None, given ',type(data))
+        if k == 0:
+            self.left = data
+        elif k == 1:
+            self.right = data
+        else:
+            raise ValueError('Error: the input index to get MergerTree member should be either 0 (left) or 1 (right), given ',k)
+
+    def build(self, merger_all, merger_target):
+        """ Construct the merger tree from all merger events and the final merger target
+        Parameters:
+        -----------
+        merger_all (petar.BSEMerge): all merger events
+        merger_target (petar.BSEMerge): the target merger to find tree (one event)
         
         """
-        idlst=[merger_root.id1, merger_root.id2]
-        btlst=[-binary_tree_interval,binary_tree_interval]
-        mlst=[merger_root.m1, merger_root.m2]
-        ctotlst=[indebinary_tree_base,1]
-        for k in range(len(idlst)):
-            if (k>0): 
-                ctotlst[k] += ctotlst[k-1]
-            idk = idlst[k]
-            sel = ((merger_list.id1 == idk) | (merger_list.id2 == idk)) & (merger_list.time <= merger_root.time) & (merger_list.mf < merger_root.mf)
-            sdat = merger_list[sel]
-            if (sdat.size>0):
-                c_left, c_right = find_merge_tree_iter(merger_list, sdat[-1], merger_tree, binary_tree_base+btlst[k], binary_tree_interval/2, ctotlst[k])  
-                ctotlst[k] += c_right - ctotlst[k]
-                merger_tree.append([[binary_tree_base+btlst[k], binary_tree_base], [c_left+1, ctotlst[0]+1], [sdat.time[-1], merger_root.time],[sdat.mf[-1], merger_root.mf]])
+        idlst=[merger_target.id1, merger_target.id2]
+        merger_branch = []
+        self.n = 1
+        self.data = merger_target
+        for k, idk in enumerate(idlst):
+            sel = ((merger_all.id1 == idk) | (merger_all.id2 == idk)) & (merger_all.time <= merger_target.time) & (merger_all.mf < merger_target.mf)
+            merger_sub = merger_all[sel]
+            if (merger_sub.size>0):
+                self[k] = MergerTree()
+                self[k].build(merger_all, merger_sub[-1])
+                self.n += self[k].n
             else:
-                ctotlst[k] += 1
-                merger_tree.append([[binary_tree_base+btlst[k], binary_tree_base], [ctotlst[k], ctotlst[0]+1], [0, merger_root.time], [mlst[k], merger_root.mf]])
-        return ctotlst[0], ctotlst[1]
-    merger_tree=[]
-    find_merge_tree_iter(merger_list, merger_root, merger_tree, 0.5, 0.25, 0)
+                self[k] = None
 
-    return np.array(merger_tree)
+    def printTree(self, prefix=''):
+        """
+        Print merger tree with mass, time and number of mergers to current mass
+        """
+        print(f'mf: {self.data.mf:.4g} t: {self.data.time:.12g} n:{self.n} semi:{self.data.semi:.14g} ecc:{self.data.ecc:.14g}')
+        prefix = prefix + '  |'
+        for branch in (self.left, self.right):
+            if branch:
+                print(prefix+'-',end='')
+                branch.printTree(prefix)
+
+    def plotTree(self, axes, y_type='mass'):
+        """
+        Plot the merger tree with mass or time
+        """    
+        def connect(merger_tree, connect_list, binary_tree_base, binary_tree_interval, indebinary_tree_base):
+            btlst=[-binary_tree_interval,binary_tree_interval]
+            mlst=[merger_tree.data.m1, merger_tree.data.m2]
+            ctotlst=[indebinary_tree_base,1]
+            for k in range(2):
+                if (k>0): 
+                    ctotlst[k] += ctotlst[k-1]
+                if (merger_tree[k]):
+                    c_left, c_right = connect(merger_tree[k], connect_list, binary_tree_base+btlst[k], binary_tree_interval/2, ctotlst[k])  
+                    ctotlst[k] += c_right - ctotlst[k]
+                    connect_list.append([[binary_tree_base+btlst[k], binary_tree_base], [c_left+1, ctotlst[0]+1], [merger_tree[k].data.time, merger_tree.data.time],[merger_tree[k].data.mf, merger_tree.data.mf]])
+                else:
+                    ctotlst[k] += 1
+                    connect_list.append([[binary_tree_base+btlst[k], binary_tree_base], [ctotlst[k], ctotlst[0]+1], [0, merger_tree.data.time], [mlst[k], merger_tree.data.mf]])
+            return ctotlst[0], ctotlst[1]
+        connect_list=[]
+        connect(self, connect_list, 0.5, 0.25, 0)
+        
+        if (y_type=='time'):
+            for dat in connect_list:
+                axes.plot(dat[1],dat[2],'o-',color='k')
+            axes.set_ylabel('Time')
+        elif (y_type=='mass'):
+            for dat in connect_list:
+                axes.plot(dat[1],dat[3],'o-',color='k')
+            axes.set_ylabel('mass')
+        else:
+            raise ValueError('y_type should be time or mass, given ',y_type)
+        axes.set_xlabel('index')

@@ -1,0 +1,308 @@
+\hypertarget{classMWPotentialEvolve}{}\doxysection{M\+W\+Potential\+Evolve Class Reference}
+\label{classMWPotentialEvolve}\index{MWPotentialEvolve@{MWPotentialEvolve}}
+
+
+data for M\+W\+Potential evolve  
+
+
+
+
+{\ttfamily \#include $<$galpy\+\_\+interface.\+h$>$}
+
+
+
+Collaboration diagram for M\+W\+Potential\+Evolve\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=192pt]{classMWPotentialEvolve__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \mbox{\hyperlink{classMWPotentialEvolve_a45a7e51221c2de3937fcb72cd90fd11e}{initial\+From\+File}} (const std\+::string \&\+\_\+filename, const double \&\+\_\+time)
+\begin{DoxyCompactList}\small\item\em initial potential parameter from a file \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classMWPotentialEvolve_a61d78d2224231b9d052d48cdd2d38eaf}{read\+Data\+From\+File}} (const std\+::string \&\+\_\+filename, const double \&\+\_\+time)
+\begin{DoxyCompactList}\small\item\em read potential parameter from a file \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classMWPotentialEvolve_a92e616d63b989428e6424e0d0180de7c}{write\+Data\+To\+File}} (const std\+::string \&\+\_\+filename)
+\begin{DoxyCompactList}\small\item\em write data for restart \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classMWPotentialEvolve_a499debe349e3789cd6fbab95bc56dabb}{calc\+M\+W\+Potential\+Parameters}} (const double \&\+\_\+time)
+\begin{DoxyCompactList}\small\item\em calculate MW potential based on the input time \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classFRWModel}{F\+R\+W\+Model}} \mbox{\hyperlink{classMWPotentialEvolve_ab12d579132641e66fa995ec0e25bf6ad}{frw}}
+\item 
+\begin{tabbing}
+xx\=xx\=xx\=xx\=xx\=xx\=xx\=xx\=xx\=\kill
+struct \{\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_ac0edc3d6108e395caa1577f0b707e404}{m\_vir\_halo}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_a288f772a110797a259b380fe6f193871}{c\_halo}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_a06882b124341988f3c0d9dc473864755}{ac\_halo}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_a53bb0027fa3c56b0057224d5a812e8b6}{m\_disk}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_a6a7ff92430a30fe693b3600967e77bc3}{ra\_disk}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_aec26e403ae40bb15c8374bf2d1fce712}{rb\_disk}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_a703845f35324fdc51dd04e12a1103869}{rho\_bulge}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_a7b838de9cd30ec4a8577dd0288619c96}{alpha\_bulge}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_a2294a6e2c93d5bf3359543a0cb74d0fb}{rcut\_bulge}}\\
+\} \mbox{\hyperlink{classMWPotentialEvolve_a5c406e33431608da37fcd54b3d691995}{init}}\\
+
+\end{tabbing}\item 
+\begin{tabbing}
+xx\=xx\=xx\=xx\=xx\=xx\=xx\=xx\=xx\=\kill
+struct \{\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_ac0edc3d6108e395caa1577f0b707e404}{m\_vir\_halo}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_a40943161fcb025e7633e78145e94a8ab}{r\_vir\_halo}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_a8c48aed3b62e12e8d2c2f0c3b83f3ecc}{rho\_c\_halo}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_a1c00ebdf9675f7f32d3427161c7afa8d}{gm\_halo}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_a2a62324b191d80d5bb0f89d24a275a2f}{rs\_halo}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_aeec36a599f33df13050485a81d2714f3}{gm\_disk}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_a6a7ff92430a30fe693b3600967e77bc3}{ra\_disk}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_aec26e403ae40bb15c8374bf2d1fce712}{rb\_disk}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_a2f837fbca88ad8eb1df5325f12926c11}{grho\_bulge}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_a7b838de9cd30ec4a8577dd0288619c96}{alpha\_bulge}}\\
+\>double \mbox{\hyperlink{classMWPotentialEvolve_a2294a6e2c93d5bf3359543a0cb74d0fb}{rcut\_bulge}}\\
+\} \mbox{\hyperlink{classMWPotentialEvolve_ae5644de290af1c1c3c9f7dd66a85373d}{now}}\\
+
+\end{tabbing}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+data for M\+W\+Potential evolve 
+
+The evolving Milkyway potential referring to M\+W\+Potential2014 in Galpy Reference\+: Gomez F. A., Helmi A., Brown A. G. A., Li Y. S., 2010, M\+N\+R\+AS, 408, 935. doi\+:10.\+1111/j.1365-\/2966.\+2010.\+17225.\+x, \href{https://ui.adsabs.harvard.edu/abs/2010MNRAS.408..935G}{\texttt{ https\+://ui.\+adsabs.\+harvard.\+edu/abs/2010\+M\+N\+R\+A\+S.\+408..\+935G}} 
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classMWPotentialEvolve_a499debe349e3789cd6fbab95bc56dabb}\label{classMWPotentialEvolve_a499debe349e3789cd6fbab95bc56dabb}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!calcMWPotentialParameters@{calcMWPotentialParameters}}
+\index{calcMWPotentialParameters@{calcMWPotentialParameters}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{calcMWPotentialParameters()}{calcMWPotentialParameters()}}
+{\footnotesize\ttfamily void M\+W\+Potential\+Evolve\+::calc\+M\+W\+Potential\+Parameters (\begin{DoxyParamCaption}\item[{const double \&}]{\+\_\+time }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate MW potential based on the input time 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+time} & physical time \mbox{[}Myr\mbox{]} \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classMWPotentialEvolve_a499debe349e3789cd6fbab95bc56dabb_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classMWPotentialEvolve_a499debe349e3789cd6fbab95bc56dabb_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classMWPotentialEvolve_a45a7e51221c2de3937fcb72cd90fd11e}\label{classMWPotentialEvolve_a45a7e51221c2de3937fcb72cd90fd11e}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!initialFromFile@{initialFromFile}}
+\index{initialFromFile@{initialFromFile}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{initialFromFile()}{initialFromFile()}}
+{\footnotesize\ttfamily void M\+W\+Potential\+Evolve\+::initial\+From\+File (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{\+\_\+filename,  }\item[{const double \&}]{\+\_\+time }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+initial potential parameter from a file 
+
+Parameters in configure file\+: Time \mbox{[}value(\+Myr)\mbox{]} a \mbox{[}value\mbox{]} H0 \mbox{[}value(km/s/\+Mpc)\mbox{]} Omega \mbox{[}energy radiation matter\mbox{]} dt\+\_\+scale \mbox{[}value\mbox{]} dt\+\_\+max \mbox{[}value(\+Myr)\mbox{]} Halo \mbox{[}m\+\_\+vir(\+Msun) c ac\mbox{]} ~\newline
+ Disk \mbox{[}M(\+Msun) ra(pc) rb(pc)\mbox{]} Bulge \mbox{[}rho(Msun/pc$^\wedge$(3-\/alpha)) alpha rcut(pc)\mbox{]} a (scale factor), H0 (Hubble constant) and Omega are used to obtain a at a given time by integrating adot(t) Omega are three normazied densities in F\+RW cosmological model dt\+\_\+scale\+: scale of time to integrate a, if -\/1, evolve backwards, if 1, evolve forwards dt\+\_\+max\+: maximum time step for integrating adot N\+FW Halo (3)\+: virial mass, concentration, formation epoch of halo (Wechsler 2002, Zhao 2003) Miyamoto Nagai disk (3)\+: mass, a, b Power Spherical bulge with expotential cutoff (3)\+: rho0, power law index, cutoff radius
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+filename} & the file contain parameters \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+time} & current physical time \mbox{[}Myr\mbox{]} \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classMWPotentialEvolve_a45a7e51221c2de3937fcb72cd90fd11e_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classMWPotentialEvolve_a45a7e51221c2de3937fcb72cd90fd11e_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classMWPotentialEvolve_a61d78d2224231b9d052d48cdd2d38eaf}\label{classMWPotentialEvolve_a61d78d2224231b9d052d48cdd2d38eaf}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!readDataFromFile@{readDataFromFile}}
+\index{readDataFromFile@{readDataFromFile}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{readDataFromFile()}{readDataFromFile()}}
+{\footnotesize\ttfamily void M\+W\+Potential\+Evolve\+::read\+Data\+From\+File (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{\+\_\+filename,  }\item[{const double \&}]{\+\_\+time }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read potential parameter from a file 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+filename} & the file contain parameters (no label)\+: \mbox{\hyperlink{classFRWModel}{F\+R\+W\+Model}}\+: Time\mbox{[}Myr\mbox{]}, a, H0\mbox{[}km/s/\+Mpc\mbox{]}, Omega\+\_\+energy, Omega\+\_\+radiation, Omega\+\_\+matter, dt\+\_\+scale N\+F\+W\+Halo\+: M\+\_\+vir\mbox{[}Msun\mbox{]}, c, ac Disk\+: M\mbox{[}Msun\mbox{]}, Ra\mbox{[}pc\mbox{]}, Rb\mbox{[}pc\mbox{]} Bulge\+: M\mbox{[}Msun\mbox{]}, alpha, rcut\mbox{[}pc\mbox{]} \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+time} & current physical time \mbox{[}Myr\mbox{]} \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classMWPotentialEvolve_a61d78d2224231b9d052d48cdd2d38eaf_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classMWPotentialEvolve_a61d78d2224231b9d052d48cdd2d38eaf_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classMWPotentialEvolve_a92e616d63b989428e6424e0d0180de7c}\label{classMWPotentialEvolve_a92e616d63b989428e6424e0d0180de7c}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!writeDataToFile@{writeDataToFile}}
+\index{writeDataToFile@{writeDataToFile}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{writeDataToFile()}{writeDataToFile()}}
+{\footnotesize\ttfamily void M\+W\+Potential\+Evolve\+::write\+Data\+To\+File (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{\+\_\+filename }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write data for restart 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+filename} & file to save data \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classMWPotentialEvolve_a92e616d63b989428e6424e0d0180de7c_icgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classMWPotentialEvolve_a06882b124341988f3c0d9dc473864755}\label{classMWPotentialEvolve_a06882b124341988f3c0d9dc473864755}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!ac\_halo@{ac\_halo}}
+\index{ac\_halo@{ac\_halo}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{ac\_halo}{ac\_halo}}
+{\footnotesize\ttfamily double M\+W\+Potential\+Evolve\+::ac\+\_\+halo}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_a7b838de9cd30ec4a8577dd0288619c96}\label{classMWPotentialEvolve_a7b838de9cd30ec4a8577dd0288619c96}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!alpha\_bulge@{alpha\_bulge}}
+\index{alpha\_bulge@{alpha\_bulge}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{alpha\_bulge}{alpha\_bulge}}
+{\footnotesize\ttfamily double M\+W\+Potential\+Evolve\+::alpha\+\_\+bulge}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_a288f772a110797a259b380fe6f193871}\label{classMWPotentialEvolve_a288f772a110797a259b380fe6f193871}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!c\_halo@{c\_halo}}
+\index{c\_halo@{c\_halo}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{c\_halo}{c\_halo}}
+{\footnotesize\ttfamily double M\+W\+Potential\+Evolve\+::c\+\_\+halo}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_ab12d579132641e66fa995ec0e25bf6ad}\label{classMWPotentialEvolve_ab12d579132641e66fa995ec0e25bf6ad}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!frw@{frw}}
+\index{frw@{frw}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{frw}{frw}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classFRWModel}{F\+R\+W\+Model}} M\+W\+Potential\+Evolve\+::frw}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_aeec36a599f33df13050485a81d2714f3}\label{classMWPotentialEvolve_aeec36a599f33df13050485a81d2714f3}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!gm\_disk@{gm\_disk}}
+\index{gm\_disk@{gm\_disk}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{gm\_disk}{gm\_disk}}
+{\footnotesize\ttfamily double M\+W\+Potential\+Evolve\+::gm\+\_\+disk}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_a1c00ebdf9675f7f32d3427161c7afa8d}\label{classMWPotentialEvolve_a1c00ebdf9675f7f32d3427161c7afa8d}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!gm\_halo@{gm\_halo}}
+\index{gm\_halo@{gm\_halo}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{gm\_halo}{gm\_halo}}
+{\footnotesize\ttfamily double M\+W\+Potential\+Evolve\+::gm\+\_\+halo}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_a2f837fbca88ad8eb1df5325f12926c11}\label{classMWPotentialEvolve_a2f837fbca88ad8eb1df5325f12926c11}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!grho\_bulge@{grho\_bulge}}
+\index{grho\_bulge@{grho\_bulge}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{grho\_bulge}{grho\_bulge}}
+{\footnotesize\ttfamily double M\+W\+Potential\+Evolve\+::grho\+\_\+bulge}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_a5c406e33431608da37fcd54b3d691995}\label{classMWPotentialEvolve_a5c406e33431608da37fcd54b3d691995}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!init@{init}}
+\index{init@{init}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{init}{init}}
+{\footnotesize\ttfamily struct \{ ... \}  M\+W\+Potential\+Evolve\+::init}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_a53bb0027fa3c56b0057224d5a812e8b6}\label{classMWPotentialEvolve_a53bb0027fa3c56b0057224d5a812e8b6}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!m\_disk@{m\_disk}}
+\index{m\_disk@{m\_disk}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{m\_disk}{m\_disk}}
+{\footnotesize\ttfamily double M\+W\+Potential\+Evolve\+::m\+\_\+disk}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_ac0edc3d6108e395caa1577f0b707e404}\label{classMWPotentialEvolve_ac0edc3d6108e395caa1577f0b707e404}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!m\_vir\_halo@{m\_vir\_halo}}
+\index{m\_vir\_halo@{m\_vir\_halo}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{m\_vir\_halo}{m\_vir\_halo}}
+{\footnotesize\ttfamily double M\+W\+Potential\+Evolve\+::m\+\_\+vir\+\_\+halo}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_ae5644de290af1c1c3c9f7dd66a85373d}\label{classMWPotentialEvolve_ae5644de290af1c1c3c9f7dd66a85373d}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!now@{now}}
+\index{now@{now}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{now}{now}}
+{\footnotesize\ttfamily struct \{ ... \}  M\+W\+Potential\+Evolve\+::now}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_a40943161fcb025e7633e78145e94a8ab}\label{classMWPotentialEvolve_a40943161fcb025e7633e78145e94a8ab}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!r\_vir\_halo@{r\_vir\_halo}}
+\index{r\_vir\_halo@{r\_vir\_halo}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{r\_vir\_halo}{r\_vir\_halo}}
+{\footnotesize\ttfamily double M\+W\+Potential\+Evolve\+::r\+\_\+vir\+\_\+halo}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_a6a7ff92430a30fe693b3600967e77bc3}\label{classMWPotentialEvolve_a6a7ff92430a30fe693b3600967e77bc3}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!ra\_disk@{ra\_disk}}
+\index{ra\_disk@{ra\_disk}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{ra\_disk}{ra\_disk}}
+{\footnotesize\ttfamily double M\+W\+Potential\+Evolve\+::ra\+\_\+disk}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_aec26e403ae40bb15c8374bf2d1fce712}\label{classMWPotentialEvolve_aec26e403ae40bb15c8374bf2d1fce712}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!rb\_disk@{rb\_disk}}
+\index{rb\_disk@{rb\_disk}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{rb\_disk}{rb\_disk}}
+{\footnotesize\ttfamily double M\+W\+Potential\+Evolve\+::rb\+\_\+disk}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_a2294a6e2c93d5bf3359543a0cb74d0fb}\label{classMWPotentialEvolve_a2294a6e2c93d5bf3359543a0cb74d0fb}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!rcut\_bulge@{rcut\_bulge}}
+\index{rcut\_bulge@{rcut\_bulge}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{rcut\_bulge}{rcut\_bulge}}
+{\footnotesize\ttfamily double M\+W\+Potential\+Evolve\+::rcut\+\_\+bulge}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_a703845f35324fdc51dd04e12a1103869}\label{classMWPotentialEvolve_a703845f35324fdc51dd04e12a1103869}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!rho\_bulge@{rho\_bulge}}
+\index{rho\_bulge@{rho\_bulge}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{rho\_bulge}{rho\_bulge}}
+{\footnotesize\ttfamily double M\+W\+Potential\+Evolve\+::rho\+\_\+bulge}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_a8c48aed3b62e12e8d2c2f0c3b83f3ecc}\label{classMWPotentialEvolve_a8c48aed3b62e12e8d2c2f0c3b83f3ecc}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!rho\_c\_halo@{rho\_c\_halo}}
+\index{rho\_c\_halo@{rho\_c\_halo}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{rho\_c\_halo}{rho\_c\_halo}}
+{\footnotesize\ttfamily double M\+W\+Potential\+Evolve\+::rho\+\_\+c\+\_\+halo}
+
+\mbox{\Hypertarget{classMWPotentialEvolve_a2a62324b191d80d5bb0f89d24a275a2f}\label{classMWPotentialEvolve_a2a62324b191d80d5bb0f89d24a275a2f}} 
+\index{MWPotentialEvolve@{MWPotentialEvolve}!rs\_halo@{rs\_halo}}
+\index{rs\_halo@{rs\_halo}!MWPotentialEvolve@{MWPotentialEvolve}}
+\doxysubsubsection{\texorpdfstring{rs\_halo}{rs\_halo}}
+{\footnotesize\ttfamily double M\+W\+Potential\+Evolve\+::rs\+\_\+halo}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{galpy__interface_8h}{galpy\+\_\+interface.\+h}}\end{DoxyCompactItemize}

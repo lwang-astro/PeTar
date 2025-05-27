@@ -1,0 +1,185 @@
+\hypertarget{classARPerturber}{}\doxysection{A\+R\+Perturber Class Reference}
+\label{classARPerturber}\index{ARPerturber@{ARPerturber}}
+
+
+Perturber class for AR integration.  
+
+
+
+
+{\ttfamily \#include $<$ar\+\_\+perturber.\+hpp$>$}
+
+
+
+Inheritance diagram for A\+R\+Perturber\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=224pt]{classARPerturber__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for A\+R\+Perturber\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=314pt]{classARPerturber__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+typedef H4\+::\+Neighbor$<$ \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $>$ \mbox{\hyperlink{classARPerturber_ac941af13d34ca3081b9248f78cc91134}{NB}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classARPerturber_a1d6a83e7c4d6ea3cbf849493861934bd}{A\+R\+Perturber}} ()
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+minimum soft perturbation \end{quote}
+\end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classARPerturber_a292b8f0ee26119c91f073a32308a725e}{clear}} ()
+\begin{DoxyCompactList}\small\item\em clear function \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classARPerturber_a264b8655b06d527d3c2cc1476b781523}{check\+Params}} ()
+\begin{DoxyCompactList}\small\item\em check parameters status \end{DoxyCompactList}\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classARPerturber_acfbbe4d44811c54fa095157e28a1ff1c}{find\+Close\+Soft\+Pert}} (\mbox{\hyperlink{classTidalTensor}{Tidal\+Tensor}} $\ast$\+\_\+tt, int \&\+\_\+n\+\_\+tt, const int \+\_\+n\+\_\+max, const H4\+::\+Particle\+H4$<$ \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $>$ \&\+\_\+cm, const P\+S\+::\+F64 \+\_\+gid)
+\begin{DoxyCompactList}\small\item\em find close tidal tensor and if (-\/) tensor group id is the same as input, initial tidal tensor c.\+m. \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\void \mbox{\hyperlink{classARPerturber_afcb1871c62eee154c8c9244c05bbd49a}{calc\+Soft\+Pert\+Min}} (const A\+R\+::\+Binary\+Tree$<$ Tptcl $>$ \&\+\_\+bin, const Float \+\_\+G)
+\begin{DoxyCompactList}\small\item\em calculate soft\+\_\+pert\+\_\+min for slowdown pert\+\_\+out \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classTidalTensor}{Tidal\+Tensor}} $\ast$ \mbox{\hyperlink{classARPerturber_a51bad2a0a866c10a5d92cd1bfbe06fe2}{soft\+\_\+pert}}
+\item 
+Float \mbox{\hyperlink{classARPerturber_a58579ef3df0b03c921b76776e5419be3}{soft\+\_\+pert\+\_\+min}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+soft perturbation \end{quote}
+\end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Perturber class for AR integration. 
+
+\doxysubsection{Member Typedef Documentation}
+\mbox{\Hypertarget{classARPerturber_ac941af13d34ca3081b9248f78cc91134}\label{classARPerturber_ac941af13d34ca3081b9248f78cc91134}} 
+\index{ARPerturber@{ARPerturber}!NB@{NB}}
+\index{NB@{NB}!ARPerturber@{ARPerturber}}
+\doxysubsubsection{\texorpdfstring{NB}{NB}}
+{\footnotesize\ttfamily typedef H4\+::\+Neighbor$<$\mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}}$>$ \mbox{\hyperlink{classARPerturber_ac941af13d34ca3081b9248f78cc91134}{A\+R\+Perturber\+::\+NB}}}
+
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classARPerturber_a1d6a83e7c4d6ea3cbf849493861934bd}\label{classARPerturber_a1d6a83e7c4d6ea3cbf849493861934bd}} 
+\index{ARPerturber@{ARPerturber}!ARPerturber@{ARPerturber}}
+\index{ARPerturber@{ARPerturber}!ARPerturber@{ARPerturber}}
+\doxysubsubsection{\texorpdfstring{ARPerturber()}{ARPerturber()}}
+{\footnotesize\ttfamily A\+R\+Perturber\+::\+A\+R\+Perturber (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\begin{quote}
+minimum soft perturbation \end{quote}
+
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classARPerturber_afcb1871c62eee154c8c9244c05bbd49a}\label{classARPerturber_afcb1871c62eee154c8c9244c05bbd49a}} 
+\index{ARPerturber@{ARPerturber}!calcSoftPertMin@{calcSoftPertMin}}
+\index{calcSoftPertMin@{calcSoftPertMin}!ARPerturber@{ARPerturber}}
+\doxysubsubsection{\texorpdfstring{calcSoftPertMin()}{calcSoftPertMin()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+void A\+R\+Perturber\+::calc\+Soft\+Pert\+Min (\begin{DoxyParamCaption}\item[{const A\+R\+::\+Binary\+Tree$<$ Tptcl $>$ \&}]{\+\_\+bin,  }\item[{const Float}]{\+\_\+G }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate soft\+\_\+pert\+\_\+min for slowdown pert\+\_\+out 
+
+\textbackslash{}\+Delta F = G m\+\_\+cm m\+\_\+p (apo) / rp$^\wedge$3 Pert\+\_\+out = \textbackslash{}\+Delta F /(G apo) 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+bin} & binary parameters \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+G} & gravitatioal constant \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classARPerturber_afcb1871c62eee154c8c9244c05bbd49a_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classARPerturber_a264b8655b06d527d3c2cc1476b781523}\label{classARPerturber_a264b8655b06d527d3c2cc1476b781523}} 
+\index{ARPerturber@{ARPerturber}!checkParams@{checkParams}}
+\index{checkParams@{checkParams}!ARPerturber@{ARPerturber}}
+\doxysubsubsection{\texorpdfstring{checkParams()}{checkParams()}}
+{\footnotesize\ttfamily bool A\+R\+Perturber\+::check\+Params (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+check parameters status 
+
+\mbox{\Hypertarget{classARPerturber_a292b8f0ee26119c91f073a32308a725e}\label{classARPerturber_a292b8f0ee26119c91f073a32308a725e}} 
+\index{ARPerturber@{ARPerturber}!clear@{clear}}
+\index{clear@{clear}!ARPerturber@{ARPerturber}}
+\doxysubsubsection{\texorpdfstring{clear()}{clear()}}
+{\footnotesize\ttfamily void A\+R\+Perturber\+::clear (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+clear function 
+
+\mbox{\Hypertarget{classARPerturber_acfbbe4d44811c54fa095157e28a1ff1c}\label{classARPerturber_acfbbe4d44811c54fa095157e28a1ff1c}} 
+\index{ARPerturber@{ARPerturber}!findCloseSoftPert@{findCloseSoftPert}}
+\index{findCloseSoftPert@{findCloseSoftPert}!ARPerturber@{ARPerturber}}
+\doxysubsubsection{\texorpdfstring{findCloseSoftPert()}{findCloseSoftPert()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 A\+R\+Perturber\+::find\+Close\+Soft\+Pert (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classTidalTensor}{Tidal\+Tensor}} $\ast$}]{\+\_\+tt,  }\item[{int \&}]{\+\_\+n\+\_\+tt,  }\item[{const int}]{\+\_\+n\+\_\+max,  }\item[{const H4\+::\+Particle\+H4$<$ \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $>$ \&}]{\+\_\+cm,  }\item[{const P\+S\+::\+F64}]{\+\_\+gid }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+find close tidal tensor and if (-\/) tensor group id is the same as input, initial tidal tensor c.\+m. 
+
+if the tidal tensor is already in used (group\+\_\+id$>$=0), copy a new one after \+\_\+n\+\_\+tt 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+tt} & tensor array \\
+\hline
+\mbox{\texttt{ in,out}}  & {\em \+\_\+n\+\_\+tt} & number of current tensor \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+max} & maximum size of tensor array \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+cm} & c.\+m. particle \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+gid} & group id (not necessary integer) \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the tidal tensor index, if no match, return -\/1 
+\end{DoxyReturn}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classARPerturber_a51bad2a0a866c10a5d92cd1bfbe06fe2}\label{classARPerturber_a51bad2a0a866c10a5d92cd1bfbe06fe2}} 
+\index{ARPerturber@{ARPerturber}!soft\_pert@{soft\_pert}}
+\index{soft\_pert@{soft\_pert}!ARPerturber@{ARPerturber}}
+\doxysubsubsection{\texorpdfstring{soft\_pert}{soft\_pert}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classTidalTensor}{Tidal\+Tensor}}$\ast$ A\+R\+Perturber\+::soft\+\_\+pert}
+
+\mbox{\Hypertarget{classARPerturber_a58579ef3df0b03c921b76776e5419be3}\label{classARPerturber_a58579ef3df0b03c921b76776e5419be3}} 
+\index{ARPerturber@{ARPerturber}!soft\_pert\_min@{soft\_pert\_min}}
+\index{soft\_pert\_min@{soft\_pert\_min}!ARPerturber@{ARPerturber}}
+\doxysubsubsection{\texorpdfstring{soft\_pert\_min}{soft\_pert\_min}}
+{\footnotesize\ttfamily Float A\+R\+Perturber\+::soft\+\_\+pert\+\_\+min}
+
+
+
+\begin{quote}
+soft perturbation \end{quote}
+
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{ar__perturber_8hpp}{ar\+\_\+perturber.\+hpp}}\end{DoxyCompactItemize}

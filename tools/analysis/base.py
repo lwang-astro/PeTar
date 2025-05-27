@@ -1,6 +1,7 @@
 # base class 
 import numpy as np
 import warnings
+warnings.simplefilter('always')
 
 class DictNpArrayMix:
     """ The basic class of data structure
@@ -293,9 +294,9 @@ class DictNpArrayMix:
         for key, item in self.__dict__.items():
             if (key=='host'): continue
             if (type(item) == np.ndarray):
-                new_dat.__dict__[key] = np.repeat(self.__dict__[key], repeats)
+                new_dat.__dict__[key] = np.repeat(self.__dict__[key], repeats, axis=0)
             elif (issubclass(type(item), DictNpArrayMix)):
-                new_dat.__dict__[key] = np.repeat(self.__dict__[key], repeats)
+                new_dat.__dict__[key] = self.__dict__[key].repeat(repeats)
                 new_dat.__dict__[key].setHost(new_dat)
                 if (size_checker == None): size_checker = new_dat.size
                 elif (size_checker != new_dat.size):
@@ -359,7 +360,7 @@ class DictNpArrayMix:
 
     def __sub__(self, other):
         """
-        Use operate function to add self and the other
+        Use operate function to subtract self and the other
         """
         return self.operate(other, np.subtract)
 
@@ -371,13 +372,13 @@ class DictNpArrayMix:
 
     def __truediv__(self, other):
         """
-        Use operate function to add self and the other
+        Use operate function to truediv self and the other
         """
         return self.operate(other, np.true_divide)
 
     def __pow__(self, other):
         """
-        Use operate function to multiply self and the other
+        Use operate function to get the other power of self
         """
         return self.operate(other, np.power)
 
@@ -524,14 +525,36 @@ class DictNpArrayMix:
                     icol += ncols
             return dat_out
 
-    def printTable(self, column_format, print_title=True):
+    def getColumnInfo(self):
+        """
+        Get column position (counting from 0), key member name and data type of the reading data file.
+        Output a list, each element is a tuple of the three parameters.
+        All sub class members are resolved.
+        """
+        position = 0
+        dt = self.collectDtype()
+        column_info = []
+        for key, par in dt:
+            column_info.append((position, key, par))
+            if type(par) == tuple:
+                if (type(par[0]) == type) & (type(par[1]) == int):
+                    position += par[1]
+                else:
+                    position += 1
+            else:
+                position += 1
+        return column_info
+
+
+    def printTable(self, column_format, print_title=True, print_format='text'):
         """
         print Table with defined column list and formats
 
         Parameters
-        column_format: a list of column label (class member name) and format, enclosed by tuple, for sub-member, use . to access
-                       For exmaple: [(key1,'%s'), (key2,'%12.7f'), (key3.subkey1,'%d'), (key3.subkey2,'%e')]
+        column_format: a list of column label (class member name), format and column title, enclosed by tuple, for sub-member, use . to access
+                       For exmaple: [(key1,'%s', title1), (key2,'%12.7f', title2), (key3.subkey1,'%d', title3), (key3.subkey2,'%e',title4)]
         print_title: print title of keys (default: True)
+        print_format: print format: text, latex, csv (default: text)
         """
         import re
 
@@ -540,7 +563,7 @@ class DictNpArrayMix:
         table=[]
         fmt_list=''
         fmt_title=''
-        for key, fmt in column_format:
+        for key, fmt, name in column_format:
             keylst = key.split('.')
             dat_key=self
             for ikey in keylst:
@@ -550,18 +573,36 @@ class DictNpArrayMix:
                     dat_key = dat_key[key_name][:,index]
                 else:
                     dat_key = dat_key[ikey]
-            title.append(key)
+            title.append(name)
             if '.' in fmt:
-                fmt_title += re.sub('\.[0-9]*[a-zA-Z]','s',fmt)
+                fmt_title += re.sub('\\.[0-9]*[a-zA-Z]','s',fmt)
             else:
                 fmt_title += re.sub('[a-zA-Z]','s',fmt)
             table.append(dat_key)
             fmt_list += fmt
+            if (print_format=='latex'):
+                fmt_title += ' &'
+                fmt_list += ' &'
+            elif (print_format=='csv'):
+                fmt_title += ','
+                fmt_list += ','
+        if (print_format=='latex'):
+            fmt_list = fmt_list[:-1] + '\\\\'
+            fmt_title = fmt_title[:-1] + '\\\\'
+        elif (print_format=='csv'):
+            fmt_list = fmt_list[:-1]
+            fmt_title = fmt_title[:-1]
         table=np.transpose(np.array(table))
+        if (print_format=='latex'):
+            print('\\\\hline')
         if (print_title):
             print(fmt_title % tuple(title))
+            if (print_format=='latex'):
+                print('\\\\hline')
         for line in table:
             print(fmt_list % tuple(line))
+        if (print_format=='latex'):
+            print('\\\\hline')
 
     def append(self, *_dat):
         """ Map the numpy.append function to each member

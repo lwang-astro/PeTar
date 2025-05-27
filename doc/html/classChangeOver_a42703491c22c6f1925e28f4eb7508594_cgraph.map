@@ -1,0 +1,5 @@
+<map id="ChangeOver::calcPotWTwo" name="ChangeOver::calcPotWTwo">
+<area shape="rect" id="node1" title="calculate changeover function Pot by selecting maximum rout" alt="" coords="5,31,200,57"/>
+<area shape="rect" id="node2" href="$classChangeOver.html#a23c019e8fc14c43826a4c85454e55780" title="changeover function for potential" alt="" coords="248,5,419,32"/>
+<area shape="rect" id="node3" href="$classChangeOver.html#ab1ee26d7f773d67568a55b8efabdbe79" title="get r_out" alt="" coords="253,56,414,83"/>
+</map>

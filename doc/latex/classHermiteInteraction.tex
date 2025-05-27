@@ -1,0 +1,336 @@
+\hypertarget{classHermiteInteraction}{}\doxysection{Hermite\+Interaction Class Reference}
+\label{classHermiteInteraction}\index{HermiteInteraction@{HermiteInteraction}}
+
+
+hermite interaction class  
+
+
+
+
+{\ttfamily \#include $<$hermite\+\_\+interaction.\+hpp$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classHermiteInteraction_a87a9b12a8d42ce1e0f0a5a9203cd8b8b}{Hermite\+Interaction}} ()
+\item 
+bool \mbox{\hyperlink{classHermiteInteraction_a2c9453eb9ce6fcfa17fd6f5ae3443f1d}{check\+Params}} ()
+\begin{DoxyCompactList}\small\item\em check whether parameters values are correct \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classHermiteInteraction_a792fef24b0742987baa0c9d08eba0f43}{print}} (std\+::ostream \&\+\_\+fout) const
+\begin{DoxyCompactList}\small\item\em print parameters \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tpi , class Tpj $>$ }\\Float \mbox{\hyperlink{classHermiteInteraction_a52efc225d2e6bf02c7fc48584b791651}{calc\+R2\+Pair}} (const Tpi \&\+\_\+pi, const Tpj \&\+\_\+pj)
+\begin{DoxyCompactList}\small\item\em calculate separation square between i and j particles \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tpi , class Tpj $>$ }\\Float \mbox{\hyperlink{classHermiteInteraction_ae5d870c8e163034c8b419ef64a031e39}{calc\+Acc\+Jerk\+Pair\+Single\+Single}} (H4\+::\+Force\+H4 \&\+\_\+fi, const Tpi \&\+\_\+pi, const Tpj \&\+\_\+pj)
+\begin{DoxyCompactList}\small\item\em calculate acceleration and jerk of one pair \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tpi , class Tgroup $>$ }\\Float \mbox{\hyperlink{classHermiteInteraction_aecaa8dca2c19d0c2833212611d1f3118}{calc\+Acc\+Jerk\+Pair\+Single\+Group\+Member}} (H4\+::\+Force\+H4 \&\+\_\+fi, const Tpi \&\+\_\+pi, const Tgroup \&\+\_\+gj)
+\begin{DoxyCompactList}\small\item\em calculate acceleration and jerk of one pair single and resolved group \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tpi , class Tgroup , class Tpcmj $>$ }\\Float \mbox{\hyperlink{classHermiteInteraction_a9d8f0c34f81481a7bc2cd61afb296a53}{calc\+Acc\+Jerk\+Pair\+Single\+Group\+CM}} (H4\+::\+Force\+H4 \&\+\_\+fi, const Tpi \&\+\_\+pi, const Tgroup \&\+\_\+gj, const Tpcmj \&\+\_\+pj)
+\begin{DoxyCompactList}\small\item\em calculate acceleration and jerk of one pair single and resolved group \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tgroup , class Tpcmi , class Tpj $>$ }\\Float \mbox{\hyperlink{classHermiteInteraction_ad063ecfbe4843d581c9834dc219c157f}{calc\+Acc\+Jerk\+Pair\+Group\+C\+M\+Single}} (H4\+::\+Force\+H4 \&\+\_\+fi, const Tgroup \&\+\_\+gi, const Tpcmi \&\+\_\+pi, const Tpj \&\+\_\+pj)
+\begin{DoxyCompactList}\small\item\em calculate acceleration and jerk of one pair group cm and single \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tpi , class Tgroup $>$ }\\Float \mbox{\hyperlink{classHermiteInteraction_ac81b5ec52878d88c7a68a7d675a19e28}{calc\+Acc\+Jerk\+Pair\+Group\+C\+M\+Group\+Member}} (H4\+::\+Force\+H4 \&\+\_\+fi, const Tgroup \&\+\_\+gi, const Tpi \&\+\_\+pi, const Tgroup \&\+\_\+gj)
+\begin{DoxyCompactList}\small\item\em calculate acceleration and jerk of one pair group cm and resolved group \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tpcmi , class Tgroup , class Tpcmj $>$ }\\Float \mbox{\hyperlink{classHermiteInteraction_ad0c5b9678c1cb91f89d90d1f4a94a568}{calc\+Acc\+Jerk\+Pair\+Group\+C\+M\+Group\+CM}} (H4\+::\+Force\+H4 \&\+\_\+fi, const Tgroup \&\+\_\+gi, const Tpcmi \&\+\_\+pi, const Tgroup \&\+\_\+gj, const Tpcmj \&\+\_\+pj)
+\begin{DoxyCompactList}\small\item\em calculate acceleration and jerk of one pair single and resolved group \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tpi , class Tpj $>$ }\\Float \mbox{\hyperlink{classHermiteInteraction_a7b78173fe482cb89918e2633d98096da}{calc\+Energy\+Pot\+Single\+Single}} (const Tpi \&pi, const Tpj \&pj)
+\begin{DoxyCompactList}\small\item\em calculate pair potential energy \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tgroup , class Tpert $>$ }\\Float \mbox{\hyperlink{classHermiteInteraction_aa6ba4c9872e2b73c48b1e7005efd208b}{calc\+Energy\+Pert\+One\+Group}} (const Tgroup \&\+\_\+group, const Tpert \&\+\_\+perturber)
+\begin{DoxyCompactList}\small\item\em calculate peturbation energy to one group \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tp , class Tgroup , class Tpert $>$ }\\void \mbox{\hyperlink{classHermiteInteraction_a80cbf64ba6e72a0c00b178468ae87754}{calc\+Energy}} (H4\+::\+Hermite\+Energy \&\+\_\+energy, const Tp $\ast$\+\_\+particles, const int \+\_\+n\+\_\+particle, const Tgroup $\ast$\+\_\+groups, const int $\ast$\+\_\+group\+\_\+index, const int \+\_\+n\+\_\+group, const Tpert \&\+\_\+perturber)
+\begin{DoxyCompactList}\small\item\em calculate kinetic and potential energy of the system \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classHermiteInteraction_ac83c1007574a22f9959ac23eb3e6ae39}{write\+Binary}} (F\+I\+LE $\ast$\+\_\+fp) const
+\begin{DoxyCompactList}\small\item\em write class data to file with binary format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classHermiteInteraction_a6e8b4fb6887d69fd9ce230d7d9f1104c}{read\+Binary}} (F\+I\+LE $\ast$\+\_\+fin)
+\begin{DoxyCompactList}\small\item\em read class data to file with binary format \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+Float \mbox{\hyperlink{classHermiteInteraction_ad3f7ca03211dab4071fca4a145a3528a}{eps\+\_\+sq}}
+\item 
+Float \mbox{\hyperlink{classHermiteInteraction_a1c35dee9d4b2f17962d2a848e6fa8b57}{gravitational\+\_\+constant}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+hermite interaction class 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classHermiteInteraction_a87a9b12a8d42ce1e0f0a5a9203cd8b8b}\label{classHermiteInteraction_a87a9b12a8d42ce1e0f0a5a9203cd8b8b}} 
+\index{HermiteInteraction@{HermiteInteraction}!HermiteInteraction@{HermiteInteraction}}
+\index{HermiteInteraction@{HermiteInteraction}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{HermiteInteraction()}{HermiteInteraction()}}
+{\footnotesize\ttfamily Hermite\+Interaction\+::\+Hermite\+Interaction (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classHermiteInteraction_ad0c5b9678c1cb91f89d90d1f4a94a568}\label{classHermiteInteraction_ad0c5b9678c1cb91f89d90d1f4a94a568}} 
+\index{HermiteInteraction@{HermiteInteraction}!calcAccJerkPairGroupCMGroupCM@{calcAccJerkPairGroupCMGroupCM}}
+\index{calcAccJerkPairGroupCMGroupCM@{calcAccJerkPairGroupCMGroupCM}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{calcAccJerkPairGroupCMGroupCM()}{calcAccJerkPairGroupCMGroupCM()}}
+{\footnotesize\ttfamily template$<$class Tpcmi , class Tgroup , class Tpcmj $>$ \\
+Float Hermite\+Interaction\+::calc\+Acc\+Jerk\+Pair\+Group\+C\+M\+Group\+CM (\begin{DoxyParamCaption}\item[{H4\+::\+Force\+H4 \&}]{\+\_\+fi,  }\item[{const Tgroup \&}]{\+\_\+gi,  }\item[{const Tpcmi \&}]{\+\_\+pi,  }\item[{const Tgroup \&}]{\+\_\+gj,  }\item[{const Tpcmj \&}]{\+\_\+pj }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate acceleration and jerk of one pair single and resolved group 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em } & \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHermiteInteraction_ad0c5b9678c1cb91f89d90d1f4a94a568_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHermiteInteraction_ac81b5ec52878d88c7a68a7d675a19e28}\label{classHermiteInteraction_ac81b5ec52878d88c7a68a7d675a19e28}} 
+\index{HermiteInteraction@{HermiteInteraction}!calcAccJerkPairGroupCMGroupMember@{calcAccJerkPairGroupCMGroupMember}}
+\index{calcAccJerkPairGroupCMGroupMember@{calcAccJerkPairGroupCMGroupMember}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{calcAccJerkPairGroupCMGroupMember()}{calcAccJerkPairGroupCMGroupMember()}}
+{\footnotesize\ttfamily template$<$class Tpi , class Tgroup $>$ \\
+Float Hermite\+Interaction\+::calc\+Acc\+Jerk\+Pair\+Group\+C\+M\+Group\+Member (\begin{DoxyParamCaption}\item[{H4\+::\+Force\+H4 \&}]{\+\_\+fi,  }\item[{const Tgroup \&}]{\+\_\+gi,  }\item[{const Tpi \&}]{\+\_\+pi,  }\item[{const Tgroup \&}]{\+\_\+gj }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate acceleration and jerk of one pair group cm and resolved group 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em } & \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classHermiteInteraction_ad063ecfbe4843d581c9834dc219c157f}\label{classHermiteInteraction_ad063ecfbe4843d581c9834dc219c157f}} 
+\index{HermiteInteraction@{HermiteInteraction}!calcAccJerkPairGroupCMSingle@{calcAccJerkPairGroupCMSingle}}
+\index{calcAccJerkPairGroupCMSingle@{calcAccJerkPairGroupCMSingle}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{calcAccJerkPairGroupCMSingle()}{calcAccJerkPairGroupCMSingle()}}
+{\footnotesize\ttfamily template$<$class Tgroup , class Tpcmi , class Tpj $>$ \\
+Float Hermite\+Interaction\+::calc\+Acc\+Jerk\+Pair\+Group\+C\+M\+Single (\begin{DoxyParamCaption}\item[{H4\+::\+Force\+H4 \&}]{\+\_\+fi,  }\item[{const Tgroup \&}]{\+\_\+gi,  }\item[{const Tpcmi \&}]{\+\_\+pi,  }\item[{const Tpj \&}]{\+\_\+pj }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate acceleration and jerk of one pair group cm and single 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em } & \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classHermiteInteraction_a9d8f0c34f81481a7bc2cd61afb296a53}\label{classHermiteInteraction_a9d8f0c34f81481a7bc2cd61afb296a53}} 
+\index{HermiteInteraction@{HermiteInteraction}!calcAccJerkPairSingleGroupCM@{calcAccJerkPairSingleGroupCM}}
+\index{calcAccJerkPairSingleGroupCM@{calcAccJerkPairSingleGroupCM}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{calcAccJerkPairSingleGroupCM()}{calcAccJerkPairSingleGroupCM()}}
+{\footnotesize\ttfamily template$<$class Tpi , class Tgroup , class Tpcmj $>$ \\
+Float Hermite\+Interaction\+::calc\+Acc\+Jerk\+Pair\+Single\+Group\+CM (\begin{DoxyParamCaption}\item[{H4\+::\+Force\+H4 \&}]{\+\_\+fi,  }\item[{const Tpi \&}]{\+\_\+pi,  }\item[{const Tgroup \&}]{\+\_\+gj,  }\item[{const Tpcmj \&}]{\+\_\+pj }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate acceleration and jerk of one pair single and resolved group 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em } & \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHermiteInteraction_a9d8f0c34f81481a7bc2cd61afb296a53_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHermiteInteraction_aecaa8dca2c19d0c2833212611d1f3118}\label{classHermiteInteraction_aecaa8dca2c19d0c2833212611d1f3118}} 
+\index{HermiteInteraction@{HermiteInteraction}!calcAccJerkPairSingleGroupMember@{calcAccJerkPairSingleGroupMember}}
+\index{calcAccJerkPairSingleGroupMember@{calcAccJerkPairSingleGroupMember}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{calcAccJerkPairSingleGroupMember()}{calcAccJerkPairSingleGroupMember()}}
+{\footnotesize\ttfamily template$<$class Tpi , class Tgroup $>$ \\
+Float Hermite\+Interaction\+::calc\+Acc\+Jerk\+Pair\+Single\+Group\+Member (\begin{DoxyParamCaption}\item[{H4\+::\+Force\+H4 \&}]{\+\_\+fi,  }\item[{const Tpi \&}]{\+\_\+pi,  }\item[{const Tgroup \&}]{\+\_\+gj }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate acceleration and jerk of one pair single and resolved group 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em } & \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHermiteInteraction_aecaa8dca2c19d0c2833212611d1f3118_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHermiteInteraction_ae5d870c8e163034c8b419ef64a031e39}\label{classHermiteInteraction_ae5d870c8e163034c8b419ef64a031e39}} 
+\index{HermiteInteraction@{HermiteInteraction}!calcAccJerkPairSingleSingle@{calcAccJerkPairSingleSingle}}
+\index{calcAccJerkPairSingleSingle@{calcAccJerkPairSingleSingle}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{calcAccJerkPairSingleSingle()}{calcAccJerkPairSingleSingle()}}
+{\footnotesize\ttfamily template$<$class Tpi , class Tpj $>$ \\
+Float Hermite\+Interaction\+::calc\+Acc\+Jerk\+Pair\+Single\+Single (\begin{DoxyParamCaption}\item[{H4\+::\+Force\+H4 \&}]{\+\_\+fi,  }\item[{const Tpi \&}]{\+\_\+pi,  }\item[{const Tpj \&}]{\+\_\+pj }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate acceleration and jerk of one pair 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em } & \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHermiteInteraction_ae5d870c8e163034c8b419ef64a031e39_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHermiteInteraction_a80cbf64ba6e72a0c00b178468ae87754}\label{classHermiteInteraction_a80cbf64ba6e72a0c00b178468ae87754}} 
+\index{HermiteInteraction@{HermiteInteraction}!calcEnergy@{calcEnergy}}
+\index{calcEnergy@{calcEnergy}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{calcEnergy()}{calcEnergy()}}
+{\footnotesize\ttfamily template$<$class Tp , class Tgroup , class Tpert $>$ \\
+void Hermite\+Interaction\+::calc\+Energy (\begin{DoxyParamCaption}\item[{H4\+::\+Hermite\+Energy \&}]{\+\_\+energy,  }\item[{const Tp $\ast$}]{\+\_\+particles,  }\item[{const int}]{\+\_\+n\+\_\+particle,  }\item[{const Tgroup $\ast$}]{\+\_\+groups,  }\item[{const int $\ast$}]{\+\_\+group\+\_\+index,  }\item[{const int}]{\+\_\+n\+\_\+group,  }\item[{const Tpert \&}]{\+\_\+perturber }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate kinetic and potential energy of the system 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+energy} & hermite energy \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+particles} & (all) particle list \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+particle} & number of particles \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+groups} & group list \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+group\+\_\+index} & active groups index array for energy calculation \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+group} & number of active groups \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+perturber} & perturber \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classHermiteInteraction_aa6ba4c9872e2b73c48b1e7005efd208b}\label{classHermiteInteraction_aa6ba4c9872e2b73c48b1e7005efd208b}} 
+\index{HermiteInteraction@{HermiteInteraction}!calcEnergyPertOneGroup@{calcEnergyPertOneGroup}}
+\index{calcEnergyPertOneGroup@{calcEnergyPertOneGroup}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{calcEnergyPertOneGroup()}{calcEnergyPertOneGroup()}}
+{\footnotesize\ttfamily template$<$class Tgroup , class Tpert $>$ \\
+Float Hermite\+Interaction\+::calc\+Energy\+Pert\+One\+Group (\begin{DoxyParamCaption}\item[{const Tgroup \&}]{\+\_\+group,  }\item[{const Tpert \&}]{\+\_\+perturber }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate peturbation energy to one group 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+group} & target group \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+perturber} & perturber \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classHermiteInteraction_a7b78173fe482cb89918e2633d98096da}\label{classHermiteInteraction_a7b78173fe482cb89918e2633d98096da}} 
+\index{HermiteInteraction@{HermiteInteraction}!calcEnergyPotSingleSingle@{calcEnergyPotSingleSingle}}
+\index{calcEnergyPotSingleSingle@{calcEnergyPotSingleSingle}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{calcEnergyPotSingleSingle()}{calcEnergyPotSingleSingle()}}
+{\footnotesize\ttfamily template$<$class Tpi , class Tpj $>$ \\
+Float Hermite\+Interaction\+::calc\+Energy\+Pot\+Single\+Single (\begin{DoxyParamCaption}\item[{const Tpi \&}]{pi,  }\item[{const Tpj \&}]{pj }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate pair potential energy 
+
+\mbox{\Hypertarget{classHermiteInteraction_a52efc225d2e6bf02c7fc48584b791651}\label{classHermiteInteraction_a52efc225d2e6bf02c7fc48584b791651}} 
+\index{HermiteInteraction@{HermiteInteraction}!calcR2Pair@{calcR2Pair}}
+\index{calcR2Pair@{calcR2Pair}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{calcR2Pair()}{calcR2Pair()}}
+{\footnotesize\ttfamily template$<$class Tpi , class Tpj $>$ \\
+Float Hermite\+Interaction\+::calc\+R2\+Pair (\begin{DoxyParamCaption}\item[{const Tpi \&}]{\+\_\+pi,  }\item[{const Tpj \&}]{\+\_\+pj }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate separation square between i and j particles 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em } & \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classHermiteInteraction_a2c9453eb9ce6fcfa17fd6f5ae3443f1d}\label{classHermiteInteraction_a2c9453eb9ce6fcfa17fd6f5ae3443f1d}} 
+\index{HermiteInteraction@{HermiteInteraction}!checkParams@{checkParams}}
+\index{checkParams@{checkParams}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{checkParams()}{checkParams()}}
+{\footnotesize\ttfamily bool Hermite\+Interaction\+::check\+Params (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+check whether parameters values are correct 
+
+\begin{DoxyReturn}{Returns}
+true\+: all correct 
+\end{DoxyReturn}
+\mbox{\Hypertarget{classHermiteInteraction_a792fef24b0742987baa0c9d08eba0f43}\label{classHermiteInteraction_a792fef24b0742987baa0c9d08eba0f43}} 
+\index{HermiteInteraction@{HermiteInteraction}!print@{print}}
+\index{print@{print}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void Hermite\+Interaction\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print parameters 
+
+\mbox{\Hypertarget{classHermiteInteraction_a6e8b4fb6887d69fd9ce230d7d9f1104c}\label{classHermiteInteraction_a6e8b4fb6887d69fd9ce230d7d9f1104c}} 
+\index{HermiteInteraction@{HermiteInteraction}!readBinary@{readBinary}}
+\index{readBinary@{readBinary}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{readBinary()}{readBinary()}}
+{\footnotesize\ttfamily void Hermite\+Interaction\+::read\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for reading \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classHermiteInteraction_ac83c1007574a22f9959ac23eb3e6ae39}\label{classHermiteInteraction_ac83c1007574a22f9959ac23eb3e6ae39}} 
+\index{HermiteInteraction@{HermiteInteraction}!writeBinary@{writeBinary}}
+\index{writeBinary@{writeBinary}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{writeBinary()}{writeBinary()}}
+{\footnotesize\ttfamily void Hermite\+Interaction\+::write\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fp }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for output \\
+\hline
+\end{DoxyParams}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classHermiteInteraction_ad3f7ca03211dab4071fca4a145a3528a}\label{classHermiteInteraction_ad3f7ca03211dab4071fca4a145a3528a}} 
+\index{HermiteInteraction@{HermiteInteraction}!eps\_sq@{eps\_sq}}
+\index{eps\_sq@{eps\_sq}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{eps\_sq}{eps\_sq}}
+{\footnotesize\ttfamily Float Hermite\+Interaction\+::eps\+\_\+sq}
+
+\mbox{\Hypertarget{classHermiteInteraction_a1c35dee9d4b2f17962d2a848e6fa8b57}\label{classHermiteInteraction_a1c35dee9d4b2f17962d2a848e6fa8b57}} 
+\index{HermiteInteraction@{HermiteInteraction}!gravitational\_constant@{gravitational\_constant}}
+\index{gravitational\_constant@{gravitational\_constant}!HermiteInteraction@{HermiteInteraction}}
+\doxysubsubsection{\texorpdfstring{gravitational\_constant}{gravitational\_constant}}
+{\footnotesize\ttfamily Float Hermite\+Interaction\+::gravitational\+\_\+constant}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{hermite__interaction_8hpp}{hermite\+\_\+interaction.\+hpp}}\end{DoxyCompactItemize}

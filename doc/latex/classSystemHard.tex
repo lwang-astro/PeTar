@@ -1,0 +1,670 @@
+\hypertarget{classSystemHard}{}\doxysection{System\+Hard Class Reference}
+\label{classSystemHard}\index{SystemHard@{SystemHard}}
+
+
+Hard system.  
+
+
+
+
+{\ttfamily \#include $<$hard.\+hpp$>$}
+
+
+
+Collaboration diagram for System\+Hard\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=256pt]{classSystemHard__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+struct \mbox{\hyperlink{structSystemHard_1_1GroupIndexInfo}{Group\+Index\+Info}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+bool \mbox{\hyperlink{classSystemHard_ab4cfa60701681b891092275b4be9cfc0}{check\+Params}} ()
+\begin{DoxyCompactList}\small\item\em check paramters \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classSystemHard_afe8639a329f3910329a816e2fe03ea6b}{System\+Hard}} ()
+\item 
+void \mbox{\hyperlink{classSystemHard_a689b06c61c96f9d0cd2447402b83d3fc}{allocate\+Hard\+Integrator}} (const P\+S\+::\+S32 \+\_\+n\+\_\+hard\+\_\+int)
+\begin{DoxyCompactList}\small\item\em allocate memorgy for \mbox{\hyperlink{classHardIntegrator}{Hard\+Integrator}} \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classSystemHard_aafdd364b50148d60e369018a576947ef}{$\sim$\+System\+Hard}} ()
+\item 
+void \mbox{\hyperlink{classSystemHard_a8baaff00777996341313a1ca786a0e31}{initialize\+For\+One\+Cluster}} (const P\+S\+::\+S32 n)
+\item 
+{\footnotesize template$<$class Tsys , class Tptcl , class Tmediator $>$ }\\void \mbox{\hyperlink{classSystemHard_a97c75b84d56fedcc0f9a1a3995839ce8}{set\+Ptcl\+For\+Connected\+Cluster}} (const Tsys \&sys, const P\+S\+::\+Reallocatable\+Array$<$ Tmediator $>$ \&med, const P\+S\+::\+Reallocatable\+Array$<$ Tptcl $>$ \&ptcl\+\_\+recv)
+\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classSystemHard_a4f2a36cdaa2aec437d6434d8e6117666}{get\+Group\+Ptcl\+RemoteN}} () const
+\item 
+P\+S\+::\+Reallocatable\+Array$<$ \mbox{\hyperlink{hard_8hpp_a95cbf1c8a6b57f13cc3bcbdd8bfd7bc2}{Ptcl\+H4}} $>$ \& \mbox{\hyperlink{classSystemHard_a1801c9b9ed48c4dab3c5e0ee8d8fe67d}{get\+Ptcl}} ()
+\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classSystemHard_a6c7b5d7db23cc30a8886f5cda356afe5}{get\+Number\+Of\+Clusters}} () const
+\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classSystemHard_ad981cab6e696a124b003289878094386}{get\+Number\+Of\+Interrupt\+Clusters}} () const
+\item 
+\mbox{\hyperlink{classHardIntegrator}{Hard\+Integrator}} $\ast$ \mbox{\hyperlink{classSystemHard_abc16c2e7f709c17f0762c600cd30b58b}{get\+Interrupt\+Hard\+Integrator}} (const std\+::size\+\_\+t i)
+\item 
+P\+S\+::\+S32 $\ast$ \mbox{\hyperlink{classSystemHard_a7a93c9f2f0da92ca0eb63989a8ab2191}{get\+Cluster\+Number\+Of\+Member\+List}} (const std\+::size\+\_\+t i=0) const
+\item 
+P\+S\+::\+S32 $\ast$ \mbox{\hyperlink{classSystemHard_a6b8d71a996fb596b4cb9ca9ff242b3d8}{get\+Cluster\+Number\+Of\+Member\+List\+Offset}} (const std\+::size\+\_\+t i=0) const
+\item 
+P\+S\+::\+S32 $\ast$ \mbox{\hyperlink{classSystemHard_a7f940cb1a60da6e388dd777336dce45e}{get\+Group\+Number\+Of\+Member\+List}} (const std\+::size\+\_\+t i=0) const
+\item 
+P\+S\+::\+S32 $\ast$ \mbox{\hyperlink{classSystemHard_a783c9989d97e3a5e769d4df4d8edd6b4}{get\+Group\+Number\+Of\+Member\+List\+Offset}} (const std\+::size\+\_\+t i=0) const
+\item 
+P\+S\+::\+S32 $\ast$ \mbox{\hyperlink{classSystemHard_a955838a8442493261a92e9bb572f5a94}{get\+Adr\+Ptcl\+Art\+First\+List}} (const std\+::size\+\_\+t i=0) const
+\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classSystemHard_a9acc9ace45305aba14aedcaf2c8dcf7c}{get\+N\+Cluster\+Change\+Over\+Update}} () const
+\item 
+void \mbox{\hyperlink{classSystemHard_abd543bc60e7a4e5e19a73c1e5fa8c612}{set\+Time\+Origin}} (const P\+S\+::\+F64 \+\_\+time\+\_\+origin)
+\item 
+void \mbox{\hyperlink{classSystemHard_a0aefe9e642d174f1d8ab04825a3bce3c}{update\+Time\+Write\+Back}} ()
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classSystemHard_aaa3225b5e3f3fdeef1626258addcae12}{get\+Time\+Origin}} () const
+\item 
+{\footnotesize template$<$class Tsys $>$ }\\void \mbox{\hyperlink{classSystemHard_af79104a101a84b34ddfa0d87694fcb3b}{set\+Ptcl\+For\+One\+Cluster\+O\+MP}} (const Tsys \&sys, const P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&adr\+\_\+array)
+\item 
+void \mbox{\hyperlink{classSystemHard_a988c41fbd9c555adbaa705d01be4fd86}{drive\+For\+One\+Cluster\+O\+MP}} (const P\+S\+::\+F64 \+\_\+dt)
+\begin{DoxyCompactList}\small\item\em integrate one isolated particle \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsys $>$ }\\void \mbox{\hyperlink{classSystemHard_a3aa3d047d228450630934f7aaa7d3f98}{write\+Back\+Ptcl\+For\+One\+Cluster}} (Tsys \&sys, P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&\+\_\+mass\+\_\+modify\+\_\+list)
+\begin{DoxyCompactList}\small\item\em write back hard particles to global system, check mass modification and update time of write back \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsys $>$ }\\void \mbox{\hyperlink{classSystemHard_a7c2326950585e3ca686ac07faff7f246}{write\+Back\+Ptcl\+For\+One\+Cluster\+O\+MP}} (Tsys \&sys, P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&\+\_\+mass\+\_\+modify\+\_\+list)
+\begin{DoxyCompactList}\small\item\em write back hard particles to global system and update time of write back O\+MP version \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsys $>$ }\\void \mbox{\hyperlink{classSystemHard_aa4aebe7d712e02085a411e85618d6f12}{write\+Back\+Ptcl\+For\+Multi\+Cluster}} (Tsys \&\+\_\+sys, P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&\+\_\+mass\+\_\+modify\+\_\+list)
+\begin{DoxyCompactList}\small\item\em write back hard particles to global system, check mass modification and update time of write back \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsys $>$ }\\void \mbox{\hyperlink{classSystemHard_a986611cce9084300e7f6fee4decb1e6c}{write\+Back\+Ptcl\+For\+Multi\+Cluster\+O\+MP}} (Tsys \&\+\_\+sys, P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&\+\_\+mass\+\_\+modify\+\_\+list)
+\begin{DoxyCompactList}\small\item\em write back hard particles to global system and update time of write back O\+MP version \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsys $>$ }\\void \mbox{\hyperlink{classSystemHard_aa18476d87a9f3647939b7429899e13bb}{set\+Ptcl\+For\+Isolated\+Multi\+Cluster\+O\+MP}} (const Tsys \&sys, const P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&\+\_\+adr\+\_\+array, const P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&\+\_\+n\+\_\+ptcl\+\_\+in\+\_\+cluster)
+\item 
+{\footnotesize template$<$class Tpsoft $>$ }\\int \mbox{\hyperlink{classSystemHard_a54fe61854b07e077f41c55e52af4035c}{drive\+For\+Multi\+Cluster\+O\+MP}} (const P\+S\+::\+F64 dt, Tpsoft $\ast$\+\_\+ptcl\+\_\+soft)
+\begin{DoxyCompactList}\small\item\em Hard integration for clusters. \end{DoxyCompactList}\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classSystemHard_a2d86414801edb526081bb7441b6a0da4}{finish\+Integrate\+Interrupt\+Clusters\+O\+MP}} ()
+\begin{DoxyCompactList}\small\item\em Finish interrupt integration. \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\void \mbox{\hyperlink{classSystemHard_ab9aaaaa58ad48fe4fcfe36d2ce1c8619}{find\+Groups\+And\+Create\+Artificial\+Particles\+One\+Cluster}} (const P\+S\+::\+S32 \+\_\+i\+\_\+cluster, Tptcl $\ast$\+\_\+ptcl\+\_\+in\+\_\+cluster, const P\+S\+::\+S32 \+\_\+n\+\_\+ptcl, P\+S\+::\+Reallocatable\+Array$<$ Tptcl $>$ \&\+\_\+ptcl\+\_\+artificial, P\+S\+::\+Reallocatable\+Array$<$ C\+O\+M\+M\+::\+Binary\+Tree$<$ \mbox{\hyperlink{hard_8hpp_a95cbf1c8a6b57f13cc3bcbdd8bfd7bc2}{Ptcl\+H4}}, C\+O\+M\+M\+::\+Binary $>$$>$ \&\+\_\+binary\+\_\+table, P\+S\+::\+S32 \&\+\_\+n\+\_\+groups, P\+S\+::\+Reallocatable\+Array$<$ \mbox{\hyperlink{structSystemHard_1_1GroupIndexInfo}{Group\+Index\+Info}} $>$ \&\+\_\+n\+\_\+member\+\_\+in\+\_\+group, P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&\+\_\+changeover\+\_\+update\+\_\+list, \mbox{\hyperlink{classSearchGroupCandidate}{Search\+Group\+Candidate}}$<$ Tptcl $>$ \&\+\_\+groups, const P\+S\+::\+F64 \+\_\+dt\+\_\+tree)
+\begin{DoxyCompactList}\small\item\em generate artificial particles, \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsys , class Tptcl $>$ }\\void \mbox{\hyperlink{classSystemHard_aac43bb3f43f7b3ea6f04efcc40bf11bd}{find\+Groups\+And\+Create\+Artificial\+Particles\+O\+MP}} (Tsys \&\+\_\+sys, const P\+S\+::\+F64 \+\_\+dt\+\_\+tree)
+\begin{DoxyCompactList}\small\item\em Find groups and create aritfical particles to sys. \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsys $>$ }\\void \mbox{\hyperlink{classSystemHard_ad15b5a9f60e73df248ce6e68512e791d}{correct\+Pot\+With\+Cutoff\+O\+MP}} (Tsys \&\+\_\+sys, const P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&\+\_\+ptcl\+\_\+list)
+\begin{DoxyCompactList}\small\item\em potential correction for single cluster \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsys , class Tpsoft , class Ttree , class Tepj $>$ }\\void \mbox{\hyperlink{classSystemHard_a4f4cc338a1ecb9b1e2530a9a0ec0f68b}{correct\+Force\+With\+Cutoff\+Tree\+Neighbor\+And\+Cluster\+O\+MP}} (Tsys \&\+\_\+sys, Ttree \&\+\_\+tree, const P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&\+\_\+adr\+\_\+send, const bool \+\_\+acorr\+\_\+flag=false)
+\begin{DoxyCompactList}\small\item\em Soft force correction due to different cut-\/off function. \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsys $>$ }\\void \mbox{\hyperlink{classSystemHard_a014acbefdcaa7a3db1cf6d043b7b519c}{correct\+Force\+With\+Cutoff\+Cluster\+O\+MP}} (Tsys \&\+\_\+sys, const bool \+\_\+acorr\+\_\+flag=false)
+\begin{DoxyCompactList}\small\item\em Soft force correction due to different cut-\/off function. \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsys , class Ttree , class Tepj $>$ }\\void \mbox{\hyperlink{classSystemHard_a948046ca0f81181a45882201c86cca56}{correct\+Force\+For\+Change\+Over\+Update\+O\+MP}} (Tsys \&\+\_\+sys, Ttree \&\+\_\+tree, const P\+S\+::\+S32 $\ast$\+\_\+adr\+\_\+send=N\+U\+LL, const P\+S\+::\+S32 \+\_\+n\+\_\+send=0)
+\begin{DoxyCompactList}\small\item\em Correct force due to change over factor change. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+{\footnotesize template$<$class Tsys , class Tpsoft , class Ttree , class Tepj $>$ }\\static void \mbox{\hyperlink{classSystemHard_aaae0c65a7caa9679827b980b9e9f3c89}{correct\+Force\+With\+Cutoff\+Tree\+Neighbor\+O\+MP}} (Tsys \&\+\_\+sys, Ttree \&\+\_\+tree, const P\+S\+::\+S32 \+\_\+adr\+\_\+ptcl\+\_\+artificial\+\_\+start, \mbox{\hyperlink{classArtificialParticleManager}{Artificial\+Particle\+Manager}} \&\+\_\+ap\+\_\+manager, const bool \+\_\+acorr\+\_\+flag=false)
+\begin{DoxyCompactList}\small\item\em Soft force correction due to different cut-\/off function. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+P\+S\+::\+Reallocatable\+Array$<$ C\+O\+M\+M\+::\+Binary\+Tree$<$ \mbox{\hyperlink{hard_8hpp_a95cbf1c8a6b57f13cc3bcbdd8bfd7bc2}{Ptcl\+H4}}, C\+O\+M\+M\+::\+Binary $>$ $>$ \mbox{\hyperlink{classSystemHard_afac0753be3aa4fc3023a5ddafa2f94dc}{binary\+\_\+table}}
+\item 
+\mbox{\hyperlink{classHardManager}{Hard\+Manager}} $\ast$ \mbox{\hyperlink{classSystemHard_a6c021c99c3f6ae3adbfbc3a4929fd06f}{manager}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Hard system. 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classSystemHard_afe8639a329f3910329a816e2fe03ea6b}\label{classSystemHard_afe8639a329f3910329a816e2fe03ea6b}} 
+\index{SystemHard@{SystemHard}!SystemHard@{SystemHard}}
+\index{SystemHard@{SystemHard}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{SystemHard()}{SystemHard()}}
+{\footnotesize\ttfamily System\+Hard\+::\+System\+Hard (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSystemHard_afe8639a329f3910329a816e2fe03ea6b_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSystemHard_aafdd364b50148d60e369018a576947ef}\label{classSystemHard_aafdd364b50148d60e369018a576947ef}} 
+\index{SystemHard@{SystemHard}!````~SystemHard@{$\sim$SystemHard}}
+\index{````~SystemHard@{$\sim$SystemHard}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{$\sim$SystemHard()}{~SystemHard()}}
+{\footnotesize\ttfamily System\+Hard\+::$\sim$\+System\+Hard (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classSystemHard_a689b06c61c96f9d0cd2447402b83d3fc}\label{classSystemHard_a689b06c61c96f9d0cd2447402b83d3fc}} 
+\index{SystemHard@{SystemHard}!allocateHardIntegrator@{allocateHardIntegrator}}
+\index{allocateHardIntegrator@{allocateHardIntegrator}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{allocateHardIntegrator()}{allocateHardIntegrator()}}
+{\footnotesize\ttfamily void System\+Hard\+::allocate\+Hard\+Integrator (\begin{DoxyParamCaption}\item[{const P\+S\+::\+S32}]{\+\_\+n\+\_\+hard\+\_\+int }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+allocate memorgy for \mbox{\hyperlink{classHardIntegrator}{Hard\+Integrator}} 
+
+For record interrupt clusters. A array of \mbox{\hyperlink{classHardIntegrator}{Hard\+Integrator}} is allocated 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+hard\+\_\+int} & number of \mbox{\hyperlink{classHardIntegrator}{Hard\+Integrator}} \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=302pt]{classSystemHard_a689b06c61c96f9d0cd2447402b83d3fc_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSystemHard_ab4cfa60701681b891092275b4be9cfc0}\label{classSystemHard_ab4cfa60701681b891092275b4be9cfc0}} 
+\index{SystemHard@{SystemHard}!checkParams@{checkParams}}
+\index{checkParams@{checkParams}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{checkParams()}{checkParams()}}
+{\footnotesize\ttfamily bool System\+Hard\+::check\+Params (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+check paramters 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSystemHard_ab4cfa60701681b891092275b4be9cfc0_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSystemHard_a948046ca0f81181a45882201c86cca56}\label{classSystemHard_a948046ca0f81181a45882201c86cca56}} 
+\index{SystemHard@{SystemHard}!correctForceForChangeOverUpdateOMP@{correctForceForChangeOverUpdateOMP}}
+\index{correctForceForChangeOverUpdateOMP@{correctForceForChangeOverUpdateOMP}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{correctForceForChangeOverUpdateOMP()}{correctForceForChangeOverUpdateOMP()}}
+{\footnotesize\ttfamily template$<$class Tsys , class Ttree , class Tepj $>$ \\
+void System\+Hard\+::correct\+Force\+For\+Change\+Over\+Update\+O\+MP (\begin{DoxyParamCaption}\item[{Tsys \&}]{\+\_\+sys,  }\item[{Ttree \&}]{\+\_\+tree,  }\item[{const P\+S\+::\+S32 $\ast$}]{\+\_\+adr\+\_\+send = {\ttfamily NULL},  }\item[{const P\+S\+::\+S32}]{\+\_\+n\+\_\+send = {\ttfamily 0} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Correct force due to change over factor change. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+sys} & global particle system, acc is updated \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+tree} & tree for force, to get neighbor list \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+adr\+\_\+send} & for connected case, correct sending list \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+send} & sending particle number \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classSystemHard_a014acbefdcaa7a3db1cf6d043b7b519c}\label{classSystemHard_a014acbefdcaa7a3db1cf6d043b7b519c}} 
+\index{SystemHard@{SystemHard}!correctForceWithCutoffClusterOMP@{correctForceWithCutoffClusterOMP}}
+\index{correctForceWithCutoffClusterOMP@{correctForceWithCutoffClusterOMP}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{correctForceWithCutoffClusterOMP()}{correctForceWithCutoffClusterOMP()}}
+{\footnotesize\ttfamily template$<$class Tsys $>$ \\
+void System\+Hard\+::correct\+Force\+With\+Cutoff\+Cluster\+O\+MP (\begin{DoxyParamCaption}\item[{Tsys \&}]{\+\_\+sys,  }\item[{const bool}]{\+\_\+acorr\+\_\+flag = {\ttfamily false} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Soft force correction due to different cut-\/off function. 
+
+\mbox{\Hypertarget{classSystemHard_a4f4cc338a1ecb9b1e2530a9a0ec0f68b}\label{classSystemHard_a4f4cc338a1ecb9b1e2530a9a0ec0f68b}} 
+\index{SystemHard@{SystemHard}!correctForceWithCutoffTreeNeighborAndClusterOMP@{correctForceWithCutoffTreeNeighborAndClusterOMP}}
+\index{correctForceWithCutoffTreeNeighborAndClusterOMP@{correctForceWithCutoffTreeNeighborAndClusterOMP}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{correctForceWithCutoffTreeNeighborAndClusterOMP()}{correctForceWithCutoffTreeNeighborAndClusterOMP()}}
+{\footnotesize\ttfamily template$<$class Tsys , class Tpsoft , class Ttree , class Tepj $>$ \\
+void System\+Hard\+::correct\+Force\+With\+Cutoff\+Tree\+Neighbor\+And\+Cluster\+O\+MP (\begin{DoxyParamCaption}\item[{Tsys \&}]{\+\_\+sys,  }\item[{Ttree \&}]{\+\_\+tree,  }\item[{const P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&}]{\+\_\+adr\+\_\+send,  }\item[{const bool}]{\+\_\+acorr\+\_\+flag = {\ttfamily false} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Soft force correction due to different cut-\/off function. 
+
+Use tree neighbor search
+\begin{DoxyEnumerate}
+\item first correct for artificial particles use cluster information,
+\item The c.\+m. force is substracted from tidal tensor force
+\item c.\+m. force is replaced by the averaged force on orbital particles
+\item then use tree neighbor search for local cluster real member.
+\end{DoxyEnumerate}
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+sys} & global particle system, acc is updated \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+tree} & tree for force \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+adr\+\_\+send} & particle in sending list of connected clusters \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+acorr\+\_\+flag} & flag to do acorr for K\+D\+K\+D\+K\+\_\+4\+TH case \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classSystemHard_aaae0c65a7caa9679827b980b9e9f3c89}\label{classSystemHard_aaae0c65a7caa9679827b980b9e9f3c89}} 
+\index{SystemHard@{SystemHard}!correctForceWithCutoffTreeNeighborOMP@{correctForceWithCutoffTreeNeighborOMP}}
+\index{correctForceWithCutoffTreeNeighborOMP@{correctForceWithCutoffTreeNeighborOMP}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{correctForceWithCutoffTreeNeighborOMP()}{correctForceWithCutoffTreeNeighborOMP()}}
+{\footnotesize\ttfamily template$<$class Tsys , class Tpsoft , class Ttree , class Tepj $>$ \\
+static void System\+Hard\+::correct\+Force\+With\+Cutoff\+Tree\+Neighbor\+O\+MP (\begin{DoxyParamCaption}\item[{Tsys \&}]{\+\_\+sys,  }\item[{Ttree \&}]{\+\_\+tree,  }\item[{const P\+S\+::\+S32}]{\+\_\+adr\+\_\+ptcl\+\_\+artificial\+\_\+start,  }\item[{\mbox{\hyperlink{classArtificialParticleManager}{Artificial\+Particle\+Manager}} \&}]{\+\_\+ap\+\_\+manager,  }\item[{const bool}]{\+\_\+acorr\+\_\+flag = {\ttfamily false} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+Soft force correction due to different cut-\/off function. 
+
+Use tree neighbor search for all particles. c.\+m. force is replaced by the averaged force on orbital particles Tidal tensor particle subtract the c.\+m. acc 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+sys} & global particle system, acc is updated \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+tree} & tree for force \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+adr\+\_\+ptcl\+\_\+artificial\+\_\+start} & start address of artificial particle in \+\_\+sys \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+ap\+\_\+manager} & artificial particle manager \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSystemHard_aaae0c65a7caa9679827b980b9e9f3c89_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSystemHard_ad15b5a9f60e73df248ce6e68512e791d}\label{classSystemHard_ad15b5a9f60e73df248ce6e68512e791d}} 
+\index{SystemHard@{SystemHard}!correctPotWithCutoffOMP@{correctPotWithCutoffOMP}}
+\index{correctPotWithCutoffOMP@{correctPotWithCutoffOMP}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{correctPotWithCutoffOMP()}{correctPotWithCutoffOMP()}}
+{\footnotesize\ttfamily template$<$class Tsys $>$ \\
+void System\+Hard\+::correct\+Pot\+With\+Cutoff\+O\+MP (\begin{DoxyParamCaption}\item[{Tsys \&}]{\+\_\+sys,  }\item[{const P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&}]{\+\_\+ptcl\+\_\+list }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+potential correction for single cluster 
+
+\mbox{\Hypertarget{classSystemHard_a54fe61854b07e077f41c55e52af4035c}\label{classSystemHard_a54fe61854b07e077f41c55e52af4035c}} 
+\index{SystemHard@{SystemHard}!driveForMultiClusterOMP@{driveForMultiClusterOMP}}
+\index{driveForMultiClusterOMP@{driveForMultiClusterOMP}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{driveForMultiClusterOMP()}{driveForMultiClusterOMP()}}
+{\footnotesize\ttfamily template$<$class Tpsoft $>$ \\
+int System\+Hard\+::drive\+For\+Multi\+Cluster\+O\+MP (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{dt,  }\item[{Tpsoft $\ast$}]{\+\_\+ptcl\+\_\+soft }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Hard integration for clusters. 
+
+Integrate (drift) all clusters with Open\+MP If interrupt integration exist, record in the interrupt\+\_\+list\+\_\+; 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+dt} & integration ending time (initial time is fixed to 0) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+ptcl\+\_\+soft} & global particle array which contains the artificial particles for constructing tidal tensors. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+interrupt cluster number 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=304pt]{classSystemHard_a54fe61854b07e077f41c55e52af4035c_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSystemHard_a988c41fbd9c555adbaa705d01be4fd86}\label{classSystemHard_a988c41fbd9c555adbaa705d01be4fd86}} 
+\index{SystemHard@{SystemHard}!driveForOneClusterOMP@{driveForOneClusterOMP}}
+\index{driveForOneClusterOMP@{driveForOneClusterOMP}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{driveForOneClusterOMP()}{driveForOneClusterOMP()}}
+{\footnotesize\ttfamily void System\+Hard\+::drive\+For\+One\+Cluster\+O\+MP (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+dt }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+integrate one isolated particle 
+
+integrate one isolated particle and calculate new r\+\_\+search 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+dt} & tree time step \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classSystemHard_aac43bb3f43f7b3ea6f04efcc40bf11bd}\label{classSystemHard_aac43bb3f43f7b3ea6f04efcc40bf11bd}} 
+\index{SystemHard@{SystemHard}!findGroupsAndCreateArtificialParticlesOMP@{findGroupsAndCreateArtificialParticlesOMP}}
+\index{findGroupsAndCreateArtificialParticlesOMP@{findGroupsAndCreateArtificialParticlesOMP}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{findGroupsAndCreateArtificialParticlesOMP()}{findGroupsAndCreateArtificialParticlesOMP()}}
+{\footnotesize\ttfamily template$<$class Tsys , class Tptcl $>$ \\
+void System\+Hard\+::find\+Groups\+And\+Create\+Artificial\+Particles\+O\+MP (\begin{DoxyParamCaption}\item[{Tsys \&}]{\+\_\+sys,  }\item[{const P\+S\+::\+F64}]{\+\_\+dt\+\_\+tree }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Find groups and create aritfical particles to sys. 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSystemHard_aac43bb3f43f7b3ea6f04efcc40bf11bd_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=311pt]{classSystemHard_aac43bb3f43f7b3ea6f04efcc40bf11bd_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSystemHard_ab9aaaaa58ad48fe4fcfe36d2ce1c8619}\label{classSystemHard_ab9aaaaa58ad48fe4fcfe36d2ce1c8619}} 
+\index{SystemHard@{SystemHard}!findGroupsAndCreateArtificialParticlesOneCluster@{findGroupsAndCreateArtificialParticlesOneCluster}}
+\index{findGroupsAndCreateArtificialParticlesOneCluster@{findGroupsAndCreateArtificialParticlesOneCluster}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{findGroupsAndCreateArtificialParticlesOneCluster()}{findGroupsAndCreateArtificialParticlesOneCluster()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+void System\+Hard\+::find\+Groups\+And\+Create\+Artificial\+Particles\+One\+Cluster (\begin{DoxyParamCaption}\item[{const P\+S\+::\+S32}]{\+\_\+i\+\_\+cluster,  }\item[{Tptcl $\ast$}]{\+\_\+ptcl\+\_\+in\+\_\+cluster,  }\item[{const P\+S\+::\+S32}]{\+\_\+n\+\_\+ptcl,  }\item[{P\+S\+::\+Reallocatable\+Array$<$ Tptcl $>$ \&}]{\+\_\+ptcl\+\_\+artificial,  }\item[{P\+S\+::\+Reallocatable\+Array$<$ C\+O\+M\+M\+::\+Binary\+Tree$<$ \mbox{\hyperlink{hard_8hpp_a95cbf1c8a6b57f13cc3bcbdd8bfd7bc2}{Ptcl\+H4}}, C\+O\+M\+M\+::\+Binary $>$$>$ \&}]{\+\_\+binary\+\_\+table,  }\item[{P\+S\+::\+S32 \&}]{\+\_\+n\+\_\+groups,  }\item[{P\+S\+::\+Reallocatable\+Array$<$ \mbox{\hyperlink{structSystemHard_1_1GroupIndexInfo}{Group\+Index\+Info}} $>$ \&}]{\+\_\+n\+\_\+member\+\_\+in\+\_\+group,  }\item[{P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&}]{\+\_\+changeover\+\_\+update\+\_\+list,  }\item[{\mbox{\hyperlink{classSearchGroupCandidate}{Search\+Group\+Candidate}}$<$ Tptcl $>$ \&}]{\+\_\+groups,  }\item[{const P\+S\+::\+F64}]{\+\_\+dt\+\_\+tree }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+generate artificial particles, 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSystemHard_ab9aaaaa58ad48fe4fcfe36d2ce1c8619_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSystemHard_ab9aaaaa58ad48fe4fcfe36d2ce1c8619_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSystemHard_a2d86414801edb526081bb7441b6a0da4}\label{classSystemHard_a2d86414801edb526081bb7441b6a0da4}} 
+\index{SystemHard@{SystemHard}!finishIntegrateInterruptClustersOMP@{finishIntegrateInterruptClustersOMP}}
+\index{finishIntegrateInterruptClustersOMP@{finishIntegrateInterruptClustersOMP}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{finishIntegrateInterruptClustersOMP()}{finishIntegrateInterruptClustersOMP()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 System\+Hard\+::finish\+Integrate\+Interrupt\+Clusters\+O\+MP (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Finish interrupt integration. 
+
+Finish interrupted integrations, if new interruption appear, record in the interrupt\+\_\+list and this function need to be called again after modification of interrupt clusters If no new interrupt cluster appear, update time\+\_\+origin\+\_\+ with drift time. 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em } & \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSystemHard_a2d86414801edb526081bb7441b6a0da4_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSystemHard_a955838a8442493261a92e9bb572f5a94}\label{classSystemHard_a955838a8442493261a92e9bb572f5a94}} 
+\index{SystemHard@{SystemHard}!getAdrPtclArtFirstList@{getAdrPtclArtFirstList}}
+\index{getAdrPtclArtFirstList@{getAdrPtclArtFirstList}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{getAdrPtclArtFirstList()}{getAdrPtclArtFirstList()}}
+{\footnotesize\ttfamily P\+S\+::\+S32$\ast$ System\+Hard\+::get\+Adr\+Ptcl\+Art\+First\+List (\begin{DoxyParamCaption}\item[{const std\+::size\+\_\+t}]{i = {\ttfamily 0} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSystemHard_a7a93c9f2f0da92ca0eb63989a8ab2191}\label{classSystemHard_a7a93c9f2f0da92ca0eb63989a8ab2191}} 
+\index{SystemHard@{SystemHard}!getClusterNumberOfMemberList@{getClusterNumberOfMemberList}}
+\index{getClusterNumberOfMemberList@{getClusterNumberOfMemberList}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{getClusterNumberOfMemberList()}{getClusterNumberOfMemberList()}}
+{\footnotesize\ttfamily P\+S\+::\+S32$\ast$ System\+Hard\+::get\+Cluster\+Number\+Of\+Member\+List (\begin{DoxyParamCaption}\item[{const std\+::size\+\_\+t}]{i = {\ttfamily 0} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSystemHard_a6b8d71a996fb596b4cb9ca9ff242b3d8}\label{classSystemHard_a6b8d71a996fb596b4cb9ca9ff242b3d8}} 
+\index{SystemHard@{SystemHard}!getClusterNumberOfMemberListOffset@{getClusterNumberOfMemberListOffset}}
+\index{getClusterNumberOfMemberListOffset@{getClusterNumberOfMemberListOffset}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{getClusterNumberOfMemberListOffset()}{getClusterNumberOfMemberListOffset()}}
+{\footnotesize\ttfamily P\+S\+::\+S32$\ast$ System\+Hard\+::get\+Cluster\+Number\+Of\+Member\+List\+Offset (\begin{DoxyParamCaption}\item[{const std\+::size\+\_\+t}]{i = {\ttfamily 0} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSystemHard_a7f940cb1a60da6e388dd777336dce45e}\label{classSystemHard_a7f940cb1a60da6e388dd777336dce45e}} 
+\index{SystemHard@{SystemHard}!getGroupNumberOfMemberList@{getGroupNumberOfMemberList}}
+\index{getGroupNumberOfMemberList@{getGroupNumberOfMemberList}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{getGroupNumberOfMemberList()}{getGroupNumberOfMemberList()}}
+{\footnotesize\ttfamily P\+S\+::\+S32$\ast$ System\+Hard\+::get\+Group\+Number\+Of\+Member\+List (\begin{DoxyParamCaption}\item[{const std\+::size\+\_\+t}]{i = {\ttfamily 0} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSystemHard_a783c9989d97e3a5e769d4df4d8edd6b4}\label{classSystemHard_a783c9989d97e3a5e769d4df4d8edd6b4}} 
+\index{SystemHard@{SystemHard}!getGroupNumberOfMemberListOffset@{getGroupNumberOfMemberListOffset}}
+\index{getGroupNumberOfMemberListOffset@{getGroupNumberOfMemberListOffset}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{getGroupNumberOfMemberListOffset()}{getGroupNumberOfMemberListOffset()}}
+{\footnotesize\ttfamily P\+S\+::\+S32$\ast$ System\+Hard\+::get\+Group\+Number\+Of\+Member\+List\+Offset (\begin{DoxyParamCaption}\item[{const std\+::size\+\_\+t}]{i = {\ttfamily 0} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSystemHard_a4f2a36cdaa2aec437d6434d8e6117666}\label{classSystemHard_a4f2a36cdaa2aec437d6434d8e6117666}} 
+\index{SystemHard@{SystemHard}!getGroupPtclRemoteN@{getGroupPtclRemoteN}}
+\index{getGroupPtclRemoteN@{getGroupPtclRemoteN}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{getGroupPtclRemoteN()}{getGroupPtclRemoteN()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 System\+Hard\+::get\+Group\+Ptcl\+RemoteN (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSystemHard_abc16c2e7f709c17f0762c600cd30b58b}\label{classSystemHard_abc16c2e7f709c17f0762c600cd30b58b}} 
+\index{SystemHard@{SystemHard}!getInterruptHardIntegrator@{getInterruptHardIntegrator}}
+\index{getInterruptHardIntegrator@{getInterruptHardIntegrator}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{getInterruptHardIntegrator()}{getInterruptHardIntegrator()}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classHardIntegrator}{Hard\+Integrator}}$\ast$ System\+Hard\+::get\+Interrupt\+Hard\+Integrator (\begin{DoxyParamCaption}\item[{const std\+::size\+\_\+t}]{i }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSystemHard_a9acc9ace45305aba14aedcaf2c8dcf7c}\label{classSystemHard_a9acc9ace45305aba14aedcaf2c8dcf7c}} 
+\index{SystemHard@{SystemHard}!getNClusterChangeOverUpdate@{getNClusterChangeOverUpdate}}
+\index{getNClusterChangeOverUpdate@{getNClusterChangeOverUpdate}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{getNClusterChangeOverUpdate()}{getNClusterChangeOverUpdate()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 System\+Hard\+::get\+N\+Cluster\+Change\+Over\+Update (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSystemHard_a6c7b5d7db23cc30a8886f5cda356afe5}\label{classSystemHard_a6c7b5d7db23cc30a8886f5cda356afe5}} 
+\index{SystemHard@{SystemHard}!getNumberOfClusters@{getNumberOfClusters}}
+\index{getNumberOfClusters@{getNumberOfClusters}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{getNumberOfClusters()}{getNumberOfClusters()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 System\+Hard\+::get\+Number\+Of\+Clusters (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSystemHard_ad981cab6e696a124b003289878094386}\label{classSystemHard_ad981cab6e696a124b003289878094386}} 
+\index{SystemHard@{SystemHard}!getNumberOfInterruptClusters@{getNumberOfInterruptClusters}}
+\index{getNumberOfInterruptClusters@{getNumberOfInterruptClusters}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{getNumberOfInterruptClusters()}{getNumberOfInterruptClusters()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 System\+Hard\+::get\+Number\+Of\+Interrupt\+Clusters (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSystemHard_a1801c9b9ed48c4dab3c5e0ee8d8fe67d}\label{classSystemHard_a1801c9b9ed48c4dab3c5e0ee8d8fe67d}} 
+\index{SystemHard@{SystemHard}!getPtcl@{getPtcl}}
+\index{getPtcl@{getPtcl}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{getPtcl()}{getPtcl()}}
+{\footnotesize\ttfamily P\+S\+::\+Reallocatable\+Array$<$\mbox{\hyperlink{hard_8hpp_a95cbf1c8a6b57f13cc3bcbdd8bfd7bc2}{Ptcl\+H4}}$>$\& System\+Hard\+::get\+Ptcl (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=273pt]{classSystemHard_a1801c9b9ed48c4dab3c5e0ee8d8fe67d_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSystemHard_aaa3225b5e3f3fdeef1626258addcae12}\label{classSystemHard_aaa3225b5e3f3fdeef1626258addcae12}} 
+\index{SystemHard@{SystemHard}!getTimeOrigin@{getTimeOrigin}}
+\index{getTimeOrigin@{getTimeOrigin}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{getTimeOrigin()}{getTimeOrigin()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 System\+Hard\+::get\+Time\+Origin (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSystemHard_a8baaff00777996341313a1ca786a0e31}\label{classSystemHard_a8baaff00777996341313a1ca786a0e31}} 
+\index{SystemHard@{SystemHard}!initializeForOneCluster@{initializeForOneCluster}}
+\index{initializeForOneCluster@{initializeForOneCluster}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{initializeForOneCluster()}{initializeForOneCluster()}}
+{\footnotesize\ttfamily void System\+Hard\+::initialize\+For\+One\+Cluster (\begin{DoxyParamCaption}\item[{const P\+S\+::\+S32}]{n }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSystemHard_a97c75b84d56fedcc0f9a1a3995839ce8}\label{classSystemHard_a97c75b84d56fedcc0f9a1a3995839ce8}} 
+\index{SystemHard@{SystemHard}!setPtclForConnectedCluster@{setPtclForConnectedCluster}}
+\index{setPtclForConnectedCluster@{setPtclForConnectedCluster}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{setPtclForConnectedCluster()}{setPtclForConnectedCluster()}}
+{\footnotesize\ttfamily template$<$class Tsys , class Tptcl , class Tmediator $>$ \\
+void System\+Hard\+::set\+Ptcl\+For\+Connected\+Cluster (\begin{DoxyParamCaption}\item[{const Tsys \&}]{sys,  }\item[{const P\+S\+::\+Reallocatable\+Array$<$ Tmediator $>$ \&}]{med,  }\item[{const P\+S\+::\+Reallocatable\+Array$<$ Tptcl $>$ \&}]{ptcl\+\_\+recv }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSystemHard_aa18476d87a9f3647939b7429899e13bb}\label{classSystemHard_aa18476d87a9f3647939b7429899e13bb}} 
+\index{SystemHard@{SystemHard}!setPtclForIsolatedMultiClusterOMP@{setPtclForIsolatedMultiClusterOMP}}
+\index{setPtclForIsolatedMultiClusterOMP@{setPtclForIsolatedMultiClusterOMP}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{setPtclForIsolatedMultiClusterOMP()}{setPtclForIsolatedMultiClusterOMP()}}
+{\footnotesize\ttfamily template$<$class Tsys $>$ \\
+void System\+Hard\+::set\+Ptcl\+For\+Isolated\+Multi\+Cluster\+O\+MP (\begin{DoxyParamCaption}\item[{const Tsys \&}]{sys,  }\item[{const P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&}]{\+\_\+adr\+\_\+array,  }\item[{const P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&}]{\+\_\+n\+\_\+ptcl\+\_\+in\+\_\+cluster }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=327pt]{classSystemHard_aa18476d87a9f3647939b7429899e13bb_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSystemHard_af79104a101a84b34ddfa0d87694fcb3b}\label{classSystemHard_af79104a101a84b34ddfa0d87694fcb3b}} 
+\index{SystemHard@{SystemHard}!setPtclForOneClusterOMP@{setPtclForOneClusterOMP}}
+\index{setPtclForOneClusterOMP@{setPtclForOneClusterOMP}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{setPtclForOneClusterOMP()}{setPtclForOneClusterOMP()}}
+{\footnotesize\ttfamily template$<$class Tsys $>$ \\
+void System\+Hard\+::set\+Ptcl\+For\+One\+Cluster\+O\+MP (\begin{DoxyParamCaption}\item[{const Tsys \&}]{sys,  }\item[{const P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&}]{adr\+\_\+array }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSystemHard_abd543bc60e7a4e5e19a73c1e5fa8c612}\label{classSystemHard_abd543bc60e7a4e5e19a73c1e5fa8c612}} 
+\index{SystemHard@{SystemHard}!setTimeOrigin@{setTimeOrigin}}
+\index{setTimeOrigin@{setTimeOrigin}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{setTimeOrigin()}{setTimeOrigin()}}
+{\footnotesize\ttfamily void System\+Hard\+::set\+Time\+Origin (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+time\+\_\+origin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=309pt]{classSystemHard_abd543bc60e7a4e5e19a73c1e5fa8c612_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSystemHard_a0aefe9e642d174f1d8ab04825a3bce3c}\label{classSystemHard_a0aefe9e642d174f1d8ab04825a3bce3c}} 
+\index{SystemHard@{SystemHard}!updateTimeWriteBack@{updateTimeWriteBack}}
+\index{updateTimeWriteBack@{updateTimeWriteBack}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{updateTimeWriteBack()}{updateTimeWriteBack()}}
+{\footnotesize\ttfamily void System\+Hard\+::update\+Time\+Write\+Back (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSystemHard_a0aefe9e642d174f1d8ab04825a3bce3c_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSystemHard_aa4aebe7d712e02085a411e85618d6f12}\label{classSystemHard_aa4aebe7d712e02085a411e85618d6f12}} 
+\index{SystemHard@{SystemHard}!writeBackPtclForMultiCluster@{writeBackPtclForMultiCluster}}
+\index{writeBackPtclForMultiCluster@{writeBackPtclForMultiCluster}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{writeBackPtclForMultiCluster()}{writeBackPtclForMultiCluster()}}
+{\footnotesize\ttfamily template$<$class Tsys $>$ \\
+void System\+Hard\+::write\+Back\+Ptcl\+For\+Multi\+Cluster (\begin{DoxyParamCaption}\item[{Tsys \&}]{\+\_\+sys,  }\item[{P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&}]{\+\_\+mass\+\_\+modify\+\_\+list }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write back hard particles to global system, check mass modification and update time of write back 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+sys} & particle system \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+mass\+\_\+modify\+\_\+list} & address on \+\_\+sys of particles where mass is modified \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSystemHard_aa4aebe7d712e02085a411e85618d6f12_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=306pt]{classSystemHard_aa4aebe7d712e02085a411e85618d6f12_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSystemHard_a986611cce9084300e7f6fee4decb1e6c}\label{classSystemHard_a986611cce9084300e7f6fee4decb1e6c}} 
+\index{SystemHard@{SystemHard}!writeBackPtclForMultiClusterOMP@{writeBackPtclForMultiClusterOMP}}
+\index{writeBackPtclForMultiClusterOMP@{writeBackPtclForMultiClusterOMP}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{writeBackPtclForMultiClusterOMP()}{writeBackPtclForMultiClusterOMP()}}
+{\footnotesize\ttfamily template$<$class Tsys $>$ \\
+void System\+Hard\+::write\+Back\+Ptcl\+For\+Multi\+Cluster\+O\+MP (\begin{DoxyParamCaption}\item[{Tsys \&}]{\+\_\+sys,  }\item[{P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&}]{\+\_\+mass\+\_\+modify\+\_\+list }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write back hard particles to global system and update time of write back O\+MP version 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+sys} & particle system \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+mass\+\_\+modify\+\_\+list} & address on \+\_\+sys of particles where mass is modified \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+removelist} & address on \+\_\+sys of particles that are need to be removed are stored. \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSystemHard_a986611cce9084300e7f6fee4decb1e6c_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSystemHard_a3aa3d047d228450630934f7aaa7d3f98}\label{classSystemHard_a3aa3d047d228450630934f7aaa7d3f98}} 
+\index{SystemHard@{SystemHard}!writeBackPtclForOneCluster@{writeBackPtclForOneCluster}}
+\index{writeBackPtclForOneCluster@{writeBackPtclForOneCluster}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{writeBackPtclForOneCluster()}{writeBackPtclForOneCluster()}}
+{\footnotesize\ttfamily template$<$class Tsys $>$ \\
+void System\+Hard\+::write\+Back\+Ptcl\+For\+One\+Cluster (\begin{DoxyParamCaption}\item[{Tsys \&}]{sys,  }\item[{P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&}]{\+\_\+mass\+\_\+modify\+\_\+list }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write back hard particles to global system, check mass modification and update time of write back 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+sys} & particle system \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+mass\+\_\+modify\+\_\+list} & address on \+\_\+sys of particles where mass is modified \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSystemHard_a3aa3d047d228450630934f7aaa7d3f98_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSystemHard_a3aa3d047d228450630934f7aaa7d3f98_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSystemHard_a7c2326950585e3ca686ac07faff7f246}\label{classSystemHard_a7c2326950585e3ca686ac07faff7f246}} 
+\index{SystemHard@{SystemHard}!writeBackPtclForOneClusterOMP@{writeBackPtclForOneClusterOMP}}
+\index{writeBackPtclForOneClusterOMP@{writeBackPtclForOneClusterOMP}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{writeBackPtclForOneClusterOMP()}{writeBackPtclForOneClusterOMP()}}
+{\footnotesize\ttfamily template$<$class Tsys $>$ \\
+void System\+Hard\+::write\+Back\+Ptcl\+For\+One\+Cluster\+O\+MP (\begin{DoxyParamCaption}\item[{Tsys \&}]{sys,  }\item[{P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \&}]{\+\_\+mass\+\_\+modify\+\_\+list }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write back hard particles to global system and update time of write back O\+MP version 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+sys} & particle system \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+mass\+\_\+modify\+\_\+list} & address on \+\_\+sys of particles where mass is modified \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSystemHard_a7c2326950585e3ca686ac07faff7f246_icgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classSystemHard_afac0753be3aa4fc3023a5ddafa2f94dc}\label{classSystemHard_afac0753be3aa4fc3023a5ddafa2f94dc}} 
+\index{SystemHard@{SystemHard}!binary\_table@{binary\_table}}
+\index{binary\_table@{binary\_table}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{binary\_table}{binary\_table}}
+{\footnotesize\ttfamily P\+S\+::\+Reallocatable\+Array$<$C\+O\+M\+M\+::\+Binary\+Tree$<$\mbox{\hyperlink{hard_8hpp_a95cbf1c8a6b57f13cc3bcbdd8bfd7bc2}{Ptcl\+H4}},C\+O\+M\+M\+::\+Binary$>$ $>$ System\+Hard\+::binary\+\_\+table}
+
+\mbox{\Hypertarget{classSystemHard_a6c021c99c3f6ae3adbfbc3a4929fd06f}\label{classSystemHard_a6c021c99c3f6ae3adbfbc3a4929fd06f}} 
+\index{SystemHard@{SystemHard}!manager@{manager}}
+\index{manager@{manager}!SystemHard@{SystemHard}}
+\doxysubsubsection{\texorpdfstring{manager}{manager}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classHardManager}{Hard\+Manager}}$\ast$ System\+Hard\+::manager}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{hard_8hpp}{hard.\+hpp}}\end{DoxyCompactItemize}

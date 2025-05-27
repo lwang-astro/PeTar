@@ -11,7 +11,7 @@
 #ifdef BSE_BASE
 #include "bse_interface.h"
 #endif
-#include "external_force.hpp"
+#include "external_hard.hpp"
 
 //! AR interaction clas
 class ARInteraction{
@@ -19,29 +19,37 @@ public:
     typedef H4::ParticleH4<PtclHard> H4Ptcl;
     Float eps_sq; ///> softening parameter
     Float gravitational_constant;
-#ifdef EXTERNAL_HARD
-    ExternalHardForce *ext_force; // external hard to calculate perturbation
-#endif
+    int interrupt_detection_option;    // 0: no interruption; 1: merge when the pair distance is less than the sum of two members' radii; 2: record binary status instead of merger
 #ifdef STELLAR_EVOLUTION
-    int stellar_evolution_option;
-    bool stellar_evolution_write_flag;
     Float time_interrupt_max;
 #ifdef BSE_BASE
+    int stellar_evolution_option;
+    bool stellar_evolution_write_flag;
     BSEManager bse_manager;
     TwoBodyTide tide;
     std::ofstream fout_sse; ///> log file for SSE event
     std::ofstream fout_bse; ///> log file for BSE event
+#else
+    std::ofstream fout_interrupt; ///> log file for interrupted binary
+#endif
+#endif
+#ifdef EXTERNAL_HARD
+    ExternalHardForce *ext_force; // external hard to calculate perturbation
+#endif
 
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), 
-                     stellar_evolution_option(1), stellar_evolution_write_flag(true), time_interrupt_max(NUMERIC_FLOAT_MAX), 
-                     bse_manager(), fout_sse(), fout_bse() {}
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), interrupt_detection_option(0)
+#ifdef STELLAR_EVOLUTION
+                   , time_interrupt_max(NUMERIC_FLOAT_MAX) 
+#ifdef BSE_BASE
+                   , stellar_evolution_option(0), stellar_evolution_write_flag(false), bse_manager(), tide(), fout_sse(), fout_bse()
 #else
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), 
-                     stellar_evolution_option(0), stellar_evolution_write_flag(true), time_interrupt_max(NUMERIC_FLOAT_MAX){}
+                   , fout_interrupt()  
 #endif
-#else
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)) {}
 #endif
+#ifdef EXTERNAL_HARD
+                   , ext_force(NULL)
+#endif
+    {}
 
     //! (Necessary) check whether publicly initialized parameters are correctly set
     /*! \return true: all parmeters are correct. In this case no parameters, return true;
@@ -49,12 +57,15 @@ public:
     bool checkParams() {
         ASSERT(eps_sq>=0.0);
         ASSERT(gravitational_constant>0.0);
+        ASSERT(interrupt_detection_option>=0 && interrupt_detection_option<=2);
 #ifdef STELLAR_EVOLUTION
         ASSERT(time_interrupt_max>=0.0);
 #ifdef BSE_BASE
         ASSERT(stellar_evolution_option==0 || (stellar_evolution_option==1 && bse_manager.checkParams()) || (stellar_evolution_option==2 && bse_manager.checkParams() && tide.checkParams()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
+#else
+        ASSERT(interrupt_detection_option==0||(interrupt_detection_option>0&&fout_interrupt.is_open()));
 #endif
 #endif
         return true;
@@ -63,9 +74,12 @@ public:
     //! print parameters
     void print(std::ostream & _fout) const{
         _fout<<"eps_sq : "<<eps_sq<<std::endl
-             <<"G      : "<<gravitational_constant<<std::endl;
+             <<"G      : "<<gravitational_constant<<std::endl
+             <<"Interrupt_opt: "<<interrupt_detection_option<<std::endl;
 #ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
         _fout<<"SE_opt : "<<stellar_evolution_option<<std::endl;
+#endif
 #endif
     }    
 
@@ -81,10 +95,10 @@ public:
     inline Float calcInnerAccPotAndGTKickInvTwo(AR::Force& _f1, AR::Force& _f2, Float& _epot, const PtclHard& _p1, const PtclHard& _p2) {
         // acceleration
         const Float mass1 = _p1.mass;
-        const Float* pos1 = &_p1.pos.x;
+        const auto& pos1 = _p1.pos;
 
         const Float mass2 = _p2.mass;
-        const Float* pos2 = &_p2.pos.x;
+        const auto& pos2 = _p2.pos;
 
         Float gm1 = gravitational_constant*mass1;
         Float gm2 = gravitational_constant*mass2;
@@ -305,7 +319,7 @@ public:
             for (int i=0; i<_n_particle; i++) {
                 Float* acc_pert = _force[i].acc_pert;
                 Float& pot_pert = _force[i].pot_pert;
-                const auto& pi = _particles[i];
+                auto& pi = _particles[i];
                 auto& chi = pi.changeover;
                 acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
                 pot_pert = 0.0;
@@ -832,14 +846,14 @@ public:
                     // if status not set, set to change
                     if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) {
                         _bin_interrupt.status = AR::InterruptStatus::change;
-                        _bin_interrupt.adr = &_bin;
+                        _bin_interrupt.setBinaryTreeAddress(&_bin);
                     }
                 }
 #endif
             }
-            // ensure to record the root binary tree to include all changed members
-            if (modify_branch[0]>0&&modify_branch[1]>0) {
-                _bin_interrupt.adr = &_bin;
+            // ensure to record the root binary tree to include all changed members, if only record binary information (interrupt_detection_option == 2), should not do this
+            if (modify_branch[0]>0&&modify_branch[1]>0 && interrupt_detection_option!=2) {
+                _bin_interrupt.setBinaryTreeAddress(&_bin);
             }
             if (_bin_interrupt.status == AR::InterruptStatus::destroy) {
                 // if both branch has destroyed, set destroy status, otherwise set merge status
@@ -850,10 +864,6 @@ public:
         else {
             auto* p1 = _bin.getLeftMember();
             auto* p2 = _bin.getRightMember();
-
-            COMM::Vector3<Float> pos_red(p2->pos[0] - p1->pos[0], p2->pos[1] - p1->pos[1], p2->pos[2] - p1->pos[2]);
-            COMM::Vector3<Float> vel_red(p2->vel[0] - p1->vel[0], p2->vel[1] - p1->vel[1], p2->vel[2] - p1->vel[2]);
-            Float drdv = pos_red * vel_red;
 
 #ifdef BSE_BASE
             auto postProcess =[&](StarParameterOut* out, Float* pos_cm, Float*vel_cm, Float& semi, Float& ecc, int binary_type_final) {
@@ -877,7 +887,7 @@ public:
                 if (p2->getBinaryInterruptState()== BinaryInterruptState::collision)
                     p2->setBinaryInterruptState(BinaryInterruptState::none);
 
-                // set binary status
+                // set binary status (this is done in new/end group in Hermite group info printing, should not be used here)
                 //p1->setBinaryPairID(p2->id);
                 //p2->setBinaryPairID(p1->id);
                 p1->setBinaryInterruptState(static_cast<BinaryInterruptState>(binary_type_final));
@@ -1009,6 +1019,9 @@ public:
             };
 
             bool check_flag = false;
+            COMM::Vector3<Float> pos_red(p2->pos[0] - p1->pos[0], p2->pos[1] - p1->pos[1], p2->pos[2] - p1->pos[2]);
+            COMM::Vector3<Float> vel_red(p2->vel[0] - p1->vel[0], p2->vel[1] - p1->vel[1], p2->vel[2] - p1->vel[2]);
+            Float drdv = pos_red * vel_red;
             if (stellar_evolution_option>0) {
                 int binary_type_p1 = static_cast<int>(p1->getBinaryInterruptState());
                 int binary_type_p2 = static_cast<int>(p2->getBinaryInterruptState());
@@ -1033,7 +1046,7 @@ public:
                 if (check_flag) {
                     ASSERT(bse_manager.checkParams());
                     // record address of modified binary
-                    _bin_interrupt.adr = &_bin;
+                    _bin_interrupt.setBinaryTreeAddress(&_bin);
 
                     // first evolve two components to the same starting time
                     if (p1->time_record!=p2->time_record) {
@@ -1133,7 +1146,7 @@ public:
                             if (binary_type>0) event_flag = std::max(event_flag, 1); // type change
                             else if (bse_manager.isMassTransfer(binary_type)) event_flag = std::max(event_flag, 2); // orbit change
                             else if (bse_manager.isDisrupt(binary_type)) event_flag = std::max(event_flag, 3); // disrupt
-                            else if (bse_manager.isMerger(binary_type)) event_flag = std::max(event_flag, 4); // Merger
+                            else if (bse_manager.isMerger(binary_type) || bse_manager.isNoRemnant(binary_type)) event_flag = std::max(event_flag, 4); // Merger or no Remnant
                             binary_type_final = binary_type;
                         }
                         else if(binary_type<0) break;
@@ -1152,7 +1165,7 @@ public:
             if (_bin_interrupt.status!=AR::InterruptStatus::merge&&_bin_interrupt.status!=AR::InterruptStatus::destroy) {
 
                 auto merge = [&](const Float& dr, const Float& t_peri, const Float& sd_factor) {
-                    _bin_interrupt.adr = &_bin;
+                    _bin_interrupt.setBinaryTreeAddress(&_bin);
                 
 #ifdef BSE_BASE
                     //Float m1_bk = p1->mass;
@@ -1220,87 +1233,98 @@ public:
                     }
 #else //not BSE_BASE
                     // print data
-                    std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;
-                    _bin.Binary::printColumnTitle(std::cerr);
-                    //PtclHard::printColumnTitle(std::cerr);
-                    //PtclHard::printColumnTitle(std::cerr);
-                    std::cerr<<std::endl;
-                    _bin.Binary::printColumn(std::cerr);
-                    //p1->printColumn(std::cerr);
-                    //p2->printColumn(std::cerr);
-                    std::cerr<<std::endl;
+#pragma omp critical
+                    {
+                        _bin_interrupt.printColumn(fout_interrupt, WRITE_WIDTH, true);
+                        fout_interrupt<<std::endl;
+
+                        DATADUMP("dump_interrupt"); 
+                    }
 
                     // set return flag >0
                     modify_return = 2;
 
-                    p1->time_record = _bin_interrupt.time_now;
-                    p2->time_record = _bin_interrupt.time_now;
-            
-                    // new particle data
-                    Float mcm = p1->mass + p2->mass;
-                    for (int k=0; k<3; k++) {
-                        p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
-                        p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
-                    }
-                    p1->dm += p2->mass;
-                    p2->dm -= p2->mass;
-
-                    p1->mass = mcm;
-                    p2->mass = 0.0;
-
-                    p2->radius = 0.0;
-
                     if (_bin_interrupt.status == AR::InterruptStatus::none) 
                         _bin_interrupt.status = AR::InterruptStatus::merge;
 
-                    // reset collision state since binary orbit changes
-                    p1->setBinaryInterruptState(BinaryInterruptState::none);
-                    p2->setBinaryInterruptState(BinaryInterruptState::none);
+                    // merge two particles
+                    if (interrupt_detection_option == 1) {
+                        p1->time_record = _bin_interrupt.time_now;
+                        p2->time_record = _bin_interrupt.time_now;
 
-                    p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
-#endif
+                        // reset collision state since binary orbit changes
+                        p1->setBinaryInterruptState(BinaryInterruptState::none);
+                        p2->setBinaryInterruptState(BinaryInterruptState::none);
+
+                        // new particle data
+                        Float mcm = p1->mass + p2->mass;
+                        for (int k=0; k<3; k++) {
+                            p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
+                            p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
+                        }
+                        p1->dm += p2->mass;
+                        p2->dm -= p2->mass;
+
+                        p1->mass = mcm;
+                        p2->mass = 0.0;
+
+                        p2->radius = 0.0;
+
+                        p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+
+                    }
+                    // record particle information, only set status
+                    else if (interrupt_detection_option == 2) {
+                        p1->setBinaryInterruptState(BinaryInterruptState::collision);
+                        p2->setBinaryInterruptState(BinaryInterruptState::collision);
+                    }
+
+#endif // end BSE_BASE
                     //p1->setBinaryPairID(0);
                     //p2->setBinaryPairID(0);
                 };
-                
+
+#ifndef BSE_BASE
                 // delayed merger
-                if (p1->getBinaryInterruptState()== BinaryInterruptState::collision && 
-                    p2->getBinaryInterruptState()== BinaryInterruptState::collision &&
+                if (p1->getBinaryInterruptState()== BinaryInterruptState::delaycollision && 
+                    p2->getBinaryInterruptState()== BinaryInterruptState::delaycollision &&
                     (p1->time_interrupt<_bin_interrupt.time_now && p2->time_interrupt<_bin_interrupt.time_now) &&
-                    (p1->getBinaryPairID()==p2->id||p2->getBinaryPairID()==p1->id)) {
+                    (p1->getBinaryPairID()==p2->id||p2->getBinaryPairID()==p1->id) &&
+                    (_bin_interrupt.status != AR::InterruptStatus::merge)) {
                     Float dr[3] = {p1->pos[0] - p2->pos[0], 
                                    p1->pos[1] - p2->pos[1], 
                                    p1->pos[2] - p2->pos[2]};
                     Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
                     merge(std::sqrt(dr2), 0.0, 1.0);
                 }
-                else {
+                else if (p1->getBinaryInterruptState() != BinaryInterruptState::collision && p2->getBinaryInterruptState() != BinaryInterruptState::collision) {
                     // check merger
                     Float radius = p1->radius + p2->radius;
-#ifndef BSE_BASE
                     // slowdown case
                     if (_bin.slowdown.getSlowDownFactor()>1.0) {
                         ASSERT(_bin.semi>0.0);
                         Float drdv;
                         _bin.particleToSemiEcc(_bin.semi, _bin.ecc, _bin.r, drdv, *_bin.getLeftMember(), *_bin.getRightMember(), gravitational_constant);
                         Float peri = _bin.semi*(1 - _bin.ecc);
-                        if (peri<radius && p1->getBinaryPairID()!=p2->id&&p2->getBinaryPairID()!=p1->id) {
+                        if (peri<radius) {
                             Float ecc_anomaly  = _bin.calcEccAnomaly(_bin.r);
                             Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
                             Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi))); 
                             Float t_peri = mean_anomaly/mean_motion;
-                            if (drdv<0 && t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
+                            if (t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
                                 Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                                               p1->pos[1] - p2->pos[1], 
-                                               p1->pos[2] - p2->pos[2]};
+                                    p1->pos[1] - p2->pos[1], 
+                                    p1->pos[2] - p2->pos[2]};
                                 Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                                _bin_interrupt.time_now += t_peri;
                                 merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor());
                             }
                             else if (_bin.semi>0||(_bin.semi<0&&drdv<0)) {
+                                // ensure to set pair id for delayed collision
                                 p1->setBinaryPairID(p2->id);
                                 p2->setBinaryPairID(p1->id);
-                                p1->setBinaryInterruptState(BinaryInterruptState::collision);
-                                p2->setBinaryInterruptState(BinaryInterruptState::collision);
+                                p1->setBinaryInterruptState(BinaryInterruptState::delaycollision);
+                                p2->setBinaryInterruptState(BinaryInterruptState::delaycollision);
                                 p1->time_interrupt = std::min(_bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri), time_interrupt_max);
                                 p2->time_interrupt = p1->time_interrupt;
                                     
@@ -1309,25 +1333,25 @@ public:
                     }
                     else { // no slowdown case, check separation directly
                         Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                                       p1->pos[1] - p2->pos[1], 
-                                       p1->pos[2] - p2->pos[2]};
+                            p1->pos[1] - p2->pos[1], 
+                            p1->pos[2] - p2->pos[2]};
                         Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
                         if (dr2<radius*radius) merge(std::sqrt(dr2), 0.0, 1.0);
                     }
-#else
-                    // in bse case, handle binary merger in bse, only check hyperbolic merger
-                    if (_bin.semi<0.0) {
-                        Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                                       p1->pos[1] - p2->pos[1], 
-                                       p1->pos[2] - p2->pos[2]};
-                        Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
-                        if (dr2<radius*radius) merge(std::sqrt(dr2), 0.0, 1.0);
-                    }
-#endif
+                }
+#else // BSE_BASE 
+                // in bse case, handle binary merger in bse, only check hyperbolic merger
+                if (_bin.semi<0.0) {
+                    // check merger
+                    Float radius = p1->radius + p2->radius;
+                    
+                    Float dr[3] = {p1->pos[0] - p2->pos[0], 
+                        p1->pos[1] - p2->pos[1], 
+                        p1->pos[2] - p2->pos[2]};
+                    Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                    if (dr2<radius*radius) merge(std::sqrt(dr2), 0.0, 1.0);
                 }
 
-
-#ifdef BSE_BASE
                 // tide energy loss 
                 if (stellar_evolution_option==2 && p1->mass>0 && p2->mass>0) {
                     if (drdv<0) { // when two star approach each other; reset tide status
@@ -1347,6 +1371,7 @@ public:
                         if ((binary_type_p1 != binary_type_p2) || (pair_id1 != p2->id) || (pair_id2 != p1->id)) tide_flag = false;
                         else if (bse_manager.isMassTransfer(binary_type_p1) 
                                  || bse_manager.isMerger(binary_type_p1) 
+                                 || bse_manager.isNoRemnant(binary_type_p1) 
                                  || bse_manager.isDisrupt(binary_type_p1)
                                  || binary_type_p1 == 14)
                             tide_flag = false;
@@ -1390,7 +1415,8 @@ public:
 
                             if (change_flag) {
 
-                                _bin_interrupt.adr = &_bin;
+                                // record address of modified binary
+                                _bin_interrupt.setBinaryTreeAddress(&_bin);
 
                                 // if status not set, set to change
                                 if (_bin_interrupt.status == AR::InterruptStatus::none) 
@@ -1401,8 +1427,8 @@ public:
                                 p1->vel += _bin.vel;
                                 p2->vel += _bin.vel;
 
-                                p1->setBinaryPairID(p2->id);
-                                p2->setBinaryPairID(p1->id);
+                                //p1->setBinaryPairID(p2->id);
+                                //p2->setBinaryPairID(p1->id);
                                 p1->setBinaryInterruptState(BinaryInterruptState::tide);
                                 p2->setBinaryInterruptState(BinaryInterruptState::tide);
                             
@@ -1432,7 +1458,7 @@ public:
                                 }
 
                             }
-                         }
+                        }
                     }
                 }
 #endif // BSE_BASE
@@ -1466,9 +1492,13 @@ public:
     void writeBinary(FILE *_fp) const {
         fwrite(&eps_sq, sizeof(Float),1,_fp);
         fwrite(&gravitational_constant, sizeof(Float),1,_fp);
+        fwrite(&interrupt_detection_option, sizeof(int),1,_fp);
 #ifdef STELLAR_EVOLUTION
+        fwrite(&time_interrupt_max, sizeof(Float),1,_fp);
+#ifdef BSE_BASE
         fwrite(&stellar_evolution_option, sizeof(int),1,_fp);
         fwrite(&stellar_evolution_write_flag, sizeof(bool),1,_fp);
+#endif
 #endif
     }
 
@@ -1478,17 +1508,25 @@ public:
     void readBinary(FILE *_fin) {
         size_t rcount = fread(&eps_sq, sizeof(Float),1,_fin);
         rcount += fread(&gravitational_constant, sizeof(Float),1,_fin);
-        if (rcount<2) {
+        rcount += fread(&interrupt_detection_option, sizeof(int),1,_fin);
+        if (rcount<3) {
             std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
             abort();
         }
 #ifdef STELLAR_EVOLUTION
-        rcount += fread(&stellar_evolution_option, sizeof(int),1,_fin);
-        rcount += fread(&stellar_evolution_write_flag, sizeof(bool),1,_fin);
+        rcount += fread(&time_interrupt_max, sizeof(Float),1,_fin);
         if (rcount<4) {
             std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             abort();
         }
+#ifdef BSE_BASE
+        rcount += fread(&stellar_evolution_option, sizeof(int),1,_fin);
+        rcount += fread(&stellar_evolution_write_flag, sizeof(bool),1,_fin);
+        if (rcount<6) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 6, only obtain "<<rcount<<".\n";
+            abort();
+        }
+#endif
 #endif
     }    
 };

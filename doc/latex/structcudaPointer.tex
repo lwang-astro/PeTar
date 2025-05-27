@@ -1,0 +1,134 @@
+\hypertarget{structcudaPointer}{}\doxysection{cuda\+Pointer$<$ T $>$ Struct Template Reference}
+\label{structcudaPointer}\index{cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}}
+
+
+{\ttfamily \#include $<$cuda\+\_\+pointer.\+h$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{structcudaPointer_af3030840ad5ab7e0ba1f490f567c50d9}{cuda\+Pointer}} ()
+\item 
+void \mbox{\hyperlink{structcudaPointer_aa17523c0b8cf0f7931f56337a045e538}{allocate}} (int \+\_\+size)
+\item 
+void \mbox{\hyperlink{structcudaPointer_ade534dd16f9903eed7acbd5ab42dac63}{free}} ()
+\item 
+void \mbox{\hyperlink{structcudaPointer_afe2d54bb2bc70a581bc095d2977be1cf}{htod}} (int count)
+\item 
+void \mbox{\hyperlink{structcudaPointer_a6706a86ab06a072c74866c3786526dcc}{htod}} ()
+\item 
+void \mbox{\hyperlink{structcudaPointer_ac2a111234d85904b3a3d5030e8c19f12}{dtoh}} (int count)
+\item 
+void \mbox{\hyperlink{structcudaPointer_a2b3f425013c37af90186957e79ed9285}{dtoh}} ()
+\item 
+T \& \mbox{\hyperlink{structcudaPointer_a657565d2687c0db348631fd7679a95d9}{operator\mbox{[}$\,$\mbox{]}}} (int i)
+\item 
+\mbox{\hyperlink{structcudaPointer_a6d4a4b40830158023a35071274099943}{operator T$\ast$}} ()
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+T $\ast$ \mbox{\hyperlink{structcudaPointer_a333bb3eb7d55306bfc90090f801d38f6}{dev\+\_\+pointer}}
+\item 
+T $\ast$ \mbox{\hyperlink{structcudaPointer_a779bb7d0805ec2fe5682263c913b6b35}{host\+\_\+pointer}}
+\item 
+size\+\_\+t \mbox{\hyperlink{structcudaPointer_a29ff9caea3ff414bfa11a5284b9981ff}{size}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{structcudaPointer_af3030840ad5ab7e0ba1f490f567c50d9}\label{structcudaPointer_af3030840ad5ab7e0ba1f490f567c50d9}} 
+\index{cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}!cudaPointer@{cudaPointer}}
+\index{cudaPointer@{cudaPointer}!cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{cudaPointer()}{cudaPointer()}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+\mbox{\hyperlink{structcudaPointer}{cuda\+Pointer}}$<$ T $>$\+::\mbox{\hyperlink{structcudaPointer}{cuda\+Pointer}} (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{structcudaPointer_aa17523c0b8cf0f7931f56337a045e538}\label{structcudaPointer_aa17523c0b8cf0f7931f56337a045e538}} 
+\index{cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}!allocate@{allocate}}
+\index{allocate@{allocate}!cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{allocate()}{allocate()}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+void \mbox{\hyperlink{structcudaPointer}{cuda\+Pointer}}$<$ T $>$\+::allocate (\begin{DoxyParamCaption}\item[{int}]{\+\_\+size }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{structcudaPointer_a2b3f425013c37af90186957e79ed9285}\label{structcudaPointer_a2b3f425013c37af90186957e79ed9285}} 
+\index{cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}!dtoh@{dtoh}}
+\index{dtoh@{dtoh}!cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{dtoh()}{dtoh()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+void \mbox{\hyperlink{structcudaPointer}{cuda\+Pointer}}$<$ T $>$\+::dtoh (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{structcudaPointer_ac2a111234d85904b3a3d5030e8c19f12}\label{structcudaPointer_ac2a111234d85904b3a3d5030e8c19f12}} 
+\index{cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}!dtoh@{dtoh}}
+\index{dtoh@{dtoh}!cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{dtoh()}{dtoh()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+void \mbox{\hyperlink{structcudaPointer}{cuda\+Pointer}}$<$ T $>$\+::dtoh (\begin{DoxyParamCaption}\item[{int}]{count }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{structcudaPointer_ade534dd16f9903eed7acbd5ab42dac63}\label{structcudaPointer_ade534dd16f9903eed7acbd5ab42dac63}} 
+\index{cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}!free@{free}}
+\index{free@{free}!cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{free()}{free()}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+void \mbox{\hyperlink{structcudaPointer}{cuda\+Pointer}}$<$ T $>$\+::free (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{structcudaPointer_a6706a86ab06a072c74866c3786526dcc}\label{structcudaPointer_a6706a86ab06a072c74866c3786526dcc}} 
+\index{cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}!htod@{htod}}
+\index{htod@{htod}!cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{htod()}{htod()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+void \mbox{\hyperlink{structcudaPointer}{cuda\+Pointer}}$<$ T $>$\+::htod (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{structcudaPointer_afe2d54bb2bc70a581bc095d2977be1cf}\label{structcudaPointer_afe2d54bb2bc70a581bc095d2977be1cf}} 
+\index{cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}!htod@{htod}}
+\index{htod@{htod}!cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{htod()}{htod()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+void \mbox{\hyperlink{structcudaPointer}{cuda\+Pointer}}$<$ T $>$\+::htod (\begin{DoxyParamCaption}\item[{int}]{count }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{structcudaPointer_a6d4a4b40830158023a35071274099943}\label{structcudaPointer_a6d4a4b40830158023a35071274099943}} 
+\index{cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}!operator T$\ast$@{operator T$\ast$}}
+\index{operator T$\ast$@{operator T$\ast$}!cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{operator T$\ast$()}{operator T*()}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+\mbox{\hyperlink{structcudaPointer}{cuda\+Pointer}}$<$ T $>$\+::operator T$\ast$ (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{structcudaPointer_a657565d2687c0db348631fd7679a95d9}\label{structcudaPointer_a657565d2687c0db348631fd7679a95d9}} 
+\index{cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}!operator\mbox{[}\mbox{]}@{operator[]}}
+\index{operator\mbox{[}\mbox{]}@{operator[]}!cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{operator[]()}{operator[]()}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+T\& \mbox{\hyperlink{structcudaPointer}{cuda\+Pointer}}$<$ T $>$\+::operator\mbox{[}$\,$\mbox{]} (\begin{DoxyParamCaption}\item[{int}]{i }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{structcudaPointer_a333bb3eb7d55306bfc90090f801d38f6}\label{structcudaPointer_a333bb3eb7d55306bfc90090f801d38f6}} 
+\index{cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}!dev\_pointer@{dev\_pointer}}
+\index{dev\_pointer@{dev\_pointer}!cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{dev\_pointer}{dev\_pointer}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+T$\ast$ \mbox{\hyperlink{structcudaPointer}{cuda\+Pointer}}$<$ T $>$\+::dev\+\_\+pointer}
+
+\mbox{\Hypertarget{structcudaPointer_a779bb7d0805ec2fe5682263c913b6b35}\label{structcudaPointer_a779bb7d0805ec2fe5682263c913b6b35}} 
+\index{cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}!host\_pointer@{host\_pointer}}
+\index{host\_pointer@{host\_pointer}!cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{host\_pointer}{host\_pointer}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+T$\ast$ \mbox{\hyperlink{structcudaPointer}{cuda\+Pointer}}$<$ T $>$\+::host\+\_\+pointer}
+
+\mbox{\Hypertarget{structcudaPointer_a29ff9caea3ff414bfa11a5284b9981ff}\label{structcudaPointer_a29ff9caea3ff414bfa11a5284b9981ff}} 
+\index{cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}!size@{size}}
+\index{size@{size}!cudaPointer$<$ T $>$@{cudaPointer$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{size}{size}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+size\+\_\+t \mbox{\hyperlink{structcudaPointer}{cuda\+Pointer}}$<$ T $>$\+::size}
+
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{cuda__pointer_8h}{cuda\+\_\+pointer.\+h}}\end{DoxyCompactItemize}

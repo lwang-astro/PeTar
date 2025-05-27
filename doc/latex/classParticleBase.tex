@@ -1,0 +1,600 @@
+\hypertarget{classParticleBase}{}\doxysection{Particle\+Base Class Reference}
+\label{classParticleBase}\index{ParticleBase@{ParticleBase}}
+
+
+Basic particle class.  
+
+
+
+
+{\ttfamily \#include $<$particle\+\_\+base.\+hpp$>$}
+
+
+
+Inheritance diagram for Particle\+Base\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=322pt]{classParticleBase__inherit__graph}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \mbox{\hyperlink{classParticleBase_aa3527d3ba78e4ae097e074ce68781a76}{set\+Binary\+Pair\+ID}} (const P\+S\+::\+S64 \+\_\+id)
+\begin{DoxyCompactList}\small\item\em save pair id in binary\+\_\+state with shift bit size of B\+I\+N\+A\+R\+Y\+\_\+\+S\+T\+A\+T\+E\+\_\+\+I\+D\+\_\+\+S\+H\+I\+FT \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticleBase_a09db37a8d02b22650ca4303ed0d18ed5}{set\+Binary\+Interrupt\+State}} (const \mbox{\hyperlink{particle__base_8hpp_a7f4cea813094a8f3eaa92306f62b4400}{Binary\+Interrupt\+State}} \+\_\+state)
+\begin{DoxyCompactList}\small\item\em save binary interrupt state in the first B\+I\+N\+A\+R\+Y\+\_\+\+S\+T\+A\+T\+E\+\_\+\+I\+D\+\_\+\+S\+H\+I\+FT bit in binary\+\_\+state \end{DoxyCompactList}\item 
+\mbox{\hyperlink{particle__base_8hpp_a7f4cea813094a8f3eaa92306f62b4400}{Binary\+Interrupt\+State}} \mbox{\hyperlink{classParticleBase_a443ee52158212b8fbbee7a56e3797eb9}{get\+Binary\+Interrupt\+State}} () const
+\begin{DoxyCompactList}\small\item\em get binary interrupt state from binary\+\_\+state \end{DoxyCompactList}\item 
+P\+S\+::\+S64 \mbox{\hyperlink{classParticleBase_a90ff5070cb25e1ed0f1807d9dff24eae}{get\+Binary\+Pair\+ID}} () const
+\begin{DoxyCompactList}\small\item\em get pair ID from binary\+\_\+state \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classParticleBase_a597fb651e037fd6b6432013f17ff1c10}{Particle\+Base}} ()
+\begin{DoxyCompactList}\small\item\em defaulted constructor \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tp $>$ }\\\mbox{\hyperlink{classParticleBase_a9b3cdef0a443dccce6780726e56fdb87}{Particle\+Base}} (const Tp \&p)
+\item 
+\mbox{\hyperlink{classParticleBase_a3009a80fbb7b88a26b948c534f5695b4}{Particle\+Base}} (const P\+S\+::\+F64 \+\_\+mass, const P\+S\+::\+F64vec \&\+\_\+pos, const P\+S\+::\+F64vec \&\+\_\+vel)
+\begin{DoxyCompactList}\small\item\em constructor \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classParticleBase_a95057f3eb29f5495b1c8a2ea838dca33}{Particle\+Base}} (const P\+S\+::\+F64 \+\_\+mass, const P\+S\+::\+F64vec \&\+\_\+pos, const P\+S\+::\+F64vec \&\+\_\+vel, const P\+S\+::\+S64 \+\_\+binary\+\_\+state)
+\begin{DoxyCompactList}\small\item\em constructor \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticleBase_a2aff5120451894367e08971adb595a24}{write\+Ascii}} (F\+I\+LE $\ast$fp) const
+\begin{DoxyCompactList}\small\item\em write class data with A\+S\+C\+II format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticleBase_a37300f78eeb60423fb3e750685331e8d}{read\+Ascii}} (F\+I\+LE $\ast$fp)
+\begin{DoxyCompactList}\small\item\em read class data with A\+S\+C\+II format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticleBase_ab26b2b513b3c62bac84bb25a357223b6}{write\+Binary}} (F\+I\+LE $\ast$fp) const
+\begin{DoxyCompactList}\small\item\em write class data with B\+I\+N\+A\+RY format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticleBase_af021a12bf8d0213f9e0441328755119d}{read\+Binary}} (F\+I\+LE $\ast$fp)
+\begin{DoxyCompactList}\small\item\em read class data with B\+I\+N\+A\+RY format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticleBase_aaa2eb35e8a36bc9c08c441944913dda0}{print}} (std\+::ostream \&fout) const
+\begin{DoxyCompactList}\small\item\em for print debugging \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticleBase_a2ee6dff13f084250e566036a37ac4bd4}{print\+Column}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20) const
+\begin{DoxyCompactList}\small\item\em print data of class members using column style \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tpcm $>$ }\\void \mbox{\hyperlink{classParticleBase_accf33b8bed2326ee349439a7ae3e0768}{print\+Column\+With\+Offset}} (Tpcm \&\+\_\+pcm, std\+::ostream \&\+\_\+fout, const int \+\_\+width=20) const
+\begin{DoxyCompactList}\small\item\em print data of class members with pos and vel offset using column style \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tp $>$ }\\void \mbox{\hyperlink{classParticleBase_aeeb3bfd51f0c8eadcf23c0e3b4aeb003}{Data\+Copy}} (const Tp \&din)
+\begin{DoxyCompactList}\small\item\em Copy from another \mbox{\hyperlink{classParticleBase}{Particle\+Base}}. \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classParticleBase_a0717a30219081e348225fd7daf5d8888}{get\+Mass}} ()
+\begin{DoxyCompactList}\small\item\em Get mass (required for A\+R\+C\+::chain) \end{DoxyCompactList}\item 
+P\+S\+::\+F64 $\ast$ \mbox{\hyperlink{classParticleBase_a7a3a51bae0e063029fbaaca47fc88e91}{get\+Pos}} ()
+\begin{DoxyCompactList}\small\item\em Get position (required for A\+R\+C\+::chain) \end{DoxyCompactList}\item 
+P\+S\+::\+F64 $\ast$ \mbox{\hyperlink{classParticleBase_ac094cb0dd1a3331aecb998474b7f7697}{get\+Vel}} ()
+\begin{DoxyCompactList}\small\item\em Get velocity (required for A\+R\+C\+::chain) \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticleBase_a3ed30475fa9a421e01cde92155146e84}{set\+Pos}} (const P\+S\+::\+F64 x, const P\+S\+::\+F64 y, const P\+S\+::\+F64 z)
+\begin{DoxyCompactList}\small\item\em Set position (required for A\+R\+C\+::chain) \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticleBase_a509bea1fa7ae741cf160aa6eaa08fdc3}{set\+Pos}} (const P\+S\+::\+F64vec \&\+\_\+pos)
+\begin{DoxyCompactList}\small\item\em Set position (used in soft part) \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticleBase_addd44ae669dec979dfd8f32b688409f4}{set\+Vel}} (const P\+S\+::\+F64 vx, const P\+S\+::\+F64 vy, const P\+S\+::\+F64 vz)
+\begin{DoxyCompactList}\small\item\em Set velocity (required for A\+R\+C\+::chain) \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticleBase_a6bc5c3641dc55ce592bad989e83949a1}{set\+Vel}} (const P\+S\+::\+F64vec \&\+\_\+vel)
+\begin{DoxyCompactList}\small\item\em Set velocity. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticleBase_a2d0e2a5d66587d7f321f9f708531a8b8}{set\+Mass}} (const P\+S\+::\+F64 m)
+\begin{DoxyCompactList}\small\item\em Set mass (required for A\+R\+C\+::chain) \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static void \mbox{\hyperlink{classParticleBase_a9797dd76731d696cd5ed651aae200828}{print\+Column\+Title}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print titles of class members using column style \end{DoxyCompactList}\item 
+static int \mbox{\hyperlink{classParticleBase_acbad2a98ca348d62adb2b2f972ad7d5a}{print\+Title\+With\+Meaning}} (std\+::ostream \&\+\_\+fout, const int \+\_\+counter=0, const int \+\_\+offset=0)
+\begin{DoxyCompactList}\small\item\em print column title with meaning (each line for one column) \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classParticleBase_a68202546452f775401a22830ff96ea0c}{mass}}
+\item 
+P\+S\+::\+F64vec \mbox{\hyperlink{classParticleBase_ae275e275f1f54c1e4781a6914d6cb94b}{pos}}
+\item 
+P\+S\+::\+F64vec \mbox{\hyperlink{classParticleBase_a92c238ba601044ce5972215f36ff708c}{vel}}
+\item 
+P\+S\+::\+S64 \mbox{\hyperlink{classParticleBase_a63f0b50f2978db86718854c947ab2b70}{binary\+\_\+state}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Basic particle class. 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classParticleBase_a597fb651e037fd6b6432013f17ff1c10}\label{classParticleBase_a597fb651e037fd6b6432013f17ff1c10}} 
+\index{ParticleBase@{ParticleBase}!ParticleBase@{ParticleBase}}
+\index{ParticleBase@{ParticleBase}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{ParticleBase()}{ParticleBase()}\hspace{0.1cm}{\footnotesize\ttfamily [1/4]}}
+{\footnotesize\ttfamily Particle\+Base\+::\+Particle\+Base (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+defaulted constructor 
+
+\mbox{\Hypertarget{classParticleBase_a9b3cdef0a443dccce6780726e56fdb87}\label{classParticleBase_a9b3cdef0a443dccce6780726e56fdb87}} 
+\index{ParticleBase@{ParticleBase}!ParticleBase@{ParticleBase}}
+\index{ParticleBase@{ParticleBase}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{ParticleBase()}{ParticleBase()}\hspace{0.1cm}{\footnotesize\ttfamily [2/4]}}
+{\footnotesize\ttfamily template$<$class Tp $>$ \\
+Particle\+Base\+::\+Particle\+Base (\begin{DoxyParamCaption}\item[{const Tp \&}]{p }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_a9b3cdef0a443dccce6780726e56fdb87_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classParticleBase_a3009a80fbb7b88a26b948c534f5695b4}\label{classParticleBase_a3009a80fbb7b88a26b948c534f5695b4}} 
+\index{ParticleBase@{ParticleBase}!ParticleBase@{ParticleBase}}
+\index{ParticleBase@{ParticleBase}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{ParticleBase()}{ParticleBase()}\hspace{0.1cm}{\footnotesize\ttfamily [3/4]}}
+{\footnotesize\ttfamily Particle\+Base\+::\+Particle\+Base (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+mass,  }\item[{const P\+S\+::\+F64vec \&}]{\+\_\+pos,  }\item[{const P\+S\+::\+F64vec \&}]{\+\_\+vel }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+constructor 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_a3009a80fbb7b88a26b948c534f5695b4_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classParticleBase_a95057f3eb29f5495b1c8a2ea838dca33}\label{classParticleBase_a95057f3eb29f5495b1c8a2ea838dca33}} 
+\index{ParticleBase@{ParticleBase}!ParticleBase@{ParticleBase}}
+\index{ParticleBase@{ParticleBase}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{ParticleBase()}{ParticleBase()}\hspace{0.1cm}{\footnotesize\ttfamily [4/4]}}
+{\footnotesize\ttfamily Particle\+Base\+::\+Particle\+Base (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+mass,  }\item[{const P\+S\+::\+F64vec \&}]{\+\_\+pos,  }\item[{const P\+S\+::\+F64vec \&}]{\+\_\+vel,  }\item[{const P\+S\+::\+S64}]{\+\_\+binary\+\_\+state }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+constructor 
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classParticleBase_aeeb3bfd51f0c8eadcf23c0e3b4aeb003}\label{classParticleBase_aeeb3bfd51f0c8eadcf23c0e3b4aeb003}} 
+\index{ParticleBase@{ParticleBase}!DataCopy@{DataCopy}}
+\index{DataCopy@{DataCopy}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{DataCopy()}{DataCopy()}}
+{\footnotesize\ttfamily template$<$class Tp $>$ \\
+void Particle\+Base\+::\+Data\+Copy (\begin{DoxyParamCaption}\item[{const Tp \&}]{din }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Copy from another \mbox{\hyperlink{classParticleBase}{Particle\+Base}}. 
+
+This is used for data transfer between nodes and between soft and hard parts 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em din} & data need to be copied \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_aeeb3bfd51f0c8eadcf23c0e3b4aeb003_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classParticleBase_a443ee52158212b8fbbee7a56e3797eb9}\label{classParticleBase_a443ee52158212b8fbbee7a56e3797eb9}} 
+\index{ParticleBase@{ParticleBase}!getBinaryInterruptState@{getBinaryInterruptState}}
+\index{getBinaryInterruptState@{getBinaryInterruptState}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{getBinaryInterruptState()}{getBinaryInterruptState()}}
+{\footnotesize\ttfamily \mbox{\hyperlink{particle__base_8hpp_a7f4cea813094a8f3eaa92306f62b4400}{Binary\+Interrupt\+State}} Particle\+Base\+::get\+Binary\+Interrupt\+State (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get binary interrupt state from binary\+\_\+state 
+
+\mbox{\Hypertarget{classParticleBase_a90ff5070cb25e1ed0f1807d9dff24eae}\label{classParticleBase_a90ff5070cb25e1ed0f1807d9dff24eae}} 
+\index{ParticleBase@{ParticleBase}!getBinaryPairID@{getBinaryPairID}}
+\index{getBinaryPairID@{getBinaryPairID}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{getBinaryPairID()}{getBinaryPairID()}}
+{\footnotesize\ttfamily P\+S\+::\+S64 Particle\+Base\+::get\+Binary\+Pair\+ID (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get pair ID from binary\+\_\+state 
+
+\mbox{\Hypertarget{classParticleBase_a0717a30219081e348225fd7daf5d8888}\label{classParticleBase_a0717a30219081e348225fd7daf5d8888}} 
+\index{ParticleBase@{ParticleBase}!getMass@{getMass}}
+\index{getMass@{getMass}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{getMass()}{getMass()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Particle\+Base\+::get\+Mass (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get mass (required for A\+R\+C\+::chain) 
+
+\begin{DoxyReturn}{Returns}
+mass 
+\end{DoxyReturn}
+\mbox{\Hypertarget{classParticleBase_a7a3a51bae0e063029fbaaca47fc88e91}\label{classParticleBase_a7a3a51bae0e063029fbaaca47fc88e91}} 
+\index{ParticleBase@{ParticleBase}!getPos@{getPos}}
+\index{getPos@{getPos}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{getPos()}{getPos()}}
+{\footnotesize\ttfamily P\+S\+::\+F64$\ast$ Particle\+Base\+::get\+Pos (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get position (required for A\+R\+C\+::chain) 
+
+\begin{DoxyReturn}{Returns}
+position vector (P\+S\+::\+F64\mbox{[}3\mbox{]}) 
+\end{DoxyReturn}
+\mbox{\Hypertarget{classParticleBase_ac094cb0dd1a3331aecb998474b7f7697}\label{classParticleBase_ac094cb0dd1a3331aecb998474b7f7697}} 
+\index{ParticleBase@{ParticleBase}!getVel@{getVel}}
+\index{getVel@{getVel}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{getVel()}{getVel()}}
+{\footnotesize\ttfamily P\+S\+::\+F64$\ast$ Particle\+Base\+::get\+Vel (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get velocity (required for A\+R\+C\+::chain) 
+
+\begin{DoxyReturn}{Returns}
+velocity vector (P\+S\+::\+F64\mbox{[}3\mbox{]}) 
+\end{DoxyReturn}
+\mbox{\Hypertarget{classParticleBase_aaa2eb35e8a36bc9c08c441944913dda0}\label{classParticleBase_aaa2eb35e8a36bc9c08c441944913dda0}} 
+\index{ParticleBase@{ParticleBase}!print@{print}}
+\index{print@{print}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void Particle\+Base\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+for print debugging 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=336pt]{classParticleBase_aaa2eb35e8a36bc9c08c441944913dda0_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_aaa2eb35e8a36bc9c08c441944913dda0_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classParticleBase_a2ee6dff13f084250e566036a37ac4bd4}\label{classParticleBase_a2ee6dff13f084250e566036a37ac4bd4}} 
+\index{ParticleBase@{ParticleBase}!printColumn@{printColumn}}
+\index{printColumn@{printColumn}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{printColumn()}{printColumn()}}
+{\footnotesize\ttfamily void Particle\+Base\+::print\+Column (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print data of class members using column style 
+
+print data of class members in one line for column style. Notice no newline is printed at the end 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_a2ee6dff13f084250e566036a37ac4bd4_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_a2ee6dff13f084250e566036a37ac4bd4_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classParticleBase_a9797dd76731d696cd5ed651aae200828}\label{classParticleBase_a9797dd76731d696cd5ed651aae200828}} 
+\index{ParticleBase@{ParticleBase}!printColumnTitle@{printColumnTitle}}
+\index{printColumnTitle@{printColumnTitle}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{printColumnTitle()}{printColumnTitle()}}
+{\footnotesize\ttfamily static void Particle\+Base\+::print\+Column\+Title (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print titles of class members using column style 
+
+print titles of class members in one line for column style 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_a9797dd76731d696cd5ed651aae200828_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_a9797dd76731d696cd5ed651aae200828_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classParticleBase_accf33b8bed2326ee349439a7ae3e0768}\label{classParticleBase_accf33b8bed2326ee349439a7ae3e0768}} 
+\index{ParticleBase@{ParticleBase}!printColumnWithOffset@{printColumnWithOffset}}
+\index{printColumnWithOffset@{printColumnWithOffset}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{printColumnWithOffset()}{printColumnWithOffset()}}
+{\footnotesize\ttfamily template$<$class Tpcm $>$ \\
+void Particle\+Base\+::print\+Column\+With\+Offset (\begin{DoxyParamCaption}\item[{Tpcm \&}]{\+\_\+pcm,  }\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print data of class members with pos and vel offset using column style 
+
+print data of class members in one line for column style. Notice no newline is printed at the end 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+pcm} & particle data with position and velocity offset that are added when print data \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_accf33b8bed2326ee349439a7ae3e0768_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_accf33b8bed2326ee349439a7ae3e0768_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classParticleBase_acbad2a98ca348d62adb2b2f972ad7d5a}\label{classParticleBase_acbad2a98ca348d62adb2b2f972ad7d5a}} 
+\index{ParticleBase@{ParticleBase}!printTitleWithMeaning@{printTitleWithMeaning}}
+\index{printTitleWithMeaning@{printTitleWithMeaning}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{printTitleWithMeaning()}{printTitleWithMeaning()}}
+{\footnotesize\ttfamily static int Particle\+Base\+::print\+Title\+With\+Meaning (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+counter = {\ttfamily 0},  }\item[{const int}]{\+\_\+offset = {\ttfamily 0} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print column title with meaning (each line for one column) 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+counter} & offset of the number counter for each line to indicate the column index (defaulted 0) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+offset} & the printing whitespace offset for each line (defaulted 0) \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+\+: the total counter of columns 
+\end{DoxyReturn}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_acbad2a98ca348d62adb2b2f972ad7d5a_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_acbad2a98ca348d62adb2b2f972ad7d5a_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classParticleBase_a37300f78eeb60423fb3e750685331e8d}\label{classParticleBase_a37300f78eeb60423fb3e750685331e8d}} 
+\index{ParticleBase@{ParticleBase}!readAscii@{readAscii}}
+\index{readAscii@{readAscii}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{readAscii()}{readAscii()}}
+{\footnotesize\ttfamily void Particle\+Base\+::read\+Ascii (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{fp }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data with A\+S\+C\+II format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fin} & file IO for read \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_a37300f78eeb60423fb3e750685331e8d_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classParticleBase_af021a12bf8d0213f9e0441328755119d}\label{classParticleBase_af021a12bf8d0213f9e0441328755119d}} 
+\index{ParticleBase@{ParticleBase}!readBinary@{readBinary}}
+\index{readBinary@{readBinary}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{readBinary()}{readBinary()}}
+{\footnotesize\ttfamily void Particle\+Base\+::read\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{fp }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data with B\+I\+N\+A\+RY format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fin} & file IO for read \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_af021a12bf8d0213f9e0441328755119d_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classParticleBase_a09db37a8d02b22650ca4303ed0d18ed5}\label{classParticleBase_a09db37a8d02b22650ca4303ed0d18ed5}} 
+\index{ParticleBase@{ParticleBase}!setBinaryInterruptState@{setBinaryInterruptState}}
+\index{setBinaryInterruptState@{setBinaryInterruptState}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{setBinaryInterruptState()}{setBinaryInterruptState()}}
+{\footnotesize\ttfamily void Particle\+Base\+::set\+Binary\+Interrupt\+State (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{particle__base_8hpp_a7f4cea813094a8f3eaa92306f62b4400}{Binary\+Interrupt\+State}}}]{\+\_\+state }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+save binary interrupt state in the first B\+I\+N\+A\+R\+Y\+\_\+\+S\+T\+A\+T\+E\+\_\+\+I\+D\+\_\+\+S\+H\+I\+FT bit in binary\+\_\+state 
+
+\mbox{\Hypertarget{classParticleBase_aa3527d3ba78e4ae097e074ce68781a76}\label{classParticleBase_aa3527d3ba78e4ae097e074ce68781a76}} 
+\index{ParticleBase@{ParticleBase}!setBinaryPairID@{setBinaryPairID}}
+\index{setBinaryPairID@{setBinaryPairID}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{setBinaryPairID()}{setBinaryPairID()}}
+{\footnotesize\ttfamily void Particle\+Base\+::set\+Binary\+Pair\+ID (\begin{DoxyParamCaption}\item[{const P\+S\+::\+S64}]{\+\_\+id }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+save pair id in binary\+\_\+state with shift bit size of B\+I\+N\+A\+R\+Y\+\_\+\+S\+T\+A\+T\+E\+\_\+\+I\+D\+\_\+\+S\+H\+I\+FT 
+
+\mbox{\Hypertarget{classParticleBase_a2d0e2a5d66587d7f321f9f708531a8b8}\label{classParticleBase_a2d0e2a5d66587d7f321f9f708531a8b8}} 
+\index{ParticleBase@{ParticleBase}!setMass@{setMass}}
+\index{setMass@{setMass}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{setMass()}{setMass()}}
+{\footnotesize\ttfamily void Particle\+Base\+::set\+Mass (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{m }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Set mass (required for A\+R\+C\+::chain) 
+
+N\+AN check will be done 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em m} & particle mass \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classParticleBase_a3ed30475fa9a421e01cde92155146e84}\label{classParticleBase_a3ed30475fa9a421e01cde92155146e84}} 
+\index{ParticleBase@{ParticleBase}!setPos@{setPos}}
+\index{setPos@{setPos}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{setPos()}{setPos()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily void Particle\+Base\+::set\+Pos (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{x,  }\item[{const P\+S\+::\+F64}]{y,  }\item[{const P\+S\+::\+F64}]{z }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Set position (required for A\+R\+C\+::chain) 
+
+N\+AN check will be done 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em x} & particle position in x axis \\
+\hline
+\mbox{\texttt{ in}}  & {\em y} & particle position in y axis \\
+\hline
+\mbox{\texttt{ in}}  & {\em z} & particle position in z axis \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classParticleBase_a509bea1fa7ae741cf160aa6eaa08fdc3}\label{classParticleBase_a509bea1fa7ae741cf160aa6eaa08fdc3}} 
+\index{ParticleBase@{ParticleBase}!setPos@{setPos}}
+\index{setPos@{setPos}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{setPos()}{setPos()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily void Particle\+Base\+::set\+Pos (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64vec \&}]{\+\_\+pos }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Set position (used in soft part) 
+
+\mbox{\Hypertarget{classParticleBase_addd44ae669dec979dfd8f32b688409f4}\label{classParticleBase_addd44ae669dec979dfd8f32b688409f4}} 
+\index{ParticleBase@{ParticleBase}!setVel@{setVel}}
+\index{setVel@{setVel}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{setVel()}{setVel()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily void Particle\+Base\+::set\+Vel (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{vx,  }\item[{const P\+S\+::\+F64}]{vy,  }\item[{const P\+S\+::\+F64}]{vz }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Set velocity (required for A\+R\+C\+::chain) 
+
+N\+AN check will be done 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em vx} & particle velocity in x axis \\
+\hline
+\mbox{\texttt{ in}}  & {\em vy} & particle velocity in y axis \\
+\hline
+\mbox{\texttt{ in}}  & {\em vz} & particle velocity in z axis \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classParticleBase_a6bc5c3641dc55ce592bad989e83949a1}\label{classParticleBase_a6bc5c3641dc55ce592bad989e83949a1}} 
+\index{ParticleBase@{ParticleBase}!setVel@{setVel}}
+\index{setVel@{setVel}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{setVel()}{setVel()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily void Particle\+Base\+::set\+Vel (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64vec \&}]{\+\_\+vel }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Set velocity. 
+
+\mbox{\Hypertarget{classParticleBase_a2aff5120451894367e08971adb595a24}\label{classParticleBase_a2aff5120451894367e08971adb595a24}} 
+\index{ParticleBase@{ParticleBase}!writeAscii@{writeAscii}}
+\index{writeAscii@{writeAscii}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{writeAscii()}{writeAscii()}}
+{\footnotesize\ttfamily void Particle\+Base\+::write\+Ascii (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{fp }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data with A\+S\+C\+II format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fout} & file IO for write \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_a2aff5120451894367e08971adb595a24_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classParticleBase_ab26b2b513b3c62bac84bb25a357223b6}\label{classParticleBase_ab26b2b513b3c62bac84bb25a357223b6}} 
+\index{ParticleBase@{ParticleBase}!writeBinary@{writeBinary}}
+\index{writeBinary@{writeBinary}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{writeBinary()}{writeBinary()}}
+{\footnotesize\ttfamily void Particle\+Base\+::write\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{fp }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data with B\+I\+N\+A\+RY format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fout} & file IO for write \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classParticleBase_ab26b2b513b3c62bac84bb25a357223b6_icgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classParticleBase_a63f0b50f2978db86718854c947ab2b70}\label{classParticleBase_a63f0b50f2978db86718854c947ab2b70}} 
+\index{ParticleBase@{ParticleBase}!binary\_state@{binary\_state}}
+\index{binary\_state@{binary\_state}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{binary\_state}{binary\_state}}
+{\footnotesize\ttfamily P\+S\+::\+S64 Particle\+Base\+::binary\+\_\+state}
+
+\mbox{\Hypertarget{classParticleBase_a68202546452f775401a22830ff96ea0c}\label{classParticleBase_a68202546452f775401a22830ff96ea0c}} 
+\index{ParticleBase@{ParticleBase}!mass@{mass}}
+\index{mass@{mass}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{mass}{mass}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Particle\+Base\+::mass}
+
+\mbox{\Hypertarget{classParticleBase_ae275e275f1f54c1e4781a6914d6cb94b}\label{classParticleBase_ae275e275f1f54c1e4781a6914d6cb94b}} 
+\index{ParticleBase@{ParticleBase}!pos@{pos}}
+\index{pos@{pos}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{pos}{pos}}
+{\footnotesize\ttfamily P\+S\+::\+F64vec Particle\+Base\+::pos}
+
+\mbox{\Hypertarget{classParticleBase_a92c238ba601044ce5972215f36ff708c}\label{classParticleBase_a92c238ba601044ce5972215f36ff708c}} 
+\index{ParticleBase@{ParticleBase}!vel@{vel}}
+\index{vel@{vel}!ParticleBase@{ParticleBase}}
+\doxysubsubsection{\texorpdfstring{vel}{vel}}
+{\footnotesize\ttfamily P\+S\+::\+F64vec Particle\+Base\+::vel}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{particle__base_8hpp}{particle\+\_\+base.\+hpp}}\end{DoxyCompactItemize}

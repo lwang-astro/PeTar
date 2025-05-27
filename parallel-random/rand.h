@@ -12,11 +12,12 @@
       integer(c_long_long) rand_uint64
       end function
 
-      subroutine srand_parallel(seed) bind(c, 
+      subroutine srand_parallel(seed, rank) bind(c, 
      &        name='srand_parallel')
       import 
       implicit none
       integer(c_long_long) seed
+      integer(c_int) rank
       end subroutine
 
       end interface

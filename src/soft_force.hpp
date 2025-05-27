@@ -71,9 +71,6 @@ struct CalcForceEpEpWithLinearCutoffNoSimd{
             }
             //std::cerr<<"poti= "<<poti<<std::endl;
             force[i].acc += G*ai;
-#ifdef KDKDK_4TH
-            force[i].acorr = 0.0;
-#endif
             force[i].pot += G*poti;
 #ifdef NAN_CHECK_DEBUG
             assert(!std::isnan(ai[0]));
@@ -95,6 +92,7 @@ struct CalcCorrectEpEpWithLinearCutoffNoSimd{
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
         const PS::F64 r_out2 = EPISoft::r_out*EPISoft::r_out;
+        const PS::F64 G = ForceSoft::grav_const;
 
         for(PS::S32 i=0; i<n_ip; i++){
             PS::F64vec acorr = 0.0;
@@ -115,7 +113,7 @@ struct CalcCorrectEpEpWithLinearCutoffNoSimd{
                 acorr -= m_r3 * (da - alpha * dr); 
             }
             //std::cerr<<"poti= "<<poti<<std::endl;
-            force[i].acorr += 2.0 * acorr;
+            force[i].acorr += 2.0 * G * acorr;
             force[i].acc = acci;
         }
     }

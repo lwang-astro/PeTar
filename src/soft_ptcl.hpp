@@ -15,6 +15,9 @@ public:
     static PS::F64 grav_const; ///> gravitational constant
     void clear(){
         acc = 0.0;
+#ifdef KDKDK_4TH
+        acorr = 0.0;
+#endif        
         pot = 0.0;
         n_ngb = 0;
 #ifdef SAVE_NEIGHBOR_ID_IN_FORCE_KERNEL
@@ -44,19 +47,6 @@ public:
 
     FPSoft() {}
 
-    //! Get position (required for \ref ARC::chain)
-    /*! \return position vector (PS::F64[3])
-     */
-    PS::F64vec getPos() const{
-        return pos;
-    }
-
-    //! Get velocity (required for \ref ARC::chain)
-    /*! \return velocity vector (PS::F64[3])
-     */
-    PS::F64vec getVel() const{
-        return vel;
-    }
     
     //template<class Tptcl>
     //FPSoft& operator = (const FPSoft& p) {
@@ -259,6 +249,9 @@ public:
     //! clear force
     void clearForce() {
         acc = 0.0;
+#ifdef KDKDK_4TH
+        acorr = 0.0;
+#endif
         pot_tot = 0.0;
         pot_soft = 0.0;
 #ifdef EXTERNAL_POT_IN_PTCL
@@ -317,10 +310,8 @@ public:
 #ifdef KDKDK_4TH
     PS::F64vec acc;
 #endif
-    PS::F64 r_in;
-    PS::F64 r_out;
+    ChangeOver changeover;
     PS::F64 r_search;
-    PS::F64 r_scale_next;
     GroupDataDeliver group_data;
     PS::S32 rank_org;
     PS::S32 adr_org;
@@ -335,9 +326,7 @@ public:
 #ifdef KDKDK_4TH
         acc = fp.acc;
 #endif
-        r_in = fp.changeover.getRin();
-        r_out = fp.changeover.getRout();
-        r_scale_next = fp.changeover.r_scale_next;
+        changeover = fp.changeover;
         r_search = fp.r_search;
         group_data = fp.group_data;
         rank_org = fp.rank_org;
@@ -368,9 +357,8 @@ public:
     void clear(){
         mass = 0.0;
         pos = vel = 0.0;
-        r_in = r_out = 0.0;
+        changeover.clear();
         r_search = 0.0;
-        r_scale_next = 1.0;
         id = rank_org = adr_org = -1;
     }
 };

@@ -6,6 +6,8 @@ class PtclHard: public Ptcl{
 public:
     PS::S32 id_cluster;
     PS::S32 adr_org;
+    static PS::F64 r_group_over_in;
+    static PS::F64 r_search_group_over_in;
 
     PtclHard(): Ptcl(), id_cluster(-1), adr_org(-1) {}
 
@@ -49,29 +51,17 @@ public:
         return PS::S32(- group_data.artificial.getStatus());
     }
 
-    // calculate reseach based on potential and velocity
-    /*!
-      Potential criterion: 
-      pot = -Gm/r0
-      -Gm/r0 + 1/2 v^2 = -Gm/(r0+dr)
-      dr = r0/[2Gm/(r0 v^2) - 1]
-      If energy is positive, dr < 0
+    //! Get group candidate distance criterion
+    PS::F64 getRGroupCandidate() const {
+        return changeover.getRin()*r_search_group_over_in;
+    }
 
-      velocity criterion:
-      v*dt_tree
-
-      Use min of two
-     */
-    void calcRSearch(const PS::F64 _Gm, const PS::F64 _pot, const PS::F64vec& _vel_cm, const PS::F64 _dt_tree) {
-        PS::F64vec vrel = Ptcl::vel-_vel_cm;
-        PS::F64 v2rel = vrel*vrel;
-        PS::F64 r0 = _pot>0? _Gm/_pot : PS::LARGE_FLOAT;
-        PS::F64 q = 2.0*_pot/v2rel;
-        if (q>1.0) r0 /= (q-1.0);
-
-        PS::F64 v2 = Ptcl::vel*Ptcl::vel;
-        PS::F64 v = std::sqrt(v2);
-        r_search = std::max(std::min(v*_dt_tree, r0)*search_factor+Ptcl::changeover.getRout(), r_search_min);
+    //! Get group distance criterion
+    PS::F64 getRGroup() const {
+#ifdef HARD_DEBUG
+        assert(r_group_over_in>0);
+#endif
+        return changeover.getRin()*r_group_over_in;
     }
 
     void dump(FILE *_fout) {
@@ -89,6 +79,15 @@ public:
         Ptcl::print(_fout);
         std::cerr<<" id_cluster="<<id_cluster
                  <<" adr_org="<<adr_org;
+    }
+
+    //! Get neighbor distance criterion 
+    PS::F64 getRNeighbor() const {
+#ifdef HARD_DEBUG
+        // If a binary's velocity is zero. its r_search can be the same as r_out, because r_out can be > r_search_min, then calcRSearch return r_out.
+        assert(r_search>=changeover.getRout());
+#endif 
+        return r_search;
     }
 
 };

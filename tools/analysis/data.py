@@ -36,10 +36,12 @@ class PeTarDataHeader():
             PeTar snapshot file name to read the header, if not provide, all members are initialized to zero (None)
         kwargs: dict
             Keyword arguments:
+            float_type: type (np.float64)
+                floating point data type
             snapshot_format: string (ascii)
                 Data format of snapshot files: binary or ascii
             external_mode: string (none)
-                PeTar external mode (set in configure): galpy, none 
+                PeTar external mode (set in configure): galpy, agama, none 
                 If not none, this option indicates the pos_offset and vel_offset exists 
         """
         self.file_id = int(0)
@@ -60,16 +62,20 @@ class PeTarDataHeader():
             PeTar snapshot file name to read the header
         kwargs: dict
             Keyword arguments:
+            float_type: type (np.float64)
+                floating point data type
             snapshot_format: string (ascii)
                 Data format of snapshot files: binary or ascii
             external_mode: string (none)
-                PeTar external mode (set in configure): galpy, none 
+                PeTar external mode (set in configure): galpy, agama, none 
                 If not none, this option indicates the pos_offset and vel_offset exists 
         """
         snapshot_format='ascii'
         if ('snapshot_format' in kwargs.keys()): snapshot_format=kwargs['snapshot_format']
         if ('external_mode' in kwargs.keys()):
             if (kwargs['external_mode']!='none'): self.offset_flag=True
+        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
+        else: float_type = np.float64
 
         if (snapshot_format=='ascii'):
             fp = open(_filename, 'r')
@@ -84,9 +90,9 @@ class PeTarDataHeader():
 
                 self.file_id = int(file_id)
                 self.n = int(n_glb)
-                self.time = float(t)
-                self.pos_offset = [float(x),float(y),float(z)]
-                self.vel_offset = [float(vx),float(vy),float(vz)]
+                self.time = float_type(t)
+                self.pos_offset = [float_type(x),float_type(y),float_type(z)]
+                self.vel_offset = [float_type(vx),float_type(vy),float_type(vz)]
             else:
                 if (len(header_items)!=3):
                     raise ValueError('Snapshot header item number mismatch! Need 3 (file_id, N, time), got %d. Make sure the external_mode keyword set correctly.' % len(header_items))
@@ -96,18 +102,18 @@ class PeTarDataHeader():
 
                 self.file_id = int(file_id)
                 self.n = int(n_glb)
-                self.time = float(t)
+                self.time = float_type(t)
 
         else:
             if (self.offset_flag):
-                fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',np.float64),('x',np.float64),('y',np.float64),('z',np.float64),('vx',np.float64),('vy',np.float64),('vz',np.float64)]),count=1)
+                fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',float_type),('x',float_type),('y',float_type),('z',float_type),('vx',float_type),('vy',float_type),('vz',float_type)]),count=1)
                 self.file_id = fp['file_id'][0]
                 self.n = fp['n_glb'][0]
                 self.time = fp['time'][0]
                 self.pos_offset = [fp['x'][0], fp['y'][0], fp['z'][0]]
                 self.vel_offset = [fp['vx'][0], fp['vy'][0], fp['vz'][0]]
             else:
-                fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',np.float64)]),count=1)
+                fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',float_type)]),count=1)
                 self.file_id = fp['file_id'][0]
                 self.n = fp['n_glb'][0]
                 self.time = fp['time'][0]
@@ -222,12 +228,29 @@ class SimpleParticle(DictNpArrayMix):
     keys: (class members)
         mass (1D): mass
         pos (2D,3): postion x, y, z
+        *pos_high (2D,3): high-precision parts of position x, y, z, only exist when use_mpfrc is True
         vel (2D,3): velocity vx, vy, vz
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
+        Parameters:
+        -----------
+        Keyword arguments:
+            float_type: type (np.float64)
+                floating point data type
+            use_mpfrc: bool (False)
+                if true, add three columns of pos_high indicating the high-precision parts of position
         """
-        keys = [['mass', np.float64], ['pos', (np.float64, 3)], ['vel', (np.float64, 3)]]
+        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
+        else: float_type = np.float64
+        keys = [['mass', float_type], ['pos', (float_type, 3)]]
+        if ('use_mpfrc' in kwargs.keys()): use_mpfrc = kwargs['use_mpfrc']
+        else: use_mpfrc = False
+        if (use_mpfrc):
+            keys += [['pos_high', (float_type, 3)]]
+        keys += [['vel', (float_type, 3)]]
+        
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
     def calcR2(self):
@@ -323,52 +346,21 @@ class SimpleParticle(DictNpArrayMix):
                         frame='galactocentric', representation_type='cartesian', **parameters)
         return snap
         
-
-class Particle(SimpleParticle):
-    """ Particle class 
-        The particle data of PeTar. Depending on the compile configuration of PeTar, 
-        The data structures (columns) of the particle snapshots are different.
-        Using the correct keyword arguments in the initialization to control the member definition (Keys)
-
+class BaseParticle(SimpleParticle):
+    """ Base particle type of PeTar
+        The members include simple particle information, binary status and stellar evolution data
+       
     keys: (class members)
-        The final keys are a combination of sub keys depending on keyword arguments (kwargs) of initial function
-
-        Sub key list:
-
-        std: [inherit SimpleParticle]
-        bstat: binary_state: binary interruption state 
-        se: radius:        (1D): radius for merger checker
+        Members inherited from SimpleParticle: mass (1D), pos (2D,3), *pos_high (2D,3) vel (2D,3) 
+            see help(petar.SimpleParticle)
+        binary_state (1D): binary interruption state
+        if (keyword argument 'interrupt_mode' == 'base', 'bse', 'bseEmp', 'mobse'):
+            radius:        (1D): radius for merger checker
             dm:            (1D): mass loss
             time_record    (1D): last time of interruption check
             time_interrupt (1D): next interruption time
-        bse: star  (SSEStarParameter): BSE based stellar evolution parameters
-        ptcl: r_search (1D): searching radius
-              id       (1D): identification
-              mass_bk  (1D): artificial particle parameter 1 
-              status   (1D): artificial particle parameter 2
-              r_in     (1D): changeover function inner boundary
-              r_out    (1D): changeover function outer boundary
-        hermite: dt    (1D): time step
-                 time  (1D): current time
-                 acc   (2D,3): acceleration x, y, z
-                 jerk  (2D,3): acceleration derivative x, y, z
-                 pot   (1D): potential
-        soft: acc_soft (2D,3): long-range interaction acceleration (particle-tree) x, y, z
-              pot      (1D): total potential
-              pot_soft (1D): long-range interaction potential
-              *pot_ext  (1D): external potential (only exist when keyword argument 'external_mode' is not 'none')
-              n_nb:    (1D): number of neighbors (short-interaction)
-
-        ends: the end part of keys depends on kwargs['particle_type']:
-             hermite:   ptcl + hermite
-             hard:      ptcl
-             soft (default): ptcl + soft 
-
-        final: the final combination of keys depends on kwargs['interrupt_mode']:
-             base:      std + bstat + se + ends
-             bse:       std + bstat + se + bse + ends
-             none (default): std + bstat + ends
-
+        if (keyword argument 'interrupt_mode' == 'bse', 'bseEmp', 'mobse'):
+            star  (SSEStarParameter): BSE based stellar evolution parameters
     """
 
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
@@ -377,39 +369,143 @@ class Particle(SimpleParticle):
         Parameters
         ----------
         keyword arguments:
-            particle_type: string (soft)
-               basic particle type: hermite, hard, soft
+            interrupt_mode: string (none)
+               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               This option indicates whether columns of stellar evolution exist
+            use_mpfrc: bool (False)
+                if true, add three columns of pos_high indicating the high-precision parts of position
+            float_type: type (np.float64)
+                floating point data type
+        """
+        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
+        else: float_type = np.float64
+
+        keys_bstat = [['binary_state',np.int64]]
+        keys_se  = [['radius',float_type],['dm',float_type],['time_record',float_type],['time_interrupt',float_type]]    
+        
+        keys = keys_bstat
+        if ('interrupt_mode' in kwargs.keys()):
+            if (kwargs['interrupt_mode']=='base'):
+                keys = keys_bstat+keys_se
+            elif ('bse' in kwargs['interrupt_mode']):
+                keys = keys_bstat+keys_se+[['star',SSEStarParameter]]
+            
+        SimpleParticle.__init__(self, _dat, _offset, _append, **kwargs)
+        DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
+
+class HardParticle(BaseParticle):
+    """ Hard particle type of PeTar
+        The member include BaseParticle and searching radius, id, artificial particle data and changeover radii
+        
+    keys: (class members)
+        Members inherited from BaseParticle: see help(petar.BaseParticle)
+             Please set the keyword argument 'interrupt_mode' to determine the members of stellar evolution data
+        r_search (1D): searching radius
+        id       (1D): identification
+        mass_bk  (1D): artificial particle parameter 1 
+        status   (1D): artificial particle parameter 2
+        r_in     (1D): changeover function inner boundary
+        r_out    (1D): changeover function outer boundary
+    """
+
+    def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
+        keyword arguments:
+            interrupt_mode: string (none)
+               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               This option indicates whether columns of stellar evolution exist
+            use_mpfrc: bool (False)
+                if true, add three columns of pos_high indicating the high-precision parts of position
+            float_type: type (np.float64)
+                floating point data type
+        """
+        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
+        else: float_type = np.float64
+
+        keys = [['r_search',float_type], ['id',np.int64], ['mass_bk',np.float64], ['status',np.float64], ['r_in',float_type], ['r_out',float_type]]
+
+        BaseParticle.__init__(self, _dat, _offset, _append, **kwargs)
+        DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
+
+class HermiteParticle(HardParticle):
+    """ Hermite particle type of PeTar
+        The member include HardParticle and dt, time, acc, jerk and pot
+        
+    keys: (class members)
+        Members inherited from HardParticle: see help(petar.HardParticle)
+             Please set the keyword argument 'interrupt_mode' to determine the members of stellar evolution data
+        dt    (1D): time step
+        time  (1D): current time
+        acc   (2D,3): acceleration x, y, z
+        jerk  (2D,3): acceleration derivative x, y, z
+        pot   (1D): potential
+    """
+
+    def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
+        keyword arguments:
+            interrupt_mode: string (none)
+               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               This option indicates whether columns of stellar evolution exist
+            use_mpfrc: bool (False)
+                if true, add three columns of pos_high indicating the high-precision parts of position
+            float_type: type (np.float64)
+                floating point data type
+        """
+        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
+        else: float_type = np.float64
+
+        keys = [['dt',float_type],['time',float_type],['acc',(float_type,3)],['jerk',(float_type,3)],['pot',float_type]]
+
+        HardParticle.__init__(self, _dat, _offset, _append, **kwargs)
+        DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
+
+class Particle(HardParticle):
+    """ (Soft) Particle type of PeTar, also used in snapshot
+        The particle data of PeTar. Depending on the compile configuration of PeTar, 
+        The data structures (columns) of the particle snapshots are different.
+        Using the correct keyword arguments in the initialization to control the member definition (Keys)
+
+    keys: (class members)
+        Members inherited from HardParticle: see help(petar.HardParticle)
+             Please set the keyword argument 'interrupt_mode' to determine the members of stellar evolution data
+             Please set the keyword argument 'use_mpfrc' to determine whether high-precision parts of particle position are included
+        acc_soft (2D,3): long-range interaction acceleration (particle-tree) x, y, z
+        pot      (1D): total potential
+        pot_soft (1D): long-range interaction potential
+        if (keyword argument 'external_mode' != 'none'):
+             pot_ext  (1D): external potential (only exist when keyword argument 'external_mode' is not 'none')
+        n_nb:    (1D): number of neighbors (short-interaction)
+    """
+
+    def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
+        Parameters
+        ----------
+        keyword arguments:
             interrupt_mode: string (none)
                PeTar interrupt mode (set in configure): base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
-               PeTar external mode (set in configure): galpy, none 
+               PeTar external mode (set in configure): galpy, agama, none 
                This option indicates whether the column of externa potential exist
+            use_mpfrc: bool (False)
+               If true, add three columns of pos_high indicating the high-precision parts of position
+            float_type: type (np.float64)
+                floating point data type
         """
+        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
+        else: float_type = np.float64
 
-        keys_bstat = [['binary_state',np.int64]]
-        keys_se  = [['radius',np.float64],['dm',np.float64],['time_record',np.float64],['time_interrupt',np.float64]]
-        keys_ptcl_add = [['r_search',np.float64], ['id',np.int64], ['mass_bk',np.int64], ['status',np.int64], ['r_in',np.float64], ['r_out',np.float64]]
-        keys_hermite_add = [['dt',np.float64],['time',np.float64],['acc',(np.float64,3)],['jerk',(np.float64,3)],['pot',np.float64]]
-        keys_soft_add = [['acc_soft',(np.float64,3)], ['pot',np.float64], ['pot_soft',np.float64], ['n_nb',np.int64]]
+        keys = [['acc_soft',(float_type,3)], ['pot',float_type], ['pot_soft',float_type], ['n_nb',np.int64]]
         if ('external_mode' in kwargs.keys()):
             if (kwargs['external_mode']!='none'):
-                keys_soft_add = [['acc_soft',(np.float64,3)], ['pot',np.float64], ['pot_soft',np.float64], ['pot_ext',np.float64], ['n_nb',np.int64]]
+                keys = [['acc_soft',(float_type,3)], ['pot',float_type], ['pot_soft',float_type], ['pot_ext',float_type], ['n_nb',np.int64]]
 
-        keys_end =  keys_ptcl_add + keys_soft_add
-        if ('particle_type' in kwargs.keys()):
-            if (kwargs['particle_type']=='hermite'):
-                keys_end = keys_ptcl_add + keys_hermite_add
-            elif (kwargs['particle_type']=='hard'):
-                keys_end = keys_ptcl_add
-        keys=keys_bstat+keys_end
-        if ('interrupt_mode' in kwargs.keys()):
-            if (kwargs['interrupt_mode']=='base'):
-                keys = keys_bstat+keys_se+keys_end
-            elif ('bse' in kwargs['interrupt_mode']):
-                keys = keys_bstat+keys_se+[['star',SSEStarParameter]]+keys_end
-            
-        SimpleParticle.__init__(self, _dat, _offset, _append, **kwargs)
+        HardParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
 
     def calcEtot(self):
@@ -422,7 +518,8 @@ class ParticleGroup(DictNpArrayMix):
     """ A group of particles
     Keys: (class members)
         n (1D): number of particles, when keyword argument N_column_exist=False, this member does not exist
-        p[x] (particle_type[kwargs]): particle data, [x] indicate the indice, counting from 0
+        cm (cm_type): center-of-the-mass particle data 
+        p[x] (member_type): particle data, [x] indicate the indice, counting from 0
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
@@ -431,12 +528,18 @@ class ParticleGroup(DictNpArrayMix):
         keyword arguments:
             member_type: type (SimpleParticle)
                 Member particle type
+            cm_type: type (SimpleParticle)
+                Center-of-the-mass particle type
             N_particle: int (0)
                 Number of particles (ignore the value in the column N)
                 If data path is provided in the initialization; the column N exists and this argument is not provided, 
                 the first value in column N is used to determine N_particle
             N_column_exist: bool (True)
                 if True, the class member n exists, otherwise not.
+            cm_column_exist: bool (True)
+                if True, the center-of-the-mass particle data exist, otherwise not
+            float_type: type (np.float64)
+                floating point data type
         """
 
         N_column_exist = True
@@ -454,9 +557,20 @@ class ParticleGroup(DictNpArrayMix):
 
         if 'N_particle' in kwargs.keys(): n = kwargs['N_particle']
 
+        cm_column_exist = True
+        if 'cm_column_exist' in kwargs.keys():
+            cm_column_exist = kwargs['cm_column_exist']
+
+        cm_type = SimpleParticle
+        if ('cm_type' in kwargs.keys()): cm_type = kwargs['cm_type']
+
+        if (cm_column_exist):
+            keys_cm = [['cm', cm_type]]
+            DictNpArrayMix.__init__(self, keys_cm, _dat, _offset+self.ncols, True, **kwargs)
+
         member_type = SimpleParticle
         if ('member_type' in kwargs.keys()): member_type = kwargs['member_type']
-
+        
         if (n>0):
             keys_p = [['p'+str(i), member_type] for i in range(n)]
             DictNpArrayMix.__init__(self, keys_p, _dat, _offset+self.ncols, True, **kwargs)
@@ -489,12 +603,12 @@ def calculateParticleCMDict(pcm, _p1, _p2):
     """
     if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
         pcm['mass'] = _p1.mass + _p2.mass
-        pcm['pos']  = np.array(list(map(lambda m1,x1,m2,x2:(m1*x1+m2*x2)/(m1+m2), _p1.mass, _p1.pos, _p2.mass, _p2.pos)))
-        pcm['vel']  = np.array(list(map(lambda m1,x1,m2,x2:(m1*x1+m2*x2)/(m1+m2), _p1.mass, _p1.vel, _p2.mass, _p2.vel)))
+        pcm['pos']  = (_p1.mass[:,None]*_p1.pos + _p2.mass[:,None]*_p2.pos)/pcm['mass'][:,None]
+        pcm['vel']  = (_p1.mass[:,None]*_p1.vel + _p2.mass[:,None]*_p2.vel)/pcm['mass'][:,None]
     elif (isinstance(_p1, collections.OrderedDict)) & (isinstance(_p2,collections.OrderedDict)) | (isinstance(_p1, dict)) & (isinstance(_p2, dict)):
         pcm['mass'] = _p1['mass'] + _p2['mass']
-        pcm['pos']  = np.array(list(map(lambda m1,x1,m2,x2:(m1*x1+m2*x2)/(m1+m2), _p1['mass'], _p1['pos'], _p2['mass'], _p2['pos'])))
-        pcm['vel']  = np.array(list(map(lambda m1,x1,m2,x2:(m1*x1+m2*x2)/(m1+m2), _p1['mass'], _p1['vel'], _p2['mass'], _p2['vel'])))
+        pcm['pos']  = (_p1['mass'][:,None]*_p1['pos'] + _p2['mass'][:,None]*_p2['pos'])/pcm['mass'][:,None]
+        pcm['vel']  = (_p1['mass'][:,None]*_p1['vel'] + _p2['mass'][:,None]*_p2['vel'])/pcm['mass'][:,None]
     else:
         raise ValueError('Initial fail, date type should be Particle or collections.OrderDict, given',type(_p1))
 
@@ -540,7 +654,7 @@ class Binary(SimpleParticle):
 
         The member_particle_type(|_one|_two) is given by keyword arguments:
            'member_particle_type' (for both members),'member_particle_type_one','member_particle_type_two'.
-        In default, it is petar.SimpleParticle.
+        In default, it is petar.Particle.
         If a type (e.g., petar.Particle) is given, the member is a single star.
         If a list with two members (e.g., [petar.Particle, petar.Particle]) is given, 
         the member is a binary with two single stars.
@@ -552,13 +666,13 @@ class Binary(SimpleParticle):
         """
         Parameters
         ----------
-        _p1: inherited SimpleParticle | 2D numpy.ndarray | Binary | None
-            If the type is inherited SimpleParticle, it is the first component of binary (_p2 should be the same type).
-            If the type is Binary, the class instance is initialized by copy the data of _p1.
-            If it is None, initialize class with empty data
-        _p2: inherited SimpleParticle | None
-            If the type is inherited SimpleParticle, it is the second component of binary 
-            If it is None, _p1 should be either 2D numpy.ndarray or Bina
+        _p1: particle data | 2D numpy.ndarray | petar.Binary | None
+            If _p1 is a particle type data or a petar.Binary type data, it is treated as the first component of binary
+            If _p1 is a petar.Binary type data and _p2 is None, the class instance is initialized by copy the data of _p1.
+            If _p1 is None, initialize class with empty data
+        _p2: particle data | None
+            If _p2 is a particle type data or a petar.Binary type data, it is treated as the second component of binary
+            If _p2 is None, _p1 should be petar.Binary data or None
         _offset: int (0)
             Reading column offset of _dat if it is 2D np.ndarray
         _append: bool (False)
@@ -569,16 +683,29 @@ class Binary(SimpleParticle):
                 If True, only calculate semi and ecc, save computing time significantly
             G: float (1.0)
                 Gravitational constant
-            member_particle_type: type or list (SimpleParticle)
+            interrupt_mode: string (none)
+               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               This option indicates whether columns of stellar evolution exist
+            external_mode: string (none)
+               PeTar external mode (set in configure): galpy, agama, none 
+               This option indicates whether the column of externa potential exist
+            use_mpfrc: bool (False)
+               If true, add three columns of pos_high indicating the high-precision parts of position
+            member_particle_type: type or list (Particle)
                 Type of component particle (both)
-            member_particle_type_one: type or list (SimpleParticle)
+            member_particle_type_one: type or list (Particle)
                 Type of 1st component
-            member_particle_type_two: type or list (SimpleParticle)
+            member_particle_type_two: type or list (Particle)
                 Type of 2nd component 
+            float_type: type (np.float64)
+                floating point data type
         """
+        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
+        else: float_type = np.float64
+
         G=1
         simple_mode=True
-        member_particle_type=SimpleParticle
+        member_particle_type=Particle
         member_particle_type_one=member_particle_type
         member_particle_type_two=member_particle_type
         
@@ -592,14 +719,24 @@ class Binary(SimpleParticle):
         if 'member_particle_type_two' in kwargs.keys(): member_particle_type_two=kwargs['member_particle_type_two']
 
         if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
+            self.initargs = kwargs.copy()
+            self.ncols = int(7)
+            self.keys = [['mass',float_type],['pos',(float_type,3)]]
+            if ('use_mpfrc' in _p1.initargs.keys()):
+                if (_p1.initargs['use_mpfrc']):
+                    self.keys += [['pos_high',(float_type,3)]]
+                    self.__dict__['pos_high'] = np.zeros((_p1.size,3),dtype=float_type)
+                    self.initargs['use_mpfrc'] = True
+                    self.ncols += 3
+            self.keys += [['vel',(float_type,3)]]
             if (simple_mode): 
-                self.keys = [['mass',np.float64],['pos',(np.float64,3)],['vel',(np.float64,3)],['rrel',np.float64],['semi',np.float64],['ecc',np.float64],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
+                self.keys += [['rrel',float_type],['semi',float_type],['ecc',float_type],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
                 self.particleToSemiEcc(_p1, _p2, G)
-                self.ncols= int(10)
+                self.ncols += 3
             else:
-                self.keys = [['mass',np.float64],['pos',(np.float64,3)],['vel',(np.float64,3)],['m1',np.float64],['m2',np.float64],['rrel',np.float64],['semi',np.float64],['am',(np.float64,3)],['L',(np.float64,3)],['eccvec',(np.float64,3)],['incline',np.float64],['rot_horizon',np.float64],['ecc',np.float64],['rot_self',np.float64],['ecca',np.float64],['period',np.float64],['t_peri',np.float64],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
+                self.keys += [['m1',float_type],['m2',float_type],['rrel',float_type],['semi',float_type],['am',(float_type,3)],['L',(float_type,3)],['eccvec',(float_type,3)],['incline',float_type],['rot_horizon',float_type],['ecc',float_type],['rot_self',float_type],['ecca',float_type],['period',float_type],['t_peri',float_type],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
                 self.particleToBinary(_p1, _p2, G)
-                self.ncols= int(27)
+                self.ncols += 20
             self.p1 = _p1
             self.p1.setHost(self)
             self.p2 = _p2
@@ -608,7 +745,6 @@ class Binary(SimpleParticle):
                 self.host = None
             self.size = _p1.size
             self.ncols += self.p1.ncols + self.p2.ncols
-            self.initargs = kwargs.copy()
             binary_tree = self.createMemberParticleTypeTree()
             self.initargs['member_particle_type_one']=binary_tree[0]
             self.initargs['member_particle_type_two']=binary_tree[1]
@@ -620,11 +756,11 @@ class Binary(SimpleParticle):
             if (type(member_particle_type_two) == list):
                 type_two = (Binary, {'member_particle_type_one':member_particle_type_two[0],'member_particle_type_two':member_particle_type_two[1]})
             if (simple_mode):
-                keys = [['rrel',np.float64],['semi',np.float64],['ecc',np.float64],['p1',type_one], ['p2', type_two]]
+                keys = [['rrel',float_type],['semi',float_type],['ecc',float_type],['p1',type_one], ['p2', type_two]]
                 SimpleParticle.__init__(self, _p1, _offset, _append, **kwargs)
                 DictNpArrayMix.__init__(self, keys, _p1, _offset+self.ncols, True, **kwargs)
             else:
-                keys=[['m1',np.float64],['m2',np.float64],['rrel',np.float64],['semi',np.float64],['am',(np.float64,3)],['L',(np.float64,3)],['eccvec',(np.float64,3)],['incline',np.float64],['rot_horizon',np.float64],['ecc',np.float64],['rot_self',np.float64],['ecca',np.float64],['period',np.float64],['t_peri',np.float64],['p1', type_one],['p2', type_two]]
+                keys=[['m1',float_type],['m2',float_type],['rrel',float_type],['semi',float_type],['am',(float_type,3)],['L',(float_type,3)],['eccvec',(float_type,3)],['incline',float_type],['rot_horizon',float_type],['ecc',float_type],['rot_self',float_type],['ecca',float_type],['period',float_type],['t_peri',float_type],['p1', type_one],['p2', type_two]]
                 SimpleParticle.__init__(self, _p1, _offset, _append, **kwargs)
                 DictNpArrayMix.__init__(self, keys, _p1, _offset+self.ncols, True, **kwargs)
             self.initargs = kwargs.copy()
@@ -723,7 +859,19 @@ class Binary(SimpleParticle):
         """
         calculateParticleCMDict(self.__dict__, _p1, _p2)
 
-        dr = (_p1.pos - _p2.pos)
+        if ('use_mpfrc' in _p1.initargs.keys()):
+            if (_p1.initargs['use_mpfrc']):
+                pos1_mp = np.zeros((_p1.size,3),dtype=np.float128)
+                pos1_mp += _p1.pos
+                pos1_mp += _p1.pos_high
+                pos2_mp = np.zeros((_p2.size,3),dtype=np.float128)
+                pos2_mp += _p2.pos
+                pos2_mp += _p2.pos_high
+                dr = (pos1_mp - pos2_mp)
+            else:
+                dr = (_p1.pos - _p2.pos)
+        else:
+            dr = (_p1.pos - _p2.pos)
         dv = (_p1.vel - _p2.vel)
         
         dr2  = (dr*dr).sum(axis=1)

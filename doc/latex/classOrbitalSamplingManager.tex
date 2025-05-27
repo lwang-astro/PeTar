@@ -1,0 +1,222 @@
+\hypertarget{classOrbitalSamplingManager}{}\doxysection{Orbital\+Sampling\+Manager Class Reference}
+\label{classOrbitalSamplingManager}\index{OrbitalSamplingManager@{OrbitalSamplingManager}}
+
+
+orbital sampling method for counter force from binary  
+
+
+
+
+{\ttfamily \#include $<$orbit\+\_\+sampling.\+hpp$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classOrbitalSamplingManager_a83f9a149464cd755f9ac204ee227afb0}{Orbital\+Sampling\+Manager}} ()
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+gravitational constant \end{quote}
+\end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classOrbitalSamplingManager_a91889268835719076f1b45ebe858fe43}{check\+Params}} ()
+\begin{DoxyCompactList}\small\item\em check paramters \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\void \mbox{\hyperlink{classOrbitalSamplingManager_a1a4f77b9a3ef7a218e08e5b78dd3c043}{create\+Sample\+Particles}} (Tptcl $\ast$\+\_\+ptcl\+\_\+artificial, C\+O\+M\+M\+::\+Binary\+Tree$<$ Tptcl $>$ \&\+\_\+bin)
+\begin{DoxyCompactList}\small\item\em create orbit sampling particles \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classOrbitalSamplingManager_ac0e2815e5bbbf15b2457db32cba0e44d}{set\+Particle\+SplitN}} (const P\+S\+::\+S32 \&\+\_\+n\+\_\+split)
+\begin{DoxyCompactList}\small\item\em set particle split number \end{DoxyCompactList}\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classOrbitalSamplingManager_acca7f53022eeef8c856f4dcf641270b7}{get\+Particle\+SplitN}} () const
+\begin{DoxyCompactList}\small\item\em get particle split number \end{DoxyCompactList}\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classOrbitalSamplingManager_af85d8b4876da7792015ddf45c874cfdc}{get\+ParticleN}} () const
+\begin{DoxyCompactList}\small\item\em get particle number \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classOrbitalSamplingManager_a60058fd3c6ff5be792a92526ee99907e}{write\+Binary}} (F\+I\+LE $\ast$\+\_\+fp)
+\begin{DoxyCompactList}\small\item\em write class data to file with binary format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classOrbitalSamplingManager_a2f3d32e6b39c6653cc16e6276dd79237}{read\+Binary}} (F\+I\+LE $\ast$\+\_\+fin)
+\begin{DoxyCompactList}\small\item\em read class data to file with binary format \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classOrbitalSamplingManager_a079b9fa259b7a83335b59c4a1e4cb617}{$\sim$\+Orbital\+Sampling\+Manager}} ()
+\begin{DoxyCompactList}\small\item\em destructor \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classOrbitalSamplingManager}{Orbital\+Sampling\+Manager}} \& \mbox{\hyperlink{classOrbitalSamplingManager_a2c38f9941532a5dbb045ce7c29d90df5}{operator=}} (const \mbox{\hyperlink{classOrbitalSamplingManager}{Orbital\+Sampling\+Manager}} \&\+\_\+manager)
+\begin{DoxyCompactList}\small\item\em operator = \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classOrbitalSamplingManager_a69611c05c289a6159d7981fcecb76ed1}{print}} (std\+::ostream \&\+\_\+fout) const
+\begin{DoxyCompactList}\small\item\em print parameters \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classOrbitalSamplingManager_a9d03878600d4466df149cfe5dac9adb6}{gravitational\+\_\+constant}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+orbital sampling method for counter force from binary 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classOrbitalSamplingManager_a83f9a149464cd755f9ac204ee227afb0}\label{classOrbitalSamplingManager_a83f9a149464cd755f9ac204ee227afb0}} 
+\index{OrbitalSamplingManager@{OrbitalSamplingManager}!OrbitalSamplingManager@{OrbitalSamplingManager}}
+\index{OrbitalSamplingManager@{OrbitalSamplingManager}!OrbitalSamplingManager@{OrbitalSamplingManager}}
+\doxysubsubsection{\texorpdfstring{OrbitalSamplingManager()}{OrbitalSamplingManager()}}
+{\footnotesize\ttfamily Orbital\+Sampling\+Manager\+::\+Orbital\+Sampling\+Manager (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\begin{quote}
+gravitational constant \end{quote}
+
+
+initializer \mbox{\Hypertarget{classOrbitalSamplingManager_a079b9fa259b7a83335b59c4a1e4cb617}\label{classOrbitalSamplingManager_a079b9fa259b7a83335b59c4a1e4cb617}} 
+\index{OrbitalSamplingManager@{OrbitalSamplingManager}!````~OrbitalSamplingManager@{$\sim$OrbitalSamplingManager}}
+\index{````~OrbitalSamplingManager@{$\sim$OrbitalSamplingManager}!OrbitalSamplingManager@{OrbitalSamplingManager}}
+\doxysubsubsection{\texorpdfstring{$\sim$OrbitalSamplingManager()}{~OrbitalSamplingManager()}}
+{\footnotesize\ttfamily Orbital\+Sampling\+Manager\+::$\sim$\+Orbital\+Sampling\+Manager (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+destructor 
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classOrbitalSamplingManager_a91889268835719076f1b45ebe858fe43}\label{classOrbitalSamplingManager_a91889268835719076f1b45ebe858fe43}} 
+\index{OrbitalSamplingManager@{OrbitalSamplingManager}!checkParams@{checkParams}}
+\index{checkParams@{checkParams}!OrbitalSamplingManager@{OrbitalSamplingManager}}
+\doxysubsubsection{\texorpdfstring{checkParams()}{checkParams()}}
+{\footnotesize\ttfamily bool Orbital\+Sampling\+Manager\+::check\+Params (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+check paramters 
+
+\mbox{\Hypertarget{classOrbitalSamplingManager_a1a4f77b9a3ef7a218e08e5b78dd3c043}\label{classOrbitalSamplingManager_a1a4f77b9a3ef7a218e08e5b78dd3c043}} 
+\index{OrbitalSamplingManager@{OrbitalSamplingManager}!createSampleParticles@{createSampleParticles}}
+\index{createSampleParticles@{createSampleParticles}!OrbitalSamplingManager@{OrbitalSamplingManager}}
+\doxysubsubsection{\texorpdfstring{createSampleParticles()}{createSampleParticles()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+void Orbital\+Sampling\+Manager\+::create\+Sample\+Particles (\begin{DoxyParamCaption}\item[{Tptcl $\ast$}]{\+\_\+ptcl\+\_\+artificial,  }\item[{C\+O\+M\+M\+::\+Binary\+Tree$<$ Tptcl $>$ \&}]{\+\_\+bin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+create orbit sampling particles 
+
+each component have n\+\_\+split\+\_\+ samples with equal interval of eccentric anomaly. Mass is weighted by mean anomaly and summation is the same as binary mass. 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em $<$em$>$ptcl\+\_\+artificial} & particle array to store the sample particles, 2$\ast$n\+\_\+split will be used \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+bin} & binary orbit \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classOrbitalSamplingManager_af85d8b4876da7792015ddf45c874cfdc}\label{classOrbitalSamplingManager_af85d8b4876da7792015ddf45c874cfdc}} 
+\index{OrbitalSamplingManager@{OrbitalSamplingManager}!getParticleN@{getParticleN}}
+\index{getParticleN@{getParticleN}!OrbitalSamplingManager@{OrbitalSamplingManager}}
+\doxysubsubsection{\texorpdfstring{getParticleN()}{getParticleN()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Orbital\+Sampling\+Manager\+::get\+ParticleN (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get particle number 
+
+\mbox{\Hypertarget{classOrbitalSamplingManager_acca7f53022eeef8c856f4dcf641270b7}\label{classOrbitalSamplingManager_acca7f53022eeef8c856f4dcf641270b7}} 
+\index{OrbitalSamplingManager@{OrbitalSamplingManager}!getParticleSplitN@{getParticleSplitN}}
+\index{getParticleSplitN@{getParticleSplitN}!OrbitalSamplingManager@{OrbitalSamplingManager}}
+\doxysubsubsection{\texorpdfstring{getParticleSplitN()}{getParticleSplitN()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Orbital\+Sampling\+Manager\+::get\+Particle\+SplitN (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get particle split number 
+
+\mbox{\Hypertarget{classOrbitalSamplingManager_a2c38f9941532a5dbb045ce7c29d90df5}\label{classOrbitalSamplingManager_a2c38f9941532a5dbb045ce7c29d90df5}} 
+\index{OrbitalSamplingManager@{OrbitalSamplingManager}!operator=@{operator=}}
+\index{operator=@{operator=}!OrbitalSamplingManager@{OrbitalSamplingManager}}
+\doxysubsubsection{\texorpdfstring{operator=()}{operator=()}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classOrbitalSamplingManager}{Orbital\+Sampling\+Manager}}\& Orbital\+Sampling\+Manager\+::operator= (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classOrbitalSamplingManager}{Orbital\+Sampling\+Manager}} \&}]{\+\_\+manager }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+operator = 
+
+Copy function will remove the local data and also copy the particle data or the link Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classOrbitalSamplingManager_a2c38f9941532a5dbb045ce7c29d90df5_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classOrbitalSamplingManager_a69611c05c289a6159d7981fcecb76ed1}\label{classOrbitalSamplingManager_a69611c05c289a6159d7981fcecb76ed1}} 
+\index{OrbitalSamplingManager@{OrbitalSamplingManager}!print@{print}}
+\index{print@{print}!OrbitalSamplingManager@{OrbitalSamplingManager}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void Orbital\+Sampling\+Manager\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print parameters 
+
+\mbox{\Hypertarget{classOrbitalSamplingManager_a2f3d32e6b39c6653cc16e6276dd79237}\label{classOrbitalSamplingManager_a2f3d32e6b39c6653cc16e6276dd79237}} 
+\index{OrbitalSamplingManager@{OrbitalSamplingManager}!readBinary@{readBinary}}
+\index{readBinary@{readBinary}!OrbitalSamplingManager@{OrbitalSamplingManager}}
+\doxysubsubsection{\texorpdfstring{readBinary()}{readBinary()}}
+{\footnotesize\ttfamily void Orbital\+Sampling\+Manager\+::read\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for reading \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classOrbitalSamplingManager_a2f3d32e6b39c6653cc16e6276dd79237_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classOrbitalSamplingManager_ac0e2815e5bbbf15b2457db32cba0e44d}\label{classOrbitalSamplingManager_ac0e2815e5bbbf15b2457db32cba0e44d}} 
+\index{OrbitalSamplingManager@{OrbitalSamplingManager}!setParticleSplitN@{setParticleSplitN}}
+\index{setParticleSplitN@{setParticleSplitN}!OrbitalSamplingManager@{OrbitalSamplingManager}}
+\doxysubsubsection{\texorpdfstring{setParticleSplitN()}{setParticleSplitN()}}
+{\footnotesize\ttfamily void Orbital\+Sampling\+Manager\+::set\+Particle\+SplitN (\begin{DoxyParamCaption}\item[{const P\+S\+::\+S32 \&}]{\+\_\+n\+\_\+split }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set particle split number 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+split} & particle split number of orbital samples, total artificial particle number is 2$\ast$\+\_\+n\+\_\+split+\+Tidal\+Tensor\+::n\+\_\+point+1, first Tidal\+Tensor\+::n\+\_\+point are tidal tensor particles. \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classOrbitalSamplingManager_ac0e2815e5bbbf15b2457db32cba0e44d_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classOrbitalSamplingManager_a60058fd3c6ff5be792a92526ee99907e}\label{classOrbitalSamplingManager_a60058fd3c6ff5be792a92526ee99907e}} 
+\index{OrbitalSamplingManager@{OrbitalSamplingManager}!writeBinary@{writeBinary}}
+\index{writeBinary@{writeBinary}!OrbitalSamplingManager@{OrbitalSamplingManager}}
+\doxysubsubsection{\texorpdfstring{writeBinary()}{writeBinary()}}
+{\footnotesize\ttfamily void Orbital\+Sampling\+Manager\+::write\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fp }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for output \\
+\hline
+\end{DoxyParams}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classOrbitalSamplingManager_a9d03878600d4466df149cfe5dac9adb6}\label{classOrbitalSamplingManager_a9d03878600d4466df149cfe5dac9adb6}} 
+\index{OrbitalSamplingManager@{OrbitalSamplingManager}!gravitational\_constant@{gravitational\_constant}}
+\index{gravitational\_constant@{gravitational\_constant}!OrbitalSamplingManager@{OrbitalSamplingManager}}
+\doxysubsubsection{\texorpdfstring{gravitational\_constant}{gravitational\_constant}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Orbital\+Sampling\+Manager\+::gravitational\+\_\+constant}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{orbit__sampling_8hpp}{orbit\+\_\+sampling.\+hpp}}\end{DoxyCompactItemize}

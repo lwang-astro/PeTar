@@ -111,7 +111,7 @@ def calcRocheLobeRadius(mass_ratio, semi):
 
     return radius
 
-def calcGWMyr(m1, m2, semi, ecc):
+def calcTGW(m1, m2, semi, ecc):
     """ Calculate GW merge timescale in Myr using Peters (1964) formula
     If ecc >1.0, return np.NaN
 
@@ -154,10 +154,36 @@ def calcGWMyr(m1, m2, semi, ecc):
     else: 
         return time_gw_myr_one(m1, m2, semi_au, ecc)
 
+def calcTKL(m_in1, m_in2, m_out, period_in, period_out, ecc_out):
+    """ calculate Kozai-Lidov oscillation timescale (Antognini, 2015)
+
+    Parameters
+    ----------
+    m_in1: 1D numpy.ndarray or float
+           inner binary member 1 mass (any mass unit)
+    m_in2: 1D numpy.ndarray or float
+           inner binary member 2 mass (any mass unit)
+    m_out: 1D numpy.ndarray or float
+           outer member mass (any mass unit)
+    period_in: 1D numpy.ndarray or float
+           inner binary period (any time unit)
+    period_out: 1D number.ndarray or float
+           outer binary period (any time unit)
+    ecc_out: 1D numpy.ndarray or float
+           outer eccentricity
+
+    Return
+    ----------
+    KZ timescale in the unit of input period
+    """
+
+    return 8.0/15.0/np.pi*(m_in1 + m_in2 + m_out)/m_out * period_out**2/period_in * (1-ecc_out**2)**1.5
+
+
 def convergentPointCheck(data, velocity):
     """ calculate proper motions in the frame of convergent point based on the given velocity and calculate the residuals 
-        The method is described in e.g., van Leeuwen F., 2009, A\&A, 497, 209. doi:10.1051/0004-6361/200811382; 
-        and Jerabkova T., Boffin H.~M.~J., Beccari G., de Marchi G., de Bruijne J.~H.~J., Prusti T., 2021, A\&A, 647, A137. doi:10.1051/0004-6361/202039949
+        The method is described in e.g., van Leeuwen F., 2009, A&A, 497, 209. doi:10.1051/0004-6361/200811382; 
+        and Jerabkova T., Boffin H.~M.~J., Beccari G., de Marchi G., de Bruijne J.~H.~J., Prusti T., 2021, A&A, 647, A137. doi:10.1051/0004-6361/202039949
 
         The algorithm can be described as follows
        1. Assume that the stars have the given velocity and rotate it by RA (alpha) and DEC (delta) of stars. Thus this predicted velocity is in the same frame as the observation.

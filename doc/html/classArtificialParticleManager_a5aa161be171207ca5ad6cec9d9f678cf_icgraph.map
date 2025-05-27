@@ -1,0 +1,6 @@
+<map id="ArtificialParticleManager::getIndexOffsetOrb" name="ArtificialParticleManager::getIndexOffsetOrb">
+<area shape="rect" id="node1" title="orbital/pseudo particle index offset" alt="" coords="485,39,667,80"/>
+<area shape="rect" id="node2" href="$classArtificialParticleManager.html#af3f6cdb0c22cffa6a12cc47fa32f79fa" title="create artificial particles" alt="" coords="256,5,437,47"/>
+<area shape="rect" id="node3" href="$classArtificialParticleManager.html#aed984927e871b5aec2948fdcb3ff44f9" title="get oribit/pseudo particle list address from a artificial particle array" alt="" coords="256,71,437,112"/>
+<area shape="rect" id="node4" href="$classArtificialParticleManager.html#a849acb19588a63ec450f606fd1bead3d" title="correct orbit&#45;samping/pseudo particles force" alt="" coords="5,71,208,112"/>
+</map>

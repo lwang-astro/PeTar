@@ -43,7 +43,7 @@ def getPotInstance(pot_name):
     return pot_module, pot_instance
 
 def savePotTypeArg(config_filename, n_pot, pot_type, pot_arg):
-    """ save type argument of a potential
+    """ save type argument of a potential to a configure file
 
     Parameters
     ----------
@@ -57,13 +57,15 @@ def savePotTypeArg(config_filename, n_pot, pot_type, pot_arg):
         argument list
     """
     with open(config_filename,'w') as f:
-        f.write("0 %d\n" % n_pot)
+        f.write("# This template contains configuration settings for the specified potential type. Please adjust the values to suit your requirements. Note that the potential argument values are in Galpy Units; please replace them with the corresponding values in PeTar Units. Before using PeTar to read this configuration file, remember to remove this line.\n")
+        f.write("Time 0.0 Task add\nNset 1\n")
+        f.write("Set 0\nNtype %d Mode 0\nGM 0 Pos 0 0 0 Vel 0 0 0\nType" % n_pot)
         for item in pot_type:
-            f.write("%d " % item)
-        f.write("\n")
+            f.write(" %d" % item)
+        f.write("\nArg")
         for item in pot_arg:
-            f.write("%.14g " % item)
-        f.write("\n")
+            f.write(" %.14g" % item)
+        f.write("\nNchange 0\n")
 
 def printPotTypeArg(pot_name, pot_module, pot_instance, print_front_offset=0, print_long_list=False):
     """ print the petar --type-arg options for a given potential
@@ -138,11 +140,170 @@ def printSpliter():
 def listPot():
     printPotTitle()
     printSpliter()
-    pot_list=[p for p in dir(galpy.potential)] 
+    pot_list = [p for p in dir(galpy.potential) if p.endswith('Potential') and 'Wrapper' not in p]
     for pot_name in pot_list:
         pot_module, pot_instance = getPotInstance(pot_name)
         if (pot_instance!=None):
             printPotTypeArg(pot_name, pot_module, pot_instance)
+
+
+
+POT_LIST_INFO = dict()
+
+POT_LIST_INFO['PowerSphericalPotential'] = {'type':7,
+                                            'name':'power-law density model',
+                                            'math':['rho(r) = (3-a) GM /(4 pi rg^(3-a)) r^(-a); M: mass in rg'],
+                                            'pot0':'r=0',
+                                            'args':[['amp [1]','(3-a) GM /(4 pi rg^(3-a))', 'G*m/r^(3-a)'], 
+                                                    ['a [2]', 'inner power', '1']]}
+
+POT_LIST_INFO['PowerSphericalPotentialwCutoff'] = {'type':15,
+                                                   'name':'power-law density model with cutoff radius',
+                                                   'math':['rho(r) = (3-a) GM /(4 pi rg^(3-a)) r^(-a) e^(-r^2/rc^2); M: mass in rg'],
+                                                   'pot0':'r=0',
+                                                   'args':[['amp [1]', '(3-a) GM /(4 pi rg^(3-a))', 'G*m/r^(3-a)'], 
+                                                           ['a [2]', 'inner power', '1'],
+                                                           ['rc [3]', 'cut-off radius','r']]}
+
+    
+POT_LIST_INFO['MiyamotoNagaiPotential'] = {'type':5,
+                                           'name':'Miyamoto-Nagai potential',
+                                           'math':['Phi(R,z) = - GM /sqrt(R^2+(a + sqrt(z^2+b^2))^2)'],
+                                           'pot0':'R,Z = infinity',
+                                           'args':[['amp [1]','G M','G*m'],
+                                                   ['a [2]','scale length','r'],
+                                                   ['b [3]','scale length','r']]}
+
+POT_LIST_INFO['NFWPotential'] = {'type':9,
+                                 'name':'NFW potential',
+                                 'math':['rho(r) = GM /(4 pi a^3) /((r/a)*(1+r/a)^2)'],
+                                 'pot0':'r = infinity',
+                                 'args':[['amp [1]','G M','G*m'],
+                                         ['a [2]','scale length','r']]}
+
+POT_LIST_INFO['HomogeneousSpherePotential'] = {'type':35,
+                                               'name':'homogeneous sphere potential',
+                                               'math':['Phi(r) = -2/3 pi G rho0 (r^2-3 rs^2) [r<rs]; -4/3 pi G rho0 rs^3/r [r>rs]'],
+                                               'pot0':'r = infinity',
+                                               'args':[['amp [1]','2/3 pi G rho0', 'G*m/r^3'],
+                                                       ['r2 [2]', 'rs^2', 'r^2'],
+                                                       ['r3 [3]', 'rs^3', 'r^3']]}
+
+POT_LIST_INFO['PlummerPotential'] = {'type':17,
+                                     'name':'Plummer potential',
+                                     'math':['Phi(r) = GM / sqrt(r^2 + b^2)'],
+                                     'pot0':'r = infinity',
+                                     'args':[['amp [1]','GM','G*m'],
+                                             ['b [2]','scale length','r']]}
+
+POT_LIST_INFO['DehnenBarPotential'] = {'type':1,
+                                       'name':'Dehnen bar potential',
+                                       'math':['Phi(R,z,phi) = A(t) cos (2(phi - Wb - barphi)) (R/r)^2 { -(Rb/r)^3 (r>Rb)' ,
+                                               '                                                           (r/Rb)^3-2 (r<=Rb)',
+                                               'A(t) = {0 (t <tf)',
+                                               '        Af (3/16 xi^5 - 5/8 xi^3 + 15/16 xi + 1/2) (tf< t <tf+ts)',
+                                               '        Af (t >tf+ts)',
+                                               'xi = 2 (t - tf)/(ts - tf) - 1'],
+                                       'pot0':'r = infinity',
+                                       'args':[['Af [1]','bar strength', '(r/t)^2'],
+                                               ['tf [2]','bar formation time', 't'],
+                                               ['ts [3]','bar steady time', 't'],
+                                               ['Rb [4]','bar max radius', 'r'],
+                                               ['Wb [5]','bar rotation speed','rad/t'],
+                                               ['barphi [6]','bar initial angle','rad']]}
+
+POT_LIST_INFO['SpiralArmsPotential'] = {'type':27,
+                                        'name':'Spiral arms potential',
+                                        'math':['Phi(R,z,phi) = -amp H exp{-(R-r_ref)/Rs} sum{ Cn/(Kn Dn) cos(n g) / cosh(Kn z / Bn)^Bn};  (1<=n<=nCs)',
+                                                'Rsa = R sin_alpha'
+                                                'Kn = n N / Rsa;  KnH = Kn H',
+                                                'Dn = ( 0.3 KnH^2 + KnH + 1 ) / (0.3 KnH + 1)',
+                                                'Bn = KnH (0.4 KnH + 1)',
+                                                'g = N (phi - omega t - phi_ref - ln(R/r_ref)/tan_alpha)'],
+                                        'pot0':'r = infinity',
+                                        'args':[['nCs [1]','number of expansion terms','1'],
+                                                ['amp [2]','amplitude to be applied to the potential','4 pi G rho0'],
+                                                ['N [3]','number of spiral arms','1'],
+                                                ['sin_alpha [4]','sin(alpha), alpha is pitch angle of the logarithmic spiral arms','1'],
+                                                ['tan_alpha [5]','tan(alpha)','1'],
+                                                ['r_ref [6]','fiducial radius where rho = rho0','r'],
+                                                ['phi_ref [7]','reference angle (phi(r_0) in the paper by Cox and Gomez)','rad'],
+                                                ['Rs [8]','radial scale length of the drop-off in density amplitude of the arms','r'],
+                                                ['H [9]','scale height of the stellar arm perturbation','r'],
+                                                ['omega [10]','rotational pattern speed of the spiral arms','rad/t'],
+                                                ['*Cs [11-11+nCs]','An array of constants terms of cos(n g), number of arguments is nCs','1']]}
+
+POT_LIST_INFO['DehnenSmoothWrapperPotential'] = {'type':-1,
+                                                 'name':'Dehnen smooth wrapper potential',
+                                                 'math':['A(t) = {Ab(t) (decay = 0)',
+                                                         '        1 - Ab(t) (decay = 1)',
+                                                         'Ab(t) = {0 (t <tf)',
+                                                         '         Af(3/16 xi^5 - 5/8 xi^3 + 15/16 xi + 1/2) (tf< t <tf+ts)',
+                                                         '         Af (t >tf+ts)',
+                                                         'xi = 2 (t - tf)/(ts -tf) - 1'],
+                                                 'pot0':'not defined',
+                                                 'args':[['Af [1]','amplitude to be applied to the potential', '1'],
+                                                         ['tf [2]','time to start growth', 't'],
+                                                         ['ts [3]','time to become steady', 't'],
+                                                         ['decay [4]','if 1, decay amplitude instead of growth', 'r']]}
+
+POT_LIST_INFO['TriaxialNFWPotential'] = {'type':22,
+                                          'name':'Triaxial NFW potential',
+                                          'math':['rho(x, y, z) = GM / (4 pi a^3) / ((m/a) * (1 + r/a)^2)',
+												  'm^2 = xm^2 + ym^2/b^2 + zm^2/c^2'],
+                                          'pot0':'r = infinity',
+                                          'args':[['amp [1]','GM/(4 pi)','G*m'],
+                                                  ['x0, y0, z0 [2-4]','initial coordinates of the potential origin (in the rotated coordinate system)','r'],
+                                                  ['Fx0, Fy0, Fz0 [6-7]','initial forces (in the rotated coordinate system)', 'm r s^2'],
+                                                  ['Npsi [8]','number of psi parameters, here should be 1, representing one psi parameter, a','1'],
+                                                  ['a [9]','scale radius','r'],
+												  ['b2 [10]','b^2, where b is the y-to-x axis ratio of the density','r^2'],
+                                                  ['c2 [11]','c^2, where c is the z-to-x axis ratio of the density','r^2'],
+												  ['aligned [12]','if 1, aligned; if 0, apply rotation from the xyz coordinate system to xm-ym-zm system.','1'],
+												  ['rot [12-20])','rotation matrix (9 parameters)','1'],
+												  ['glorder [21]','Gauss-Legendre integration order','1'],
+												  ['*glx [22-(21+glorder)]','Gauss-Legendre integration points','1'],
+												  ['*glw [(22+glorder)-(21+2*glorder)]','Gauss-Legendre weights','1']]}
+    
+def printCPot(pot_name):
+    """
+    Print descriptions of potential for c interface.
+    The c arguments of potential can be different from Python one
+
+    Parameters:
+    -----------
+    pot_name: string 
+        Print the potential description for given potential name
+    """
+    pot_data = POT_LIST_INFO[pot_name]
+    print('{:31}'.format('Name:'),'%s' % pot_data['name'])
+    print('{:31}'.format('Type index:'),'%d ' % pot_data['type'])
+    print('{:31}'.format('Math:'), pot_data['math'][0])
+    if (len(pot_data['math'])>1):
+        for item in pot_data['math'][1:]:
+            print(' '*31, item)
+    print('{:31}'.format('Potential zero position:'), '%s' % pot_data['pot0'])
+    print('Arguments: description [units]:')
+    for arg in pot_data['args']:
+        print(' '*31, '%s: %s [%s]' % tuple(arg))
+
+def listCPot():
+    print('For each potential: 1st line: name [type index]: math')
+    print('                    from 2nd line: argument [argument index]: descriptoin [unit]')
+    print('                    Units symbols: G: gravity constant; m: mass; r: length; t: time')
+    printSpliter()
+    name_format='{:30}'
+    for pot_name in POT_LIST_INFO.keys():
+        pot_data = POT_LIST_INFO[pot_name]
+        print(name_format.format(pot_name),'[%2d]: %s' % (pot_data['type'], pot_data['math'][0]))
+        if (len(pot_data['math'])>1):
+            for item in pot_data['math'][1:]:
+                print(' '*36, item)
+        print(' '*30, 'args: %s: %s [%s]' % tuple(pot_data['args'][0]))
+        if (len(pot_data['args'])>1):
+            for item in pot_data['args'][1:]:
+                print(' '*36,'%s: %s [%s]' % tuple(item))
+    printSpliter()
 
 if __name__ == '__main__':
 
@@ -198,8 +359,14 @@ if __name__ == '__main__':
             if (config_filename!=""): 
                 print("Save type arguments of %s to file %s." % (pot_name,config_filename))
                 savePotTypeArg(config_filename, n_pot, pot_type, pot_arg)
-            printSpliter()                                                     
-            print("Class definition of %s from Galpy:" % pot_name)
+                printSpliter()
+
+            if pot_name in POT_LIST_INFO.keys():
+                print("C interface description:")
+                printCPot(pot_name)
+                printSpliter()
+
+            print("Python interface description:")
             if (type(pot_instance)==list):
                 for pot_sub in pot_instance:
                     print(pot_sub.__doc__)
@@ -365,7 +532,14 @@ if __name__ == '__main__':
         print("               Time 6.0 Task remove")
         print("               Nset 1 Index 1")
         print("Users can use --galpy-set, --galpy-type-arg and --galpy-conf-file together.")
-        print("Here are the supported list of Potentials and their default type indices and arguments:")
-        print("PS: The listed arguments are in Bovy units. ")
-        print("    Be careful that the first argument of many potentials is G*M.")
+        print("Here list a part of potentials with short descriptions for c interface.")
+        listCPot()
+        print("Here list all potentials type and sample of arguments for Python interface.")
+        print("Some important tips for reading the Python interface description:")
+        print("    1) The argument values are in Bovy units. ")
+        print("    2) The first argument of many potentials (amp) is G*M.")
+        print("    3) The Python and c interfaces may have different arguments.")
+        print("       Unfortunately there is no official manual for c interface yet.")
+        print("       Please check the original c source codes for the potential with no description for c interface.")
+        print("       The potential source codes are in [Galpy install path]/potential/potential_c_ext/.")
         listPot()

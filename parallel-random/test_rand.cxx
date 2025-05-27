@@ -6,7 +6,7 @@ extern "C" {
 
     double rand_f64_();
 
-    void srand_parallel_(uint64_t* seed);
+    void srand_parallel_(uint64_t* seed, int *rank);
 }
 
 int main (int argc, char** argv) {
@@ -28,7 +28,7 @@ int main (int argc, char** argv) {
 
     // test fortran interface
     if (rank==0) std::cout<<"Test fortran random, generate seeds for each MPI and OMP, input seed: "<<seed<<"\n";
-    srand_parallel_(&seed);
+    srand_parallel_(&seed, &rank);
 
     if (rank==0) std::cout<<"Generate uint64 and double random samples from each pair of thread and rank, should be different from each other:\n";
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
@@ -45,7 +45,11 @@ int main (int argc, char** argv) {
                 double sf64 = rand_f64_();
 #pragma omp critical
                 {
+#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
                     int i_omp = omp_get_thread_num();
+#else
+                    int i_omp = 0;
+#endif
                     std::cout<<"Rank["<<rank<<"] OMP["<<i_omp<<"] seed:"<<RAND_SEED[0]<<" rand_uint64: "<<si64<<" rand_f64: "<<sf64<<std::endl;
                 }
             }
@@ -57,7 +61,7 @@ int main (int argc, char** argv) {
 #endif
     // test cxx interface
     if (rank==0) std::cout<<"Test c++ random, generate seeds for each MPI and OMP, input seed: "<<seed<<"\n";
-    srand_parallel(&seed);
+    srand_parallel(&seed, &rank);
 
     // test read and write
 
@@ -87,7 +91,11 @@ int main (int argc, char** argv) {
                 double sf64 = rand_f64();
 #pragma omp critical
                 {
+#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
                     int i_omp = omp_get_thread_num();
+#else
+                    int i_omp = 0;
+#endif
                     std::cout<<"Rank["<<rank<<"] OMP["<<i_omp<<"] seed:"<<RAND_SEED[0]<<" rand_uint64: "<<si64<<" rand_f64: "<<sf64<<std::endl;
                 }
             }
@@ -123,7 +131,11 @@ int main (int argc, char** argv) {
                 double sf64 = rand_f64();
 #pragma omp critical
                 {
+#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
                     int i_omp = omp_get_thread_num();
+#else
+                    int i_omp = 0;
+#endif
                     std::cout<<"Rank["<<rank<<"] OMP["<<i_omp<<"] seed:"<<RAND_SEED[0]<<" rand_uint64: "<<si64<<" rand_f64: "<<sf64<<std::endl;
                 }
             }

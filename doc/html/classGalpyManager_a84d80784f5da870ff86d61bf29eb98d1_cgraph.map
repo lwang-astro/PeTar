@@ -1,0 +1,5 @@
+<map id="GalpyManager::writePotentialPars" name="GalpyManager::writePotentialPars">
+<area shape="rect" id="node1" title="write potential parameters for restart" alt="" coords="5,42,248,69"/>
+<area shape="rect" id="node2" href="$classMWPotentialEvolve.html#a92e616d63b989428e6424e0d0180de7c" title="write data for restart" alt="" coords="331,5,488,47"/>
+<area shape="rect" id="node3" href="$classGalpyManager.html#aa1e9c6eb40673066e5a7ee87d5a2e641" title="write data for restart" alt="" coords="296,71,523,98"/>
+</map>

@@ -662,13 +662,14 @@ public:
     IOParams<double> mscale;
     IOParams<double> vscale;
     IOParams<double> z;
+    IOParams<std::string> fname_par;
 
     bool print_flag;
 
 #if (defined BSEBBF) || (defined BSEEMP)
     IOParamsBSE(): input_par_store(),
                    neta  (input_par_store, 0.5, "bse-neta",  "Reimers mass-loss coefficent [neta*4x10^-13]"),
-                   bwind (input_par_store, 0.0, "bse-bwind", "Binary enhanced mass loss parameter; inactive for single"),
+                   bwind (input_par_store, 0.0, "bse-bwind", "Binary enhanced mass loss parameter, inactive for single"),
                    hewind(input_par_store, 1.0, "bse-hewind","Helium star mass loss factor"),
                    //mxns  (input_par_store, 1.0, "bse-mxns",   "Helium star mass loss factor"),
                    alpha (input_par_store, 3.0,   "bse-alpha",  "Common-envelope efficiency parameter"),
@@ -685,9 +686,9 @@ public:
                    //ifflag(input_par_store, 2,   "bse-ifflag", "if > 0 uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
                    wdflag(input_par_store, 1,     "bse-wdflag", "if >0, uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
                    bhflag(input_par_store, 2,     "bse-bhflag", "BH kick option: 0: no kick; 1: same as NS; 2: scaled by fallback"),
-                   nsflag(input_par_store, 3,     "bse-nsflag", "NS/BH foramtion options: 0: original SSE; 1: Belczynski (2002); 2: Belczynski (2008); 3: Fryer (2012) rapid SN; 4: Fryer (2012) delayed SN; 5: Eldridge & Tout (2004)"),
-                   psflag(input_par_store, 1,     "bse-psflag", "PPSN condition (Belczynski 2016): 0: no PPSN; 1: strong; (Leung 2019): 2: moderate; 3: weak"),
-                   kmech (input_par_store, 1,     "bse-kmech",  "Kick mechanism: 1: standard momentum-conserving; 2: convection-asymmetry-driven; 3: collapse-asymmerty-driven; 4: neutrino driven"),
+                   nsflag(input_par_store, 3,     "bse-nsflag", "NS/BH foramtion options; 0: original SSE; 1: Belczynski (2002); 2: Belczynski (2008); 3: Fryer (2012) rapid SN; 4: Fryer (2012) delayed SN; 5: Eldridge & Tout (2004)"),
+                   psflag(input_par_store, 1,     "bse-psflag", "PPSN condition (Belczynski 2016); 0: no PPSN; 1: strong (Leung 2019); 2: moderate; 3: weak"),
+                   kmech (input_par_store, 1,     "bse-kmech",  "Kick mechanism; 1: standard momentum-conserving; 2: convection-asymmetry-driven; 3: collapse-asymmerty-driven; 4: neutrino driven"),
                    ecflag(input_par_store, 1,     "bse-ecflag", "if >0, ECS is switched on"),
                    pts1  (input_par_store, 0.05,  "bse-pts1",   "time step of MS"),
                    pts2  (input_par_store, 0.01,  "bse-pts2",   "time step of GB, CHeB, AGB, HeGB"),
@@ -699,12 +700,17 @@ public:
                    rscale(input_par_store, 1.0,   "bse-rscale", "Radius scale factor from input data unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
                    mscale(input_par_store, 1.0,   "bse-mscale", "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
                    vscale(input_par_store, 1.0,   "bse-vscale", "Velocity scale factor from input data unit(IN) to km/s (v[km/s]=v[IN]*vscale)"),
+#ifdef BSEEMP
+                   z     (input_par_store, 0.001, "bse-metallicity", "Metallicity Z, ranging from 0 to 0.03; when Z<0.0001, using EMP track, please make a symbolic link in the simulation directory to the track directory according to the --bse-trackmode option"),
+#else
                    z     (input_par_store, 0.001, "bse-metallicity", "Metallicity Z, ranging from 0.0001 to 0.03"),
+#endif
+                   fname_par(input_par_store, "input.par", "p", "Input parameter file for sse/bse (this option should be used first before any other options)",NULL,false),
                    print_flag(false) {}
 #elif MOBSE
     IOParamsBSE(): input_par_store(),
                    neta  (input_par_store, 0.5,     "mobse-neta",   "Reimers mass-loss coefficent [neta*4x10^-13]"),
-                   bwind (input_par_store, 0.0,     "mobse-wind",   "Binary enhanced mass loss parameter; inactive for single"),
+                   bwind (input_par_store, 0.0,     "mobse-wind",   "Binary enhanced mass loss parameter, inactive for single"),
                    hewind(input_par_store, 1.0,     "mobse-hewind", "Helium star mass loss factor"),
                    //mxns  (input_par_store, 1.0, "Helium star mass loss factor"),
                    alpha (input_par_store, 3.0,     "mobse-alpha",  "Common-envelope efficiency parameter"),
@@ -721,8 +727,8 @@ public:
                    tflag (input_par_store, 1,       "mobse-tflag",  "if >0, activates tidal circularisation"),
                    //ifflag(input_par_store, 2,   "if > 0 uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
                    wdflag(input_par_store, 1,       "mobse-wdflag", "if >0, uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
-                   bhflag(input_par_store, 3,       "mobse-bhflag", "BH kick option: 0: no kick; 1: same as NS; 2: scaled by fallback; 3: Giacobbo&Mapelli (2020)"),
-                   nsflag(input_par_store, 3,       "mobse-nsflag", "NS/BH formation options: 0: original SSE; 1: Belczynski (2008); 2: Fryer (2012) rapid SN; 3: Fryer (2012) delayed SN; 4: Belczynski (2008); 5: no SN explosion"),
+                   bhflag(input_par_store, 3,       "mobse-bhflag", "BH kick option; 0: no kick; 1: same as NS; 2: scaled by fallback; 3: Giacobbo&Mapelli (2020)"),
+                   nsflag(input_par_store, 3,       "mobse-nsflag", "NS/BH formation options; 0: original SSE; 1: Belczynski (2008); 2: Fryer (2012) rapid SN; 3: Fryer (2012) delayed SN; 4: Belczynski (2008); 5: no SN explosion"),
                    piflag(input_par_store, 1,       "mobse-piflag", "PPSN condition (Spera et al. 2015)"),
                    //psflag(input_par_store, 1,  "PPSN condition (Belczynski 2016): 0: no PPSN; 1: strong; (Leung 2019): 2: moderate; 3: weak"),
                    //kmech (input_par_store, 1,  "Kick mechanism: 1: standard momentum-conserving; 2: convection-asymmetry-driven; 3: collapse-asymmerty-driven; 4: neutrino driven"),
@@ -735,6 +741,7 @@ public:
                    mscale(input_par_store, 1.0,     "mobse-msclae", "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
                    vscale(input_par_store, 1.0,     "mobse-vsclae",  "Velocity scale factor from input data unit(IN) to km/s (v[km/s]=v[IN]*vscale)"),
                    z     (input_par_store, 0.001,   "mobse-metallicity",    "Metallicity"),
+                   fname_par(input_par_store, "input.par", "p", "Input parameter file for sse/bse (this option should be used first before any other options)",NULL,false),
                    print_flag(false) {}
 #endif
 
@@ -742,10 +749,11 @@ public:
     /*!
       @param[in] argc: number of options
       @param[in] argv: string of options
+      @param[in] print_format_info: print format information
       @param[in] opt_used_pre: already used option number from previous reading, use to correctly count the remaining argument number
       \return -1 if help is used; else the used number of argv
      */
-    int read(int argc, char *argv[], const int opt_used_pre=0) {
+    int read(int argc, char *argv[], const bool print_format_info=true, const int opt_used_pre=0) {
         static int sse_flag=-1;
         const struct option long_options[] = {
             {neta.key,   required_argument, &sse_flag, 0},  
@@ -797,7 +805,6 @@ public:
         int opt_used=opt_used_pre;
         int copt;
         int option_index;
-        std::string fname_par;
         optind = 0;
         while ((copt = getopt_long(argc, argv, "-z:p:h", long_options, &option_index)) != -1) 
             switch (copt) {
@@ -980,14 +987,14 @@ public:
                 opt_used+=2;
                 break;
             case 'p':
-                fname_par = optarg;
+                fname_par.value = optarg;
                 if(print_flag) {
 #ifdef BSEBBF
-                    std::string fbse_par = fname_par+".bse"; 
+                    std::string fbse_par = fname_par.value+".bse"; 
 #elif MOBSE
-                    std::string fbse_par = fname_par+".mobse"; 
+                    std::string fbse_par = fname_par.value+".mobse"; 
 #elif BSEEMP
-                    std::string fbse_par = fname_par+".bseEmp"; 
+                    std::string fbse_par = fname_par.value+".bseEmp"; 
 #endif
                     FILE* fpar_in;
                     if( (fpar_in = fopen(fbse_par.c_str(),"r")) == NULL) {
@@ -1006,13 +1013,13 @@ public:
             case 'h':
                 if(print_flag){
 #ifdef BSEBBF
-                    std::cout<<"SSE/BSE options:"<<std::endl;
+                    std::cout<<"----- SSE/BSE options: -----"<<std::endl;
 #elif MOBSE
-                    std::cout<<"MOBSE options:"<<std::endl;
+                    std::cout<<"----- MOBSE options: -----"<<std::endl;
 #elif BSEEMP
-                    std::cout<<"BSEEMP options:"<<std::endl;
+                    std::cout<<"----- BSEEMP options: -----"<<std::endl;
 #endif
-                    input_par_store.printHelp(std::cout, 2, 10, 23);
+                    input_par_store.printHelp(std::cout, print_format_info);
                 }
                 return -1;
             case '?':
@@ -1173,7 +1180,11 @@ public:
     //}
 
     bool isMerger(const int _binary_type) {
-        return (_binary_type>=10&&_binary_type<=12);
+        return (_binary_type>=10&&_binary_type<12);
+    }
+
+    bool isNoRemnant(const int _binary_type) {
+        return (_binary_type==12);
     }
 
     bool isDisrupt(const int _binary_type) {

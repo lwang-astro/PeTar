@@ -22,7 +22,7 @@ class Core(DictNpArrayMix):
 
     def calcPotentialCenter(self, single, binary, G):
         """ Calculate potential center of the system and return the result
-        r_cm = \sum_i pot_i *r_i /\sum_i pot_i (only count pot_i <0)
+        r_cm = sum_i {pot_i *r_i} /sum_i pot_i (only count pot_i <0)
 
         Parameters
         ----------
@@ -91,7 +91,7 @@ class Core(DictNpArrayMix):
 
     def calcCoreRadius(self, particle):
         """ Calculate core radius, using Casertano & Hut (1985) method with the squares of densities, also used in Nbody5 and Nbody6 (Aarseth 2003):
-        rc = sqrt(\sum_i rho_i^2 r_i^2 / \sum_i rho_i^2)
+        rc = sqrt(sum_i rho_i^2 r_i^2 / sum_i rho_i^2)
 
         Parameters
         ----------
@@ -223,7 +223,7 @@ class Lagrangian(DictNpArrayMix):
             calc_energy: bool (False)
                 If true, add kinetic, potential energies and virial ratio calculation
             external_mode: string (none)
-                PeTar external mode (set in configure): galpy, none 
+                PeTar external mode (set in configure): galpy, agama, none 
                 If it is not none, epot_ext will be added if calc_energy=True
             calc_multi_rc: bool (False)
                 If true, calculate core radius using KDTree and correct the central position
@@ -565,7 +565,7 @@ class LagrangianMultiple(DictNpArrayMix):
             calc_energy: bool (False)
                 If true, add kinetic, potential energies and virial ratio calculation
             external_mode: string (none)
-                PeTar external mode (set in configure): galpy, none 
+                PeTar external mode (set in configure): galpy, agama, none 
                 If it is not none, epot_ext will be added if calc_energy=True
             calc_multi_rc: bool (False)
                 If true, calculate core radius using KDTree and correct the central position
