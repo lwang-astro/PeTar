@@ -575,13 +575,13 @@ The third pivotal radius influencing performance is the radius used to identify 
 
 ### Adjusting Tree Time Step and Radii
 
-When initiating a new simulation, the automatically determined tree time step and radii may not always be the optimal choice for users. To select the most suitable tree time step, users can utilize the `petar.find.dt` tool (refer to [Find tree time step](#find-tree-time-step)). This tool is compatible only with PeTar's autodetermined tree time step and changeover radii (refer to [Outer Changeover Radius](#outer-changeover-radius)).
+When initiating a new simulation, the automatically determined tree time step and radii may not always be the optimal choice for users. To select the most suitable tree time step, users can utilize the `petar.find.dt` tool (refer to [Determining the tree time step](#determining-the-tree-time-step)). This tool is compatible only with PeTar's autodetermined tree time step and changeover radii (refer to [Outer Changeover Radius](#outer-changeover-radius)).
 
 In cases where the structure of the particle system undergoes significant evolution over an extended period, users may wish to adjust the tree time step and radii mentioned earlier to enhance performance. If users prefer to modify only the tree time step while allowing `petar` to determine the radii automatically, the options in the following example are necessary to restart the simulation:
 ```shell
 petar -p input.par -s [new tree_time_step] -r 0 --r-search-min 0 --r-bin 0 [other options] [snapshot filename for restart]
 ```
-Here, `-r 0 --r-search-min 0 --r-bin 0` are employed to reset all three radii and activate autodetermination based on the new tree time step. Users can also employ `petar.find.dt` to select the optimal restart tree time step (refer to [Find tree time step](#find-tree-time-step)).
+Here, `-r 0 --r-search-min 0 --r-bin 0` are employed to reset all three radii and activate autodetermination based on the new tree time step. Users can also employ `petar.find.dt` to select the optimal restart tree time step (refer to [Determining the tree time step](#determining-the-tree-time-step)).
 
 ## Output
 ### Printed Information
