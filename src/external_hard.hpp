@@ -54,7 +54,6 @@ public:
                             gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant", NULL, false),
                             center_id    (input_par_store, -1, "ext-center-id", "id of the central object, if given, the central object does not feel gas drag; and gas is assumed to rotating in kepler orbit around the center", "None"),
                             fname_par    (input_par_store, "input.par", "p", "Input parameter file for external force (this option should be used first before any other options)",NULL,false),
-    
                             print_flag(false) {}
 
     //! reading parameters from GNU option API
@@ -89,7 +88,7 @@ public:
         int copt;
         int option_index;
         optind = 0;
-        while ((copt = getopt_long(argc, argv, "-z:p:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "-G:p:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 switch (ext_flag) {
@@ -409,6 +408,8 @@ public:
         Float v2 = vel_rel[0]*vel_rel[0] + vel_rel[1]*vel_rel[1] + vel_rel[2]*vel_rel[2];
         Float v = std::sqrt(v2);
         Float v3 = v2*v;
+        Float cs2 = sound_speed*sound_speed;
+        Float v2_cs2 = v2 + cs2;
 
         Float mach = v/sound_speed;
         Float Ifunc, dIfunc;
@@ -432,7 +433,11 @@ public:
             dIfunc = 1/(mach2*mach - mach);
         }
 
+#ifdef DISK_STAR_MERGER
+        Float c1 = -4*PI*G2*mass*gas_density*v/(v2_cs2*v2_cs2)*Ifunc;
+#else
         Float c1 = -4*PI*G2*mass*gas_density/v3*Ifunc;
+#endif        
 
         if (mode==1) {
             // GDF force
@@ -452,10 +457,14 @@ public:
 
         if (_calc_acc1) {
             ASSERT(_acc1!=NULL);
-
             Float vdota = vel_rel[0]*_acc0[0] + vel_rel[1]*_acc0[1] + vel_rel[2]*_acc0[2];
+#ifdef DISK_STAR_MERGER
+            // d(v/(v^2+cs^2)^2)/dt = (cs^2 - 3v^2)/(v^2+cs^2)^5(v^2) v dot a
+            Float c2 = c1*(cs2 - 3*v2)/(v2_cs2*v2)*vdota;
+#else
             // d(1/v^3)/dt = -3/v^5 v dot a
             Float c2 = -3*c1/v2*vdota;
+#endif
             // d(v/ds)/dt  = v dot a / (v*ds) 
             Float c3 = -c1*dIfunc*vdota/(v*sound_speed);
             

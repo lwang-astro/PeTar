@@ -2983,6 +2983,12 @@ public:
         PS::F64 rmax=0.0;
 
         for(PS::S64 i=0; i<n_loc; i++){
+#ifdef DISK_STAR_MERGER
+            if (system_soft[i].star.getType()==StarType::smbh) {
+                // SMBH particle, skip
+                continue;
+            }
+#endif
             PS::F64 mi = system_soft[i].mass;
             PS::F64vec vi = system_soft[i].vel;
             PS::F64vec ri = system_soft[i].pos;

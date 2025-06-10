@@ -27,6 +27,7 @@ public:
     IOParams<double> mass_growth_factor; //!< mass growth factor (c) for increasing mass to equlibrium (dM/dt = c M^2)
     IOParams<double> mass_loss_rate; //!< mass decrease rate dM/dt for decreasing mass to equlibrium 
     IOParams<long long int> redistribute_star_mode; //!< redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity to opposite side of the center
+    IOParams<std::string> fname_par;
 
     bool print_flag; //!< print flag
     //! Constructor
@@ -40,6 +41,7 @@ public:
                               mass_growth_factor(input_par_store, 0.0, "mass-growth-factor", "mass growth factor (c) for increasing mass to equlibrium (dM/dt = c M^2)"),
                               mass_loss_rate(input_par_store, 0.0, "mass-loss-rate", "mass loss rate dM/dt for decreasing mass to equlibrium"), 
                               redistribute_star_mode(input_par_store, 1, "redistribute-star-mode", "redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity to opposite side of the center; 2: redistribute star by choosing next type 3 star"),
+                              fname_par    (input_par_store, "input.par", "p", "Input parameter file for external force (this option should be used first before any other options)",NULL,false),
                               print_flag(false) {}
 
     //! reading parameters from GNU option API
@@ -69,7 +71,7 @@ public:
         int copt;
         int option_index;
         optind = 0;
-        while ((copt = getopt_long(argc, argv, "-z:p:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "-p:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 switch (merger_flag) {
@@ -121,6 +123,24 @@ public:
                 default:
                     break;
                 }
+                break;
+            case 'p':
+                fname_par.value = optarg;
+                if(print_flag) {
+                    std::string fgalpy_par = fname_par.value+".disk_star_merger"; 
+                    FILE* fpar_in;
+                    if( (fpar_in = fopen(fgalpy_par.c_str(),"r")) == NULL) {
+                        fprintf(stderr,"Error: Cannot open file %s.\n", fgalpy_par.c_str());
+                        abort();
+                    }
+                    input_par_store.readAscii(fpar_in);
+                    fclose(fpar_in);
+                }
+                opt_used+=2;
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+                input_par_store.mpi_broadcast();
+                PS::Comm::barrier();
+#endif
                 break;
             case 'h':
                 if(print_flag){
