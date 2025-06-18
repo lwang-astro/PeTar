@@ -539,6 +539,11 @@ public:
             L[1] = x[2]*v[0] - x[0]*v[2];  
             L[2] = x[0]*v[1] - x[1]*v[0];  
 
+            // corrected according to Kidder 1995 2023.III.22 NB !!!
+            L[0] *= eta*M;
+            L[1] *= eta*M;
+            L[2] *= eta*M;
+
             Float LABS = std::sqrt(L[0]*L[0]+L[1]*L[1]+L[2]*L[2]);
 
             Float LU[3];
