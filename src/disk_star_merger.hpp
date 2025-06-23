@@ -22,10 +22,15 @@ public:
     IOParams<double> stellar_radius_power_index; //!< stellar radius power index
     IOParams<double> stellar_radius_scale; //!< stellar radius scale
     IOParams<double> merger_time_delay; //!< time delay for merger to increase mass and change radius
-    IOParams<double> initial_mass; //!< initial mass of star seed
-    IOParams<double> target_mass; //!< equilibrium mass
-    IOParams<double> mass_growth_factor; //!< mass growth factor (c) for increasing mass to equlibrium (dM/dt = c M^2)
-    IOParams<double> mass_loss_rate; //!< mass decrease rate dM/dt for decreasing mass to equlibrium 
+    IOParams<double> stellar_seed_mass; //!< initial mass of star seed
+    IOParams<double> initial_equilibrium_mass; //!< initial equilibrium mass of star;
+    IOParams<double> lambda0; //!< fraction of star's intrinsic luminosity over the Eddington luminosity without merger
+    IOParams<double> helium_fraction_disk; //!< helium fraction in the disk, used to calculate the equilibrium mass
+    IOParams<double> helium_enrich_timescale; //!< helium enrichment timescale, for the star to reach equilibrium
+    IOParams<double> salpeter_timescale; //!< salpeter timescale, for the star to reach equilibrium if NUMERIC_FLOAT_MAX, no growth
+    IOParams<double> solar_radius; //!< solar radius 
+    IOParams<double> gravitational_constant; //!< gravitational constant
+    IOParams<double> speed_of_light; //!< speed of light
     IOParams<long long int> redistribute_star_mode; //!< redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity to opposite side of the center
     IOParams<std::string> fname_par;
 
@@ -36,10 +41,15 @@ public:
                               stellar_radius_power_index(input_par_store, 0.6, "stellar-radius-power", "stellar radius power index 'n', rs = s M^n"),
                               stellar_radius_scale(input_par_store, 0.0046, "stellar-radius-scale", "stellar radius scale 's', rs = s M^n"),
                               merger_time_delay(input_par_store, 0.0, "merger-time-delay", "time delay for merger to increase mass"),
-                              initial_mass(input_par_store, 10.0, "initial-mass", "initial mass for star approaching equilibrium"),
-                              target_mass(input_par_store, 300.0, "target-mass", "mass for star approaching equilibrium"),
-                              mass_growth_factor(input_par_store, 0.0, "mass-growth-factor", "mass growth factor (c) for increasing mass to equlibrium (dM/dt = c M^2)"),
-                              mass_loss_rate(input_par_store, 0.0, "mass-loss-rate", "mass loss rate dM/dt for decreasing mass to equlibrium"), 
+                              stellar_seed_mass(input_par_store, 10.0, "stellar-seed-mass", "initial mass of star seed"),  
+                              initial_equilibrium_mass(input_par_store, 390.0, "initial-equilibrium-mass", "initial equilibrium mass of star"), 
+                              lambda0(input_par_store, 0.75, "lambda0", "fraction of star's intrinsic luminosity over the Eddington luminosity without merger"),   
+                              helium_fraction_disk(input_par_store, 0.25, "helium-fraction-disk", "helium fraction in the disk, used to calculate the equilibrium mass"),
+                              helium_enrich_timescale(input_par_store, 1.0, "helium-enrich-timescale", "helium enrichment timescale, for the star to reach equilibrium"),
+                              salpeter_timescale(input_par_store, NUMERIC_FLOAT_MAX, "salpeter-timescale", "salpeter timescale, for the star to reach equilibrium, if NUMERIC_FLOAT_MAX, no growth"),
+                              solar_radius(input_par_store, 1.0, "solar-radius", "solar radius, used to calculate the eddition mass accretion rate"),
+                              gravitational_constant(input_par_store, 1.0, "G", "gravitational constant"),
+                              speed_of_light(input_par_store, 1.0, "speed-of-light", "speed of light"),
                               redistribute_star_mode(input_par_store, 1, "redistribute-star-mode", "redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity to opposite side of the center; 2: redistribute star by choosing next type 3 star"),
                               fname_par    (input_par_store, "input.par", "p", "Input parameter file for external force (this option should be used first before any other options)",NULL,false),
                               print_flag(false) {}
@@ -57,12 +67,16 @@ public:
             {merger_mass_loss_rate.key, required_argument, &merger_flag, 0},  
             {stellar_radius_power_index.key, required_argument, &merger_flag, 1},  
             {stellar_radius_scale.key, required_argument, &merger_flag, 2},
-            {merger_time_delay.key, required_argument, &merger_flag, 3},  
-            {initial_mass.key, required_argument, &merger_flag, 4},
-            {target_mass.key, required_argument, &merger_flag, 5},
-            {mass_growth_factor.key, required_argument, &merger_flag, 6},
-            {mass_loss_rate.key, required_argument, &merger_flag, 7},
-            {redistribute_star_mode.key, required_argument, &merger_flag, 8},
+            {merger_time_delay.key, required_argument, &merger_flag, 3},
+            {stellar_seed_mass.key, required_argument, &merger_flag, 4},
+            {initial_equilibrium_mass.key, required_argument, &merger_flag, 5},
+            {lambda0.key, required_argument, &merger_flag, 6},
+            {helium_fraction_disk.key, required_argument, &merger_flag, 7},
+            {helium_enrich_timescale.key, required_argument, &merger_flag, 8},
+            {salpeter_timescale.key, required_argument, &merger_flag, 9},
+            {solar_radius.key, required_argument, &merger_flag, 10},
+            {speed_of_light.key, required_argument, &merger_flag, 11},
+            {redistribute_star_mode.key, required_argument, &merger_flag, 12},
             {"help",      no_argument,       0, 'h'},
             {0,0,0,0}
         };
@@ -71,7 +85,7 @@ public:
         int copt;
         int option_index;
         optind = 0;
-        while ((copt = getopt_long(argc, argv, "-p:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "-Gp:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 switch (merger_flag) {
@@ -96,26 +110,46 @@ public:
                     opt_used+=2;
                     break;
                 case 4:
-                    initial_mass.value = atof(optarg);
-                    if(print_flag) initial_mass.print(std::cout);
+                    stellar_seed_mass.value = atof(optarg);
+                    if(print_flag) stellar_seed_mass.print(std::cout);
                     opt_used+=2;
                     break;
                 case 5:
-                    target_mass.value = atof(optarg);
-                    if(print_flag) target_mass.print(std::cout);
+                    initial_equilibrium_mass.value = atof(optarg);
+                    if(print_flag) initial_equilibrium_mass.print(std::cout);
                     opt_used+=2;
                     break;
                 case 6:
-                    mass_growth_factor.value = atof(optarg);
-                    if(print_flag) mass_growth_factor.print(std::cout);
+                    lambda0.value = atof(optarg);
+                    if(print_flag) lambda0.print(std::cout);
                     opt_used+=2;
                     break;
                 case 7:
-                    mass_loss_rate.value = atof(optarg);
-                    if(print_flag) mass_loss_rate.print(std::cout);
+                    helium_fraction_disk.value = atof(optarg);
+                    if(print_flag) helium_fraction_disk.print(std::cout);
                     opt_used+=2;
                     break;
                 case 8:
+                    helium_enrich_timescale.value = atof(optarg);
+                    if(print_flag) helium_enrich_timescale.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 9:
+                    salpeter_timescale.value = atof(optarg);
+                    if(print_flag) salpeter_timescale.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 10:
+                    solar_radius.value = atof(optarg);
+                    if(print_flag) solar_radius.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 11:
+                    speed_of_light.value = atof(optarg);
+                    if(print_flag) speed_of_light.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 12:
                     redistribute_star_mode.value = atoi(optarg);
                     if(print_flag) redistribute_star_mode.print(std::cout);
                     opt_used+=2;
@@ -123,6 +157,11 @@ public:
                 default:
                     break;
                 }
+                break;
+            case 'G':
+                gravitational_constant.value = atof(optarg);
+                if(print_flag) gravitational_constant.print(std::cout);
+                opt_used+=2;
                 break;
             case 'p':
                 fname_par.value = optarg;
@@ -167,10 +206,15 @@ public:
     Float stellar_radius_power_index; //!< radius amplifier
     Float stellar_radius_scale; //!< radius scale
     Float merger_time_delay; //!< time delay for merger to increase mass
-    Float initial_mass; //!< initial mass
-    Float target_mass; //!< equilibrium mass
-    Float mass_growth_factor; //!< mass growth factor (c) for increasing mass to equlibrium (dM/dt = c M^2)
-    Float mass_loss_rate; //!< mass decrease rate dM/dt for decreasing mass to equlibrium
+    Float stellar_seed_mass; //!< initial mass of star seed
+    Float initial_equlibrium_mass; //!< initial equilibrium mass of star;
+    Float lambda0; //!< fraction of star's intrinsic luminosity over the Eddington luminosity
+    Float helium_fraction_disk; //!< helium fraction in the disk, used to calculate the equilibrium mass
+    Float helium_enrich_timescale; //!< Helium enrichment timescale, for the star to reach equilibrium
+    Float salpeter_timescale; //!< Salpeter timescale, for the star to reach equilibrium if NUMERIC_FLOAT_MAX, no growth
+    Float solar_radius; //!< solar radius
+    Float gravitational_constant; //!< gravitational constant
+    Float speed_of_light; //!< speed of light
     int redistribute_star_mode; //!< redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity to opposite side of the center
     
     //! Constructor
@@ -184,10 +228,15 @@ public:
         assert(stellar_radius_power_index>=0.0);
         assert(stellar_radius_scale>=0.0);
         assert(merger_time_delay>=0.0);
-        assert(initial_mass>=0.0);
-        assert(target_mass>=0.0);
-        assert(mass_growth_factor>=0.0);
-        assert(mass_loss_rate>=0.0);
+        assert(stellar_seed_mass>=0.0);
+        assert(initial_equlibrium_mass>=0.0);
+        assert(lambda0>=0.0);
+        assert(helium_fraction_disk>=0.0);
+        assert(helium_enrich_timescale>=0.0);
+        assert(salpeter_timescale>=0.0);
+        assert(solar_radius>=0.0);
+        assert(gravitational_constant>0.0);
+        assert(speed_of_light>0.0);
         assert(redistribute_star_mode>=0 && redistribute_star_mode<=2);
         return true;
     }
@@ -198,10 +247,15 @@ public:
              <<"stellar_radius_power_index : "<<stellar_radius_power_index<<std::endl
              <<"stellar_radius_scale : "<<stellar_radius_scale<<std::endl
              <<"merger_time_delay : "<<merger_time_delay<<std::endl
-             <<"initial_mass : "<<initial_mass<<std::endl
-             <<"target_mass : "<<target_mass<<std::endl
-             <<"mass_growth_factor : "<<mass_growth_factor<<std::endl
-             <<"mass_loss_rate : "<<mass_loss_rate<<std::endl
+             <<"stellar_seed_mass : "<<stellar_seed_mass<<std::endl
+             <<"initial_equlibrium_mass : "<<initial_equlibrium_mass<<std::endl
+             <<"lambda0 : "<<lambda0<<std::endl
+             <<"helium_fraction_disk : "<<helium_fraction_disk<<std::endl
+             <<"helium_enrich_timescale : "<<helium_enrich_timescale<<std::endl
+             <<"salpeter_timescale : "<<salpeter_timescale<<std::endl
+             <<"gravitational_constant : "<<gravitational_constant<<std::endl
+             <<"speed_of_light : "<<speed_of_light<<std::endl
+             <<"solar_radius : "<<solar_radius<<std::endl
              <<"redistribute_star_mode : "<<redistribute_star_mode<<std::endl;
     }
 
@@ -215,10 +269,15 @@ public:
         stellar_radius_power_index = _input.stellar_radius_power_index.value;
         stellar_radius_scale = _input.stellar_radius_scale.value;
         merger_time_delay = _input.merger_time_delay.value;
-        initial_mass = _input.initial_mass.value;
-        target_mass = _input.target_mass.value;
-        mass_growth_factor = _input.mass_growth_factor.value;
-        mass_loss_rate = _input.mass_loss_rate.value;
+        stellar_seed_mass = _input.stellar_seed_mass.value;
+        initial_equlibrium_mass = _input.initial_equilibrium_mass.value;
+        lambda0 = _input.lambda0.value;
+        helium_fraction_disk = _input.helium_fraction_disk.value;
+        helium_enrich_timescale = _input.helium_enrich_timescale.value;
+        salpeter_timescale = _input.salpeter_timescale.value;
+        solar_radius = _input.solar_radius.value;
+        gravitational_constant = _input.gravitational_constant.value;
+        speed_of_light = _input.speed_of_light.value;
         redistribute_star_mode = _input.redistribute_star_mode.value;
     }
 
@@ -301,34 +360,53 @@ public:
         // if type is star, evolve mass to equilibrium mass    
         if (p->star.getType()==StarType::star) {
             Float dt = time - p->star.last_mass_change_time;
-            if (dt>0) {
-                // increase mass
-                if (p->mass < target_mass && mass_growth_factor > 0) {
-                    Float new_mass = p->mass + mass_growth_factor*p->mass*p->mass*dt;
-                    if (new_mass > target_mass) {
-                        new_mass = target_mass;
-                    }
+
+            if (dt>0 && salpeter_timescale < NUMERIC_FLOAT_MAX) {
+                // Helium growth
+                p->star.helium_fraction += lambda0 / helium_enrich_timescale * dt;
+                
+                // Helium fraction should be between 0 and 1, if 1, evolve to BH
+                if (p->star.helium_fraction > 1.0) {
+                    p->star.helium_fraction = 1.0;
+                    
+                    // if helium fraction is 1, then star evolve to post-main sequence ane eventually become a BH
+                    Float new_mass = initial_equlibrium_mass * std::pow(helium_fraction_disk, 2.5);
                     p->dm += new_mass - p->mass;
                     p->mass = new_mass;
-                    p->radius = stellar_radius_scale * std::pow(new_mass, stellar_radius_power_index);
-                    p->star.last_mass_change_time = time;
-                    return 1;
+
+                    // set Swartzchild radius
+                    p->radius = gravitational_constant * p->mass / (speed_of_light * speed_of_light);
+                    
+                    // set type to BH
+                    p->star.setType(StarType::bh);
                 }
-                // decrease mass
-                else if (p->mass > target_mass && mass_loss_rate > 0) {
-                    Float new_mass = p->mass - mass_loss_rate * dt;
-                    if (new_mass < target_mass) {
-                        new_mass = target_mass;
-                    }
+                else {
+                    // calculate equilibrium mass
+                    Float equilibrium_mass = initial_equlibrium_mass * std::pow(helium_fraction_disk / p->star.helium_fraction, 2.5);
+
+                    // Eddition accretion rate m'_edd = r/r_sun * m / tau_salpeter
+                    Float mdot_eddition = p->radius / solar_radius * p->mass / salpeter_timescale;
+
+                    // factor of star's intrinsic luminosity over the Eddington luminosity
+                    Float m_frac_8 = std::pow(p->mass / equilibrium_mass, 8.0);
+                    Float s_fb = ( 1 - m_frac_8/(1 + m_frac_8));
+                    s_fb = s_fb * s_fb;
+
+                    // mass acrretion rate m'_acc = S_feedback * m'_edd
+                    // wind mass loss rate m'_wind = lambda*(1 - S_feedback)/2 * m'_edd
+                    // net mass change rate m'_net = m'_acc - m'_wind
+                    Float new_mass = p->mass + s_fb - p->lambda * (1 - s_fb)/2 * mdot_eddition * dt;
+
+                    // update parameters
                     p->dm += new_mass - p->mass;
                     p->mass = new_mass;
+
                     p->radius = stellar_radius_scale * std::pow(new_mass, stellar_radius_power_index);
-                    p->star.last_mass_change_time = time;
-                    return 1;
                 }
+                p->star.last_mass_change_time = time;
+                return 1;
             }         
         }
-
         return 0;
     }
     
@@ -418,15 +496,19 @@ public:
     long long int type; //!< type of object; 0: supermassive black hole; 1: black hole; 2: star; 3: star seed; 4: star zero mass remnant; 5: black hole zero mass remnant
     long long int n_merger_star; //!< times of merger with star
     long long int n_merger_bh; //!< times of merger with black hole
-    Float last_mass_change_time; //!< time delay for mass approach target
+    Float last_mass_change_time; //!< last mass change time
     Float last_merger_time; //!< last merger time
+    Float helium_fraction; //!< helium fraction
+    Float lambda; //!< fraction of star's intrinsic luminosity over the Eddington luminosity, change after merger
 
     //! Constructor
     StarParameter():  type(-1),
                       n_merger_star(0),
                       n_merger_bh(0),
                       last_mass_change_time(0.0),
-                      last_merger_time(0.0)                    
+                      last_merger_time(0.0),
+                      helium_fraction(0.0),
+                      lambda(1.0)
                       {}
 
     //! set type
@@ -456,19 +538,21 @@ public:
         n_merger_bh = 0;
         last_mass_change_time = _last_mass_change_time;
         last_merger_time = 0;
+        helium_fraction = 0.0;
+        lambda = 1.0; // default value, can be changed after merger
     }
 
     //! write class data with ASCII format
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld %lld %lld %26.17e %26.17e\n", type, n_merger_star, n_merger_bh, last_mass_change_time, last_merger_time);
+        fprintf(fp, "%lld %lld %lld %26.17e %26.17e %26.17e %26.17e\n", type, n_merger_star, n_merger_bh, last_mass_change_time, last_merger_time, helium_fraction, lambda);
     }
 
     //! read class data with ASCII format
     void readAscii(FILE* fp) {
-        int rcount=fscanf(fp, "%lld %lld %lld %lf %lf ", 
-                          &type, &n_merger_star, &n_merger_bh, &last_mass_change_time, &last_merger_time);
-        if(rcount<5) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 5, only obtain "<<rcount<<".\n";
+        int rcount=fscanf(fp, "%lld %lld %lld %lf %lf %lf %lf ", 
+                          &type, &n_merger_star, &n_merger_bh, &last_mass_change_time, &last_merger_time, &helium_fraction, &lambda);
+        if(rcount<7) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 7, only obtain "<<rcount<<".\n";
             abort();
         }
     }
@@ -479,7 +563,9 @@ public:
             <<" n_merger_star= "<<n_merger_star
             <<" n_merger_bh= "<<n_merger_bh
             <<" last_mass_change_time= "<<last_mass_change_time
-            <<" last_merger_time= "<<last_merger_time;
+            <<" last_merger_time= "<<last_merger_time
+            <<" helium_fraction= "<<helium_fraction
+            <<" lambda= "<<lambda;
     }
 
     //! print titles of class members using column style
@@ -492,7 +578,9 @@ public:
              <<std::setw(_width)<<"n_merger_star"
              <<std::setw(_width)<<"n_merger_bh"
              <<std::setw(_width)<<"last_mass_change_time"
-             <<std::setw(_width)<<"last_merger_time";
+             <<std::setw(_width)<<"last_merger_time"
+             <<std::setw(_width)<<"helium_fraction"
+             <<std::setw(_width)<<"lambda";
     }
 
     //! print data of class members using column style
@@ -505,7 +593,9 @@ public:
              <<std::setw(_width)<<n_merger_star
              <<std::setw(_width)<<n_merger_bh
              <<std::setw(_width)<<last_mass_change_time
-             <<std::setw(_width)<<last_merger_time;
+             <<std::setw(_width)<<last_merger_time
+             <<std::setw(_width)<<helium_fraction
+             <<std::setw(_width)<<lambda;
     }
 
     //! print column title with meaning (each line for one column)
@@ -521,6 +611,8 @@ public:
         _fout<<std::setw(_offset)<<" "<<++counter<<". n_merger_bh: times of merger with black hole\n";
         _fout<<std::setw(_offset)<<" "<<++counter<<". last_mass_change_time: last mass change time\n";
         _fout<<std::setw(_offset)<<" "<<++counter<<". last_merger_time: last merger time\n";
+        _fout<<std::setw(_offset)<<" "<<++counter<<". helium_fraction: helium fraction\n";
+        _fout<<std::setw(_offset)<<" "<<++counter<<". lambda: fraction of star's intrinsic luminosity over the Eddington luminosity\n";
         return counter;
     }
     
