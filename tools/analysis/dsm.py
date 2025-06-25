@@ -11,6 +11,8 @@ class DSMStarParameter(DictNpArrayMix):
         n_merger_bh (1D): time of merger with black hole
         last_mass_change_time (1D): time of last mass change
         last_merger_time (1D): time of last merger
+        helium (1D): helium fraction in the star
+        lambda (1D): lambda parameter of the star
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
@@ -19,5 +21,7 @@ class DSMStarParameter(DictNpArrayMix):
                 ['n_merger_star',np.int64],
                 ['n_merger_bh',np.int64],
                 ['last_mass_change_time',np.float64],
-                ['last_merger_time',np.float64]]
+                ['last_merger_time',np.float64],
+                ['helium',np.float64],
+                ['lambda',np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)

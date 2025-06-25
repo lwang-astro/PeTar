@@ -28,7 +28,6 @@ public:
     IOParams<double> helium_fraction_disk; //!< helium fraction in the disk, used to calculate the equilibrium mass
     IOParams<double> helium_enrich_timescale; //!< helium enrichment timescale, for the star to reach equilibrium
     IOParams<double> salpeter_timescale; //!< salpeter timescale, for the star to reach equilibrium if NUMERIC_FLOAT_MAX, no growth
-    IOParams<double> solar_radius; //!< solar radius 
     IOParams<double> gravitational_constant; //!< gravitational constant
     IOParams<double> speed_of_light; //!< speed of light
     IOParams<long long int> redistribute_star_mode; //!< redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity to opposite side of the center
@@ -42,12 +41,11 @@ public:
                               stellar_radius_scale(input_par_store, 0.0046, "stellar-radius-scale", "stellar radius scale 's', rs = s M^n"),
                               merger_time_delay(input_par_store, 0.0, "merger-time-delay", "time delay for merger to increase mass"),
                               stellar_seed_mass(input_par_store, 10.0, "stellar-seed-mass", "initial mass of star seed"),  
-                              initial_equilibrium_mass(input_par_store, 390.0, "initial-equilibrium-mass", "initial equilibrium mass of star"), 
+                              initial_equilibrium_mass(input_par_store, 253.3124306069483, "initial-equilibrium-mass", "initial equilibrium mass of star"), 
                               lambda0(input_par_store, 0.75, "lambda0", "fraction of star's intrinsic luminosity over the Eddington luminosity without merger"),   
-                              helium_fraction_disk(input_par_store, 0.25, "helium-fraction-disk", "helium fraction in the disk, used to calculate the equilibrium mass"),
-                              helium_enrich_timescale(input_par_store, 1.0, "helium-enrich-timescale", "helium enrichment timescale, for the star to reach equilibrium"),
+                              helium_fraction_disk(input_par_store, 0.28, "helium-fraction-disk", "helium fraction in the disk, used to calculate the equilibrium mass"),
+                              helium_enrich_timescale(input_par_store, 3.0e6, "helium-enrich-timescale", "helium enrichment timescale, for the star to reach equilibrium"),
                               salpeter_timescale(input_par_store, NUMERIC_FLOAT_MAX, "salpeter-timescale", "salpeter timescale, for the star to reach equilibrium, if NUMERIC_FLOAT_MAX, no growth"),
-                              solar_radius(input_par_store, 1.0, "solar-radius", "solar radius, used to calculate the eddition mass accretion rate"),
                               gravitational_constant(input_par_store, 1.0, "G", "gravitational constant"),
                               speed_of_light(input_par_store, 1.0, "speed-of-light", "speed of light"),
                               redistribute_star_mode(input_par_store, 1, "redistribute-star-mode", "redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity to opposite side of the center; 2: redistribute star by choosing next type 3 star"),
@@ -74,7 +72,6 @@ public:
             {helium_fraction_disk.key, required_argument, &merger_flag, 7},
             {helium_enrich_timescale.key, required_argument, &merger_flag, 8},
             {salpeter_timescale.key, required_argument, &merger_flag, 9},
-            {solar_radius.key, required_argument, &merger_flag, 10},
             {speed_of_light.key, required_argument, &merger_flag, 11},
             {redistribute_star_mode.key, required_argument, &merger_flag, 12},
             {"help",      no_argument,       0, 'h'},
@@ -85,7 +82,7 @@ public:
         int copt;
         int option_index;
         optind = 0;
-        while ((copt = getopt_long(argc, argv, "-Gp:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "-G:p:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 switch (merger_flag) {
@@ -137,11 +134,6 @@ public:
                 case 9:
                     salpeter_timescale.value = atof(optarg);
                     if(print_flag) salpeter_timescale.print(std::cout);
-                    opt_used+=2;
-                    break;
-                case 10:
-                    solar_radius.value = atof(optarg);
-                    if(print_flag) solar_radius.print(std::cout);
                     opt_used+=2;
                     break;
                 case 11:
@@ -212,13 +204,24 @@ public:
     Float helium_fraction_disk; //!< helium fraction in the disk, used to calculate the equilibrium mass
     Float helium_enrich_timescale; //!< Helium enrichment timescale, for the star to reach equilibrium
     Float salpeter_timescale; //!< Salpeter timescale, for the star to reach equilibrium if NUMERIC_FLOAT_MAX, no growth
-    Float solar_radius; //!< solar radius
     Float gravitational_constant; //!< gravitational constant
     Float speed_of_light; //!< speed of light
     int redistribute_star_mode; //!< redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity to opposite side of the center
     
     //! Constructor
-    DiskStarMergerManager(): merger_mass_loss_rate(0.0), stellar_radius_power_index(0.6), stellar_radius_scale(0.0046), merger_time_delay(0.0), target_mass(0.0), mass_growth_factor(0.0), mass_loss_rate(0.0), redistribute_star_mode(1) {}
+    DiskStarMergerManager(): merger_mass_loss_rate(-1.0), 
+                             stellar_radius_power_index(-1.0), 
+                             stellar_radius_scale(0.0), 
+                             merger_time_delay(-1.0), 
+                             stellar_seed_mass(0.0), 
+                             initial_equlibrium_mass(0.0), 
+                             lambda0(0.0),
+                             helium_fraction_disk(0.0),
+                             helium_enrich_timescale(0.0),
+                             salpeter_timescale(NUMERIC_FLOAT_MAX),
+                             gravitational_constant(0.0),
+                             speed_of_light(0.0),
+                             redistribute_star_mode(-1) {}
 
     //! (Necessary) check whether publicly initialized parameters are correctly set
     /*! \return true: all parmeters are correct. In this case no parameters, return true;
@@ -226,15 +229,14 @@ public:
     bool checkParams() {
         assert(merger_mass_loss_rate>=0.0);
         assert(stellar_radius_power_index>=0.0);
-        assert(stellar_radius_scale>=0.0);
+        assert(stellar_radius_scale>0.0);
         assert(merger_time_delay>=0.0);
-        assert(stellar_seed_mass>=0.0);
-        assert(initial_equlibrium_mass>=0.0);
-        assert(lambda0>=0.0);
-        assert(helium_fraction_disk>=0.0);
-        assert(helium_enrich_timescale>=0.0);
-        assert(salpeter_timescale>=0.0);
-        assert(solar_radius>=0.0);
+        assert(stellar_seed_mass>0.0);
+        assert(initial_equlibrium_mass>0.0);
+        assert(lambda0>0.0);
+        assert(helium_fraction_disk>0.0);
+        assert(helium_enrich_timescale>0.0);
+        assert(salpeter_timescale>0.0);
         assert(gravitational_constant>0.0);
         assert(speed_of_light>0.0);
         assert(redistribute_star_mode>=0 && redistribute_star_mode<=2);
@@ -255,7 +257,6 @@ public:
              <<"salpeter_timescale : "<<salpeter_timescale<<std::endl
              <<"gravitational_constant : "<<gravitational_constant<<std::endl
              <<"speed_of_light : "<<speed_of_light<<std::endl
-             <<"solar_radius : "<<solar_radius<<std::endl
              <<"redistribute_star_mode : "<<redistribute_star_mode<<std::endl;
     }
 
@@ -275,7 +276,6 @@ public:
         helium_fraction_disk = _input.helium_fraction_disk.value;
         helium_enrich_timescale = _input.helium_enrich_timescale.value;
         salpeter_timescale = _input.salpeter_timescale.value;
-        solar_radius = _input.solar_radius.value;
         gravitational_constant = _input.gravitational_constant.value;
         speed_of_light = _input.speed_of_light.value;
         redistribute_star_mode = _input.redistribute_star_mode.value;
@@ -321,7 +321,13 @@ public:
             Float new_mass = mcm * (1 - merger_mass_loss_rate);    
             pm->dm += new_mass - pm->mass;
             pm->mass = new_mass;
-            pm->radius = std::pow(new_mass, stellar_radius_power_index);
+            if (pm->star.getType() == StarType::star) {
+                pm->radius = stellar_radius_scale * std::pow(pm->mass, stellar_radius_power_index);
+                pm->star.helium_fraction = helium_fraction_disk; // set helium fraction to disk value
+            }
+            else if (pm->star.getType() == StarType::bh) {
+                pm->radius = gravitational_constant * pm->mass / (speed_of_light * speed_of_light);
+            }
         }
 
         p0->dm -= p0->mass;
@@ -384,8 +390,8 @@ public:
                     // calculate equilibrium mass
                     Float equilibrium_mass = initial_equlibrium_mass * std::pow(helium_fraction_disk / p->star.helium_fraction, 2.5);
 
-                    // Eddition accretion rate m'_edd = r/r_sun * m / tau_salpeter
-                    Float mdot_eddition = p->radius / solar_radius * p->mass / salpeter_timescale;
+                    // Eddition accretion rate m'_edd = r/r_grav * m / tau_salpeter = r c^2 / (G tau_salpeter)
+                    Float mdot_eddition = p->radius * speed_of_light * speed_of_light / (gravitational_constant * salpeter_timescale);
 
                     // factor of star's intrinsic luminosity over the Eddington luminosity
                     Float m_frac_8 = std::pow(p->mass / equilibrium_mass, 8.0);
@@ -395,7 +401,7 @@ public:
                     // mass acrretion rate m'_acc = S_feedback * m'_edd
                     // wind mass loss rate m'_wind = lambda*(1 - S_feedback)/2 * m'_edd
                     // net mass change rate m'_net = m'_acc - m'_wind
-                    Float new_mass = p->mass + s_fb - p->lambda * (1 - s_fb)/2 * mdot_eddition * dt;
+                    Float new_mass = p->mass + (s_fb - p->star.lambda * (1 - s_fb)/2) * mdot_eddition * dt;
 
                     // update parameters
                     p->dm += new_mass - p->mass;
@@ -438,9 +444,9 @@ public:
                         p->vel[k] = center->vel[k] - vel[k];
                     }
                     p->star.setType(StarType::star);
-                    p->mass = initial_mass;
+                    p->mass = stellar_seed_mass;
                     p->dm = 0.0;
-                    p->radius = stellar_radius_scale * std::pow(initial_mass, stellar_radius_power_index);
+                    p->radius = stellar_radius_scale * std::pow(stellar_seed_mass, stellar_radius_power_index);
                     return 1;
                 }
             }
@@ -473,9 +479,9 @@ public:
                 if (index_seed >= 0) {
                     auto pi = &system[index_seed];
                     pi->star.setType(StarType::star);
-                    pi->mass = initial_mass;
+                    pi->mass = stellar_seed_mass;
                     pi->dm = 0.0;
-                    pi->radius = stellar_radius_scale * std::pow(initial_mass, stellar_radius_power_index);
+                    pi->radius = stellar_radius_scale * std::pow(stellar_seed_mass, stellar_radius_power_index);
                     pi->star.last_mass_change_time = p->star.last_mass_change_time;
                         
                     pi->star.n_merger_star = 0;

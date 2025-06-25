@@ -423,6 +423,8 @@ public:
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
                  const IOParamsBSE& _input_bse,
+#elif DISK_STAR_MERGER
+                 const IOParamsDiskStarMerger& _input_dsm,
 #endif
 #endif
                  const PS::F64 _mass_average, 
@@ -492,6 +494,8 @@ public:
             ar_manager.interaction.bse_manager.initial(_input_bse, _print_flag);
             ar_manager.interaction.tide.speed_of_light = ar_manager.interaction.bse_manager.getSpeedOfLight();
         }
+#elif DISK_STAR_MERGER
+        ar_manager.interaction.disk_star_merger_manager.initial(_input_dsm, _print_flag);
 #endif
 #endif        
 

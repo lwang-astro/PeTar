@@ -3248,13 +3248,11 @@ public:
                 hard_manager.ar_manager.interaction.modifyOneParticle(pi, stat.time, stat.time);
             }
         }
-
+#elif DISK_STAR_MERGER
+        hard_manager.initial(hard_parameters, disk_star_merger_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
 #else
         hard_manager.initial(hard_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
 #endif
-#ifdef DISK_STAR_MERGER
-        hard_manager.ar_manager.interaction.disk_star_merger_manager.initial(disk_star_merger_parameters, print_flag);
-#endif        
 #ifdef ADJUST_GROUP_PRINT
         // group information
         if (write_style&&hard_parameters.adjust_group_write_option.value==1) 
