@@ -65,9 +65,11 @@ endif
 
 SE_INSTALL:
 SE_CLEAN:
+RAND_CLEAN:
 ifneq ($(se_mode),off)
 MT_FLAGS += -D STELLAR_EVOLUTION
 BSE_FLAG=off
+DSM_FLAG=off
 ifeq ($(se_mode),mobse)
 MT_FLAGS += -D MOBSE -D BSE_BASE
 BSE_FLAG=on
@@ -79,30 +81,38 @@ MT_FLAGS += -D BSEEMP -D BSE_BASE
 BSE_FLAG=on
 else ifeq ($(se_mode),dsm)
 MT_FLAGS += -D DISK_STAR_MERGER
+DSM_FLAG=on
 endif
-ifeq ($(BSE_FLAG),on)
-FCLIBS = @FCLIBS@
+ifneq ($(BSE_FLAG)$(DSM_FLAG),offoff)
 RANDFILES = parallel-random/librand.a 
 RANDLIBS = -L ./parallel-random -lrand 
 RANDNOMPFILES = parallel-random/librandnomp.a 
 RANDNOMPLIBS = -L ./parallel-random -lrandnomp
-BSELIBFILES= bse-interface/libbse.a bse-interface/bse_interface.h 
-BSELIBS = -L ./bse-interface -lbse $(FCLIBS)
-CXXLIBS += $(BSELIBS)
-LIBFILES+= $(BSELIBFILES)
-PETAR_INCLUDE += -I ./bse-interface -I ./parallel-random
-CUDA_INCLUDE += -I ./bse-interface -I ./parallel-random
-SRC += ${shell ls ./parallel-random/*.hpp} ${shell ls ./bse-interface/*.h}
-HARD_SRC += ${shell ls ./parallel-random/*.hpp} ${shell ls ./bse-interface/*.h}
-SE_INSTALL:
-	$(MAKE) -C bse-interface install
-SE_CLEAN:
-	$(MAKE) -C parallel-random clean
-	$(MAKE) -C bse-interface clean
+PETAR_INCLUDE += -I ./parallel-random
+CUDA_INCLUDE += -I ./parallel-random
+SRC += ${shell ls ./parallel-random/*.hpp}
+HARD_SRC += ${shell ls ./parallel-random/*.hpp}
 parallel-random/librand.a: parallel-random
 	$(MAKE) -C parallel-random librand.a
 parallel-random/librandnomp.a: parallel-random
 	$(MAKE) -C parallel-random librandnomp.a
+RAND_CLEAN:
+	$(MAKE) -C parallel-random clean
+endif
+ifeq ($(BSE_FLAG),on)
+FCLIBS = @FCLIBS@
+BSELIBFILES= bse-interface/libbse.a bse-interface/bse_interface.h 
+BSELIBS = -L ./bse-interface -lbse $(FCLIBS)
+CXXLIBS += $(BSELIBS)
+LIBFILES+= $(BSELIBFILES)
+PETAR_INCLUDE += -I ./bse-interface 
+CUDA_INCLUDE += -I ./bse-interface 
+SRC += ${shell ls ./bse-interface/*.h}
+HARD_SRC += ${shell ls ./bse-interface/*.h}
+SE_INSTALL:
+	$(MAKE) -C bse-interface install
+SE_CLEAN:
+	$(MAKE) -C bse-interface clean
 bse-interface/libbse.a: bse-interface
 	$(MAKE) -C bse-interface 
 endif
@@ -356,6 +366,6 @@ install: $(TARGET) SE_INSTALL EXT_INSTALL install_script_tool
 	install -m 755 $(TARGET) @prefix@/bin/
 	ln -sf @prefix@/bin/@PROG_NAME@ @prefix@/bin/petar
 
-clean: SE_CLEAN EXT_CLEAN
+clean: SE_CLEAN EXT_CLEAN RAND_CLEAN
 	rm -f $(TARGET) build/*.o 
 

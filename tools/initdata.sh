@@ -44,10 +44,6 @@ do
 		echo '                If value is given, use the given value';
 		echo "                if '\$[column index]' is given, read the corresponding column as the value for individual objects.";
 	    echo "                   For example, --helium '\$8' indicates the 8th column is the initial helium fractions.";
-		echo '  --lambda  [S] The initial lambda parameter of each object when the DSM mode is used (default: 0.75)';
-		echo '                If value is given, use the given value';
-		echo "                if '\$[column index]' is given, read the corresponding column as the value for individual objects.";
-	    echo "                   For example, --lambda '\$8' indicates the 8th column is the initial lambda parameters.";
 	    echo 'Important notes:'
 	    echo '    1) When using stellar evolution (e.g., BSE), be cautious with the scaling factor.';
 	    echo '       It is recommended to use the unit set [Msun, pc, pc/myr] for the input data.';
@@ -75,7 +71,6 @@ do
 	--type) shift; setype=$1; shift;;
 	--time) shift; tinit=$1; shift;;
 	--helium) shift; helium=$1; shift;;
-	--lambda) shift; lambda=$1; shift;;
 	*) fname=$1;shift;;
     esac
 done
@@ -99,7 +94,6 @@ fi
 [ -z $cm ] && cm='none'
 [ -z $tinit ] && tinit=0.0
 [ -z $helium ] && helium=0.28
-[ -z $lambda ] && lambda=0.75
 
 echo 'Transfer "'$fname'" to PeTar input data file "'$fout'"'
 echo 'Skip rows: '$igline
@@ -183,8 +177,8 @@ if [[ $seflag != 'no' ]]; then
 	echo 'mass scale from PeTar unit (PT) to Msun (m[Msun] = m[PT]*mscale): ' $mscale
 	awk -v ms=$mscale  '{OFMT="%.15g"; print '"$base_col$se_col$bse_col$soft_col"'}' $fout.scale__ >>$fout
 	elif [[ "$seflag" == 'dsm' ]]; then
-	#         type,  ns, nbh, tinit,  tmerger, helium, lambda
-	dsm_col=$setype', 0, 0, '$tinit', 0.0, '$helium', '$lambda','
+	#         type,  ns, nbh, tinit,  tmerger, helium
+	dsm_col=$setype', 0, 0, '$tinit', 0.0, '$helium', '
 	awk -v ms=$mscale  '{OFMT="%.15g"; print '"$base_col$se_col$dsm_col$soft_col"'}' $fout.scale__ >>$fout
     else
 	echo 'Error: unknown option for stellar evolution: '$seflag

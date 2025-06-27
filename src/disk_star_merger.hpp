@@ -7,6 +7,11 @@
 #include "io.hpp"
 #include <cassert>
 #include "Common/Float.h"
+#ifndef ASSERT
+#define ASSERT assert
+#endif
+#include "Common/binary_tree.h"
+#include "../parallel-random/rand.hpp"
 
 //! Class for managing mergers
 enum class StarType:int {none = -1, smbh = 0, bh = 1, star = 2, seed = 3, star_remnant = 4, bh_remnant = 5};
@@ -26,8 +31,8 @@ public:
     IOParams<double> initial_equilibrium_mass; //!< initial equilibrium mass of star;
     IOParams<double> lambda0; //!< fraction of star's intrinsic luminosity over the Eddington luminosity without merger
     IOParams<double> helium_fraction_disk; //!< helium fraction in the disk, used to calculate the equilibrium mass
-    IOParams<double> helium_enrich_timescale; //!< helium enrichment timescale, for the star to reach equilibrium
     IOParams<double> salpeter_timescale; //!< salpeter timescale, for the star to reach equilibrium if NUMERIC_FLOAT_MAX, no growth
+    IOParams<double> epsilon_helium; //!< helium enrichment efficiency
     IOParams<double> epsilon_bh; //!< the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH
     IOParams<double> gravitational_constant; //!< gravitational constant
     IOParams<double> speed_of_light; //!< speed of light
@@ -45,12 +50,12 @@ public:
                               initial_equilibrium_mass(input_par_store, 253.3124306069483, "initial-equilibrium-mass", "initial equilibrium mass of star"), 
                               lambda0(input_par_store, 0.75, "lambda0", "fraction of star's intrinsic luminosity over the Eddington luminosity without merger"),   
                               helium_fraction_disk(input_par_store, 0.28, "helium-fraction-disk", "helium fraction in the disk, used to calculate the equilibrium mass"),
-                              helium_enrich_timescale(input_par_store, 3.0e6, "helium-enrich-timescale", "helium enrichment timescale, for the star to reach equilibrium"),
                               salpeter_timescale(input_par_store, NUMERIC_FLOAT_MAX, "salpeter-timescale", "salpeter timescale, for the star to reach equilibrium, if NUMERIC_FLOAT_MAX, no growth"),
+                              epsilon_helium(input_par_store, 0.006, "epsilon-helium", "helium enrichment efficiency, used to calculate helium enrichment timescale"),
                               epsilon_bh(input_par_store, 0.06, "epsilon-bh", "the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH"),
                               gravitational_constant(input_par_store, 1.0, "G", "gravitational constant"),
                               speed_of_light(input_par_store, 1.0, "speed-of-light", "speed of light"),
-                              redistribute_star_mode(input_par_store, 1, "redistribute-star-mode", "redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity to opposite side of the center; 2: redistribute star by choosing next type 3 star"),
+                              redistribute_star_mode(input_par_store, 1, "redistribute-star-mode", "redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity in random position along a circular orbit with the semi-major axis being the distance to the center; 2: redistribute star by choosing next type 3 star"),
                               fname_par    (input_par_store, "input.par", "p", "Input parameter file for external force (this option should be used first before any other options)",NULL,false),
                               print_flag(false) {}
 
@@ -72,8 +77,8 @@ public:
             {initial_equilibrium_mass.key, required_argument, &merger_flag, 5},
             {lambda0.key, required_argument, &merger_flag, 6},
             {helium_fraction_disk.key, required_argument, &merger_flag, 7},
-            {helium_enrich_timescale.key, required_argument, &merger_flag, 8},
-            {salpeter_timescale.key, required_argument, &merger_flag, 9},
+            {salpeter_timescale.key, required_argument, &merger_flag, 8},
+            {epsilon_helium.key, required_argument, &merger_flag, 9},
             {epsilon_bh.key, required_argument, &merger_flag, 10},
             {speed_of_light.key, required_argument, &merger_flag, 11},
             {redistribute_star_mode.key, required_argument, &merger_flag, 12},
@@ -130,13 +135,13 @@ public:
                     opt_used+=2;
                     break;
                 case 8:
-                    helium_enrich_timescale.value = atof(optarg);
-                    if(print_flag) helium_enrich_timescale.print(std::cout);
+                    salpeter_timescale.value = atof(optarg);
+                    if(print_flag) salpeter_timescale.print(std::cout);
                     opt_used+=2;
                     break;
                 case 9:
-                    salpeter_timescale.value = atof(optarg);
-                    if(print_flag) salpeter_timescale.print(std::cout);
+                    epsilon_helium.value = atof(optarg);
+                    if(print_flag) epsilon_helium.print(std::cout);
                     opt_used+=2;
                     break;
                 case 10:
@@ -210,8 +215,8 @@ public:
     Float initial_equlibrium_mass; //!< initial equilibrium mass of star;
     Float lambda0; //!< fraction of star's intrinsic luminosity over the Eddington luminosity
     Float helium_fraction_disk; //!< helium fraction in the disk, used to calculate the equilibrium mass
-    Float helium_enrich_timescale; //!< Helium enrichment timescale, for the star to reach equilibrium
     Float salpeter_timescale; //!< Salpeter timescale, for the star to reach equilibrium if NUMERIC_FLOAT_MAX, no growth
+    Float epsilon_helium; //!< helium enrichment efficiency, used to calculate helium enrichment timescale
     Float epsilon_bh; //!< the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH
     Float gravitational_constant; //!< gravitational constant
     Float speed_of_light; //!< speed of light
@@ -226,8 +231,8 @@ public:
                              initial_equlibrium_mass(0.0), 
                              lambda0(0.0),
                              helium_fraction_disk(0.0),
-                             helium_enrich_timescale(0.0),
                              salpeter_timescale(NUMERIC_FLOAT_MAX),
+                             epsilon_helium(0.0),
                              epsilon_bh(0.0), 
                              gravitational_constant(0.0),
                              speed_of_light(0.0),
@@ -245,8 +250,8 @@ public:
         assert(initial_equlibrium_mass>0.0);
         assert(lambda0>0.0);
         assert(helium_fraction_disk>0.0);
-        assert(helium_enrich_timescale>0.0);
         assert(salpeter_timescale>0.0);
+        assert(epsilon_helium>0.0 && epsilon_helium<=1.0);
         assert(epsilon_bh>0.0 && epsilon_bh<=1.0);
         assert(gravitational_constant>0.0);
         assert(speed_of_light>0.0);
@@ -264,8 +269,8 @@ public:
              <<"initial_equlibrium_mass : "<<initial_equlibrium_mass<<std::endl
              <<"lambda0 : "<<lambda0<<std::endl
              <<"helium_fraction_disk : "<<helium_fraction_disk<<std::endl
-             <<"helium_enrich_timescale : "<<helium_enrich_timescale<<std::endl
              <<"salpeter_timescale : "<<salpeter_timescale<<std::endl
+             <<"epsilon_helium : "<<epsilon_helium<<std::endl
              <<"epsilon_bh : "<<epsilon_bh<<std::endl
              <<"gravitational_constant : "<<gravitational_constant<<std::endl
              <<"speed_of_light : "<<speed_of_light<<std::endl
@@ -286,8 +291,8 @@ public:
         initial_equlibrium_mass = _input.initial_equilibrium_mass.value;
         lambda0 = _input.lambda0.value;
         helium_fraction_disk = _input.helium_fraction_disk.value;
-        helium_enrich_timescale = _input.helium_enrich_timescale.value;
         salpeter_timescale = _input.salpeter_timescale.value;
+        epsilon_helium = _input.epsilon_helium.value;
         epsilon_bh = _input.epsilon_bh.value;
         gravitational_constant = _input.gravitational_constant.value;
         speed_of_light = _input.speed_of_light.value;
@@ -332,15 +337,17 @@ public:
         // only increase mass and change radius after time delay
         if (time > merger_time_delay) {
             Float new_mass = mcm * (1 - merger_mass_loss_rate);    
-            pm->dm += new_mass - pm->mass;
-            pm->mass = new_mass;
             if (pm->star.getType() == StarType::star) {
-                pm->radius = stellar_radius_scale * std::pow(pm->mass, stellar_radius_power_index);
-                pm->star.helium_fraction = helium_fraction_disk; // set helium fraction to disk value
+                pm->radius = stellar_radius_scale * std::pow(new_mass, stellar_radius_power_index);
+                if (p0->star.getType() == StarType::star) {
+                    pm->star.helium_fraction = (p1->star.helium_fraction*p1->mass + p2->star.helium_fraction*p2->mass)/mcm;
+                }
             }
             else if (pm->star.getType() == StarType::bh) {
-                pm->radius = gravitational_constant * pm->mass / (speed_of_light * speed_of_light);
+                pm->radius = gravitational_constant * new_mass / (speed_of_light * speed_of_light);
             }
+            pm->mass = new_mass;
+            pm->dm += new_mass - pm->mass;
         }
 
         p0->dm -= p0->mass;
@@ -386,13 +393,13 @@ public:
             Float dt = time - p->star.last_mass_change_time;
             if (dt>0) {
                 // Helium growth
-                p->star.helium_fraction += lambda0 / helium_enrich_timescale * dt;
+                p->star.helium_fraction += lambda0 / (epsilon_helium * salpeter_timescale) * dt;
                 
                 // Helium fraction should be between 0 and 1, if 1, evolve to BH
                 if (p->star.helium_fraction > 1.0) {
 
                     // calculate time to reach BH                       
-                    Float time_bh_form = helium_enrich_timescale * (1.0 - p->star.helium_fraction) / lambda0 + time;
+                    Float time_bh_form = epsilon_helium * salpeter_timescale * (1.0 - p->star.helium_fraction) / lambda0 + time;
                     p->star.helium_fraction = 1.0;
                     
                     // if helium fraction is 1, then star evolve to post-main sequence and eventually become a BH
@@ -423,7 +430,7 @@ public:
                     // mass accretion rate m'_acc = S_feedback * m'_edd
                     // wind mass loss rate m'_wind = lambda*(1 - S_feedback)/2 * m'_edd
                     // net mass change rate m'_net = m'_acc - m'_wind
-                    Float new_mass = p->mass + (s_fb - p->star.lambda * (1 - s_fb)/2) * mdot_eddington * dt;
+                    Float new_mass = p->mass + (s_fb - lambda0 * (1 - s_fb)/2) * mdot_eddington * dt;
 
                     // update parameters
                     p->dm += new_mass - p->mass;
@@ -472,17 +479,19 @@ public:
         // if type is star, redistribute 
         if (p->star.getType() == StarType::star_remnant) {
             if (redistribute_star_mode == 1) {
-                Float pos[3];
-                Float vel[3];
-                for (int k=0; k<3; k++) {
-                    pos[k] = p->pos[k] - center->pos[k];
-                    vel[k] = p->vel[k] - center->vel[k];
-                }
-                Float r = std::sqrt(pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2]);
-                if (r>0) {
+                COMM::Binary bin;
+                bin.calcOrbit(*p,*center, gravitational_constant);
+                if (bin.r>0) {
+                    // redistribute star position and velocity to random position assuming a circular orbit with semi-major axis r
+                    bin.semi = bin.r;
+                    bin.ecc = 0.0;
+                    bin.ecca = 2 * COMM::PI * rand_f64();
+                    TParticle cm;
+                    bin.calcParticles(*p, cm, gravitational_constant);
+                    
                     for (int k=0; k<3; k++) {
-                        p->pos[k] = center->pos[k] - pos[k];
-                        p->vel[k] = center->vel[k] - vel[k];
+                        p->pos[k] += center->pos[k] - cm.pos[k];
+                        p->vel[k] += center->vel[k] - cm.vel[k];
                     }
                     p->star.setType(StarType::star);
                     p->mass = stellar_seed_mass;
@@ -546,7 +555,6 @@ public:
     Float last_mass_change_time; //!< last mass change time
     Float last_merger_time; //!< last merger time
     Float helium_fraction; //!< helium fraction
-    Float lambda; //!< fraction of star's intrinsic luminosity over the Eddington luminosity, change after merger
 
     //! Constructor
     StarParameter():  type(-1),
@@ -554,8 +562,7 @@ public:
                       n_merger_bh(0),
                       last_mass_change_time(0.0),
                       last_merger_time(0.0),
-                      helium_fraction(0.0),
-                      lambda(1.0)
+                      helium_fraction(0.0)
                       {}
 
     //! set type
@@ -586,20 +593,19 @@ public:
         last_mass_change_time = _last_mass_change_time;
         last_merger_time = 0;
         helium_fraction = 0.0;
-        lambda = 1.0; // default value, can be changed after merger
     }
 
     //! write class data with ASCII format
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld %lld %lld %26.17e %26.17e %26.17e %26.17e\n", type, n_merger_star, n_merger_bh, last_mass_change_time, last_merger_time, helium_fraction, lambda);
+        fprintf(fp, "%lld %lld %lld %26.17e %26.17e %26.17e\n", type, n_merger_star, n_merger_bh, last_mass_change_time, last_merger_time, helium_fraction);
     }
 
     //! read class data with ASCII format
     void readAscii(FILE* fp) {
-        int rcount=fscanf(fp, "%lld %lld %lld %lf %lf %lf %lf ", 
-                          &type, &n_merger_star, &n_merger_bh, &last_mass_change_time, &last_merger_time, &helium_fraction, &lambda);
-        if(rcount<7) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 7, only obtain "<<rcount<<".\n";
+        int rcount=fscanf(fp, "%lld %lld %lld %lf %lf %lf ", 
+                          &type, &n_merger_star, &n_merger_bh, &last_mass_change_time, &last_merger_time, &helium_fraction);
+        if(rcount<6) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 6, only obtain "<<rcount<<".\n";
             abort();
         }
     }
@@ -611,8 +617,7 @@ public:
             <<" n_merger_bh= "<<n_merger_bh
             <<" last_mass_change_time= "<<last_mass_change_time
             <<" last_merger_time= "<<last_merger_time
-            <<" helium_fraction= "<<helium_fraction
-            <<" lambda= "<<lambda;
+            <<" helium_fraction= "<<helium_fraction;
     }
 
     //! print titles of class members using column style
@@ -626,8 +631,7 @@ public:
              <<std::setw(_width)<<"n_merger_bh"
              <<std::setw(_width)<<"last_mass_change_time"
              <<std::setw(_width)<<"last_merger_time"
-             <<std::setw(_width)<<"helium_fraction"
-             <<std::setw(_width)<<"lambda";
+             <<std::setw(_width)<<"helium_fraction";
     }
 
     //! print data of class members using column style
@@ -641,8 +645,7 @@ public:
              <<std::setw(_width)<<n_merger_bh
              <<std::setw(_width)<<last_mass_change_time
              <<std::setw(_width)<<last_merger_time
-             <<std::setw(_width)<<helium_fraction
-             <<std::setw(_width)<<lambda;
+             <<std::setw(_width)<<helium_fraction;
     }
 
     //! print column title with meaning (each line for one column)
@@ -659,7 +662,6 @@ public:
         _fout<<std::setw(_offset)<<" "<<++counter<<". last_mass_change_time: last mass change time\n";
         _fout<<std::setw(_offset)<<" "<<++counter<<". last_merger_time: last merger time\n";
         _fout<<std::setw(_offset)<<" "<<++counter<<". helium_fraction: helium fraction\n";
-        _fout<<std::setw(_offset)<<" "<<++counter<<". lambda: fraction of star's intrinsic luminosity over the Eddington luminosity\n";
         return counter;
     }
     
