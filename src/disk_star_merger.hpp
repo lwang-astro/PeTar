@@ -28,10 +28,10 @@ public:
     IOParams<double> stellar_radius_scale; //!< stellar radius scale
     IOParams<double> merger_time_delay; //!< time delay for merger to increase mass and change radius
     IOParams<double> stellar_seed_mass; //!< initial mass of star seed
-    IOParams<double> initial_equilibrium_mass; //!< initial equilibrium mass of star;
+    IOParams<double> initial_equilbrium_mass; //!< initial equilbrium mass of star;
     IOParams<double> lambda0; //!< fraction of star's intrinsic luminosity over the Eddington luminosity without merger
-    IOParams<double> helium_fraction_disk; //!< helium fraction in the disk, used to calculate the equilibrium mass
-    IOParams<double> salpeter_timescale; //!< salpeter timescale, for the star to reach equilibrium if NUMERIC_FLOAT_MAX, no growth
+    IOParams<double> helium_fraction_disk; //!< helium fraction in the disk, used to calculate the equilbrium mass
+    IOParams<double> salpeter_timescale; //!< salpeter timescale, for the star to reach equilbrium if NUMERIC_FLOAT_MAX, no growth
     IOParams<double> epsilon_helium; //!< helium enrichment efficiency
     IOParams<double> epsilon_bh; //!< the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH
     IOParams<double> gravitational_constant; //!< gravitational constant
@@ -47,10 +47,10 @@ public:
                               stellar_radius_scale(input_par_store, 0.0046, "stellar-radius-scale", "stellar radius scale 's', rs = s M^n"),
                               merger_time_delay(input_par_store, 0.0, "merger-time-delay", "time delay for merger to increase mass"),
                               stellar_seed_mass(input_par_store, 10.0, "stellar-seed-mass", "initial mass of star seed"),  
-                              initial_equilibrium_mass(input_par_store, 253.3124306069483, "initial-equilibrium-mass", "initial equilibrium mass of star"), 
+                              initial_equilbrium_mass(input_par_store, 253.3124306069483, "initial-equilbrium-mass", "initial equilbrium mass of star"), 
                               lambda0(input_par_store, 0.75, "lambda0", "fraction of star's intrinsic luminosity over the Eddington luminosity without merger"),   
-                              helium_fraction_disk(input_par_store, 0.28, "helium-fraction-disk", "helium fraction in the disk, used to calculate the equilibrium mass"),
-                              salpeter_timescale(input_par_store, NUMERIC_FLOAT_MAX, "salpeter-timescale", "salpeter timescale, for the star to reach equilibrium, if NUMERIC_FLOAT_MAX, no growth"),
+                              helium_fraction_disk(input_par_store, 0.28, "helium-fraction-disk", "helium fraction in the disk, used to calculate the equilbrium mass"),
+                              salpeter_timescale(input_par_store, NUMERIC_FLOAT_MAX, "salpeter-timescale", "salpeter timescale, for the star to reach equilbrium, if NUMERIC_FLOAT_MAX, no growth"),
                               epsilon_helium(input_par_store, 0.006, "epsilon-helium", "helium enrichment efficiency, used to calculate helium enrichment timescale"),
                               epsilon_bh(input_par_store, 0.06, "epsilon-bh", "the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH"),
                               gravitational_constant(input_par_store, 1.0, "G", "gravitational constant"),
@@ -74,7 +74,7 @@ public:
             {stellar_radius_scale.key, required_argument, &merger_flag, 2},
             {merger_time_delay.key, required_argument, &merger_flag, 3},
             {stellar_seed_mass.key, required_argument, &merger_flag, 4},
-            {initial_equilibrium_mass.key, required_argument, &merger_flag, 5},
+            {initial_equilbrium_mass.key, required_argument, &merger_flag, 5},
             {lambda0.key, required_argument, &merger_flag, 6},
             {helium_fraction_disk.key, required_argument, &merger_flag, 7},
             {salpeter_timescale.key, required_argument, &merger_flag, 8},
@@ -120,8 +120,8 @@ public:
                     opt_used+=2;
                     break;
                 case 5:
-                    initial_equilibrium_mass.value = atof(optarg);
-                    if(print_flag) initial_equilibrium_mass.print(std::cout);
+                    initial_equilbrium_mass.value = atof(optarg);
+                    if(print_flag) initial_equilbrium_mass.print(std::cout);
                     opt_used+=2;
                     break;
                 case 6:
@@ -212,10 +212,10 @@ public:
     Float stellar_radius_scale; //!< radius scale
     Float merger_time_delay; //!< time delay for merger to increase mass
     Float stellar_seed_mass; //!< initial mass of star seed
-    Float initial_equlibrium_mass; //!< initial equilibrium mass of star;
+    Float initial_equlibrium_mass; //!< initial equilbrium mass of star;
     Float lambda0; //!< fraction of star's intrinsic luminosity over the Eddington luminosity
-    Float helium_fraction_disk; //!< helium fraction in the disk, used to calculate the equilibrium mass
-    Float salpeter_timescale; //!< Salpeter timescale, for the star to reach equilibrium if NUMERIC_FLOAT_MAX, no growth
+    Float helium_fraction_disk; //!< helium fraction in the disk, used to calculate the equilbrium mass
+    Float salpeter_timescale; //!< Salpeter timescale, for the star to reach equilbrium if NUMERIC_FLOAT_MAX, no growth
     Float epsilon_helium; //!< helium enrichment efficiency, used to calculate helium enrichment timescale
     Float epsilon_bh; //!< the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH
     Float gravitational_constant; //!< gravitational constant
@@ -288,7 +288,7 @@ public:
         stellar_radius_scale = _input.stellar_radius_scale.value;
         merger_time_delay = _input.merger_time_delay.value;
         stellar_seed_mass = _input.stellar_seed_mass.value;
-        initial_equlibrium_mass = _input.initial_equilibrium_mass.value;
+        initial_equlibrium_mass = _input.initial_equilbrium_mass.value;
         lambda0 = _input.lambda0.value;
         helium_fraction_disk = _input.helium_fraction_disk.value;
         salpeter_timescale = _input.salpeter_timescale.value;
@@ -372,7 +372,7 @@ public:
     }
 
     //! calculate mass change
-    /*! Calculate mass change, for mass < target mass, increase mass; for mass > equilibrium mass, decrease mass
+    /*! Calculate mass change, for mass < target mass, increase mass; for mass > equilbrium mass, decrease mass
         Increase mass formula:  
         dM/dt = c M^2
         c: mass growth factor
@@ -388,7 +388,7 @@ public:
         // no mass change if salpeter_timescale is NUMERIC_FLOAT_MAX        
         if (salpeter_timescale == NUMERIC_FLOAT_MAX) return 0; 
 
-        // if type is star, evolve mass to equilibrium mass    
+        // if type is star, evolve mass to equilbrium mass    
         if (p->star.getType()==StarType::star) {
             Float dt = time - p->star.last_mass_change_time;
             if (dt>0) {
@@ -416,14 +416,14 @@ public:
                     return_flag = 1;
                 }
                 else {
-                    // calculate equilibrium mass
-                    Float equilibrium_mass = initial_equlibrium_mass * std::pow(helium_fraction_disk / p->star.helium_fraction, 2.5);
+                    // calculate equilbrium mass
+                    Float equilbrium_mass = initial_equlibrium_mass * std::pow(helium_fraction_disk / p->star.helium_fraction, 2.5);
 
                     // Eddington accretion rate m'_edd = r/r_grav * m / tau_salpeter = r c^2 / (G tau_salpeter)
                     Float mdot_eddington = p->radius * speed_of_light * speed_of_light / (gravitational_constant * salpeter_timescale);
 
                     // factor of star's intrinsic luminosity over the Eddington luminosity
-                    Float m_frac_8 = std::pow(p->mass / equilibrium_mass, 8.0);
+                    Float m_frac_8 = std::pow(p->mass / equilbrium_mass, 8.0);
                     Float s_fb = ( 1 - m_frac_8/(1 + m_frac_8));
                     s_fb = s_fb * s_fb;
 
