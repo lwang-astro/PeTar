@@ -26,6 +26,18 @@ struct Particle{
         }
     }
 
+    void writeBinary(FILE* fp) const {
+        fwrite(this, sizeof(*this), 1, fp);
+    }
+
+    void writeBinary(std::ostream & _fout) const {
+        _fout.write(reinterpret_cast<const char*>(this), sizeof(*this));
+    }
+
+    void readBinary(std::istream & _fin) {
+        _fin.read(reinterpret_cast<char*>(this), sizeof(*this));
+    }
+
     //! print titles of class members using column style
     /*! print titles of class members in one line for column style
       @param[out] _fout: std::ostream output object
@@ -91,8 +103,9 @@ int main(int argc, char** argv){
     bool help_flag=false;
     //bool unit_astro_flag = false;
     bool measure_flag = false;
+    bool out_binary = true;
 
-    while ((arg_label = getopt_long(argc, argv, "-muh", long_options, &option_index)) != -1)
+    while ((arg_label = getopt_long(argc, argv, "-muAh", long_options, &option_index)) != -1)
         switch (arg_label) {
         case 0:
             switch (long_flag) {
@@ -110,9 +123,14 @@ int main(int argc, char** argv){
         //    std::cout<<"Use the astronomical unit set (Myr, pc, Msun)\n";
         //    opt_used ++;
         //    break;
+        case 'A':
+            out_binary = false;
+            std::cout<<"Output in ASCII format\n";
+            opt_used ++;
+            break;
         case 'h':
             std::cout<<"The tool to calculate acceleration, potential and mass density for a given particle list \n"
-                     <<"Usage: petar.ext [options] [data file]\n"
+                     <<"Usage: petar.external [options] [data file]\n"
                      <<"       data file format: if -m, file contains the mesh parameters\n"
                      <<"                             one line: time, dt_evolve, n_step_evolve, dt_output, x_min, x_max, n_x, y_min, y_max, n_y, z_min, z_max, n_z\n"
                      <<"                         else file contains a particle list\n"
@@ -124,6 +142,7 @@ int main(int argc, char** argv){
                      <<"            header line:  time nx ny\n"
                      <<"            each line: mass x y z vx vy vz ax ay az pot den\n"
                      <<"            Time-dependent potential is also supported.\n"
+                     <<"    -A    : output in ASCII format when -m mode is used (default: BINARY)\n"
                      <<"    -h    : help\n";
             help_flag=true;
             break;
@@ -190,10 +209,22 @@ int main(int argc, char** argv){
 #endif
 
             if (out_flag) {
-                fxy.open(("xy"+std::to_string(i)).c_str(), std::ifstream::out);
-                fxz.open(("xz"+std::to_string(i)).c_str(), std::ifstream::out);
-                fxy<<time<<" "<<nx<<" "<<ny<<std::endl;
-                fxz<<time<<" "<<nx<<" "<<nz<<std::endl;
+                if (out_binary) {
+                    fxy.open(("xy"+std::to_string(i)).c_str(), std::ifstream::binary | std::ifstream::out);
+                    fxz.open(("xz"+std::to_string(i)).c_str(), std::ifstream::binary | std::ifstream::out);
+                    fxy.write(reinterpret_cast<const char*>(&time), sizeof(time));
+                    fxy.write(reinterpret_cast<const char*>(&nx), sizeof(nx));
+                    fxy.write(reinterpret_cast<const char*>(&ny), sizeof(ny));
+                    fxz.write(reinterpret_cast<const char*>(&time), sizeof(time));
+                    fxz.write(reinterpret_cast<const char*>(&nx), sizeof(nx));
+                    fxz.write(reinterpret_cast<const char*>(&nz), sizeof(nz));
+                }
+                else {
+                    fxy.open(("xy"+std::to_string(i)).c_str(), std::ifstream::out);
+                    fxz.open(("xz"+std::to_string(i)).c_str(), std::ifstream::out);
+                    fxy<<time<<" "<<nx<<" "<<ny<<std::endl;
+                    fxz<<time<<" "<<nx<<" "<<nz<<std::endl;
+                }
                 Particle particle_xy[nx][ny];
                 Particle particle_xz[nx][ny];
                 for (int j=0; j<nx; j++) {
@@ -215,8 +246,13 @@ int main(int argc, char** argv){
 #elif AGAMA
                         agama_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos); 
 #endif
-                        pjk.printColumn(fxy);
-                        fxy<<std::endl;
+                        if (out_binary) {
+                            pjk.writeBinary(fxy);
+                        }
+                        else {
+                            pjk.printColumn(fxy);
+                            fxy<<std::endl;
+                        }
                     }
                 
                     for (int k=0; k<nz; k++) {
@@ -236,8 +272,13 @@ int main(int argc, char** argv){
 #elif AGAMA
                         agama_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos); 
 #endif
-                        pjk.printColumn(fxz);
-                        fxz<<std::endl;
+                        if (out_binary) {
+                            pjk.writeBinary(fxz);
+                        }
+                        else {
+                            pjk.printColumn(fxz);
+                            fxz<<std::endl;
+                        }   
                     }
                 }
                 fxy.close();

@@ -50,7 +50,7 @@ public:
                               initial_equilbrium_mass(input_par_store, 253.3124306069483, "initial-equilbrium-mass", "initial equilbrium mass of star"), 
                               lambda0(input_par_store, 0.75, "lambda0", "fraction of star's intrinsic luminosity over the Eddington luminosity without merger"),   
                               helium_fraction_disk(input_par_store, 0.28, "helium-fraction-disk", "helium fraction in the disk, used to calculate the equilbrium mass"),
-                              salpeter_timescale(input_par_store, NUMERIC_FLOAT_MAX, "salpeter-timescale", "salpeter timescale, for the star to reach equilbrium, if NUMERIC_FLOAT_MAX, no growth"),
+                              salpeter_timescale(input_par_store, NUMERIC_FLOAT_MAX, "salpeter-timescale", "salpeter timescale, for the star to reach equilbrium, if NUMERIC_FLOAT_MAX (default), no stellar evolution"),
                               epsilon_helium(input_par_store, 0.006, "epsilon-helium", "helium enrichment efficiency, used to calculate helium enrichment timescale"),
                               epsilon_bh(input_par_store, 0.06, "epsilon-bh", "the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH"),
                               gravitational_constant(input_par_store, 1.0, "G", "gravitational constant"),

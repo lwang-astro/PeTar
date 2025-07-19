@@ -58,6 +58,7 @@ public:
     IOParams<PS::F64> eps;
     IOParams<PS::F64> r_group;
     IOParams<PS::F64> r_search_group;
+    IOParams<PS::F64> r_acc_offset;
     IOParams<PS::S64> n_step_per_orbit;
     IOParams<PS::S64> tidal_tensor_switcher;
 #ifdef ORBIT_SAMPLING
@@ -95,8 +96,9 @@ public:
 #endif
                     gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant", NULL, false),
                     eps              (input_par_store, 0.0,  "soft-eps", "Softening epsilon"),
-                    r_group          (input_par_store,-1.0,  "r-group", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.)","0.8*r_in"),
-                    r_search_group   (input_par_store,-1.0,  "r-search-group", "The radial criterion for detecting multiple group candidates", "1.0*r_in"),
+                    r_group          (input_par_store,-1.0,  "r-group", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.); = -1: auto-determine by 0.8*r_in; = 0: switch off SDAR; > 0: custom criterion value"),
+                    r_search_group   (input_par_store,-1.0,  "r-search-group", "The radial criterion for detecting multiple group candidates; = -1: auto-determine by 1.0*r_in; = 0: switch off SDAR; > 0: custom criterion value"),
+                    r_acc_offset     (input_par_store, 0.0,  "hermite-r-acc0", "radius for computing acceleration offset in time step calculation to avoid too small step when weak acceleration exist; = 0: use r_out; > 0: custom offset value"),
                     n_step_per_orbit (input_par_store, 8,    "tt-nstep", "Number of steps per slow-down binary orbits (period/dt_soft) for isolated binaries; also the maximum criterion for activating tidal tensor method"),
                     tidal_tensor_switcher(input_par_store, 1,"tt-switch", "Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0: off, 1: on"),
 #ifdef ORBIT_SAMPLING
@@ -145,6 +147,7 @@ public:
             {eps.key,                    required_argument, &hard_flag, 2},
             {r_group.key,                required_argument, &hard_flag, 3},
             {r_search_group.key,         required_argument, &hard_flag, 4},
+            {r_acc_offset.key,           required_argument, &hard_flag, 23},
             {n_step_per_orbit.key,       required_argument, &hard_flag, 5},
             {tidal_tensor_switcher.key,  required_argument, &hard_flag, 6},
 #ifdef ORBIT_SAMPLING
@@ -200,13 +203,13 @@ public:
                         r_group.value = atof(optarg);
                         if(print_flag) r_group.print(std::cout);
                         opt_used += 2;
-                        assert(r_group.value>=0.0);
+                        //assert(r_group.value>=0.0);
                         break;
                     case 4:
                         r_search_group.value = atof(optarg);
                         if(print_flag) r_search_group.print(std::cout);
                         opt_used += 2;
-                        assert(r_search_group.value>=0.0);
+                        //assert(r_search_group.value>=0.0);
                         break;
                     case 5:
                         n_step_per_orbit.value = atof(optarg);
@@ -312,6 +315,11 @@ public:
                     case 22:
                         record_id_end_two.value = atoi(optarg);
                         if(print_flag) record_id_end_two.print(std::cout);
+                        opt_used += 2;
+                        break;
+                    case 23:
+                        r_acc_offset.value = atof(optarg);
+                        if(print_flag) r_acc_offset.print(std::cout);
                         opt_used += 2;
                         break;
                     default:
@@ -471,7 +479,8 @@ public:
 #endif
         h4_manager.step.eta_4th = _input.eta.value;
         h4_manager.step.eta_2nd = _input.eta_init.value;
-        h4_manager.step.calcAcc0OffsetSq(_mass_average, r_out_base, _input.gravitational_constant.value);
+        if (_input.r_acc_offset.value==0.0) _input.r_acc_offset.value = _r_out_base;
+        h4_manager.step.calcAcc0OffsetSq(_mass_average, _input.r_acc_offset.value, _input.gravitational_constant.value);
         if (_input.dt_max_hermite.value==0.0) _input.dt_max_hermite.value = _dt_soft;
         setDtRange(_input.dt_max_hermite.value, _input.dt_min_hermite_index.value);
 
@@ -515,6 +524,19 @@ public:
 
         // link global status 
         status = &_stat;
+
+        // print parameters
+        if(_print_flag) {
+            std::cout<<"----- Hard Parameter list: -----\n";
+            std::cout<<" Mean search group radius:         = "<<_input.r_search_group.value<<std::endl
+                     <<" Mean group radius                 = "<<_input.r_group.value       <<std::endl
+                     <<" Hermite timestep coefficient 4th  = "<<_input.eta.value <<std::endl
+                     <<" Hermite timestep coefficient init = "<<_input.eta_init.value <<std::endl
+                     <<" Hermite maximum timestep          = "<<_input.dt_max_hermite.value <<std::endl
+                     <<" AR slowdown maximum timescale     = "<<ar_manager.slowdown_timescale_max<<std::endl
+                     <<" AR slowdown perturbation criterion= "<<ar_manager.slowdown_pert_ratio_ref<<std::endl
+                     <<" Artificial particle ID offset     = "<<ap_manager.id_offset<<std::endl;
+        }
 
         checkParams();
     }    
