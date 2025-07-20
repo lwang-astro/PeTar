@@ -50,7 +50,7 @@ public:
                               initial_equilbrium_mass(input_par_store, 253.3124306069483, "initial-equilbrium-mass", "initial equilbrium mass of star"), 
                               lambda0(input_par_store, 0.75, "lambda0", "fraction of star's intrinsic luminosity over the Eddington luminosity without merger"),   
                               helium_fraction_disk(input_par_store, 0.28, "helium-fraction-disk", "helium fraction in the disk, used to calculate the equilbrium mass"),
-                              salpeter_timescale(input_par_store, NUMERIC_FLOAT_MAX, "salpeter-timescale", "salpeter timescale, for the star to reach equilbrium, if NUMERIC_FLOAT_MAX (default), no stellar evolution"),
+                              salpeter_timescale(input_par_store, 0, "salpeter-timescale", "salpeter timescale, for the star to reach equilbrium, if zero, no stellar evolution"),
                               epsilon_helium(input_par_store, 0.006, "epsilon-helium", "helium enrichment efficiency, used to calculate helium enrichment timescale"),
                               epsilon_bh(input_par_store, 0.06, "epsilon-bh", "the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH"),
                               gravitational_constant(input_par_store, 1.0, "G", "gravitational constant"),
@@ -250,7 +250,7 @@ public:
         assert(initial_equlibrium_mass>0.0);
         assert(lambda0>0.0);
         assert(helium_fraction_disk>0.0);
-        assert(salpeter_timescale>0.0);
+        assert(salpeter_timescale>=0.0);
         assert(epsilon_helium>0.0 && epsilon_helium<=1.0);
         assert(epsilon_bh>0.0 && epsilon_bh<=1.0);
         assert(gravitational_constant>0.0);
@@ -385,8 +385,8 @@ public:
     int calcMassChange(TParticle* p, const Float& time) {
         int return_flag = 0;
 
-        // no mass change if salpeter_timescale is NUMERIC_FLOAT_MAX        
-        if (salpeter_timescale == NUMERIC_FLOAT_MAX) return 0; 
+        // no mass change if salpeter_timescale is 0        
+        if (salpeter_timescale == 0) return 0; 
 
         // if type is star, evolve mass to equilbrium mass    
         if (p->star.getType()==StarType::star) {
