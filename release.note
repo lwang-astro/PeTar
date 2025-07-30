@@ -41,6 +41,8 @@
 39. Add Agama library interface with help from Eugene Vasiliev. 
 40. Add option check function, if option is not defined in petar commander, print error message and abort.
 41. Fix a bug of neighbor searching for SIMD 64b mode.
+42. Add SIMD function for computing force gradient (correction) in the KDKDK-4TH mode.
+43. Add new option 'sigma-dt-soft-factor' to control the factor determing dt_soft and changeover radii; switch the default method to nstep-dt-soft-kepler with 64.0
 
 **Some existing issues include**
 

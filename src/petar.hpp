@@ -110,6 +110,7 @@ public:
     IOParams<PS::F64> r_out;
     IOParams<PS::F64> r_in_over_out;
     IOParams<PS::F64> nstep_dt_soft_kepler;
+    IOParams<PS::F64> sigma_dt_soft_factor; // factor for dt_soft based on sigma_1D
     IOParams<PS::F64> search_vel_factor;
     IOParams<PS::F64> search_peri_factor;
     IOParams<PS::F64> r_search_min;
@@ -141,10 +142,11 @@ public:
                      unit_set         (input_par_store, 0,    "u", "Input data unit; 0: based on the value of G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr, modify G to fit this unit set"),
                      gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant, if -u 1, G = 0.00449830997959438 pc^3/(Msun*Myr^2)"),
                      n_glb            (input_par_store, 100000, "n", "Total number of particles, used only when the input data filename is __Plummer"),
-                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft); = 0: without --nstep-dt-soft-kepler, dt_soft = 0.1*r_out/sigma_1D, where sigma_1D is 1D half-mass radius velocity dispersion; = 0: with '--nstep-dt-soft-kepler nstep', dt_soft = P(r_in)/nstep; > 0: custom dt_soft value"),
+                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft); = 0: without --nstep-dt-soft-kepler, dt_soft = sigma_factor*r_in/sigma_3D;      where sigma_3D is 3D half-mass radius velocity dispersion, sigma_factor is determined by --sigma-dt-soft-factor; = 0: with '--nstep-dt-soft-kepler nstep', dt_soft = P(r_in)/nstep; > 0: custom dt_soft value"),
                      r_out            (input_par_store, 0.0,  "r", "Outer changeover radius (r_out); = 0: without -s, r_out = 0.1 GM/[N^(1/3) sigma_3D^2], where sigma_3D is 3D half-mass radius velocity dispersion; = 0: with '-s dt_soft', r_out = 10*dt_soft*sigma_1D; > 0: custom r_out value"),
                      r_in_over_out    (input_par_store, 0.1,  "r-ratio", "Ratio between inner (r_in) and outer (r_out) changeover radii"),
-                     nstep_dt_soft_kepler(input_par_store, 0.0, "nstep-dt-soft-kepler", "Determines the dt_soft by P(r_in)/nstep; P(r_in) is the binary period with the semi-major axis of r_in; nstep is the argument of this option (e.g., 32.0)", "not used"),
+                     nstep_dt_soft_kepler(input_par_store, 64.0, "nstep-dt-soft-kepler", "Determines the dt_soft by P(r_in)/nstep; P(r_in) is the binary period with the semi-major axis of r_in; nstep is the argument of this option; = 0: not used, apply sigma_dt_soft_factor; > 0: use this option to determine dt_soft"),
+                     sigma_dt_soft_factor(input_par_store, 0.0, "sigma-dt-soft-factor", "Factor for dt_soft based on sigma_3D, dt_soft = sigma_factor*r_in/sigma_3D; = 0: not used, apply nstep_dt_soft_kepler; > 0: use this option to determine dt_soft"),
                      search_vel_factor (input_par_store, 3.0,  "search-vel-factor", "Neighbor search coefficient for velocity check (v*dt)"),
                      search_peri_factor(input_par_store, 1.5, "search-peri-factor", "Neighbor search coefficient for periapsis check"),
                      r_search_min     (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters; = 0: auto-determine by max(search-vel-factor*sigma_1D*dt_soft + rout, 1.2 r_out); > 0: custom search radius value"),
@@ -174,11 +176,12 @@ public:
             {n_smp_ave.key,            required_argument, &petar_flag, 3},
             {r_in_over_out.key,        required_argument, &petar_flag, 4},
             {nstep_dt_soft_kepler.key, required_argument, &petar_flag, 5},
-            {search_vel_factor.key,    required_argument, &petar_flag, 6},  
-            {search_peri_factor.key,   required_argument, &petar_flag, 7}, 
-            {r_search_min.key,         required_argument, &petar_flag, 8},
-            {r_escape.key,             required_argument, &petar_flag, 9},
-            {"disable-print-info",     no_argument,       &petar_flag, 10},
+            {sigma_dt_soft_factor.key, required_argument, &petar_flag, 6},
+            {search_vel_factor.key,    required_argument, &petar_flag, 7},  
+            {search_peri_factor.key,   required_argument, &petar_flag, 8}, 
+            {r_search_min.key,         required_argument, &petar_flag, 9},
+            {r_escape.key,             required_argument, &petar_flag, 10},
+            {"disable-print-info",     no_argument,       &petar_flag, 11},
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
         };
@@ -223,30 +226,36 @@ public:
                     opt_used += 2;
                     break;
                 case 6:
+                    sigma_dt_soft_factor.value = atof(optarg);
+                    if(print_flag) sigma_dt_soft_factor.print(std::cout);
+                    opt_used += 2;
+                    assert(sigma_dt_soft_factor.value>0.0);
+                    break;
+                case 7:
                     search_vel_factor.value = atof(optarg);
                     if(print_flag) search_vel_factor.print(std::cout);
                     opt_used += 2;
                     update_rsearch_flag = true;
                     assert(search_vel_factor.value>0.0);
                     break;
-                case 7:
+                case 8:
                     search_peri_factor.value = atof(optarg);
                     if(print_flag) search_peri_factor.print(std::cout);
                     opt_used += 2;
                     assert(search_peri_factor.value>=1.0);
                     break;
-                case 8:
+                case 9:
                     r_search_min.value = atof(optarg);
                     if(print_flag) r_search_min.print(std::cout);
                     update_rsearch_flag = true;
                     opt_used += 2;
                     break;
-                case 9:
+                case 10:
                     r_escape.value = atof(optarg);
                     if(print_flag) r_escape.print(std::cout);
                     opt_used += 2;
                     break;
-                case 10:
+                case 11:
                     print_flag = false;
                     opt_used ++;
                     break;
@@ -1037,8 +1046,12 @@ public:
 #endif
         // correction calculation
         //tree_soft.setParticaleLocalTree(system_soft, false);
-        
+
+#ifdef USE_SIMD
+        tree_nb.calcForceAllAndWriteBack(CalcCorrectEpEpWithLinearCutoffSimd(), system_soft, dinfo);
+#else
         tree_nb.calcForceAllAndWriteBack(CalcCorrectEpEpWithLinearCutoffNoSimd(), system_soft, dinfo);
+#endif
 
 #ifdef PROFILE
         tree_soft_profile += tree_nb.getTimeProfile();
@@ -2942,6 +2955,7 @@ public:
         PS::S64& n_bin         =  input_parameters.n_bin.value;
         PS::F64& G             =  input_parameters.gravitational_constant.value;
         PS::F64& nstep_dt_soft_kepler = input_parameters.nstep_dt_soft_kepler.value;
+        PS::F64& sigma_dt_soft_factor = input_parameters.sigma_dt_soft_factor.value;
 
         // local particle number
         const PS::S64 n_loc = system_soft.getNumberOfParticleLocal();
@@ -3051,9 +3065,9 @@ public:
             else {
                 // 1/nstep of a binary period with semi-major axis = r_int.
                 if (nstep_dt_soft_kepler>0)  
-                    dt_soft = regularTimeStep(COMM::Binary::semiToPeriod(r_in, mass_average, G)/nstep_dt_soft_kepler);
+                    dt_soft = regularTimeStep(COMM::Binary::semiToPeriod(r_in, 2.0*mass_average, G)/nstep_dt_soft_kepler);
                 else 
-                    dt_soft = regularTimeStep(0.1*r_out / vel_disp);
+                    dt_soft = regularTimeStep(sigma_dt_soft_factor * r_in / (std::sqrt(3)*vel_disp));
             }
         }
         else {
@@ -3062,12 +3076,14 @@ public:
             if (!r_out_flag) {
                 if (n_glb>1) {
                     if (nstep_dt_soft_kepler>0) {
-                            r_in = COMM::Binary::periodToSemi(dt_soft*nstep_dt_soft_kepler, mass_average, G);
+                            r_in = COMM::Binary::periodToSemi(dt_soft*nstep_dt_soft_kepler, 2.0*mass_average, G);
                             r_out = r_in / r_in_over_out;
                     }
                     else {
-                        r_out = 10.0*dt_soft*vel_disp;
-                        r_in = r_out * r_in_over_out;
+                        r_in = dt_soft*std::sqrt(3)*vel_disp/sigma_dt_soft_factor;
+                        r_out = r_in / r_in_over_out;		      
+                        // r_out = 10.0*dt_soft*vel_disp;
+                        //r_in = r_out * r_in_over_out;
                     }
                 }
                 else {

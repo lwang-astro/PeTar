@@ -422,6 +422,76 @@ struct CalcForceEpEpWithLinearCutoffSimd{
     }
 };
 
+
+#ifdef KDKDK_4TH
+struct CalcCorrectEpEpWithLinearCutoffSimd{
+    void operator () (const EPISoft * ep_i,
+                      const PS::S32 n_ip,
+                      const EPJSoft * ep_j,
+                      const PS::S32 n_jp,
+                      ForceSoft * force){
+        const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+        const PS::F64 G = ForceSoft::grav_const;
+        PS::S32 ep_j_list[n_jp], n_jp_local=0;
+        PS::S32 ep_i_list[n_ip], n_ip_local=0;
+        for (PS::S32 i=0; i<n_jp; i++){
+            if(ep_j[i].mass>0) ep_j_list[n_jp_local++] = i;
+        }
+    #ifdef __HPC_ACE__
+        PhantomGrapeQuad pg;
+    #else
+        #if defined(CALC_EP_64bit) || defined(CALC_EP_MIX)
+        static thread_local PhantomGrapeQuad64Bit pg;
+        #else
+        static thread_local PhantomGrapeQuad pg;
+        #endif
+    #endif
+        if(n_ip > pg.NIMAX || n_jp > pg.NJMAX){
+            std::cout<<"ni= "<<n_ip<<" NIMAX= "<<pg.NIMAX<<" nj= "<<n_jp<<" NJMAX= "<<pg.NJMAX<<std::endl;
+        }
+        assert(n_ip<=pg.NIMAX);
+        assert(n_jp<=pg.NJMAX);
+        pg.set_eps2(eps2);
+        pg.set_r_crit2(EPISoft::r_out*EPISoft::r_out);
+        for(PS::S32 i=0; i<n_ip; i++){
+            // remove the orbital sample for the force calculation
+            if (ep_i[i].type==1) {
+                ep_i_list[n_ip_local] = i;
+                const PS::F64vec pos_i = ep_i[i].pos;
+                const PS::F64vec acci = ep_i[i].acc;
+                pg.set_epi_acci_one(i, pos_i.x, pos_i.y, pos_i.z, acci.x, acci.y, acci.z);
+                n_ip_local++;
+            }
+        }
+        PS::S32 loop_max = (n_jp_local-1) / PhantomGrapeQuad::NJMAX + 1;
+        for(PS::S32 loop=0; loop<loop_max; loop++){
+            const PS::S32 ih = PhantomGrapeQuad::NJMAX*loop;
+            const PS::S32 n_jp_tmp = ( (n_jp_local - ih) < PhantomGrapeQuad::NJMAX) ? (n_jp_local - ih) : PhantomGrapeQuad::NJMAX;
+            const PS::S32 it =ih + n_jp_tmp;
+            PS::S32 i_tmp = 0;
+            for(PS::S32 i=ih; i<it; i++, i_tmp++){
+                const PS::S32 ij = ep_j_list[i];
+                const PS::F64 m_j = ep_j[ij].mass;
+                const PS::F64vec pos_j = ep_j[ij].pos;
+                const PS::F64vec accj = ep_j[ij].acc;
+                pg.set_epj_accj_one(i_tmp, pos_j.x, pos_j.y, pos_j.z, m_j, accj.x, accj.y, accj.z);
+
+            }
+            pg.run_acorr_epj_for_p3t_with_linear_cutoff(n_ip, n_jp_tmp);
+            for(PS::S32 k=0; k<n_ip_local; k++){
+                PS::S32 i=ep_i_list[k];
+                PS::F64 a[3]= {0,0,0};
+                pg.accum_acorr_one(i, a[0], a[1], a[2]);
+                force[i].acorr[0] -= 2.0 * G * a[0];
+                force[i].acorr[1] -= 2.0 * G * a[1];
+                force[i].acorr[2] -= 2.0 * G * a[2];
+                force[i].acc = ep_i[i].acc; // keep the original acceleration
+            }
+        }
+    }
+};
+#endif // KDKDK4
+
 struct CalcForceEpSpMonoSimd{
     template<class Tsp>
     void operator () (const EPISoft * ep_i,

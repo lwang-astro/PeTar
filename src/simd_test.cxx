@@ -27,6 +27,7 @@
 #include "soft_force.hpp"
 #include "io.hpp"
 #include "particle_distribution_generator.hpp"
+#include "hard_ptcl.hpp"
 #include "static_variables.hpp"
 #ifdef USE_GPU
 #include "force_gpu_cuda.hpp"
@@ -57,8 +58,8 @@ void setSpj(const PS::F64 N, SPJSoft& sp) {
 }
 
 int main(int argc, char **argv){
-    const int Nepi = 1000;
-    const int Nepj = 2000;
+    const int Nepi = 2000;
+    const int Nepj = 1000;
     const int Nspj = 1000;
 
     const int N = std::max(Nepi,Nepj);
@@ -182,6 +183,20 @@ int main(int argc, char **argv){
     t_nb_simd -= PS::GetWtime();
     f_nb_simd(epi, Nepi, epj, Nepj, force_nb_simd);
     t_nb_simd += PS::GetWtime();
+
+#ifdef KDKDK_4TH
+    std::cout<<"calc correction simd\n";
+    CalcCorrectEpEpWithLinearCutoffSimd f_ep_ep_corr_simd;
+    for (int i=0; i<Nepi; i++) 
+        epi[i].acc = force_simd[i].acc;    
+    for (int i=0; i<Nepj; i++) 
+        epj[i].acc = force_simd[i].acc; // for correction
+
+    PS::F64 t_ep_corr_simd=0;
+    t_ep_corr_simd -= PS::GetWtime();
+    f_ep_ep_corr_simd(epi, Nepi, epj, Nepj, force_simd);
+    t_ep_corr_simd += PS::GetWtime();
+#endif
 #endif
 
 #ifdef USE_FUGAKU
@@ -231,6 +246,19 @@ int main(int argc, char **argv){
     f_ep_sp(epi, Nepi, spj, Nspj, force_sp);
     t_sp_no += PS::GetWtime();
 
+#ifdef KDKDK_4TH
+    std::cout<<"calc correction\n";
+    CalcCorrectEpEpWithLinearCutoffNoSimd f_ep_ep_corr;
+    for (int i=0; i<Nepi; i++) 
+        epi[i].acc = force[i].acc;
+    for (int i=0; i<Nepj; i++)
+        epj[i].acc = force[i].acc; // for correction
+    PS::F64 t_ep_corr_no=0;
+    t_ep_corr_no -= PS::GetWtime();
+    f_ep_ep_corr(epi, Nepi, epj, Nepj, force);
+    t_ep_corr_no += PS::GetWtime();
+#endif
+    
     std::cout<<"neighbor search\n";
     SearchNeighborEpEpNoSimd f_nb;
     PS::F64 t_nb=0;
@@ -269,6 +297,11 @@ int main(int argc, char **argv){
             df = (force_sp[i].acc[j]-force_sp_simd[i].acc[j])/force_sp[i].acc[j];
             dsmax_simd = std::max(dsmax_simd, df);
             if(df>DF_MAX) std::cerr<<"Force sp diff: i="<<i<<" nosimd["<<j<<"] "<<force_sp[i].acc[j]<<" simd["<<j<<"] "<<force_sp_simd[i].acc[j]<<std::endl;
+#ifdef KDKDK_4TH
+            df = (force[i].acorr[j]-force_simd[i].acorr[j])/force[i].acorr[j];
+            dfmax_simd = std::max(dfmax_simd, df);
+            if(df>DF_MAX) std::cerr<<"Correction diff: i="<<i<<" nosimd["<<j<<"] "<<force[i].acorr[j]<<" simd["<<j<<"] "<<force_simd[i].acorr[j]<<std::endl;
+#endif            
 #endif
 #ifdef USE_GPU
             dfmax_gpu = std::max(dfmax_gpu, df);
@@ -396,6 +429,10 @@ int main(int argc, char **argv){
 #ifdef USE_SIMD
     std::cout<<"Time: epj  simd="<<t_ep_simd<<" no="<<t_ep_no<<" ratio="<<t_ep_no/t_ep_simd<<std::endl;
     std::cout<<"Time: spj  simd="<<t_sp_simd<<" no="<<t_sp_no<<" ratio="<<t_sp_no/t_sp_simd<<std::endl;
+    std::cout<<"Time: nb   simd="<<t_nb_simd<<" no="<<t_nb<<" ratio="<<t_nb/t_nb_simd<<std::endl;
+#ifdef KDKDK_4TH
+    std::cout<<"Time: epj corr simd="<<t_ep_corr_simd<<" no="<<t_ep_corr_no<<" ratio="<<t_ep_corr_no/t_ep_corr_simd<<std::endl;
+#endif
 #endif
 #ifdef USE_GPU
     std::cout<<"Time: gpu ="<<t_gpu<<" no="<<t_ep_no+t_sp_no<<" ratio="<<(t_ep_no+t_sp_no)/t_gpu<<std::endl;
