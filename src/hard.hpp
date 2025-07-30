@@ -1256,14 +1256,14 @@ public:
 #endif                
 
 #ifdef HARD_DEBUG_PRINT
-                //PS::F64 dt_max = 0.0;
-                //PS::S32 n_group = h4_int.getNGroup();
-                //PS::S32 n_single = h4_int.getNSingle();
-                //if (n_group>0) dt_max = h4_int.groups[h4_int.getSortDtIndexGroup()[n_group-1]].particles.cm.dt;
-                //if (n_single>0) dt_max = std::max(dt_max, h4_int.particles[h4_int.getSortDtIndexSingle()[n_single-1]].dt);
-                //ASSERT(dt_max>0.0);
+                PS::F64 dt_max = 0.0;
+                PS::S32 n_group = h4_int.getNGroup();
+                PS::S32 n_single = h4_int.getNSingle();
+                if (n_group>0) dt_max = h4_int.groups[h4_int.getSortDtIndexGroup()[n_group-1]].particles.cm.dt;
+                if (n_single>0) dt_max = std::max(dt_max, h4_int.particles[h4_int.getSortDtIndexSingle()[n_single-1]].dt);
+                ASSERT(dt_max>0.0);
                 auto& h4_manager = manager->h4_manager;
-                if (fmod(h4_int.getTimeInt(), h4_manager.step.getDtMax()/HARD_DEBUG_PRINT_FEQ)==0.0) {
+                if (fmod(h4_int.getTimeInt(), dt_max/HARD_DEBUG_PRINT_FEQ)==0.0) {
                     h4_int.calcEnergySlowDown(false);
 
                     h4_int.printColumn(fout_debug, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
