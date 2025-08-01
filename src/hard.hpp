@@ -72,6 +72,8 @@ public:
     IOParams<PS::F64> e_err_ar;
     IOParams<PS::S64> step_limit_ar;
     IOParams<PS::F64> sd_factor;
+    IOParams<PS::F64> reinit_dt_dm_crit;
+    IOParams<PS::F64> reinit_dt_de_crit;
 #ifdef STELLAR_EVOLUTION
     IOParams<PS::S64> interrupt_detection_option;
 #ifdef BSE_BASE
@@ -112,6 +114,8 @@ public:
                     e_err_ar     (input_par_store, 1e-8,     "ar-max-error", "Maximum energy error allowed for the SDAR integrator"),
                     step_limit_ar(input_par_store, 1000000,  "ar-max-nstep", "Maximum step allowed for the SDAR sym integrator"),
                     sd_factor    (input_par_store, 1e-4,     "ar-slowdown-factor", "Slowdown perturbation criterion"),
+                    reinit_dt_dm_crit(input_par_store, 1e-4, "hermite-dm-crit", "Mass change rate criterion for reinitializing hermite time step"),
+                    reinit_dt_de_crit(input_par_store, 1e-4, "hermite-de-crit", "Ekin change rate criterion for reinitializing hermite time step"),
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
                     interrupt_detection_option(input_par_store, 1, "detect-interrupt", "Stellar evolution of binaries in SDAR integration; 0: switch off; 1: using BSE based code (if '--stellar-evolution != 0)"),
@@ -161,6 +165,8 @@ public:
             {e_err_ar.key,               required_argument, &hard_flag, 13},
             {step_limit_ar.key,          required_argument, &hard_flag, 14},
             {sd_factor.key,              required_argument, &hard_flag, 15},
+            {reinit_dt_dm_crit.key,      required_argument, &hard_flag, 24},
+            {reinit_dt_de_crit.key,      required_argument, &hard_flag, 25},
 #ifdef STELLAR_EVOLUTION
             {interrupt_detection_option.key,  required_argument, &hard_flag, 16},
 #ifdef BSE_BASE
@@ -275,6 +281,18 @@ public:
                         if(print_flag) sd_factor.print(std::cout);
                         opt_used += 2;
                         assert(sd_factor.value>0.0);
+                        break;
+                    case 24:
+                        reinit_dt_dm_crit.value = atof(optarg);
+                        if(print_flag) reinit_dt_dm_crit.print(std::cout);
+                        opt_used += 2;
+                        assert(reinit_dt_dm_crit.value>=0.0);
+                        break;
+                    case 25:
+                        reinit_dt_de_crit.value = atof(optarg);
+                        if(print_flag) reinit_dt_de_crit.print(std::cout);
+                        opt_used += 2;
+                        assert(reinit_dt_de_crit.value>=0.0);
                         break;
 #ifdef STELLAR_EVOLUTION
                     case 16:
@@ -481,6 +499,8 @@ public:
         h4_manager.step.calcAcc0OffsetSq(_mass_average, _input.r_acc_offset.value, _input.gravitational_constant.value);
         if (_input.dt_max_hermite.value==0.0) _input.dt_max_hermite.value = _dt_soft;
         setDtRange(_input.dt_max_hermite.value, _input.dt_min_hermite_index.value);
+        h4_manager.reinitialize_step_dm_criterion = _input.reinit_dt_dm_crit.value;
+        h4_manager.reinitialize_step_de_criterion = _input.reinit_dt_de_crit.value;
 
         ar_manager.step.initialSymplecticCofficients(-6);
         ar_manager.slowdown_timescale_max = _input.dt_max_hermite.value*n_step_per_orbit;
