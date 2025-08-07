@@ -119,6 +119,7 @@ public:
     IOParams<PS::S64> data_format;
     IOParams<PS::S64> write_style;
     IOParams<PS::S64> append_switcher;
+    IOParams<PS::S64> domain_weight_mode;
     IOParams<std::string> fname_snp;
     IOParams<std::string> fname_par;
     IOParams<std::string> fname_inp;
@@ -155,6 +156,7 @@ public:
                      data_format      (input_par_store, 1,    "i", "Data file reading and writing format; 0: read and write in BINARY; 1: read and write in ASCII; 2: read in ASCII, write in BINARY; 3: read in BINARY, write in ASCII"),
                      write_style      (input_par_store, 1,    "w", "Data file writing style; 0: no output; 1: write all files separately; 2. write snapshots in status files in one line per step (no MPI support); 3. write files except snapshots"),
                      append_switcher  (input_par_store, 1,    "a", "Data file output mode; 0: overwrite files except object dump files, include header lines; 1: append files except snapshots, no header line"),
+                     domain_weight_mode(input_par_store, 0, "domain-weight-mode", "Domain decomposition weight mode for MPI parallel; 0: equal weight for each MPI processor; 1: use force calculation time as weight to obtain better load balance with losing simulation reproducibility"),
                      fname_snp        (input_par_store, "data", "f", "Prefix of filenames for output data: [prefix].**"),
                      fname_par        (input_par_store, "input.par", "p", "Input parameter file (this option should be used first before any other options)"),
                      fname_inp        (input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false),
@@ -181,7 +183,8 @@ public:
             {search_peri_factor.key,   required_argument, &petar_flag, 8}, 
             {r_search_min.key,         required_argument, &petar_flag, 9},
             {r_escape.key,             required_argument, &petar_flag, 10},
-            {"disable-print-info",     no_argument,       &petar_flag, 11},
+            {domain_weight_mode.key,   required_argument, &petar_flag, 11},
+            {"disable-print-info",     no_argument,       &petar_flag, 12},
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
         };
@@ -256,6 +259,11 @@ public:
                     opt_used += 2;
                     break;
                 case 11:
+                    domain_weight_mode.value = atoi(optarg);
+                    if(print_flag) domain_weight_mode.print(std::cout);
+                    opt_used += 2;
+                    break;
+                case 12:
                     print_flag = false;
                     opt_used ++;
                     break;
@@ -421,6 +429,7 @@ public:
         assert(n_leaf_limit.value>0);
         assert(n_smp_ave.value>0.0);
         assert(theta.value>=0.0);
+        assert(domain_weight_mode.value>=0 && domain_weight_mode.value<=1);
         return true;
     }
 
@@ -777,7 +786,9 @@ public:
         n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
 
         tree_soft_profile += tree_soft.getTimeProfile();
-        domain_decompose_weight = tree_soft_profile.calc_force;
+        if (input_parameters.domain_weight_mode.value == 1)
+            // use force calculation time as weight
+            domain_decompose_weight = tree_soft_profile.calc_force;
 
         //profile.tree_soft.barrier();
         //PS::Comm::barrier();
