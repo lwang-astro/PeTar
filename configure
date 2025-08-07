@@ -6921,6 +6921,14 @@ printf "%s\n" "$ac_res" >&6; }
 if eval test \"x\$"$as_ac_File"\" = x"yes"
 then :
   GALPY_VERSION=`head -1 $galpy_prefix/__init__.py|cut -d'"' -f2 `
+                                   version_check=`echo -e "$GALPY_VERSION\n1.10.2" | sort -V | head -1`
+                                   if test "$version_check" != "$GALPY_VERSION"
+then :
+  { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "Galpy version $GALPY_VERSION is not supported. Please use Galpy <= 1.10.2
+See \`config.log' for more details" "$LINENO" 5; }
+fi
 else $as_nop
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}

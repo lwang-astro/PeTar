@@ -112,6 +112,7 @@ The subsequent sections provide detailed explanations of the installation proces
          - [Hard Dump with Errors](#hard-dump-with-errors)
          - [Hard Debug Tool](#hard-debug-tool)
          - [Crash with Assertion](#crash-with-assertion)
+         - [Crash with Segmentation Fault](#crash-with-segmentation-fault)
     - [Data Format Update for Older Versions](#data-format-update-for-older-versions)
     - [Useful Tools](#useful-tools)
          - [Initial Input Data File with `petar.init`](#initial-input-data-file)
@@ -175,6 +176,8 @@ pip3 install --user galpy
 ```
 In this scenario, PeTar can automatically detect _Galpy_.
 If `pip3` is unavailable, users can mamually download the source code from https://github.com/jobovy/galpy and specify the code path in the configure command (refer to the following guide).
+
+Note that PowerSphericalPotentialwCutoff was modified in Galpy 1.11.0, making it incompatible with the current PeTar parameter setup for MWPotential2014. PeTar only supports Galpy versions up to 1.10.2. Please ensure your installed Galpy version matches this requirement.
 
 ### Code path
 
@@ -986,6 +989,13 @@ Another frequent assertion error is `!std::isnan(vbk.x)`, exemplified by:
 SystemHard::driveForOneClusterOMP(ParticleSimulator::F64): Assertion `!std::isnan(vbk.x)' failed.
 ```
 This error is observed when FDPS version 7.1 is utilized. It appears that a bug or an inconsistent interface in FDPS can lead to such assertions within `petar`. The recommended solution is to revert to using FDPS version 7.0 to mitigate this issue.
+
+### Crash with Segmentation Fault
+
+Occasionally, the code may crash with a segmentation fault without any other output. By using gdb with debug mode (`configure --with-debug=g`), you can check where the crash occurs. When gdb indicates that the crash position is from a function starting with 'ucs', such as 'ucs_vfs_sock_mkdir()', it is likely related to MPI or UCX's internal virtual file system (VFS) monitoring, which uses FUSE. This is a known bug in some UCX versions, especially when running under certain environments (e.g., containers, or with FUSE not available or misconfigured). You can disable UCX's VFS feature by setting the following environment variable (better to include it in .bashrc) before running `petar`:
+```bash
+export UCX_VFS_ENABLE=n
+```
 
 ## Data Format Update for Older Versions
 
