@@ -62,6 +62,7 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #include"hard_assert.hpp"
 #include"soft_ptcl.hpp"
 #include"soft_force.hpp"
+#include "external_tensor_force.hpp" // Including the tensor manager here
 #ifdef USE_GPU
 #include"force_gpu_cuda.hpp"
 #endif
@@ -96,6 +97,7 @@ public:
     IOParams<PS::S64> n_group_limit;
     IOParams<PS::S64> n_interrupt_limit;
     IOParams<PS::S64> n_smp_ave;
+    IOParams<std::string> fname_tt;   // filename for tidal tensor data
 #ifdef ORBIT_SAMPLING
     IOParams<PS::S64> n_split;
 #endif
@@ -211,6 +213,7 @@ public:
                      append_switcher(input_par_store, 1, "a", "Data output style: 0 - create new output files and overwrite existing ones except snapshots; 1 - append new data to existing files"),
                      fname_snp(input_par_store, "data", "f", "Prefix of filenames for output data: [prefix].**"),
                      fname_par(input_par_store, "input.par", "p", "Input parameter file (this option should be used first before any other options)"),
+                     fname_tt(input_par_store, "tt.dat", "tidal-tensor-file", "Filename for tidal tensor data"),
                      fname_inp(input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false),
                      print_flag(false), update_changeover_flag(false), update_rsearch_flag(false) {}
 
@@ -259,6 +262,7 @@ public:
             {adjust_group_write_option.key,   required_argument, &petar_flag, 24},
 #endif            
             {nstep_dt_soft_kepler.key,  required_argument, &petar_flag, 25},
+            {fname_tt.key,              required_argument, &petar_flag, 26},
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
         };
@@ -636,6 +640,8 @@ public:
 #ifdef GALPY
     IOParamsGalpy galpy_parameters;
 #endif
+
+TidalTensorManager tidal_tensor_mgr; // <--- new for the tt manager
 
 #ifdef PROFILE
     PS::S32 dn_loop;
@@ -1036,6 +1042,23 @@ public:
 #ifdef PROFILE
         profile.other.start();
 #endif
+
+    // Extending the external force calculation, tidal tensor
+    // Update tidal tensor to current time
+    tidal_tensor_mgr.update(stat.time);
+
+    // Apply the tensor acceleration to all local particles
+    for (PS::S32 i = 0; i < system_soft.getNumberOfParticleLocal(); i++) {
+        auto &p = system_soft[i];
+        PS::F64vec acc_tt = tidal_tensor_mgr.applyTensor(p.pos);
+        p.acc += acc_tt;
+    }
+
+#ifdef PROFILE
+    profile.other.end();
+#endif
+}
+
 
 #ifdef GALPY
         // external force and potential
@@ -3054,6 +3077,11 @@ public:
         bool print_flag = input_parameters.print_flag;
         int write_style = input_parameters.write_style.value;
         std::cout<<std::setprecision(WRITE_PRECISION);
+        
+        // Loading the tt.dat
+        std::string tt_filename = input_parameters.fname_tt;
+        double TSTAR = input_parameters.tstar.value;
+        tidal_tensor_mgr.loadFromFile(tt_filename, TSTAR);
 
         // units
         if (input_parameters.unit_set.value==1) {
@@ -4011,7 +4039,7 @@ public:
             }
 
         }
-
+        
         return 0;
     }
 
