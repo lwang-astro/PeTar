@@ -145,10 +145,10 @@ public:
                      unit_set         (input_par_store, 0,    "u", "Input data unit; 0: based on the value of G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr, modify G to fit this unit set"),
                      gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant, if -u 1, G = 0.00449830997959438 pc^3/(Msun*Myr^2)"),
                      n_glb            (input_par_store, 100000, "n", "Total number of particles, used only when the input data filename is __Plummer"),
-                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft); = 0: without --nstep-dt-soft-kepler, dt_soft = sigma_factor*r_in/sigma_3D;      where sigma_3D is 3D half-mass radius velocity dispersion, sigma_factor is determined by --sigma-dt-soft-factor; = 0: with '--nstep-dt-soft-kepler nstep', dt_soft = P(r_in)/nstep; > 0: custom dt_soft value"),
+                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft); = 0: with '--sigma-dt-soft-factor sigma_factor(>0)', dt_soft = sigma_factor*r_in/sigma_3D;      where sigma_3D is global 3D velocity dispersion; = 0: with '--sigma-dt-soft-factor 0', dt_soft = P(r_in)/nstep, where nstep is determined by --nstep-dt-soft-kepler; > 0: custom dt_soft value"),
                      r_out            (input_par_store, 0.0,  "r", "Outer changeover radius (r_out); = 0: without -s, r_out = 0.1 GM/[N^(1/3) sigma_3D^2], where sigma_3D is 3D half-mass radius velocity dispersion; = 0: with '-s dt_soft', r_out = 10*dt_soft*sigma_1D; > 0: custom r_out value"),
                      r_in_over_out    (input_par_store, 0.1,  "r-ratio", "Ratio between inner (r_in) and outer (r_out) changeover radii"),
-                     nstep_dt_soft_kepler(input_par_store, 64.0, "nstep-dt-soft-kepler", "Determines the dt_soft by P(r_in)/nstep; P(r_in) is the binary period with the semi-major axis of r_in; nstep is the argument of this option; = 0: not used, apply sigma_dt_soft_factor; > 0: use this option to determine dt_soft"),
+                     nstep_dt_soft_kepler(input_par_store, 64.0, "nstep-dt-soft-kepler", "Determines the dt_soft by P(r_in)/nstep; P(r_in) is the binary period with the semi-major axis of r_in; nstep is the argument of this option"),
                      sigma_dt_soft_factor(input_par_store, 0.0, "sigma-dt-soft-factor", "Factor for dt_soft based on sigma_3D, dt_soft = sigma_factor*r_in/sigma_3D; = 0: not used, apply nstep_dt_soft_kepler; > 0: use this option to determine dt_soft"),
                      search_vel_factor (input_par_store, 3.0,  "search-vel-factor", "Neighbor search coefficient for velocity check (v*dt)"),
                      search_peri_factor(input_par_store, 1.5, "search-peri-factor", "Neighbor search coefficient for periapsis check"),
@@ -233,6 +233,7 @@ public:
                     nstep_dt_soft_kepler.value = atof(optarg);
                     if(print_flag) nstep_dt_soft_kepler.print(std::cout);
                     opt_used += 2;
+                    assert(nstep_dt_soft_kepler.value>0.0);
                     break;
                 case 6:
                     sigma_dt_soft_factor.value = atof(optarg);
@@ -3087,10 +3088,10 @@ public:
             }
             else {
                 // 1/nstep of a binary period with semi-major axis = r_int.
-                if (nstep_dt_soft_kepler>0)  
-                    dt_soft = regularTimeStep(COMM::Binary::semiToPeriod(r_in, 2.0*mass_average, G)/nstep_dt_soft_kepler);
-                else 
+                if (sigma_dt_soft_factor>0)  
                     dt_soft = regularTimeStep(sigma_dt_soft_factor * r_in / (std::sqrt(3)*vel_disp));
+                else 
+                    dt_soft = regularTimeStep(COMM::Binary::semiToPeriod(r_in, 2.0*mass_average, G)/nstep_dt_soft_kepler);
             }
         }
         else {
@@ -3098,13 +3099,13 @@ public:
             // if r_out is not defined, adjust r_out to minimum based on tree step
             if (!r_out_flag) {
                 if (n_glb>1) {
-                    if (nstep_dt_soft_kepler>0) {
-                            r_in = COMM::Binary::periodToSemi(dt_soft*nstep_dt_soft_kepler, 2.0*mass_average, G);
-                            r_out = r_in / r_in_over_out;
-                    }
-                    else {
+                    if (sigma_dt_soft_factor>0) {
                         r_in = dt_soft*std::sqrt(3)*vel_disp/sigma_dt_soft_factor;
                         r_out = r_in / r_in_over_out;		      
+                    }
+                    else {
+                        r_in = COMM::Binary::periodToSemi(dt_soft*nstep_dt_soft_kepler, 2.0*mass_average, G);
+                        r_out = r_in / r_in_over_out;
                         // r_out = 10.0*dt_soft*vel_disp;
                         //r_in = r_out * r_in_over_out;
                     }
