@@ -1922,7 +1922,7 @@ private:
         PS::F32 dr2_eps_32 = dr_32*dr_32 + (PS::F32)eps_sq;
         const PS::F32 dr2_max = (dr2_eps_32 > r_out2) ? dr2_eps_32 : r_out2;
         const PS::F32 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F32 gmor_max = G*_pj.mass * drinv_max;
+        const PS::F32 gmor_max = G*(PS::F32)_pj.mass * drinv_max;
         const PS::F32 drinv2_max = drinv_max*drinv_max;
         const PS::F32 gmor3_max = gmor_max * drinv2_max;
 
@@ -2028,7 +2028,7 @@ private:
         // linear cutoff
 #if  ((! defined P3T_64BIT) && (defined USE_SIMD)) || (defined USE_GPU)
         const PS::F32 r_out_32 = EPISoft::r_out;
-        const PS::F32 r_out2 = r_out_32 * r_out_32;
+        const PS::F32 r_out2_32 = r_out_32 * r_out_32;
         PS::F32vec ri_32 = PS::F32vec(_pi.pos.x, _pi.pos.y, _pi.pos.z);
         PS::F32vec rj_32 = PS::F32vec(_pj.pos.x, _pj.pos.y, _pj.pos.z);
         PS::F32vec ai_32 = PS::F32vec(_pi.acc.x, _pi.acc.y, _pi.acc.z);
@@ -2037,13 +2037,13 @@ private:
         PS::F32vec da_32 = ai_32 - aj_32;
         PS::F32 dr2_eps_32 = dr_32*dr_32 + (PS::F32)eps_sq;
         const PS::F32 drda_32 = dr_32*da_32;
-        const PS::F32 dr2_max = (dr2_eps_32 > r_out2) ? dr2_eps_32 : r_out2;
-        const PS::F32 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F32 gmor_max = G*_pj.mass * drinv_max;
-        const PS::F32 drinv2_max = drinv_max*drinv_max;
-        const PS::F32 gmor3_max = gmor_max * drinv2_max;
-        const PS::F32 alpha_max = drda_32 * drinv2_max;
-        const PS::F32vec acorr_max = gmor3_max * (da_32 - 3.0*alpha_max * dr_32);
+        const PS::F32 dr2_max_32 = (dr2_eps_32 > r_out2_32) ? dr2_eps_32 : r_out2_32;
+        const PS::F32 drinv_max_32 = 1.0/sqrt(dr2_max_32);
+        const PS::F32 gmor_max_32 = G*(PS::F32)_pj.mass * drinv_max_32;
+        const PS::F32 drinv2_max_32 = drinv_max_32*drinv_max_32;
+        const PS::F32 gmor3_max_32 = gmor_max_32 * drinv2_max_32;
+        const PS::F32 alpha_max_32 = drda_32 * drinv2_max_32;
+        const PS::F32vec acorr_max = gmor3_max_32 * (da_32 - 3.0*alpha_max_32 * dr_32);
 #else
         const PS::F64 r_out = EPISoft::r_out;
         const PS::F64 r_out2 = r_out * r_out;

@@ -272,17 +272,20 @@ int main(int argc, char **argv){
     PS::F64 nbcount_ave=0;
 
 #ifdef USE_SIMD
-    PS::F64 dfmax_simd=0, dfpmax_simd=0;
-    PS::F64 dsmax_simd=0, dspmax_simd=0;
+    PS::F64 dfmax_simd=0, dfpmax_simd=0, dfmin_simd=1e10, dfpmin_simd=1e10;
+    PS::F64 dsmax_simd=0, dspmax_simd=0, dsmin_simd=1e10, dspmin_simd=1e10;
+#ifdef KDKDK_4TH
+    PS::F64 dfcmax_simd=0, dfcmin_simd=1e10;
+#endif
     PS::F64 nbcount_ave_simd=0;
 #endif
 #ifdef USE_GPU
-    PS::F64 dfmax_gpu=0, dfpmax_gpu=0;
+    PS::F64 dfmax_gpu=0, dfpmax_gpu=0, dfmin_gpu=1e10, dfpmin_gpu=1e10;
     PS::F64 nbcount_ave_gpu=0;
 #endif
 #ifdef USE_FUGAKU
-    PS::F64 dfmax_fgk=0,dfpmax_fgk=0;
-    PS::F64 dsmax_fgk=0,dspmax_fgk=0;
+    PS::F64 dfmax_fgk=0,dfpmax_fgk=0, dfmin_fgk=1e10, dfpmin_fgk=1e10;
+    PS::F64 dsmax_fgk=0,dspmax_fgk=0, dsmin_fgk=1e10, dspmin_fgk=1e10;
     PS::F64 nbcount_ave_fgk=0;
 #endif
     PS::F64 df;
@@ -292,34 +295,42 @@ int main(int argc, char **argv){
 #ifdef USE_SIMD
             df=(force[i].acc[j]-force_simd[i].acc[j])/force[i].acc[j];
             dfmax_simd = std::max(dfmax_simd, df);
+            dfmin_simd = std::min(dfmin_simd, df);
             if(df>DF_MAX) std::cerr<<"Force diff: i="<<i<<" nosimd["<<j<<"] "<<force[i].acc[j]<<" simd["<<j<<"] "<<force_simd[i].acc[j]<<std::endl;
 
             df = (force_sp[i].acc[j]-force_sp_simd[i].acc[j])/force_sp[i].acc[j];
             dsmax_simd = std::max(dsmax_simd, df);
+            dsmin_simd = std::min(dsmin_simd, df);
             if(df>DF_MAX) std::cerr<<"Force sp diff: i="<<i<<" nosimd["<<j<<"] "<<force_sp[i].acc[j]<<" simd["<<j<<"] "<<force_sp_simd[i].acc[j]<<std::endl;
 #ifdef KDKDK_4TH
             df = (force[i].acorr[j]-force_simd[i].acorr[j])/force[i].acorr[j];
-            dfmax_simd = std::max(dfmax_simd, df);
+            dfcmax_simd = std::max(dfcmax_simd, df);
+            dfcmin_simd = std::min(dfcmin_simd, df);
             if(df>DF_MAX) std::cerr<<"Correction diff: i="<<i<<" nosimd["<<j<<"] "<<force[i].acorr[j]<<" simd["<<j<<"] "<<force_simd[i].acorr[j]<<std::endl;
 #endif            
 #endif
 #ifdef USE_GPU
             dfmax_gpu = std::max(dfmax_gpu, df);
+            dfmin_gpu = std::min(dfmin_gpu, df);
             if(df>DF_MAX) std::cerr<<"Force diff: i="<<i<<" nosimd["<<j<<"] "<<force[i].acc[j]+force_sp[i].acc[j]<<" gpu["<<j<<"] "<<force_gpu[i].acc[j]<<std::endl;
 #endif
 #ifdef USE_FUGAKU
             df=(force[i].acc[j]-force_fgk[i].acc[j])/force[i].acc[j];
             dfmax_fgk = std::max(dfmax_fgk, df);
+            dfmin_fgk = std::min(dfmin_fgk, df);
             if(df>DF_MAX) std::cerr<<"Force diff: i="<<i<<" nosimd["<<j<<"] "<<force[i].acc[j]<<" fugaku["<<j<<"] "<<force_fgk[i].acc[j]<<std::endl;
 
             df=(force_sp[i].acc[j]-force_sp_fgk[i].acc[j])/force_sp[i].acc[j];
             dsmax_fgk = std::max(dsmax_fgk, df);
+            dsmin_fgk = std::min(dsmin_fgk, df);
             if(df>DF_MAX) std::cerr<<"Force sp diff: i="<<i<<" nosimd["<<j<<"] "<<force_sp[i].acc[j]<<" fugaku["<<j<<"] "<<force_sp_fgk[i].acc[j]<<std::endl;
 #endif
         }
 #ifdef USE_SIMD
         dfpmax_simd = std::max(dfpmax_simd, (force[i].pot-force_simd[i].pot)/force[i].pot);
+        dfpmin_simd = std::min(dfpmin_simd, (force[i].pot-force_simd[i].pot)/force[i].pot);
         dspmax_simd = std::max(dspmax_simd, (force_sp[i].pot-force_sp_simd[i].pot)/force_sp[i].pot);
+        dspmin_simd = std::min(dspmin_simd, (force_sp[i].pot-force_sp_simd[i].pot)/force_sp[i].pot);
 
         if(force[i].n_ngb!=force_simd[i].n_ngb) {
             std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" simd "<<force_simd[i].n_ngb<<std::endl;
@@ -331,6 +342,7 @@ int main(int argc, char **argv){
 #endif
 #ifdef USE_GPU
         dfpmax_gpu = std::max(dfpmax_gpu, (force_sp[i].pot+force[i].pot - force_gpu[i].pot)/force_gpu[i].pot);
+        dfpmin_gpu = std::min(dfpmin_gpu, (force_sp[i].pot+force[i].pot - force_gpu[i].pot)/force_gpu[i].pot);
 
         if(force[i].n_ngb!=force_gpu[i].n_ngb) {
             std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" gpu "<<force_gpu[i].n_ngb<<std::endl;
@@ -339,7 +351,9 @@ int main(int argc, char **argv){
 #endif
 #ifdef USE_FUGAKU
         dfpmax_fgk = std::max(dfpmax_fgk, (force[i].pot-force_fgk[i].pot)/force[i].pot);
+        dfpmin_fgk = std::min(dfpmin_fgk, (force[i].pot-force_fgk[i].pot)/force[i].pot);    
         dspmax_fgk = std::max(dspmax_fgk, (force_sp[i].pot-force_sp_fgk[i].pot)/force_sp[i].pot);
+        dspmin_fgk = std::min(dspmin_fgk, (force_sp[i].pot-force_sp_fgk[i].pot)/force_sp[i].pot);
 
         if(force[i].n_ngb!=force_fgk[i].n_ngb) {
             std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" fugaku "<<force_fgk[i].n_ngb<<std::endl;
@@ -400,15 +414,25 @@ int main(int argc, char **argv){
     std::cout<<std::endl;
 
 #ifdef USE_SIMD    
-    std::cout<<"SIMD EP-EP force diff max: "<<dfmax_simd<<" Pot diff max: "<<dfpmax_simd<<std::endl
-             <<"SIMD EP-Sp force diff max: "<<dsmax_simd<<" Pot diff max: "<<dspmax_simd<<std::endl;
+    std::cout<<"SIMD EP-EP force diff max: "<<dfmax_simd<<" min: "<<dfmin_simd
+             <<" min(hex): "<<std::hexfloat<<dfmin_simd<<std::defaultfloat
+             <<" Pot diff max: "<<dfpmax_simd<<" min: "<<dfpmin_simd
+             <<" min(hex): "<<std::hexfloat<<dfpmin_simd<<std::defaultfloat<<std::endl
+             <<"SIMD EP-Sp force diff max: "<<dsmax_simd<<" min: "<<dsmin_simd
+             <<" min(hex): "<<std::hexfloat<<dsmin_simd<<std::defaultfloat
+             <<" Pot diff max: "<<dspmax_simd<<" min: "<<dspmin_simd
+             <<" min(hex): "<<std::hexfloat<<dspmin_simd<<std::defaultfloat<<std::endl;
+#ifdef KDKDK_4TH
+    std::cout<<"SIMD EP-EP corr force diff max: "<<dfcmax_simd<<" min: "<<dfcmin_simd
+             <<" min(hex): "<<std::hexfloat<<dfcmin_simd<<std::defaultfloat<<std::endl;
+#endif             
 #endif
 #ifdef USE_GPU
-    std::cout<<"GPU EP+SP force diff max: "<<dfmax_gpu<<" Pot diff max: "<<dfpmax_gpu<<std::endl;
+    std::cout<<"GPU EP+SP force diff max: "<<dfmax_gpu<<" min: "<<dfmin_gpu<<" Pot diff max: "<<dfpmax_gpu<<" min: "<<dfpmin_gpu<<std::endl;
 #endif
 #ifdef USE_FUGAKU
-    std::cout<<"Fugaku EP-EP diff max: "<<dfmax_fgk<<" Pot diff max: "<<dfpmax_fgk<<std::endl;
-    std::cout<<"Fugaku EP-SP diff max: "<<dsmax_fgk<<" Pot diff max: "<<dspmax_fgk<<std::endl;
+    std::cout<<"Fugaku EP-EP diff max: "<<dfmax_fgk<<" min: "<<dfmin_fgk<<" Pot diff max: "<<dfpmax_fgk<<" min: "<<dfpmin_fgk<<std::endl
+    std::cout<<"Fugaku EP-SP diff max: "<<dsmax_fgk<<" min: "<<dsmin_fgk<<" Pot diff max: "<<dspmax_fgk<<" min: "<<dspmin_fgk<<std::endl;
 #endif
 
     for (int i=0; i<20; i++)
