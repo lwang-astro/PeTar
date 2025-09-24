@@ -11,7 +11,7 @@
 
 #else
 #define RSQRT_NR_EPJ_X2
-//#define RSQRT_NR_SPJ_X2
+#define RSQRT_NR_SPJ_X2
 #endif 
 
 #if defined(INTRINSIC_K) || defined(INTRINSIC_X86)
@@ -2332,9 +2332,10 @@ public:
 
 #ifdef USE_SIMD
         fout<<"Use SIMD\n";
-#ifdef P3T_64BIT
-        fout<<"Use 64 bit SIMD n";
 #endif
+
+#ifdef P3T_64BIT
+        fout<<"Use 64 bit tree force\n";
 #endif
 
 #ifdef USE_FUGAKU

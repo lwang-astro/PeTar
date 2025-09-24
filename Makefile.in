@@ -1,6 +1,6 @@
 use_arch=@with_arch@
 use_simd=@use_simd@
-use_simd_64=@use_simd_64@
+use_64b=@use_64b@
 use_mpi =@use_mpi@
 use_gpu_cuda=@use_cuda@
 use_omp = @use_omp@
@@ -258,13 +258,15 @@ ifeq ($(use_simd),yes)
 CXXFLAGS += @SIMDFLAGS@
 CXXFLAGS += -D DIV_FIX
 CXXFLAGS += -D USE_SIMD
-ifeq ($(use_simd_64),yes)
-CXXFLAGS += -D P3T_64BIT
-endif # simd 64
 endif  # simd
 #-------------------------------------
 
 endif # x86
+
+#-------------------------------------
+ifeq ($(use_64b),yes)
+CXXFLAGS += -D P3T_64BIT
+endif # 64b
 
 #-------------------------------------
 ifeq ($(use_arch),fugaku)
@@ -318,8 +320,8 @@ build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) |bui
 build/petar.hard.test: hard_test.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(OMPFLAGS) $(HARD_MT_FLAGS) -o $@ $< $(CXXLIBS) $(RANDLIBS)
 
-build/petar.simd.test: simd_test.cxx $(OBJS) |build
-	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS) $^ -o $@  $(CXXLIBS)
+build/petar.simd.test: simd_test.cxx soft_force.hpp io.hpp hard_ptcl.hpp static_variables.hpp force_gpu_cuda.hpp phantomquad_for_p3t_k.hpp phantomquad_for_p3t_x86.hpp $(OBJS) |build
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS) $< $(OBJS) -o $@  $(CXXLIBS)
 
 build/petar.tt.test: tidal_tensor_test.cxx |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $< -o $@  $(CXXLIBS)

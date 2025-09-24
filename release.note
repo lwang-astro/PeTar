@@ -43,6 +43,7 @@
 41. Fix a bug of neighbor searching for SIMD 64b mode.
 42. Add SIMD function for computing force gradient (correction) in the KDKDK-4TH mode.
 43. Add new option 'sigma-dt-soft-factor' to control the factor determing dt_soft and changeover radii; switch the default method to nstep-dt-soft-kepler with 64.0
+44. Add 32 bit tree force for non-simd mode; change configure option '--enable-simd-64' to '--enable-64b', not limited to SIMD case; update petar.simd.test to print more information.
 
 **Some existing issues include**
 

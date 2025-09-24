@@ -20,7 +20,7 @@
 
 #else
 #define RSQRT_NR_EPJ_X2
-//#define RSQRT_NR_SPJ_X2
+#define RSQRT_NR_SPJ_X2
 #endif 
 
 #include "soft_ptcl.hpp"

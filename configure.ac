@@ -173,12 +173,12 @@ AS_IF([test x"$with_arch" == xfugaku],
                              [OPTFLAGS=$OPTFLAGS" -Kfast -Nclang"])
        PROG_NAME=$PROG_NAME".fugaku"])
 
-AC_ARG_ENABLE([simd-64],
-              [AS_HELP_STRING([--enable-simd-64],
-                              [enable x86 SIMD 64 bits floating point support for long-distant tree force])],
+AC_ARG_ENABLE([64b],
+              [AS_HELP_STRING([--enable-64b],
+                              [enable 64 bits floating point support for long-distant tree force])],
               [PROG_NAME=$PROG_NAME".64b"
-               use_simd_64=yes],
-              [use_simd_64=no])
+               use_64b=yes],
+              [use_64b=no])
 
 # QUAD
 AC_ARG_ENABLE([quad],
@@ -494,7 +494,7 @@ VERSION=$petar_version'_'$sdar_version
 
 AC_SUBST([with_arch])
 AC_SUBST([use_simd])
-AC_SUBST([use_simd_64])
+AC_SUBST([use_64b])
 AC_SUBST([use_quad])
 AC_SUBST([use_mpi])
 AC_SUBST([use_cuda])
@@ -545,10 +545,9 @@ AC_MSG_NOTICE([     FDPS Version:      $FDPS_VERSION])
 AC_MSG_NOTICE([     Using MPI:         $use_mpi])
 AC_MSG_NOTICE([     Using GPU:         $use_cuda])
 AC_MSG_NOTICE([     Using arch:        $with_arch])
+AC_MSG_NOTICE([     Using 64b:         $use_64b])
 AS_IF([test "x$use_simd" != xno],
-      [AS_IF([test "x$use_simd_64" != xno],
-             [AC_MSG_NOTICE([     SIMD type:         $SIMD_TYPE 64 bits])],
-             [AC_MSG_NOTICE([     SIMD type:         $SIMD_TYPE ])])
+      [AC_MSG_NOTICE([     SIMD type:         $SIMD_TYPE ])
        AS_IF([test "x$with_simd" == xauto],
              [AC_MSG_NOTICE([  Notice: this is auto-detected based on the host CPU architecture])
               AC_MSG_NOTICE([          If different CPU is used for running, check whether $SIMD_TYPE is also supported])])])
