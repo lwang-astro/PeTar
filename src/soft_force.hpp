@@ -201,6 +201,9 @@ struct CalcForceEpSpQuadNoSimd{
                 poti -= mj*r_inv - 0.5*tr*r3_inv + qrr_r5;
             }
             force[ip].acc += G*ai;
+#ifdef COLLECT_SP_ACC
+            force[ip].acc_sp += G*ai; // for superparticle acceleration
+#endif
             force[ip].pot += G*poti;
         }
     }

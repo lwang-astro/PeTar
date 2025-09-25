@@ -31,6 +31,7 @@ do
 	    echo '             For example, "$8" indicates the 8th column is the BSE types.';
 	    echo '  -t     Add an external potential column and the position and velocity offsets to all particles in the header line.';
 	    echo '         This is required when the external potential (e.g., Galpy) is enabled (--with-external in configure).';
+		echo '  -S     Add a column to collect the superparticle acceleration from the soft part.';
 	    echo '  -c [S] Set values of position and velocity offsets [in input unit], values are separated by "," (default: 0,0,0,0,0,0).';
 	    echo '         The units will be transformed based on the scaling options (-r, -v, -u).';
 	    echo '         This is required when the external potential (e.g., Galpy) is enabled and the option "-t" is used';
@@ -60,6 +61,7 @@ do
 	-R) shift; radius=$1; shift;;
 	-c) shift; cm=$1; shift;;
 	-t) extflag='yes'; shift;;
+	-S) spaccflag='yes'; shift;;
 	*) fname=$1;shift;;
     esac
 done
@@ -81,6 +83,7 @@ fi
 [ -z $convert ] && convert=0
 [ -z $henon_unit ] && henon_unit=0
 [ -z $cm ] && cm='none'
+[ -z $spaccflag ] && spaccflag='no'
 
 echo 'Transfer "'$fname'" to PeTar input data file "'$fout'"'
 echo 'Skip rows: '$igline
@@ -130,8 +133,12 @@ if [[ $mpflag == 'yes' ]]; then
 	#         m,  r,        pos_high       v,        bdata
 	base_col='$1, $2,$3,$4, 0.0, 0.0, 0.0, $5,$6,$7, 0,' 
 fi
-#         rs, id,    mbk, stat, rin, rout, acc_s, pot_t, pot_s, 
-soft_col='0,  NR-ig, 0,   0,    0,   0,    0,0,0, 0,     0,'
+#         rs, id,    mbk, stat, rin, rout, acc_s
+soft_col='0,  NR-ig, 0,   0,    0,   0,    0,0,0, '
+if [[ $spaccflag == 'yes' ]]; then
+	soft_col=$soft_col' 0,0,0,' # acc_sp
+fi
+soft_col=$soft_col' 0, 0, ' # pot_tot, pot_soft
 if [[ $extflag == 'yes' ]]; then
     echo 'Add the external potential column (pot_ext)'
     soft_col=$soft_col' 0,' # pot_ext
