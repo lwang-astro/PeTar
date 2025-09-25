@@ -153,6 +153,10 @@ struct CalcForceEpSpMonoNoSimd {
                 poti -= r_inv;
             }
             force[i].acc += G*ai;
+#ifdef COLLECT_SP_ACC
+            force[i].acc_sp += G*ai; // for superparticle acceleration
+#endif
+
             force[i].pot += G*poti;
 #ifdef NAN_CHECK_DEBUG
             assert(!std::isnan(ai[0]));

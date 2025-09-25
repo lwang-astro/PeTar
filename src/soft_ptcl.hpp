@@ -18,6 +18,9 @@ public:
     static PS::F64 grav_const; ///> gravitational constant
     void clear(){
         acc = 0.0;
+#ifdef COLLECT_SP_ACC    
+        acc_sp = 0.0;
+#endif
 #ifdef KDKDK_4TH
         acorr = 0.0;
 #endif        
@@ -239,7 +242,7 @@ public:
         _fout<<std::setw(_offset)<<" "<<counter<<"-"<<counter+2<<". acc_soft.[x/y/z]: 3D soft (long-range) acceleration (0.0)\n";
         counter+=3;
 #ifdef COLLECT_SP_ACC
-        _fout<<std::setw(_offset)<<" "<<counter<<"-"<<counter+2<<". acc_sp.[x/y/z]: 3D superparticle acceleration (only used when quadrupole is enabled) (0.0)\n";
+        _fout<<std::setw(_offset)<<" "<<counter<<"-"<<counter+2<<". acc_sp.[x/y/z]: 3D superparticle acceleration (0.0)\n";
         counter+=3;
 #endif
         _fout<<std::setw(_offset)<<" "<<counter<<". pot_tot: total potential (0.0)\n";
