@@ -1198,7 +1198,7 @@ public:
             if(_sys[adr].group_data.artificial.isSingle() || (_sys[adr].group_data.artificial.isMember() && _sys[adr].getParticleCMAddress()<0)) {
                 _sys[adr].vel += _sys[adr].acc * _dt;
 #ifdef KDKDK_4TH
-                _sys[adr].vel += _dt*_dt* _sys[adr].acorr /48; 
+                _sys[adr].vel += 9.0/192.0*_dt*_dt* _sys[adr].acorr;
 #endif
             }
 
@@ -1227,7 +1227,7 @@ public:
             auto* pcm = _ap_manager.getCMParticles(&(_sys[i]));
             pcm->vel += pcm->acc * _dt;
 #ifdef KDKDK_4TH
-            pcm->vel += _dt*_dt* pcm->acorr /48; 
+            pcm->vel += 9.0/192.0*_dt*_dt* pcm->acorr;
 #endif
 #ifdef HARD_DEBUG
             assert(pcm->group_data.artificial.isCM());

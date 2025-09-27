@@ -53,6 +53,20 @@ struct CalcForceEpEpWithLinearCutoffNoSimd{
         const FloatType eps2 = EPISoft::eps * EPISoft::eps;
         const FloatType r_out2 = EPISoft::r_out*EPISoft::r_out;
         const FloatType G = ForceSoft::grav_const;
+        // Output positions of ep_i and ep_j to files
+        //std::ofstream ep_i_pos_file("ep_i_pos.txt", std::ios::app);
+        //ep_i_pos_file << "i_list\n";
+        //for (PS::S32 i = 0; i < n_ip; i++) {
+        //    const FloatTypevec& pos = ep_i[i].pos;
+        //    ep_i_pos_file << ep_i[i].id<< " " << pos.x << " " << pos.y << " " << pos.z << "\n";
+        //}
+        //std::ofstream ep_j_pos_file("ep_j_pos.txt", std::ios::app);
+        //ep_j_pos_file << "j_list\n";
+        //for (PS::S32 j = 0; j < n_jp; j++) {
+        //    const FloatTypevec& pos = ep_j[j].pos;
+        //    ep_j_pos_file << ep_j[j].id<< " " << pos.x << " " << pos.y << " " << pos.z << "\n";
+        //}
+
         for(PS::S32 i=0; i<n_ip; i++){
             const FloatTypevec xi = ep_i[i].pos;
             //PS::S64 id_i = ep_i[i].id;
@@ -102,6 +116,19 @@ struct CalcCorrectEpEpWithLinearCutoffNoSimd{
         const FloatType eps2 = EPISoft::eps * EPISoft::eps;
         const FloatType r_out2 = EPISoft::r_out*EPISoft::r_out;
         const FloatType G = ForceSoft::grav_const;
+        // Output positions of ep_i and ep_j to files
+        //std::ofstream ep_i_pos_file("ep_i_pos.txt", std::ios::app);
+        //ep_i_pos_file << "i_list\n";
+        //for (PS::S32 i = 0; i < n_ip; i++) {
+        //    const FloatTypevec& pos = ep_i[i].pos;
+        //    ep_i_pos_file << ep_i[i].id<< " " << pos.x << " " << pos.y << " " << pos.z << "\n";
+        //}
+        //std::ofstream ep_j_pos_file("ep_j_pos.txt", std::ios::app);
+        //ep_j_pos_file << "j_list\n";
+        //for (PS::S32 j = 0; j < n_jp; j++) {
+        //    const FloatTypevec& pos = ep_j[j].pos;
+        //    ep_j_pos_file << ep_j[j].id<< " " << pos.x << " " << pos.y << " " << pos.z << "\n";
+        //}
 
         for(PS::S32 i=0; i<n_ip; i++){
             FloatTypevec acorr = 0.0;
