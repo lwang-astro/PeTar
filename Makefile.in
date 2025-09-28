@@ -267,6 +267,7 @@ build/force_gpu_cuda.o: force_gpu_cuda.cu |build
 	$(NVCC) $(CUDA_INCLUDE) -c $< -o $@ 
 
 install_script_tool:
+	install -d @prefix@/bin/
 	install -m 755 tools/initdata.sh @prefix@/bin/petar.init
 	install -m 755 tools/find_dt.sh @prefix@/bin/petar.find.dt
 	install -m 755 tools/update_par.sh @prefix@/bin/petar.update.par
