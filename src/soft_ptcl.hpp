@@ -4,6 +4,9 @@
 class ForceSoft{
 public:
     PS::F64vec acc; ///> soft acceleration (c.m.: averaged force from orbital particles; tensor: c.m. is substracted)
+#ifdef COLLECT_SP_ACC    
+    PS::F64vec acc_sp; ///> superparticle acceleration (only used when superparticle is enabled)
+#endif
     PS::F64 pot; ///> full potential
 #ifdef KDKDK_4TH
     PS::F64vec acorr; ///> soft gradient correction for 4th order KDKDK method
@@ -15,6 +18,9 @@ public:
     static PS::F64 grav_const; ///> gravitational constant
     void clear(){
         acc = 0.0;
+#ifdef COLLECT_SP_ACC    
+        acc_sp = 0.0;
+#endif
 #ifdef KDKDK_4TH
         acorr = 0.0;
 #endif        
@@ -29,6 +35,9 @@ public:
 class FPSoft: public Ptcl{
 public:
     PS::F64vec acc; // soft
+#ifdef COLLECT_SP_ACC    
+    PS::F64vec acc_sp; // superparticle acceleration (only used when superparticle is enabled)
+#endif
 #ifdef KDKDK_4TH
     PS::F64vec acorr;
 #endif
@@ -63,6 +72,12 @@ public:
         rank_org = rank_;
         adr = adr_;
         acc = 0;
+#ifdef COLLECT_SP_ACC    
+        acc_sp = 0;
+#endif
+#ifdef KDKDK_4TH
+        acorr = 0;
+#endif
         pot_tot = 0;
         pot_soft= 0;
 #ifdef EXTERNAL_POT_IN_PTCL
@@ -73,11 +88,14 @@ public:
 
     void copyFromForce(const ForceSoft & force){
         acc = force.acc;
-        pot_tot = force.pot;
-        pot_soft= pot_tot;
+#ifdef COLLECT_SP_ACC    
+        acc_sp = force.acc_sp;
+#endif
 #ifdef KDKDK_4TH
         acorr = force.acorr;
 #endif
+        pot_tot = force.pot;
+        pot_soft= pot_tot;
 #ifdef SAVE_NEIGHBOR_ID_IN_FORCE_KERNEL
         for (int k=0; k<4; k++) id_ngb[k] = force.id_ngb[k];
 #endif
@@ -92,8 +110,13 @@ public:
 
     void writeAscii(FILE* fp) const{
         Ptcl::writeAscii(fp);
-        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %26.17e ",
-                this->acc.x, this->acc.y, this->acc.z,  // 9-11
+        fprintf(fp, "%26.17e %26.17e %26.17e ",
+                this->acc.x, this->acc.y, this->acc.z);  // 9-11
+#ifdef COLLECT_SP_ACC
+        fprintf(fp, "%26.17e %26.17e %26.17e ",
+                this->acc_sp.x, this->acc_sp.y, this->acc_sp.z);  // 12-14
+#endif
+        fprintf(fp, "%26.17e %26.17e ",
                 this->pot_tot, this->pot_soft);
 #ifdef EXTERNAL_POT_IN_PTCL
         fprintf(fp, "%26.17e ",this->pot_ext);
@@ -112,11 +135,25 @@ public:
 
     void readAscii(FILE* fp) {
         Ptcl::readAscii(fp);
-        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %lf ",
-                              &this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
-                              &this->pot_tot, &this->pot_soft);
-        if (rcount<5) {
-            std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 6, only obtain "<<rcount<<".\n";
+        PS::S64 rcount=fscanf(fp, "%lf %lf %lf ",
+                              &this->acc.x, &this->acc.y, &this->acc.z);  // 9-11
+        if (rcount<3) {
+            std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 3, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
+            abort();
+        }
+#ifdef COLLECT_SP_ACC
+        rcount=fscanf(fp, "%lf %lf %lf ",
+                      &this->acc_sp.x, &this->acc_sp.y, &this->acc_sp.z);  // 12-14
+        if (rcount<3) {
+            std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 3, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
+            abort();
+        }
+#endif
+        rcount=fscanf(fp, "%lf %lf ", &this->pot_tot, &this->pot_soft);
+        if (rcount<2) {
+            std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
@@ -158,6 +195,9 @@ public:
     void print(std::ostream & fout){
         Ptcl::print(fout);
         fout<<" acc= "<<acc
+#ifdef COLLECT_SP_ACC
+            <<" acc_sp= "<<acc_sp
+#endif
             <<" pot_tot= "<<pot_tot
             <<" pot_soft= "<<pot_soft
 #ifdef EXTERNAL_POT_IN_PTCL
@@ -176,6 +216,11 @@ public:
         _fout<<std::setw(_width)<<"acc_soft.x"
              <<std::setw(_width)<<"acc_soft.y"
              <<std::setw(_width)<<"acc_soft.z"
+#ifdef COLLECT_SP_ACC
+             <<std::setw(_width)<<"acc_sp.x"
+             <<std::setw(_width)<<"acc_sp.y"
+             <<std::setw(_width)<<"acc_sp.z"
+#endif
              <<std::setw(_width)<<"pot_tot"
              <<std::setw(_width)<<"pot_soft"
 #ifdef EXTERNAL_POT_IN_PTCL
@@ -196,6 +241,10 @@ public:
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<"-"<<counter+2<<". acc_soft.[x/y/z]: 3D soft (long-range) acceleration (0.0)\n";
         counter+=3;
+#ifdef COLLECT_SP_ACC
+        _fout<<std::setw(_offset)<<" "<<counter<<"-"<<counter+2<<". acc_sp.[x/y/z]: 3D superparticle acceleration (0.0)\n";
+        counter+=3;
+#endif
         _fout<<std::setw(_offset)<<" "<<counter<<". pot_tot: total potential (0.0)\n";
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". pot_soft: soft potential (0.0)\n";
@@ -218,6 +267,11 @@ public:
         _fout<<std::setw(_width)<<acc.x
              <<std::setw(_width)<<acc.y
              <<std::setw(_width)<<acc.z
+#ifdef COLLECT_SP_ACC
+             <<std::setw(_width)<<acc_sp.x
+             <<std::setw(_width)<<acc_sp.y
+             <<std::setw(_width)<<acc_sp.z
+#endif
              <<std::setw(_width)<<pot_tot
              <<std::setw(_width)<<pot_soft
 #ifdef EXTERNAL_POT_IN_PTCL
@@ -238,6 +292,11 @@ public:
         _fout<<std::setw(_width)<<acc.x
              <<std::setw(_width)<<acc.y
              <<std::setw(_width)<<acc.z
+#ifdef COLLECT_SP_ACC
+             <<std::setw(_width)<<acc_sp.x
+             <<std::setw(_width)<<acc_sp.y
+             <<std::setw(_width)<<acc_sp.z
+#endif
              <<std::setw(_width)<<pot_tot
              <<std::setw(_width)<<pot_soft
 #ifdef EXTERNAL_POT_IN_PTCL
@@ -249,6 +308,9 @@ public:
     //! clear force
     void clearForce() {
         acc = 0.0;
+#ifdef COLLECT_SP_ACC    
+        acc_sp = 0.0;
+#endif
 #ifdef KDKDK_4TH
         acorr = 0.0;
 #endif

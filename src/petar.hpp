@@ -11,7 +11,7 @@
 
 #else
 #define RSQRT_NR_EPJ_X2
-//#define RSQRT_NR_SPJ_X2
+#define RSQRT_NR_SPJ_X2
 #endif 
 
 #if defined(INTRINSIC_K) || defined(INTRINSIC_X86)
@@ -119,6 +119,9 @@ public:
     IOParams<PS::S64> data_format;
     IOParams<PS::S64> write_style;
     IOParams<PS::S64> append_switcher;
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+    IOParams<PS::S64> domain_weight_mode;
+#endif
     IOParams<std::string> fname_snp;
     IOParams<std::string> fname_par;
     IOParams<std::string> fname_inp;
@@ -142,11 +145,11 @@ public:
                      unit_set         (input_par_store, 0,    "u", "Input data unit; 0: based on the value of G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr, modify G to fit this unit set"),
                      gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant, if -u 1, G = 0.00449830997959438 pc^3/(Msun*Myr^2)"),
                      n_glb            (input_par_store, 100000, "n", "Total number of particles, used only when the input data filename is __Plummer"),
-                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft); = 0: without --nstep-dt-soft-kepler, dt_soft = sigma_factor*r_in/sigma_3D;      where sigma_3D is 3D half-mass radius velocity dispersion, sigma_factor is determined by --sigma-dt-soft-factor; = 0: with '--nstep-dt-soft-kepler nstep', dt_soft = P(r_in)/nstep; > 0: custom dt_soft value"),
-                     r_out            (input_par_store, 0.0,  "r", "Outer changeover radius (r_out); = 0: without -s, r_out = 0.1 GM/[N^(1/3) sigma_3D^2], where sigma_3D is 3D half-mass radius velocity dispersion; = 0: with '-s dt_soft', r_out = 10*dt_soft*sigma_1D; > 0: custom r_out value"),
+                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft); > 0: custom dt_soft value, regularized to 0.5^n, where n is an integer; = 0: check '-r r_out':;      r_out = 0 (default): dt_soft = 2.6E-4*GM/sigma_3D^3, and is regularized to 0.5^n;          sigma_3D: global 3D velocity dispersion;      r_out > 0: check '--dt-soft-sigma-factor alpha':;          alpha > 0: dt_soft = alpha*r_in/(sqrt(3)*sigma);              r_in: determined by --r-ratio and r_out;          alpha = 0 (default): dt_soft = P(r_in)/nstep;              P(r_in): the binary period with the semi-major axis of r_in;              nstep: defined by --dt-soft-kepler-nstep"),
+                     r_out            (input_par_store, 0.0,  "r", "Outer changeover radius (r_out); > 0: custom r_out value and check '-s dt_soft';      dt_soft = 0: calculate dt_soft and then adjust r_out by dt_soft;      dt_soft > 0: use custom r_out directly; = 0 (default): check '--dt-soft-sigma-factor alpha':;      alpha > 0: r_out = alpha*dt_soft*sigma_3D/r-ratio;          sigma_3D: global 3D velocity dispersion;          r-ratio: defined by --r-ratio;      alpha = 0 (default): r_out = a(r_in)/r-ratio;          a(r_in): the binary semi-major axis with the period of nstep*dt_soft;          nstep: defined by --dt-soft-kepler-nstep"),
                      r_in_over_out    (input_par_store, 0.1,  "r-ratio", "Ratio between inner (r_in) and outer (r_out) changeover radii"),
-                     nstep_dt_soft_kepler(input_par_store, 64.0, "nstep-dt-soft-kepler", "Determines the dt_soft by P(r_in)/nstep; P(r_in) is the binary period with the semi-major axis of r_in; nstep is the argument of this option; = 0: not used, apply sigma_dt_soft_factor; > 0: use this option to determine dt_soft"),
-                     sigma_dt_soft_factor(input_par_store, 0.0, "sigma-dt-soft-factor", "Factor for dt_soft based on sigma_3D, dt_soft = sigma_factor*r_in/sigma_3D; = 0: not used, apply nstep_dt_soft_kepler; > 0: use this option to determine dt_soft"),
+                     nstep_dt_soft_kepler(input_par_store, 64.0, "dt-soft-kepler-nstep", "Factor 'nstep' to determine dt_soft by P(r_in)/nstep, see option '-s' and '-r'"),
+                     sigma_dt_soft_factor(input_par_store, 0.0, "dt-soft-sigma-factor", "Factor 'alpha' to determine dt_soft by alpha*r_in/sigma_3D, see option '-s' and '-r'; = 0: not used, apply --dt-soft-kepler-nstep; > 0: use this option instead of '--dt-soft-kepler-nstep'"),
                      search_vel_factor (input_par_store, 3.0,  "search-vel-factor", "Neighbor search coefficient for velocity check (v*dt)"),
                      search_peri_factor(input_par_store, 1.5, "search-peri-factor", "Neighbor search coefficient for periapsis check"),
                      r_search_min     (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters; = 0: auto-determine by max(search-vel-factor*sigma_1D*dt_soft + rout, 1.2 r_out); > 0: custom search radius value"),
@@ -155,6 +158,9 @@ public:
                      data_format      (input_par_store, 1,    "i", "Data file reading and writing format; 0: read and write in BINARY; 1: read and write in ASCII; 2: read in ASCII, write in BINARY; 3: read in BINARY, write in ASCII"),
                      write_style      (input_par_store, 1,    "w", "Data file writing style; 0: no output; 1: write all files separately; 2. write snapshots in status files in one line per step (no MPI support); 3. write files except snapshots"),
                      append_switcher  (input_par_store, 1,    "a", "Data file output mode; 0: overwrite files except object dump files, include header lines; 1: append files except snapshots, no header line"),
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+                     domain_weight_mode(input_par_store, 0, "domain-weight-mode", "Domain decomposition weight mode for MPI parallel; 0: equal weight for each MPI processor; 1: use force calculation time as weight to obtain better load balance with losing simulation reproducibility"),
+#endif                     
                      fname_snp        (input_par_store, "data", "f", "Prefix of filenames for output data: [prefix].**"),
                      fname_par        (input_par_store, "input.par", "p", "Input parameter file (this option should be used first before any other options)"),
                      fname_inp        (input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false),
@@ -181,7 +187,10 @@ public:
             {search_peri_factor.key,   required_argument, &petar_flag, 8}, 
             {r_search_min.key,         required_argument, &petar_flag, 9},
             {r_escape.key,             required_argument, &petar_flag, 10},
-            {"disable-print-info",     no_argument,       &petar_flag, 11},
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+            {domain_weight_mode.key,   required_argument, &petar_flag, 11},
+#endif
+            {"disable-print-info",     no_argument,       &petar_flag, 12},
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
         };
@@ -224,6 +233,7 @@ public:
                     nstep_dt_soft_kepler.value = atof(optarg);
                     if(print_flag) nstep_dt_soft_kepler.print(std::cout);
                     opt_used += 2;
+                    assert(nstep_dt_soft_kepler.value>0.0);
                     break;
                 case 6:
                     sigma_dt_soft_factor.value = atof(optarg);
@@ -255,7 +265,14 @@ public:
                     if(print_flag) r_escape.print(std::cout);
                     opt_used += 2;
                     break;
-                case 11:
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+                    case 11:
+                    domain_weight_mode.value = atoi(optarg);
+                    if(print_flag) domain_weight_mode.print(std::cout);
+                    opt_used += 2;
+                    break;
+#endif
+                case 12:
                     print_flag = false;
                     opt_used ++;
                     break;
@@ -421,6 +438,9 @@ public:
         assert(n_leaf_limit.value>0);
         assert(n_smp_ave.value>0.0);
         assert(theta.value>=0.0);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        assert(domain_weight_mode.value>=0 && domain_weight_mode.value<=1);
+#endif
         return true;
     }
 
@@ -783,7 +803,11 @@ public:
         n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
 
         tree_soft_profile += tree_soft.getTimeProfile();
-        domain_decompose_weight = tree_soft_profile.calc_force;
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        if (input_parameters.domain_weight_mode.value == 1)
+            // use force calculation time as weight
+            domain_decompose_weight = tree_soft_profile.calc_force;
+#endif
 
         //profile.tree_soft.barrier();
         //PS::Comm::barrier();
@@ -2322,9 +2346,10 @@ public:
 
 #ifdef USE_SIMD
         fout<<"Use SIMD\n";
-#ifdef P3T_64BIT
-        fout<<"Use 64 bit SIMD n";
 #endif
+
+#ifdef P3T_64BIT
+        fout<<"Use 64 bit tree force\n";
 #endif
 
 #ifdef USE_FUGAKU
@@ -2994,7 +3019,7 @@ public:
         // local maximum mass
         //PS::F64 mass_max_loc = 0.0;
         // box size
-        PS::F64 rmax=0.0;
+        //PS::F64 rmax=0.0;
 
         for(PS::S64 i=0; i<n_loc; i++){
 #ifdef DISK_STAR_MERGER
@@ -3013,12 +3038,12 @@ public:
             mass_cm_loc += mi;
             vel_cm_loc += mi * vi;
             pos_cm_loc += mi * ri;
-            PS::F64 r2 = ri*ri;
-            rmax = std::max(r2,rmax);
+            //PS::F64 r2 = ri*ri;
+            //rmax = std::max(r2,rmax);
             //mass_max_loc = std::max(mi, mass_max_loc);
         }
-        rmax = std::sqrt(rmax);
-        PS::F64 rmax_glb = PS::Comm::getMaxValue(rmax);
+        //rmax = std::sqrt(rmax);
+        //PS::F64 rmax_glb = PS::Comm::getMaxValue(rmax);
 
         // global c.m. parameters
         PS::F64    mass_cm_glb = PS::Comm::getSum(mass_cm_loc);
@@ -3028,7 +3053,7 @@ public:
         pos_cm_glb /= mass_cm_glb;
         vel_cm_glb /= mass_cm_glb;
 
-        PS::F64 rmin_glb = std::sqrt(pos_cm_glb*pos_cm_glb);
+        //PS::F64 rmin_glb = std::sqrt(pos_cm_glb*pos_cm_glb);
 
         // local velocity square
         PS::F64 vel_sq_loc = 0.0;
@@ -3070,57 +3095,65 @@ public:
 
         // flag to check whether r_ous is already defined
         bool r_out_flag = (r_out>0);
-    
-        // if r_out is already defined, calculate r_in based on  r_in_over_out
-        if (r_out_flag) r_in = r_out * r_in_over_out;
-        // calculate r_out based on virial radius scaled with (N)^(1/3), calculate r_in by r_in_over_out
+        // flag to check whether dt_soft is already defined
+        bool dt_soft_flag = (dt_soft>0);
+
+        if (dt_soft_flag) {
+            // if dt_soft is defined, regularize it
+            dt_soft = regularTimeStep(dt_soft);
+        }
         else {
-            if (n_glb>1) {
+            // if dt_soft is not defined, check whether r_out is defined    
+            if (r_out_flag) {
+                // if r_out is already defined, calculate r_in based on r_in_over_out
+                r_in = r_out * r_in_over_out;
+                // calculate dt_soft from r_in 
+                if (sigma_dt_soft_factor>0)  
+                    dt_soft = regularTimeStep(sigma_dt_soft_factor * r_in / (std::sqrt(3)*vel_disp));
+                else 
+                    dt_soft = regularTimeStep(COMM::Binary::semiToPeriod(r_in, 2.0*mass_average, G)/nstep_dt_soft_kepler);
+            }
+            else {
+                // if tree time step is not defined, calculate tree time step by 2.6e-4 GM/sigma(3D)^3 = 5e-5 GM/sigma(1D)^3
+                if (n_glb==1) {
+                    if (print_flag) std::cout<<"In one particle case, tree time step is finishing - starting time\n";
+                    dt_soft = input_parameters.time_end.value - stat.time;
+                }
+                else {
+                    dt_soft = regularTimeStep(5e-5 * G * mass_cm_glb / (vel_disp*vel_disp*vel_disp));
+                }
+            }
+        }
+
+        // calculate r_out based on virial radius scaled with (N)^(1/3), calculate r_in by r_in_over_out
+        /*  if (n_glb>1) {
                 r_out = std::min(0.1*G*mass_cm_glb/(std::pow(n_glb,1.0/3.0)) / (3*vel_disp*vel_disp), 3.0*(rmax_glb-rmin_glb));
                 r_in = r_out * r_in_over_out;
             }
-            else {
+        */    
+
+        if (r_out_flag && dt_soft_flag) {
+            // if both r_out and dt_soft are defined, do not adjust r_out and calculate r_in by r_in_over_out
+            r_in = r_out * r_in_over_out;
+        }
+        else {
+            // calculate r_in and r_out based on dt_soft
+            if (n_glb==1) {
                 // give two small values, no meaning at all
                 r_out = 1e-16;
                 r_in = r_out*r_in_over_out;
                 if (print_flag) std::cout<<"In one particle case, changeover radius is set to a small value\n";
             }
-        }
-
-        // if tree time step is not defined, calculate tree time step by r_out and velocity dispersion
-        if (dt_soft==0.0) {
-            if (n_glb==1) {
-                if (print_flag) std::cout<<"In one particle case, tree time step is finishing - starting time\n";
-                dt_soft = input_parameters.time_end.value - stat.time;
-            }
             else {
-                // 1/nstep of a binary period with semi-major axis = r_int.
-                if (nstep_dt_soft_kepler>0)  
-                    dt_soft = regularTimeStep(COMM::Binary::semiToPeriod(r_in, 2.0*mass_average, G)/nstep_dt_soft_kepler);
-                else 
-                    dt_soft = regularTimeStep(sigma_dt_soft_factor * r_in / (std::sqrt(3)*vel_disp));
-            }
-        }
-        else {
-            dt_soft = regularTimeStep(dt_soft);
-            // if r_out is not defined, adjust r_out to minimum based on tree step
-            if (!r_out_flag) {
-                if (n_glb>1) {
-                    if (nstep_dt_soft_kepler>0) {
-                            r_in = COMM::Binary::periodToSemi(dt_soft*nstep_dt_soft_kepler, 2.0*mass_average, G);
-                            r_out = r_in / r_in_over_out;
-                    }
-                    else {
-                        r_in = dt_soft*std::sqrt(3)*vel_disp/sigma_dt_soft_factor;
-                        r_out = r_in / r_in_over_out;		      
-                        // r_out = 10.0*dt_soft*vel_disp;
-                        //r_in = r_out * r_in_over_out;
-                    }
+                if (sigma_dt_soft_factor>0) {
+                    r_in = dt_soft*std::sqrt(3)*vel_disp/sigma_dt_soft_factor;
+                    r_out = r_in / r_in_over_out;		      
                 }
                 else {
-                    r_out = 1e-16;
-                    r_in = r_out*r_in_over_out;
-                    if (print_flag) std::cout<<"In one particle case, changeover radius is set to a small value\n";
+                    r_in = COMM::Binary::periodToSemi(dt_soft*nstep_dt_soft_kepler, 2.0*mass_average, G);
+                    r_out = r_in / r_in_over_out;
+                    // r_out = 10.0*dt_soft*vel_disp;
+                    //r_in = r_out * r_in_over_out;
                 }
             }
         }
@@ -3155,7 +3188,7 @@ public:
                      <<" Mean inner changeover radius      = "<<r_in           <<std::endl
                      <<" Mean outer changeover radius      = "<<r_out          <<std::endl
                      <<" Minimum neighbor searching radius = "<<r_search_min   <<std::endl
-                     <<" Velocity dispersion               = "<<vel_disp       <<std::endl
+                     <<" Velocity dispersion (1D)          = "<<vel_disp       <<std::endl
                      <<" Tree time step                    = "<<dt_soft        <<std::endl
                      <<" Output time step                  = "<<dt_snap        <<std::endl;
         }

@@ -658,7 +658,7 @@ use_omp
 use_cuda
 use_mpi
 use_quad
-use_simd_64
+use_64b
 use_simd
 with_arch
 ac_prefix_program
@@ -735,7 +735,7 @@ with_cpp_std
 enable_openmp
 with_arch
 with_simd
-enable_simd_64
+enable_64b
 enable_quad
 enable_cuda
 with_cuda_prefix
@@ -1389,7 +1389,7 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-omp           disable OpenMP support
-  --enable-simd-64        enable x86 SIMD 64 bits floating point support for
+  --enable-64b            enable 64 bits floating point support for
                           long-distant tree force
   --disable-quad          disable quadrupole-moment calculation for super
                           particles
@@ -4127,12 +4127,12 @@ fi
        PROG_NAME=$PROG_NAME".fugaku"
 fi
 
-# Check whether --enable-simd-64 was given.
-if test "${enable_simd_64+set}" = set; then :
-  enableval=$enable_simd_64; PROG_NAME=$PROG_NAME".64b"
-               use_simd_64=yes
+# Check whether --enable-64b was given.
+if test "${enable_64b+set}" = set; then :
+  enableval=$enable_64b; PROG_NAME=$PROG_NAME".64b"
+               use_64b=yes
 else
-  use_simd_64=no
+  use_64b=no
 fi
 
 
@@ -7136,14 +7136,11 @@ $as_echo "$as_me:      Using MPI:         $use_mpi" >&6;}
 $as_echo "$as_me:      Using GPU:         $use_cuda" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      Using arch:        $with_arch" >&5
 $as_echo "$as_me:      Using arch:        $with_arch" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      Using 64b:         $use_64b" >&5
+$as_echo "$as_me:      Using 64b:         $use_64b" >&6;}
 if test "x$use_simd" != xno; then :
-  if test "x$use_simd_64" != xno; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}:      SIMD type:         $SIMD_TYPE 64 bits" >&5
-$as_echo "$as_me:      SIMD type:         $SIMD_TYPE 64 bits" >&6;}
-else
   { $as_echo "$as_me:${as_lineno-$LINENO}:      SIMD type:         $SIMD_TYPE " >&5
 $as_echo "$as_me:      SIMD type:         $SIMD_TYPE " >&6;}
-fi
        if test "x$with_simd" == xauto; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}:   Notice: this is auto-detected based on the host CPU architecture" >&5
 $as_echo "$as_me:   Notice: this is auto-detected based on the host CPU architecture" >&6;}

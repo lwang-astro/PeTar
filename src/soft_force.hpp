@@ -6,6 +6,15 @@
 #include"phantomquad_for_p3t_x86.hpp"
 #endif
 
+#if defined(CALC_EP_64bit) || defined(CALC_EP_MIX)
+typedef PS::F64vec FloatTypevec;
+typedef PS::F64 FloatType;
+typedef PS::F64mat FloatTypemat;
+#else
+typedef PS::F32vec FloatTypevec;
+typedef PS::F32 FloatType;
+typedef PS::F32mat FloatTypemat;
+#endif
 
 // Neighbor search function
 struct SearchNeighborEpEpNoSimd{
@@ -15,12 +24,12 @@ struct SearchNeighborEpEpNoSimd{
                       const PS::S32 n_jp,
                       ForceSoft * force){
         for(PS::S32 i=0; i<n_ip; i++){
-            const PS::F64vec xi = ep_i[i].pos;
+            const FloatTypevec xi = ep_i[i].pos;
             PS::S32 n_ngb_i = 0;
             for(PS::S32 j=0; j<n_jp; j++){
-                const PS::F64vec rij = xi - ep_j[j].pos;
-                const PS::F64 r2 = rij * rij;
-                const PS::F64 r_search = std::max(ep_i[i].r_search,ep_j[j].r_search);
+                const FloatTypevec rij = xi - ep_j[j].pos;
+                const FloatType r2 = rij * rij;
+                const FloatType r_search = std::max(ep_i[i].r_search,ep_j[j].r_search);
                 if(r2 < r_search*r_search){
 #ifdef SAVE_NEIGHBOR_ID_IN_FORCE_KERNEL
                     force[i].id_ngb[n_ngb_i & 0x3] = ep_j[j].id;
@@ -41,31 +50,31 @@ struct CalcForceEpEpWithLinearCutoffNoSimd{
                       const EPJSoft * ep_j,
                       const PS::S32 n_jp,
                       ForceSoft * force){
-        const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
-        const PS::F64 r_out2 = EPISoft::r_out*EPISoft::r_out;
-        const PS::F64 G = ForceSoft::grav_const;
+        const FloatType eps2 = EPISoft::eps * EPISoft::eps;
+        const FloatType r_out2 = EPISoft::r_out*EPISoft::r_out;
+        const FloatType G = ForceSoft::grav_const;
         for(PS::S32 i=0; i<n_ip; i++){
-            const PS::F64vec xi = ep_i[i].pos;
+            const FloatTypevec xi = ep_i[i].pos;
             //PS::S64 id_i = ep_i[i].id;
-            PS::F64vec ai = 0.0;
-            PS::F64 poti = 0.0;
+            FloatTypevec ai = 0.0;
+            FloatType poti = 0.0;
             PS::S32 n_ngb_i = 0;
             for(PS::S32 j=0; j<n_jp; j++){
                 //if(id_i == ep_j[j].id){
                 //    n_ngb_i++;
                 //    continue;
                 //}
-                const PS::F64vec rij = xi - ep_j[j].pos;
-                const PS::F64 r2 = rij * rij;
-                const PS::F64 r2_eps = r2 + eps2;
-                const PS::F64 r_search = std::max(ep_i[i].r_search,ep_j[j].r_search);
+                const FloatTypevec rij = xi - ep_j[j].pos;
+                const FloatType r2 = rij * rij;
+                const FloatType r2_eps = r2 + eps2;
+                const FloatType r_search = std::max(ep_i[i].r_search,ep_j[j].r_search);
                 if(r2 < r_search*r_search){
                     n_ngb_i++;
                 }
-                const PS::F64 r2_tmp = (r2_eps > r_out2) ? r2_eps : r_out2;
-                const PS::F64 r_inv = 1.0/sqrt(r2_tmp);
-                const PS::F64 m_r = ep_j[j].mass * r_inv;
-                const PS::F64 m_r3 = m_r * r_inv * r_inv;
+                const FloatType r2_tmp = (r2_eps > r_out2) ? r2_eps : r_out2;
+                const FloatType r_inv = 1.0/sqrt(r2_tmp);
+                const FloatType m_r = ep_j[j].mass * r_inv;
+                const FloatType m_r3 = m_r * r_inv * r_inv;
                 ai -= m_r3 * rij;
                 poti -= m_r;
             }
@@ -90,26 +99,26 @@ struct CalcCorrectEpEpWithLinearCutoffNoSimd{
                       const EPJSoft * ep_j,
                       const PS::S32 n_jp,
                       ForceSoft * force){
-        const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
-        const PS::F64 r_out2 = EPISoft::r_out*EPISoft::r_out;
-        const PS::F64 G = ForceSoft::grav_const;
+        const FloatType eps2 = EPISoft::eps * EPISoft::eps;
+        const FloatType r_out2 = EPISoft::r_out*EPISoft::r_out;
+        const FloatType G = ForceSoft::grav_const;
 
         for(PS::S32 i=0; i<n_ip; i++){
-            PS::F64vec acorr = 0.0;
-            const PS::F64vec posi = ep_i[i].pos;
-            const PS::F64vec acci = ep_i[i].acc;
+            FloatTypevec acorr = 0.0;
+            const FloatTypevec posi = ep_i[i].pos;
+            const FloatTypevec acci = ep_i[i].acc;
             for(PS::S32 j=0; j<n_jp; j++){
-                const PS::F64vec dr = posi - ep_j[j].pos;
-                const PS::F64vec da = acci - ep_j[j].acc; 
-                const PS::F64 r2    = dr * dr + eps2;
-                const PS::F64 drda  = dr * da;
-                const PS::F64 r2_tmp = (r2 > r_out2) ? r2 : r_out2;
-                const PS::F64 r_inv = 1.0/sqrt(r2_tmp);
-                const PS::F64 r2_inv = r_inv*r_inv;
-                const PS::F64 m_r = ep_j[j].mass * r_inv;
-                const PS::F64 m_r3 = m_r * r2_inv;
+                const FloatTypevec dr = posi - ep_j[j].pos;
+                const FloatTypevec da = acci - ep_j[j].acc; 
+                const FloatType r2    = dr * dr + eps2;
+                const FloatType drda  = dr * da;
+                const FloatType r2_tmp = (r2 > r_out2) ? r2 : r_out2;
+                const FloatType r_inv = 1.0/sqrt(r2_tmp);
+                const FloatType r2_inv = r_inv*r_inv;
+                const FloatType m_r = ep_j[j].mass * r_inv;
+                const FloatType m_r3 = m_r * r2_inv;
 
-                const PS::F64 alpha = 3.0 * drda * r2_inv;
+                const FloatType alpha = 3.0 * drda * r2_inv;
                 acorr -= m_r3 * (da - alpha * dr); 
             }
             //std::cerr<<"poti= "<<poti<<std::endl;
@@ -127,16 +136,16 @@ struct CalcForceEpSpMonoNoSimd {
                       const Tsp * sp_j,
                       const PS::S32 n_jp,
                       ForceSoft * force){
-        const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
-        const PS::F64 G = ForceSoft::grav_const;
+        const FloatType eps2 = EPISoft::eps * EPISoft::eps;
+        const FloatType G = ForceSoft::grav_const;
         for(PS::S32 i=0; i<n_ip; i++){
-            PS::F64vec xi = ep_i[i].pos;
-            PS::F64vec ai = 0.0;
-            PS::F64 poti = 0.0;
+            FloatTypevec xi = ep_i[i].pos;
+            FloatTypevec ai = 0.0;
+            FloatType poti = 0.0;
             for(PS::S32 j=0; j<n_jp; j++){
-                PS::F64vec rij = xi - sp_j[j].getPos();
-                PS::F64 r3_inv = rij * rij + eps2;
-                PS::F64 r_inv = 1.0/sqrt(r3_inv);
+                FloatTypevec rij = xi - sp_j[j].getPos();
+                FloatType r3_inv = rij * rij + eps2;
+                FloatType r_inv = 1.0/sqrt(r3_inv);
                 r3_inv = r_inv * r_inv;
                 r_inv *= sp_j[j].getCharge();
                 r3_inv *= r_inv;
@@ -144,6 +153,10 @@ struct CalcForceEpSpMonoNoSimd {
                 poti -= r_inv;
             }
             force[i].acc += G*ai;
+#ifdef COLLECT_SP_ACC
+            force[i].acc_sp += G*ai; // for superparticle acceleration
+#endif
+
             force[i].pot += G*poti;
 #ifdef NAN_CHECK_DEBUG
             assert(!std::isnan(ai[0]));
@@ -162,36 +175,39 @@ struct CalcForceEpSpQuadNoSimd{
                       const Tsp * sp_j,
                       const PS::S32 n_jp,
                       ForceSoft * force){
-        const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
-        const PS::F64 G = ForceSoft::grav_const;
+        const FloatType eps2 = EPISoft::eps * EPISoft::eps;
+        const FloatType G = ForceSoft::grav_const;
 //        assert(n_jp==0);
         for(PS::S32 ip=0; ip<n_ip; ip++){
-            PS::F64vec xi = ep_i[ip].pos;
-            PS::F64vec ai = 0.0;
-            PS::F64 poti = 0.0;
+            FloatTypevec xi = ep_i[ip].pos;
+            FloatTypevec ai = 0.0;
+            FloatType poti = 0.0;
             for(PS::S32 jp=0; jp<n_jp; jp++){
-                PS::F64 mj = sp_j[jp].mass;
-                PS::F64vec xj= sp_j[jp].pos;
-                PS::F64vec rij= xi - xj;
-                PS::F64 r2 = rij * rij + eps2;
-                PS::F64mat qj = sp_j[jp].quad;
-                PS::F64 tr = qj.getTrace();
-                PS::F64vec qr( (qj.xx*rij.x + qj.xy*rij.y + qj.xz*rij.z),
+                FloatType mj = sp_j[jp].mass;
+                FloatTypevec xj= sp_j[jp].pos;
+                FloatTypevec rij= xi - xj;
+                FloatType r2 = rij * rij + eps2;
+                FloatTypemat qj = sp_j[jp].quad;
+                FloatType tr = qj.getTrace();
+                FloatTypevec qr( (qj.xx*rij.x + qj.xy*rij.y + qj.xz*rij.z),
                                (qj.yy*rij.y + qj.yz*rij.z + qj.xy*rij.x),
                                (qj.zz*rij.z + qj.xz*rij.x + qj.yz*rij.y) );
-                PS::F64 qrr = qr * rij;
-                PS::F64 r_inv = 1.0f/sqrt(r2);
-                PS::F64 r2_inv = r_inv * r_inv;
-                PS::F64 r3_inv = r2_inv * r_inv;
-                PS::F64 r5_inv = r2_inv * r3_inv * 1.5;
-                PS::F64 qrr_r5 = r5_inv * qrr;
-                PS::F64 qrr_r7 = r2_inv * qrr_r5;
-                PS::F64 A = mj*r3_inv - tr*r5_inv + 5*qrr_r7;
-                PS::F64 B = -2.0*r5_inv;
+                FloatType qrr = qr * rij;
+                FloatType r_inv = 1.0f/sqrt(r2);
+                FloatType r2_inv = r_inv * r_inv;
+                FloatType r3_inv = r2_inv * r_inv;
+                FloatType r5_inv = r2_inv * r3_inv * 1.5;
+                FloatType qrr_r5 = r5_inv * qrr;
+                FloatType qrr_r7 = r2_inv * qrr_r5;
+                FloatType A = mj*r3_inv - tr*r5_inv + 5*qrr_r7;
+                FloatType B = -2.0*r5_inv;
                 ai -= A*rij + B*qr;
                 poti -= mj*r_inv - 0.5*tr*r3_inv + qrr_r5;
             }
             force[ip].acc += G*ai;
+#ifdef COLLECT_SP_ACC
+            force[ip].acc_sp += G*ai; // for superparticle acceleration
+#endif
             force[ip].pot += G*poti;
         }
     }
@@ -204,17 +220,17 @@ struct CalcForcePPNoSimd {
                       const Tpj * ep_j,
                       const PS::S32 n_jp,
                       ForceSoft * force){
-      //const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
-        const PS::F64 eps2 = 0;
-        const PS::F64 G = ForceSoft::grav_const;
+      //const FloatType eps2 = EPISoft::eps * EPISoft::eps;
+        const FloatType eps2 = 0;
+        const FloatType G = ForceSoft::grav_const;
         for(PS::S32 i=0; i<n_ip; i++){
-            PS::F64vec xi = ep_i[i].pos;
-            PS::F64vec ai = 0.0;
-            PS::F64 poti = 0.0;
+            FloatTypevec xi = ep_i[i].pos;
+            FloatTypevec ai = 0.0;
+            FloatType poti = 0.0;
             for(PS::S32 j=0; j<n_jp; j++){
-                PS::F64vec rij = xi - ep_j[j].pos;
-                PS::F64 r3_inv = rij * rij + eps2;
-                PS::F64 r_inv = 1.0/sqrt(r3_inv);
+                FloatTypevec rij = xi - ep_j[j].pos;
+                FloatType r3_inv = rij * rij + eps2;
+                FloatType r_inv = 1.0/sqrt(r3_inv);
                 r3_inv = r_inv * r_inv;
                 r_inv *= ep_j[j].mass;
                 r3_inv *= r_inv;
@@ -255,7 +271,7 @@ struct SearchNeighborEpEpSimd{
         assert(n_ip<=pg.NIMAX);
         assert(n_jp<=pg.NJMAX);
         for(PS::S32 i=0; i<n_ip; i++){
-            const PS::F64vec pos_i = ep_i[i].getPos();
+            const FloatTypevec pos_i = ep_i[i].getPos();
             pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, ep_i[i].r_search);
         }
         PS::S32 loop_max = (n_jp-1) / PhantomGrapeQuad::NJMAX + 1;
@@ -265,14 +281,14 @@ struct SearchNeighborEpEpSimd{
             const PS::S32 it =ih + n_jp_tmp;
             PS::S32 i_tmp = 0;
             for(PS::S32 i=ih; i<it; i++, i_tmp++){
-                const PS::F64 m_j = ep_j[i].getCharge();
-                const PS::F64vec pos_j = ep_j[i].getPos();
+                const FloatType m_j = ep_j[i].getCharge();
+                const FloatTypevec pos_j = ep_j[i].getPos();
                 pg.set_epj_one(i_tmp, pos_j.x, pos_j.y, pos_j.z, m_j, ep_j[i].r_search);
 
             }
             pg.run_epj_for_neighbor_count(n_ip, n_jp_tmp);
             for(PS::S32 i=0; i<n_ip; i++){
-                PS::F64 n_ngb = 0;
+                FloatType n_ngb = 0;
                 pg.accum_accp_one(i, n_ngb);
                 force[i].n_ngb += (PS::S32)(n_ngb*1.00001);
             }
@@ -287,7 +303,7 @@ struct CalcForcePPSimd{
                       const Tpj * ep_j,
                       const PS::S32 n_jp,
                       ForceSoft * force){
-        const PS::F64 G = ForceSoft::grav_const;
+        const FloatType G = ForceSoft::grav_const;
         PS::S32 ep_j_list[n_jp], n_jp_local=0;
         for (PS::S32 i=0; i<n_jp; i++){
             if(ep_j[i].mass>0) ep_j_list[n_jp_local++] = i;
@@ -309,7 +325,7 @@ struct CalcForcePPSimd{
         pg.set_eps2(0.0);
         pg.set_r_crit2(0.0);
         for(PS::S32 i=0; i<n_ip; i++){
-            const PS::F64vec pos_i = ep_i[i].pos;
+            const FloatTypevec pos_i = ep_i[i].pos;
             pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, 0.0);
         }
         PS::S32 loop_max = (n_jp_local-1) / PhantomGrapeQuad::NJMAX + 1;
@@ -320,16 +336,16 @@ struct CalcForcePPSimd{
             PS::S32 i_tmp = 0;
             for(PS::S32 i=ih; i<it; i++, i_tmp++){
                 const PS::S32 ij = ep_j_list[i];
-                const PS::F64 m_j = ep_j[ij].mass;
-                const PS::F64vec pos_j = ep_j[ij].pos;
+                const FloatType m_j = ep_j[ij].mass;
+                const FloatTypevec pos_j = ep_j[ij].pos;
                 pg.set_epj_one(i_tmp, pos_j.x, pos_j.y, pos_j.z, m_j, 0.0);
 
             }
             pg.run_epj_for_p3t_with_linear_cutoff(n_ip, n_jp_tmp);
             for(PS::S32 i=0; i<n_ip; i++){
-                PS::F64 p = 0;
-                PS::F64 a[3]= {0,0,0};
-                PS::F64 n_ngb = 0;
+                FloatType p = 0;
+                FloatType a[3]= {0,0,0};
+                FloatType n_ngb = 0;
                 pg.accum_accp_one(i, a[0], a[1], a[2], p, n_ngb);
                 force[i].acc[0] += G*a[0];
                 force[i].acc[1] += G*a[1];
@@ -351,15 +367,15 @@ struct CalcForceEpEpWithLinearCutoffSimd{
                       const EPJSoft * ep_j,
                       const PS::S32 n_jp,
                       ForceSoft * force){
-        const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
-        const PS::F64 G = ForceSoft::grav_const;
+        const FloatType eps2 = EPISoft::eps * EPISoft::eps;
+        const FloatType G = ForceSoft::grav_const;
         PS::S32 ep_j_list[n_jp], n_jp_local=0;
         PS::S32 ep_i_list[n_ip], n_ip_local=0;
         for (PS::S32 i=0; i<n_jp; i++){
             if(ep_j[i].mass>0) ep_j_list[n_jp_local++] = i;
         }
 //        std::cerr<<"n_jp="<<n_jp<<" reduced n_jp="<<n_jp_local<<std::endl;
-//        const PS::F64 r_crit2 = EPJSoft::r_search * EPJSoft::r_search;
+//        const FloatType r_crit2 = EPJSoft::r_search * EPJSoft::r_search;
     #ifdef __HPC_ACE__
         PhantomGrapeQuad pg;
     #else
@@ -380,7 +396,7 @@ struct CalcForceEpEpWithLinearCutoffSimd{
             // remove the orbital sample for the force calculation
             if (ep_i[i].type==1) {
                 ep_i_list[n_ip_local] = i;
-                const PS::F64vec pos_i = ep_i[i].getPos();
+                const FloatTypevec pos_i = ep_i[i].getPos();
                 pg.set_xi_one(n_ip_local, pos_i.x, pos_i.y, pos_i.z, ep_i[i].r_search);
                 n_ip_local++;
             }
@@ -394,17 +410,17 @@ struct CalcForceEpEpWithLinearCutoffSimd{
             PS::S32 i_tmp = 0;
             for(PS::S32 i=ih; i<it; i++, i_tmp++){
                 const PS::S32 ij = ep_j_list[i];
-                const PS::F64 m_j = ep_j[ij].getCharge();
-                const PS::F64vec pos_j = ep_j[ij].getPos();
+                const FloatType m_j = ep_j[ij].getCharge();
+                const FloatTypevec pos_j = ep_j[ij].getPos();
                 pg.set_epj_one(i_tmp, pos_j.x, pos_j.y, pos_j.z, m_j, ep_j[ij].r_search);
 
             }
             pg.run_epj_for_p3t_with_linear_cutoff(n_ip, n_jp_tmp);
             for(PS::S32 k=0; k<n_ip_local; k++){
                 PS::S32 i=ep_i_list[k];
-                PS::F64 p = 0;
-                PS::F64 a[3]= {0,0,0};
-                PS::F64 n_ngb = 0;
+                FloatType p = 0;
+                FloatType a[3]= {0,0,0};
+                FloatType n_ngb = 0;
                 pg.accum_accp_one(k, a[0], a[1], a[2], p, n_ngb);
 #ifdef NAN_CHECK_DEBUG
                 assert(!std::isnan(a[0]));
@@ -430,8 +446,8 @@ struct CalcCorrectEpEpWithLinearCutoffSimd{
                       const EPJSoft * ep_j,
                       const PS::S32 n_jp,
                       ForceSoft * force){
-        const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
-        const PS::F64 G = ForceSoft::grav_const;
+        const FloatType eps2 = EPISoft::eps * EPISoft::eps;
+        const FloatType G = ForceSoft::grav_const;
         PS::S32 ep_j_list[n_jp], n_jp_local=0;
         PS::S32 ep_i_list[n_ip], n_ip_local=0;
         for (PS::S32 i=0; i<n_jp; i++){
@@ -457,8 +473,8 @@ struct CalcCorrectEpEpWithLinearCutoffSimd{
             // remove the orbital sample for the force calculation
             if (ep_i[i].type==1) {
                 ep_i_list[n_ip_local] = i;
-                const PS::F64vec pos_i = ep_i[i].pos;
-                const PS::F64vec acci = ep_i[i].acc;
+                const FloatTypevec pos_i = ep_i[i].pos;
+                const FloatTypevec acci = ep_i[i].acc;
                 pg.set_epi_acci_one(i, pos_i.x, pos_i.y, pos_i.z, acci.x, acci.y, acci.z);
                 n_ip_local++;
             }
@@ -471,16 +487,16 @@ struct CalcCorrectEpEpWithLinearCutoffSimd{
             PS::S32 i_tmp = 0;
             for(PS::S32 i=ih; i<it; i++, i_tmp++){
                 const PS::S32 ij = ep_j_list[i];
-                const PS::F64 m_j = ep_j[ij].mass;
-                const PS::F64vec pos_j = ep_j[ij].pos;
-                const PS::F64vec accj = ep_j[ij].acc;
+                const FloatType m_j = ep_j[ij].mass;
+                const FloatTypevec pos_j = ep_j[ij].pos;
+                const FloatTypevec accj = ep_j[ij].acc;
                 pg.set_epj_accj_one(i_tmp, pos_j.x, pos_j.y, pos_j.z, m_j, accj.x, accj.y, accj.z);
 
             }
             pg.run_acorr_epj_for_p3t_with_linear_cutoff(n_ip, n_jp_tmp);
             for(PS::S32 k=0; k<n_ip_local; k++){
                 PS::S32 i=ep_i_list[k];
-                PS::F64 a[3]= {0,0,0};
+                FloatType a[3]= {0,0,0};
                 pg.accum_acorr_one(i, a[0], a[1], a[2]);
                 force[i].acorr[0] -= 2.0 * G * a[0];
                 force[i].acorr[1] -= 2.0 * G * a[1];
@@ -500,8 +516,8 @@ struct CalcForceEpSpMonoSimd{
                       const Tsp * sp_j,
                       const PS::S32 n_jp,
                       ForceSoft * force){
-        const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
-        const PS::F64 G = ForceSoft::grav_const;
+        const FloatType eps2 = EPISoft::eps * EPISoft::eps;
+        const FloatType G = ForceSoft::grav_const;
         PS::S32 ep_i_list[n_ip], n_ip_local=0;
 #ifdef __HPC_ACE__
         PhantomGrapeQuad pg;
@@ -519,7 +535,7 @@ struct CalcForceEpSpMonoSimd{
             // remove the orbital sample for the force calculation
             if (ep_i[i].type==1) {
                 ep_i_list[n_ip_local] = i;
-                const PS::F64vec pos_i = ep_i[i].getPos();
+                const FloatTypevec pos_i = ep_i[i].getPos();
                 pg.set_xi_one(n_ip_local, pos_i.x, pos_i.y, pos_i.z, 0.0);
                 n_ip_local++;
             }                
@@ -531,15 +547,15 @@ struct CalcForceEpSpMonoSimd{
             const PS::S32 it = ih + n_jp_tmp;
             PS::S32 i_tmp = 0;
             for(PS::S32 i=ih; i<it; i++, i_tmp++){
-                const PS::F64 m_j = sp_j[i].getCharge();
-                const PS::F64vec pos_j = sp_j[i].getPos();
+                const FloatType m_j = sp_j[i].getCharge();
+                const FloatTypevec pos_j = sp_j[i].getPos();
                 pg.set_epj_one(i_tmp, pos_j.x, pos_j.y, pos_j.z, m_j, 0.0);
             }
             pg.run_epj(n_ip, n_jp_tmp);
             for(PS::S32 k=0; k<n_ip_local; k++){
                 PS::S32 i=ep_i_list[k];
-                PS::F64 p = 0;
-                PS::F64 a[3]= {0,0,0};
+                FloatType p = 0;
+                FloatType a[3]= {0,0,0};
                 pg.accum_accp_one(k, a[0], a[1], a[2], p);
                 force[i].acc[0] += G*a[0];
                 force[i].acc[1] += G*a[1];
@@ -563,8 +579,8 @@ struct CalcForceEpSpQuadSimd{
                       const Tsp * sp_j,
                       const PS::S32 n_jp,
                       ForceSoft * force){
-        const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
-        const PS::F64 G = ForceSoft::grav_const;
+        const FloatType eps2 = EPISoft::eps * EPISoft::eps;
+        const FloatType G = ForceSoft::grav_const;
         PS::S32 ep_i_list[n_ip], n_ip_local=0;
     #ifdef __HPC_ACE__
         PhantomGrapeQuad pg;
@@ -582,7 +598,7 @@ struct CalcForceEpSpQuadSimd{
             // remove the orbital sample for the force calculation
             if (ep_i[i].type==1) {
                 ep_i_list[n_ip_local] = i;
-                const PS::F64vec pos_i = ep_i[i].getPos();
+                const FloatTypevec pos_i = ep_i[i].getPos();
                 pg.set_xi_one(n_ip_local, pos_i.x, pos_i.y, pos_i.z, 0.0);
                 n_ip_local++;
             }                
@@ -594,17 +610,17 @@ struct CalcForceEpSpQuadSimd{
             const PS::S32 it = ih + n_jp_tmp;
             PS::S32 i_tmp = 0;
             for(PS::S32 i=ih; i<it; i++, i_tmp++){
-                const PS::F64 m_j = sp_j[i].getCharge();
-                const PS::F64vec pos_j = sp_j[i].getPos();
-                const PS::F64mat q = sp_j[i].quad;
+                const FloatType m_j = sp_j[i].getCharge();
+                const FloatTypevec pos_j = sp_j[i].getPos();
+                const FloatTypemat q = sp_j[i].quad;
                 pg.set_spj_one(i, pos_j.x, pos_j.y, pos_j.z, m_j,
                                q.xx, q.yy, q.zz, q.xy, q.yz, q.xz);
             }
             pg.run_spj(n_ip, n_jp_tmp);
             for(PS::S32 k=0; k<n_ip_local; k++){
                 PS::S32 i=ep_i_list[k];
-                PS::F64 p = 0;
-                PS::F64 a[3]= {0,0,0};
+                FloatType p = 0;
+                FloatType a[3]= {0,0,0};
                 pg.accum_accp_one(k, a[0], a[1], a[2], p);
 #ifdef NAN_CHECK_DEBUG
                 assert(!std::isnan(a[0]));
