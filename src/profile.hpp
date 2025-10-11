@@ -271,6 +271,36 @@ public:
         return *this;
     }
 
+#ifdef FDPS_V8
+    void dumpName(std::ostream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
+        fout<<std::setw(width)<<"Sample_ptcl"
+            <<std::setw(width)<<"Domain_deco"
+            <<std::setw(width)<<"Ex_ptcl    "
+            <<std::setw(width)<<"SetRootCell"
+            <<std::setw(width)<<"Make_LT    "
+            <<std::setw(width)<<"Make_LET   "
+            <<std::setw(width)<<"Make_GT    "
+            <<std::setw(width)<<"Make_Group "
+            <<std::setw(width)<<"Make_I_list"
+            <<std::setw(width)<<"Calc_force "
+            <<std::setw(width)<<"Write_back ";
+    }
+    
+    void dump(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 width=PROFILE_PRINT_WIDTH){
+        fout<<std::setw(width)<<select_sample_particle  /n_loop 
+            <<std::setw(width)<<decompose_domain        /n_loop 
+            <<std::setw(width)<<exchange_particle       /n_loop 
+            <<std::setw(width)<<set_root_cell           /n_loop
+            <<std::setw(width)<<construct_lt            /n_loop 
+            <<std::setw(width)<<construct_exchange_let  /n_loop 
+            <<std::setw(width)<<construct_gt            /n_loop 
+            <<std::setw(width)<<construct_ipg           /n_loop 
+            <<std::setw(width)<<construct_interaction_list /n_loop 
+            <<std::setw(width)<<calculate_force         /n_loop 
+            <<std::setw(width)<<write_back              /n_loop; 
+    }
+
+#else
     void dumpName(std::ostream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
         fout<<std::setw(width)<<"Sample_ptcl"
             <<std::setw(width)<<"Domain_deco"
@@ -308,6 +338,7 @@ public:
             <<std::setw(width)<<exchange_LET_2nd        /n_loop
             <<std::setw(width)<<write_back              /n_loop; 
     }
+#endif
 };
 
 class SysProfile{

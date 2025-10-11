@@ -45,6 +45,9 @@
 43. Add new option 'sigma-dt-soft-factor' to control the factor determing dt_soft and changeover radii; switch the default method to nstep-dt-soft-kepler with 64.0
 44. Add 32 bit tree force for non-simd mode; change configure option '--enable-simd-64' to '--enable-64b', not limited to SIMD case; update petar.simd.test to print more information.
 45. Add COLLECT_SP_ACC macro to allow record superparticle acc in snapshot.
+46. Add support for FDPS 8.0.
+47. Improve IOParams by printing all options with different data types in order of characters.
+48. Write EPI and EPJ particle information when i or j particle number in groups exceed the limitation.
 
 **Some existing issues include**
 

@@ -293,7 +293,25 @@ struct SearchNeighborEpEpSimd{
         #endif
     #endif
         if(n_ip > pg.NIMAX || n_jp > pg.NJMAX){
-            std::cout<<"ni= "<<n_ip<<" NIMAX= "<<pg.NIMAX<<" nj= "<<n_jp<<" NJMAX= "<<pg.NJMAX<<std::endl;
+            #pragma omp critical
+            {
+                std::cout<<"ni= "<<n_ip<<" NIMAX= "<<pg.NIMAX<<" nj= "<<n_jp<<" NJMAX= "<<pg.NJMAX<<std::endl;
+                // Output positions of ep_i and ep_j to files
+                std::ofstream ep_i_pos_file("ep_i_pos.txt", std::ios::app);
+                ep_i_pos_file << "i_list\n";
+                for (PS::S32 i = 0; i < n_ip; i++) {
+                    const FloatTypevec& pos = ep_i[i].pos;
+                    ep_i_pos_file << ep_i[i].id<< " " << ep_i[i].r_search << " " << pos.x << " " << pos.y << " " << pos.z << "\n";
+                }
+                ep_i_pos_file.close();
+                std::ofstream ep_j_pos_file("ep_j_pos.txt", std::ios::app);
+                ep_j_pos_file << "j_list\n";
+                for (PS::S32 j = 0; j < n_jp; j++) {
+                    const FloatTypevec& pos = ep_j[j].pos;
+                    ep_j_pos_file << ep_j[j].id<< " " <<ep_j[j].mass << " " << ep_j[j].r_search << " " << pos.x << " " << pos.y << " " << pos.z << "\n";
+                }
+                ep_j_pos_file.close();
+            }    
         }
         assert(n_ip<=pg.NIMAX);
         assert(n_jp<=pg.NJMAX);

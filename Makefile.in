@@ -28,6 +28,15 @@ ifeq ($(use_fdps_comm),yes)
 FDPSFLAGS = -D FDPS_COMM
 endif
 
+FDPS_VERSION=@FDPS_VERSION@
+FDPS_VERSION_MAJOR := $(shell echo $(FDPS_VERSION) | cut -d. -f1)
+#FDPS_VERSION_MINOR := $(shell echo $(FDPS_VERSION) | cut -d. -f2)
+FDPS_VERSION_GE_8 := $(shell [ $(FDPS_VERSION_MAJOR) -ge 8 ] && echo yes || echo no)
+ifeq ($(FDPS_VERSION_GE_8),yes)
+FDPSFLAGS += -D FDPS_V8
+endif
+
+
 ifeq ($(use_mpfrc),yes)
 MT_FLAGS += -D PETAR_USE_MPFRC
 PETAR_INCLUDE += @MPFRCFLAGS@
