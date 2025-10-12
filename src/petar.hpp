@@ -806,7 +806,11 @@ public:
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         if (input_parameters.domain_weight_mode.value == 1)
             // use force calculation time as weight
+#ifdef FDPS_V8
+            domain_decompose_weight = tree_soft_profile.calc_force_all;
+#else            
             domain_decompose_weight = tree_soft_profile.calc_force;
+#endif
 #endif
 
         //profile.tree_soft.barrier();
