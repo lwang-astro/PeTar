@@ -272,8 +272,8 @@ public:
             auto* pert_adr = _perturber.neighbor_address.getDataAddress();
 
             Float xp[n_pert][3], xcm[3], m[n_pert];
-            ChangeOver* changeover[n_pert_single];
-            H4::NBAdr<PtclHard>::Group* ptclgroup[n_pert_group];
+            ChangeOver* changeover[n_pert_single+1];
+            H4::NBAdr<PtclHard>::Group* ptclgroup[n_pert_group+1];
 
             int n_single_count=0;
             int n_group_count=0;
