@@ -330,8 +330,8 @@ public:
         for (int k=0; k<3; k++) {
             pm->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
             pm->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
-            p0->pos[k] = pm->pos[k]*(1+1e-8)+1e-12;
-            p0->vel[k] = pm->vel[k]*(1+1e-8)+1e-12;
+            p0->pos[k] = -pm->pos[k];
+            p0->vel[k] = -pm->vel[k];
         }
         
         // only increase mass and change radius after time delay
@@ -463,7 +463,21 @@ public:
         }
         return return_flag;
     }
-    
+
+    //! Set the remnant orbit to the center of mass
+    /*! 
+        @param[in,out] p: particle array
+        @param[in] p_cm: center of mass particle
+    */
+    template <class TParticle, class Tcm>
+    void setRemnantOrbitToCM(TParticle& p, const Tcm& p_cm) {
+        if (p.star.getType() == StarType::star_remnant) {
+            for (int k=0; k<3; k++) {
+                p.pos[k] = p_cm.pos[k];
+                p.vel[k] = p_cm.vel[k];
+            }
+        }
+    }
 
     //! redistribute star position and velocity
     /*!

@@ -1439,6 +1439,9 @@ public:
 #ifdef STELLAR_EVOLUTION
                 if (pi.mass==0.0) {
                     ASSERT(pi.group_data.artificial.isUnused());
+#ifdef DISK_STAR_MERGER
+                    manager->ar_manager.interaction.disk_star_merger_manager.setRemnantOrbitToCM(pi, pcm);
+#endif
                     continue;
                 }
 
@@ -1603,7 +1606,6 @@ public:
 #ifdef BSE_BASE
                     ASSERT(pi.star.tphys<=time_origin+_time_end);
 #endif
-
                     continue;
                 }
 
@@ -1625,6 +1627,14 @@ public:
                 pi.Ptcl::calcRSearch(_time_end);
 //                pi.calcRSearch(h4_manager.interaction.G*(h4_pcm.mass-pi.mass), abs(pi.pot), h4_pcm.vel, _dt);
             }
+
+#ifdef DISK_STAR_MERGER
+            for (PS::S32 i=0; i<h4_int.particles.getSize(); i++) {
+                auto& pi = ptcl_origin[i];
+                if (pi.mass==0.0) 
+                    manager->ar_manager.interaction.disk_star_merger_manager.setRemnantOrbitToCM(pi, h4_pcm);
+            }
+#endif
 
 
 #ifdef PROFILE
