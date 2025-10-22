@@ -274,6 +274,11 @@ int main(int argc, char **argv){
   hard_manager.readBinary(fpar_in);
   fclose(fpar_in);
 
+#ifdef ADJUST_GROUP_PRINT
+  // Reinitialize fgroup after binary read to fix vptr corruption
+  new (&hard_manager.h4_manager.fgroup) std::ofstream();
+#endif
+
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
   if (stellar_evolution_option>=0) {

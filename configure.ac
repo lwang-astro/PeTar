@@ -85,6 +85,12 @@ AX_CHECK_COMPILE_FLAG([-O0],
 AX_CHECK_COMPILE_FLAG([-fbounds-check],
                       [DEBFLAGS=$DEBFLAGS" -fbounds-check"])
 
+AX_CHECK_COMPILE_FLAG([-fsanitize=address,undefined],
+                      [DEBFLAGS=$DEBFLAGS" -fsanitize=address,undefined"])
+
+AX_CHECK_COMPILE_FLAG([-fno-omit-frame-pointer],
+                      [DEBFLAGS=$DEBFLAGS" -fno-omit-frame-pointer"])
+
 AS_IF([test x"$with_debug" == xg],
       [PROG_SUFFIX=".g"
        OPTFLAGS=$DEBFLAGS],
