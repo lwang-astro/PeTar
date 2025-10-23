@@ -269,7 +269,7 @@ def coordinateCorrection(data, snap_center, obs_center, **kwargs):
     parameters={'galcen_distance':8.0*u.kpc, 'z_sun':15.*u.pc, 'galcen_v_sun':CartesianDifferential([10.0,235.,7.]*u.km/u.s)}    
     for key in parameters.keys():
         if key in kwargs.keys():
-            parameter[key] = kwargs[key]
+            parameters[key] = kwargs[key]
 
     obs_cg = obs_center.transform_to(Galactocentric(**parameters))
     obs_cg.representation_type = 'spherical'

@@ -211,7 +211,7 @@ class PeTarDataHeader():
         parameters={'galcen_distance':8.0*u.kpc, 'z_sun':15.*u.pc, 'galcen_v_sun':CartesianDifferential([10.0,235.,7.]*u.km/u.s)}
         for key in parameters.keys():
             if key in kwargs.keys():
-                parameter[key] = kwargs[key]
+                parameters[key] = kwargs[key]
 
         sky = SkyCoord(x=self.pos_offset[0]*pos_unit, 
                        y=self.pos_offset[1]*pos_unit, 
