@@ -835,8 +835,11 @@ public:
 #ifdef DISK_STAR_MERGER
         if (_p.getBinaryInterruptState() != BinaryInterruptState::delaycollision) {
             // call mass change function
-            int modify_flag = disk_star_merger_manager.calcMassChange(&_p, _time_end);
-            return modify_flag;
+            if (_p.time_interrupt<=_time_end) {
+                int modify_flag = disk_star_merger_manager.calcMassChange(&_p, _time_end, time_interrupt_max);
+                return modify_flag;
+            }
+            else return 0;
         }
 #endif
 
