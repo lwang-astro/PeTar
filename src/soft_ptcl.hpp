@@ -121,7 +121,7 @@ public:
 #ifdef EXTERNAL_POT_IN_PTCL
         fprintf(fp, "%26.17e ",this->pot_ext);
 #endif        
-        fprintf(fp, "%lld\n",this->n_ngb);
+        fprintf(fp, "%" PRId64 "\n",this->n_ngb);
     }
 
     void writeBinary(FILE* fp) const{
@@ -165,7 +165,7 @@ public:
             abort();
         }
 #endif
-        rcount=fscanf(fp, "%lld\n", &this->n_ngb);
+        rcount=fscanf(fp, "%" PRId64 "\n", &this->n_ngb);
         if (rcount<1) {
             std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
@@ -425,3 +425,12 @@ public:
     }
 };
 
+class MomentQuadrupole : public PS::MomentQuadrupole{
+public:
+    void set() { if (mass!=0.0) pos = pos / mass; }
+};
+
+class MomentMonopole : public PS::MomentMonopole{
+public:
+    void set() { if (mass!=0.0) pos = pos / mass; }
+};

@@ -141,11 +141,11 @@ public:
     void writeAscii(FILE* _fout) const{
         ParticleBase::writeAscii(_fout);
 #ifdef GROUP_DATA_WRITE_ARTIFICIAL
-        fprintf(_fout, "%26.17e %lld ", 
+        fprintf(_fout, "%26.17e %" PRId64" ", 
                 this->r_search, this->id);
         group_data.artificial.writeAscii(_fout);
 #else
-        fprintf(_fout, "%26.17e %lld %lld %lld", 
+        fprintf(_fout, "%26.17e %" PRId64 " %" PRId64 " %" PRId64 " ",
                 this->r_search, this->id, this->group_data.data_int64.data1, this->group_data.data_int64.data2);
 #endif
         changeover.writeAscii(_fout);
@@ -167,7 +167,7 @@ public:
     void readAscii(FILE* _fin) {
         ParticleBase::readAscii(_fin);
 #ifdef GROUP_DATA_WRITE_ARTIFICIAL
-        PS::S64 rcount=fscanf(_fin, "%lf %lld ",
+        PS::S64 rcount=fscanf(_fin, "%lf %" PRId64 " ",
                               &this->r_search, &this->id);
         if (rcount<2) {
             std::cerr<<"Error: Ptcl data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
@@ -176,7 +176,7 @@ public:
         }
         group_data.artificial.readAscii(_fin);
 #else
-        PS::S64 rcount=fscanf(_fin, "%lf %lld %lld %lld",
+        PS::S64 rcount=fscanf(_fin, "%lf %" PRId64 " %" PRId64 " %" PRId64 " ",
                               &this->r_search, &this->id, &this->group_data.data_int64.data1, &this->group_data.data_int64.data2);
         if (rcount<4) {
             std::cerr<<"Error: Ptcl data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";

@@ -451,9 +451,11 @@ public:
 class PeTar {
 public:
 #ifdef USE_QUAD
-    typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::QuadrupoleWithSymmetrySearch TreeForce; 
+    typedef PS::TreeForForce<PS::SEARCH_MODE_LONG_SYMMETRY, ForceSoft, EPISoft, EPJSoft, MomentQuadrupole, MomentQuadrupole, PS::SPJQuadrupole> TreeForce;
+    //typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::QuadrupoleWithSymmetrySearch TreeForce; 
 #else
-    typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::MonopoleWithSymmetrySearch TreeForce;
+    typedef PS::TreeForForce<PS::SEARCH_MODE_LONG_SYMMETRY, ForceSoft, EPISoft, EPJSoft, MomentMonopole, MomentMonopole, PS::SPJMonopole> TreeForce;
+    //typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::MonopoleWithSymmetrySearch TreeForce;
 #endif
     typedef PS::ParticleSystem<FPSoft> SystemSoft;
 
