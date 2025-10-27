@@ -676,6 +676,9 @@ public:
     PS::S64 ARC_tsyn_step_sum;
     PS::S64 H4_step_sum;
 #endif
+    PS::S64 ARC_n_groups_new;
+    PS::S64 ARC_n_groups_end;
+    PS::S64 n_group_arti_change;
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
     PS::ReallocatableArray<bool> table_neighbor_exist;
@@ -697,6 +700,7 @@ public:
 #ifdef PROFILE
                       ARC_substep_sum(0), ARC_tsyn_step_sum(0), H4_step_sum(0), 
 #endif
+                      ARC_n_groups_new(0), ARC_n_groups_end(0), n_group_arti_change(0),
 #ifdef HARD_COUNT_NO_NEIGHBOR
                       table_neighbor_exist(), n_neighbor_zero(0),
 #endif
@@ -908,12 +912,15 @@ public:
             ASSERT(sym_int.info.checkParams());
             ASSERT(sym_int.perturber.checkParams());
 
+            bool pre_exit_flag = sym_int.info.checkAndSetBinaryPairIDIter(sym_int.info.getBinaryTreeRoot(),false);
+
 #ifdef ADJUST_GROUP_PRINT
-            if (manager->h4_manager.adjust_group_write_flag) {
+            if (manager->h4_manager.adjust_group_write_flag && !pre_exit_flag) {
                 // print new group information
                 sym_int.printGroupInfo(0, manager->h4_manager.fgroup, WRITE_WIDTH, &pcm);
             }
 #endif
+
 
 #ifdef HARD_DEBUG_PRINT_TITLE
             sym_int.printColumnTitle(std::cerr, WRITE_WIDTH, sym_int.info.binarytree.getSize());
@@ -1136,12 +1143,6 @@ public:
 #endif
 #endif
 
-#ifdef ADJUST_GROUP_PRINT
-            if (manager->h4_manager.adjust_group_write_flag) {
-                // print new group information
-                sym_int.printGroupInfo(1, manager->h4_manager.fgroup, WRITE_WIDTH, &(sym_int.particles.cm));
-            }
-#endif
 
 #ifdef PROFILE
 #ifdef HARD_DUMP
@@ -1393,34 +1394,50 @@ public:
     }
 #endif
 
-    //! drift c.m. particle of the cluster record group c.m. in group_data and write back data to original particle array
+    //! drift c.m. of the cluster and of artifical particles and write back data to original particle array
     /*!
        @param[in] _time_end: integration ending time (initial time is fixed to 0)
+       @param[in,out] _ptcl_artificial: artificial particle array
+       @param[in] _n_group: number of groups with artificial particles
      */
-    void driftClusterCMRecordGroupCMDataAndWriteBack(const PS::F64 _time_end) {
+    template <class Tsoft>
+    void driftClusterAndArtificialCMAndWriteBack(const PS::F64 _time_end,
+                                                Tsoft* _ptcl_artificial,
+                                                const PS::S32 _n_group) {
         ASSERT(checkParams());
 #ifdef HARD_CHECK_ENERGY
         PS::F64 ekin, epot, ekin_sd, epot_sd;
 #endif
         if (use_sym_int) {
+
             auto& pcm = sym_int.particles.cm;
+            auto& bink = sym_int.info.getBinaryTreeRoot();
             pcm.pos += pcm.vel * _time_end;
 
-            // update rsearch
             ASSERT(!std::isinf(pcm.vel[0]));
             ASSERT(!std::isnan(pcm.vel[0]));
-            pcm.Ptcl::calcRSearch(_time_end);
-            // copyback
+
+            bool reset_flag = (bink.semi < 0 ) && (bink.ecca > 0);
+            sym_int.info.checkAndSetBinaryPairIDIter(bink, reset_flag);
+
+#ifdef ADJUST_GROUP_PRINT
+            if (manager->h4_manager.adjust_group_write_flag && reset_flag) {
+                // print break group information
+                sym_int.printGroupInfo(1, manager->h4_manager.fgroup, WRITE_WIDTH, &pcm);
+            }
+#endif
+
 
 #ifdef HARD_CHECK_ENERGY
             // correct cm kinetic energy
-            auto& bink = sym_int.info.getBinaryTreeRoot();
             auto& vcm = pcm.vel;
             Float dm = bink.mass - pcm.mass;
             Float de_kin = 0.5*dm*(vcm[0]*vcm[0]+vcm[1]*vcm[1]+vcm[2]*vcm[2]);
             auto& vbin = bink.vel;
             de_kin += bink.mass*(vbin[0]*vcm[0]+vbin[1]*vcm[1]+vbin[2]*vcm[2]);
 #endif
+            // copyback
+
 #ifdef PETAR_USE_MPFRC
             shiftToOriginFrameWithPosMP(sym_int.particles);
 #else
@@ -1428,8 +1445,30 @@ public:
 #endif
             sym_int.particles.template writeBackMemberAll<PtclH4>();
 
-            PS::S32 n_members = sym_int.particles.getSize();
 
+            // drift artificial particles and move particle mass to backup mass
+            if (_ptcl_artificial!=NULL) {
+                auto& ap_manager = manager->ap_manager;
+
+                // update new cm. pos and vel for binarytree root                
+                bink.pos = pcm.pos;
+                bink.vel = pcm.vel;
+                ap_manager.updateArtificialParticles(_ptcl_artificial, bink);
+#ifdef ARTIFICIAL_PARTICLE_DEBUG                
+                ap_manager.checkConsistence(ptcl_origin, _ptcl_artificial);
+#endif
+
+                // set mass back to backup mass                
+                const int n_members = sym_int.particles.getSize();                
+                for (int i=0; i<n_members; i++) {
+                    auto& pi = ptcl_origin[i];
+                    pi.group_data.artificial.setMassBackup(pi.mass);
+                    pi.mass = 0.0; // set mass to zero
+                }
+            }    
+
+#ifdef HARD_DEBUG
+            PS::S32 n_members = sym_int.particles.getSize();
             for (PS::S32 i=0; i<n_members; i++) {
                 auto& pi = ptcl_origin[i];
 #ifdef STELLAR_EVOLUTION
@@ -1437,32 +1476,18 @@ public:
                     ASSERT(pi.group_data.artificial.isUnused());
                     continue;
                 }
-
-                // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                //pi.time_record -= _time_end;
-                //pi.time_interrupt -= _time_end;
+#ifdef BSE_BASE
+                ASSERT(pi.star.tphys<=time_origin+_time_end);
 #endif
 
-                pi.r_search = std::max(pcm.r_search, pi.r_search);
-#ifdef CLUSTER_VELOCITY
-                pi.group_data.cm.mass    = pcm.mass;
-                pi.group_data.cm.vel[0]  = pcm.vel[0];
-                pi.group_data.cm.vel[1]  = pcm.vel[1];
-                pi.group_data.cm.vel[2]  = pcm.vel[2];
 #endif
+
                 ASSERT(!std::isinf(pi.pos[0]));
                 ASSERT(!std::isnan(pi.pos[0]));
                 ASSERT(!std::isinf(pi.vel[0]));
                 ASSERT(!std::isnan(pi.vel[0]));
-
-#ifdef HARD_DEBUG
-                ASSERT(ptcl_origin[i].r_search>=ptcl_origin[i].changeover.getRout());
-#ifdef BSE_BASE
-                ASSERT(pi.star.tphys<=time_origin+_time_end);
-#endif
-#endif
             }
-
+#endif
 
 #ifdef PROFILE
             ARC_substep_sum += sym_int.profile.step_count;
@@ -1538,28 +1563,82 @@ public:
             energy.de_sd_change_modify_single = energy.de_change_modify_single;
 #endif
 #endif
-            
-            // update research and group_data.cm
-            auto& h4_pcm = h4_int.particles.cm;
+            if (_ptcl_artificial!=NULL) {
+                bool group_arti_update_list[_n_group];
+                for (PS::S32 i=0; i<_n_group; i++) group_arti_update_list[i] = false;
+
+                auto& ap_manager = manager->ap_manager;
+                for (PS::S32 k=0; k<h4_int.getNGroup(); k++) {
+                    auto& groupk = h4_int.groups[k];
+
+                    // check whether soft_pert exist                    
+                    if (groupk.perturber.soft_pert != NULL) {
+
+                        // check whether group match artifical particles
+                        PS::S32 index_arti = groupk.particles[0].getTidalTensorID()-1;
+                        PS::S32 adr_arti = index_arti*ap_manager.getArtificialParticleN();
+                        PS::S32 n_member_from_arti = ap_manager.getMemberN(&_ptcl_artificial[adr_arti]);
+                        PS::S32 n_member_from_group = groupk.particles.getSize();
+
+                        // check n_member match
+                        if (n_member_from_arti != n_member_from_group) {
+                            continue;
+                        }
+
+                        // check member tidal tensor id match
+                        bool unmatch_flag = false;
+                        for (int i=0; i<n_member_from_group; i++) {
+                            if (groupk.particles[i].getTidalTensorID()-1 != index_arti) {
+                                unmatch_flag = true;
+                                break;
+                            }
+                        }
+                        if (unmatch_flag) continue;
+
+                        // update new cm. pos and vel for binarytree root
+                        auto& bink = groupk.info.getBinaryTreeRoot();
+                        bink.pos += groupk.particles.cm.pos + pcm.pos;
+                        bink.vel += groupk.particles.cm.vel + pcm.vel;
+                        
+                        ap_manager.updateArtificialParticles(&_ptcl_artificial[adr_arti], groupk.info.getBinaryTreeRoot());
+
+                        // set mass back to backup mass                
+                        const int n_members = groupk.particles.getSize();
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+                        PtclHard ptcl_origin_list[n_members];
+                        for (int i=0; i<n_members; i++) {
+                            ptcl_origin_list[i] = *groupk.particles.getMemberOriginAddress(i);
+                        }
+                        ap_manager.checkConsistence(ptcl_origin_list, &_ptcl_artificial[adr_arti]);
+#endif
+                        for (int i=0; i<n_members; i++) {
+                            auto* pi = groupk.particles.getMemberOriginAddress(i);
+                            pi->group_data.artificial.setMassBackup(pi->mass);
+                            pi->mass = 0.0; // set mass to zero
+                        }
+
+                        group_arti_update_list[index_arti] = true;
+                    }
+                }
+
+                // count number of artificial particles not updated                
+                for (PS::S32 i=0; i<_n_group; i++) {
+                    if (!group_arti_update_list[i]) n_group_arti_change ++;
+                }
+                        
+            }
+
+#ifdef HARD_DEBUG
+            //auto& h4_pcm = h4_int.particles.cm;
             const PS::S32* group_index = h4_int.getSortDtIndexGroup();
             for(PS::S32 i=0; i<h4_int.getNGroup(); i++) {
                 const PS::S32 k =group_index[i];
-#ifdef HARD_DEBUG
                 ASSERT(h4_int.groups[k].particles.cm.changeover.getRout()>0);
-#endif
-                //h4_int.groups[k].particles.cm.calcRSearch(_dt);
-                auto& pcm = h4_int.groups[k].particles.cm;
-                pcm.vel += h4_pcm.vel;
 
-                //pcm.calcRSearch(h4_manager.interaction.G*(h4_pcm.mass-pcm.mass), abs(pcm.pot), h4_pcm.vel, _dt);
-                ASSERT(!std::isinf(pcm.vel[0]));
-                ASSERT(!std::isnan(pcm.vel[0]));
-                pcm.Ptcl::calcRSearch(_time_end);
                 const PS::S32 n_member = h4_int.groups[k].particles.getSize();
                 //const PS::S32 id_first = h4_int.groups[k].particles.getMemberOriginAddress(0)->id;
                 for (PS::S32 j=0; j<n_member; j++) {
                     auto* pj = h4_int.groups[k].particles.getMemberOriginAddress(j);
-                    pj->r_search = std::max(pj->r_search, pcm.r_search);
 #ifdef STELLAR_EVOLUTION
                     if (pj->mass==0.0) {
                         ASSERT(pj->group_data.artificial.isUnused());
@@ -1569,19 +1648,6 @@ public:
                     ASSERT(pj->star.tphys<=time_origin+_time_end);
 #endif
 
-                    // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                    //pj->time_record -= _time_end;
-                    //pj->time_interrupt -= _time_end;
-#endif
-#ifdef CLUSTER_VELOCITY
-                    // save c.m. velocity and mass for neighbor search
-                    pj->group_data.cm.mass    = pcm.mass;
-                    pj->group_data.cm.vel[0]  = pcm.vel[0];
-                    pj->group_data.cm.vel[1]  = pcm.vel[1];
-                    pj->group_data.cm.vel[2]  = pcm.vel[2];
-#endif
-#ifdef HARD_DEBUG
-                    ASSERT(pj->r_search>pj->changeover.getRout());
 #endif
                     ASSERT(!std::isinf(pj->pos[0]));
                     ASSERT(!std::isnan(pj->pos[0]));
@@ -1603,25 +1669,13 @@ public:
                     continue;
                 }
 
-                // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                //pi.time_record -= _time_end;
-                //pi.time_interrupt -= _time_end;
-#endif
-#ifdef CLUSTER_VELOCITY
-                // set group_data.cm to 0.0 for singles
-                pi.group_data.cm.mass    = 0.0;
-                pi.group_data.cm.vel[0]  = 0.0;
-                pi.group_data.cm.vel[1]  = 0.0;
-                pi.group_data.cm.vel[2]  = 0.0;
 #endif
                 ASSERT(!std::isinf(pi.pos[0]));
                 ASSERT(!std::isnan(pi.pos[0]));
                 ASSERT(!std::isinf(pi.vel[0]));
                 ASSERT(!std::isnan(pi.vel[0]));
-                pi.Ptcl::calcRSearch(_time_end);
-//                pi.calcRSearch(h4_manager.interaction.G*(h4_pcm.mass-pi.mass), abs(pi.pot), h4_pcm.vel, _dt);
             }
-
+#endif
 
 #ifdef PROFILE
             //ARC_substep_sum += Aint.getNsubstep();
@@ -1634,6 +1688,8 @@ public:
                 //DATADUMP("dump_large_step");
             } 
 #endif
+            ARC_n_groups_new += h4_int.profile.new_group_count;
+            ARC_n_groups_end += h4_int.profile.break_group_count;
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
             for (PS::S32 i=0; i<table_neighbor_exist.size(); i++) {
@@ -1751,6 +1807,9 @@ public:
         ARC_tsyn_step_sum = 0;
         H4_step_sum = 0;
 #endif
+        ARC_n_groups_new = 0;
+        ARC_n_groups_end = 0;
+        n_group_arti_change = 0;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         table_neighbor_exist.resizeNoInitialize(0);
         n_neighbor_zero = 0;
@@ -1799,6 +1858,9 @@ public:
     PS::S64 ARC_n_groups_iso;
     PS::S64 H4_step_sum;
 #endif
+    PS::S64 ARC_n_groups_new;
+    PS::S64 ARC_n_groups_end;
+    PS::S64 n_group_arti_change;
 #ifdef HARD_COUNT_NO_NEIGHBOR
     PS::S64 n_neighbor_zero;
 #endif
@@ -2234,6 +2296,9 @@ public:
         ARC_n_groups_iso = 0;
         H4_step_sum = 0;
 #endif
+        ARC_n_groups_new = 0;
+        ARC_n_groups_end = 0;
+        n_group_arti_change = 0;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         n_neighbor_zero = 0;
 #endif
@@ -2698,6 +2763,12 @@ public:
     template<class Tpsoft>
     void driveForMultiClusterOMP(const PS::F64 dt, Tpsoft* _ptcl_soft){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
+
+        if (n_cluster == 0) {
+            time_origin_ += dt;
+            return;
+        }
+
         //PS::ReallocatableArray<PtclH4> extra_ptcl[num_thread];
         //// For test
         //PS::ReallocatableArray<std::pair<PS::S32,PS::S32>> n_sort_list;
@@ -2730,6 +2801,14 @@ public:
             H4_step_sum_threads[i] = 0;
         }
 #endif
+        PS::S64 ARC_n_groups_new_threads[num_thread];
+        PS::S64 ARC_n_groups_end_threads[num_thread];
+        PS::S64 n_group_arti_change_threads[num_thread];
+        for (PS::S32 i=0; i<num_thread; i++) {
+            ARC_n_groups_new_threads[i] = 0;
+            ARC_n_groups_end_threads[i] = 0;
+            n_group_arti_change_threads[i] = 0;
+        }
 #ifdef HARD_COUNT_NO_NEIGHBOR
         PS::S64 n_neighbor_zero_threads[num_thread];
         for (PS::S32 i=0; i<num_thread; i++) n_neighbor_zero_threads[i] = 0;
@@ -2788,7 +2867,7 @@ public:
 
             hard_int_thread[ith].integrateToTime(dt);
 
-            hard_int_thread[ith].driftClusterCMRecordGroupCMDataAndWriteBack(dt);
+            hard_int_thread[ith].driftClusterAndArtificialCMAndWriteBack(dt, ptcl_artificial_ptr, n_group);
 
 #ifdef STELLAR_EVOLUTION
 #ifndef BSE_BASE
@@ -2802,6 +2881,10 @@ public:
             ARC_tsyn_step_sum_threads[ith]  += hard_int_thread[ith].ARC_tsyn_step_sum;
             H4_step_sum_threads[ith]        += hard_int_thread[ith].H4_step_sum;
 #endif
+            ARC_n_groups_new_threads[ith] += hard_int_thread[ith].ARC_n_groups_new;
+            ARC_n_groups_end_threads[ith] += hard_int_thread[ith].ARC_n_groups_end;
+            n_group_arti_change_threads[ith] += hard_int_thread[ith].n_group_arti_change;
+
 #ifdef HARD_COUNT_NO_NEIGHBOR
             n_neighbor_zero_threads[ith]    += hard_int_thread[ith].n_neighbor_zero;
 #endif
@@ -2860,6 +2943,11 @@ public:
             H4_step_sum += H4_step_sum_threads[i];
         }
 #endif
+        for (PS::S32 i=0; i<num_thread; i++) {
+            ARC_n_groups_new += ARC_n_groups_new_threads[i];
+            ARC_n_groups_end += ARC_n_groups_end_threads[i];
+            n_group_arti_change += n_group_arti_change_threads[i];
+        }
 #ifdef HARD_COUNT_NO_NEIGHBOR
         for (PS::S32 i=0; i<num_thread; i++) n_neighbor_zero += n_neighbor_zero_threads[i];
 #endif
@@ -3184,11 +3272,13 @@ public:
 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
         // check whether the list is correct
-        PS::S32 plist_new[group_ptcl_adr_offset];
-        for (int i=0; i<group_ptcl_adr_offset; i++) plist_new[i] = group_ptcl_adr_list[i];
-        std::sort(plist_new, plist_new+group_ptcl_adr_offset, [](const PS::S32 &a, const PS::S32 &b) {return a < b;});
-        std::sort(ptcl_list_reorder, ptcl_list_reorder+group_ptcl_adr_offset, [](const PS::S32 &a, const PS::S32 &b) {return a < b;});
-        for (int i=0; i<group_ptcl_adr_offset; i++) assert(ptcl_list_reorder[i]==plist_new[i]);
+        if (group_ptcl_adr_offset>0) {
+            PS::S32 plist_new[group_ptcl_adr_offset];
+            for (int i=0; i<group_ptcl_adr_offset; i++) plist_new[i] = group_ptcl_adr_list[i];
+            std::sort(plist_new, plist_new+group_ptcl_adr_offset, [](const PS::S32 &a, const PS::S32 &b) {return a < b;});
+            std::sort(ptcl_list_reorder, ptcl_list_reorder+group_ptcl_adr_offset, [](const PS::S32 &a, const PS::S32 &b) {return a < b;});
+            for (int i=0; i<group_ptcl_adr_offset; i++) assert(ptcl_list_reorder[i]==plist_new[i]);
+        }
 #endif        
 
         // overwrite the new ptcl list for group members by reorderd list
@@ -3462,87 +3552,78 @@ public:
         }
     }
 
-    //! set group member particle group_data.cm to c.m. data for search cluster
+    //! update rsearch, recover member backuped mass and set group member particle group_data.cm to c.m. data for search cluster
     /*! update both local and global 
        @param[in,out] _ptcl_soft: global particle
     */
     template <class Tsoft>
-    void setParticleGroupDataToCMData(Tsoft& _ptcl_soft) {
+    void calcRsearchAndGetMassBackupAndsetGroupDataToCM(Tsoft& _ptcl_soft, const PS::F64 _dt_tree) {
         Ptcl::group_data_mode = GroupDataMode::cm;
-        auto& ap_manager = manager->ap_manager;
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
 #pragma omp parallel for schedule(dynamic)
         for(PS::S32 i=0; i<n_cluster; i++){
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
-            const PS::S32 n_group = n_group_in_cluster_[i];
             PtclH4* ptcl_local = ptcl_hard_.getPointer(adr_head);
 
-            PS::S32 n_group_offset_local = 0;
-            if(n_group>0) {
-                for(int k=0; k<n_group; k++) {
-                    PS::S32 n_group_in_cluster_offset_k = n_group_in_cluster_offset_[i]+k;
-                    PS::S32 ptcl_artificial_adr = adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_k];
-                    PS::S32 n_members = n_member_in_group_[n_group_in_cluster_offset_k];
-                    // when artificial particles exist
-                    if (ptcl_artificial_adr>=0) {
-                        auto* pi = &(_ptcl_soft[ptcl_artificial_adr]);
-                        auto* pcm = ap_manager.getCMParticles(pi);
-                        PS::F64 pcm_mass = pcm->group_data.artificial.getMassBackup();
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-                        assert(n_members == ap_manager.getMemberN(pi));
-                        ap_manager.checkConsistence(&ptcl_local[n_group_offset_local], pi);
-#endif
-                        for (int j=n_group_offset_local; j<n_group_offset_local+n_members; j++) {
-                            ptcl_local[j].r_search = std::max(pcm->r_search, ptcl_local[j].r_search);
-                            auto& pj_cm = ptcl_local[j].group_data.cm;
-                            pj_cm.mass  = pcm_mass;
-                            pj_cm.vel.x = pcm->vel[0];
-                            pj_cm.vel.y = pcm->vel[1];
-                            pj_cm.vel.z = pcm->vel[2];
-                            PS::S32 adr = ptcl_local[j].adr_org;
-                            if(adr>=0) {
-                                assert(ptcl_local[j].id==_ptcl_soft[adr].id);
-                                _ptcl_soft[adr].group_data.cm = pj_cm;
-                                _ptcl_soft[adr].r_search = ptcl_local[j].r_search;
-                            }
-                        }
+            std::map<PS::S64, std::vector<PS::S64>> bid_index_map;
+
+            for (int k=0; k<n_ptcl; k++) {
+                // reset all particles first
+                auto bid = AR::Information<PtclHard,PtclH4>::getBinaryID(ptcl_local[k]);
+                if (bid ==0 ) {
+                    auto& pj_cm = ptcl_local[k].group_data.cm;
+                    pj_cm.mass  = pj_cm.vel.x = pj_cm.vel.y = pj_cm.vel.z = 0.0;
+                    ptcl_local[k].calcRSearch(_dt_tree);
+                    PS::S32 adr = ptcl_local[k].adr_org;
+                    if(adr>=0) {
+                        assert(ptcl_local[k].id==_ptcl_soft[adr].id);
+                        _ptcl_soft[adr].group_data.cm = pj_cm;
+                        _ptcl_soft[adr].r_search = ptcl_local[k].r_search;
                     }
-                    else {
-                        // when no artificial particles, calculate c.m.
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-                        // current case only isolated binary
-                        assert(n_members == 2&&n_group==1);
-#endif
-                        PS::F32 mass_cm=0.0;
-                        PS::F32vec vel_cm=PS::F32vec(0.0);
-                        for (int j=n_group_offset_local; j<n_group_offset_local+n_members; j++) {
-                            auto& pj = ptcl_local[j];
-                            mass_cm += pj.mass;
-                            vel_cm.x += pj.mass*pj.vel.x;
-                            vel_cm.y += pj.mass*pj.vel.y;
-                            vel_cm.z += pj.mass*pj.vel.z;
-                        }
-                        vel_cm /= mass_cm;
-                        for (int j=n_group_offset_local; j<n_group_offset_local+n_members; j++) {
-                            auto& pj_cm = ptcl_local[j].group_data.cm;
-                            pj_cm.mass = mass_cm;
-                            pj_cm.vel  = vel_cm;
-                            PS::S32 adr = ptcl_local[j].adr_org;
-                            if(adr>=0) {
-                                assert(ptcl_local[j].id==_ptcl_soft[adr].id);
-                                _ptcl_soft[adr].group_data.cm = pj_cm;
-                            }
-                        }
-                    }
-                    n_group_offset_local += n_members;
+                }
+                else {
+                    bid_index_map[bid].push_back(k);
                 }
             }
-            for (int j=n_group_offset_local; j<n_ptcl; j++) {
-                auto& pj_cm = ptcl_local[j].group_data.cm;
-                pj_cm.mass  = pj_cm.vel.x = pj_cm.vel.y = pj_cm.vel.z = 0.0;
-                PS::S32 adr = ptcl_local[j].adr_org;
-                if(adr>=0) _ptcl_soft[adr].group_data.cm = pj_cm;
+
+            for (const auto& [bid, indices] : bid_index_map) {
+                // calculate c.m. data and recover mass for members of group
+                PS::F64 mass_cm=0.0;
+                PS::F64vec vel_cm=PS::F64vec(0.0);
+                for (const auto& idx : indices) {
+                    auto& pj = ptcl_local[idx];
+                    if (pj.mass == 0.0 && pj.group_data.artificial.isMember()) {
+                        pj.mass = pj.group_data.artificial.getMassBackup();
+                        assert(pj.mass>0.0);
+                    }
+                    mass_cm += pj.mass;
+                    vel_cm.x += pj.mass*pj.vel.x;
+                    vel_cm.y += pj.mass*pj.vel.y;
+                    vel_cm.z += pj.mass*pj.vel.z;
+                }
+                vel_cm /= mass_cm;
+                
+                // update r_search of c.m. and group_data.cm
+                Ptcl pcm;
+                pcm.mass = mass_cm;
+                pcm.vel = vel_cm;
+                PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
+                pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                pcm.calcRSearch(_dt_tree);
+                for (const auto& idx : indices) {
+                    auto& pj_cm = ptcl_local[idx].group_data.cm;
+                    pj_cm.mass = mass_cm;
+                    pj_cm.vel = vel_cm;
+                    PS::S32 adr = ptcl_local[idx].adr_org;
+                    ptcl_local[idx].r_search = pcm.r_search;
+                    if(adr>=0) {
+                        assert(ptcl_local[idx].id==_ptcl_soft[adr].id);
+                        _ptcl_soft[adr].mass = ptcl_local[idx].mass; // recover mass
+                        _ptcl_soft[adr].group_data.cm = pj_cm;
+                        _ptcl_soft[adr].r_search = pcm.r_search;
+                    }
+                }
             }
         }
     }

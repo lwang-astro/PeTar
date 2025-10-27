@@ -481,7 +481,7 @@ int main(int argc, char **argv){
           hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, ptcl_artificial_ptr, hard_dump.n_group, hard_dump.n_member_in_group.getPointer(), &hard_manager, hard_dump.time_offset);
 
           hard_int.integrateToTime(hard_dump.time_end);
-          hard_int.driftClusterCMRecordGroupCMDataAndWriteBack(hard_dump.time_end);
+          hard_int.driftClusterAndArtificialCMAndWriteBack(hard_dump.time_end, ptcl_artificial_ptr, hard_dump.n_group);
 
       }
       // test stability
