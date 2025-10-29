@@ -1521,7 +1521,8 @@ public:
 #else
             h4_int.writeBackGroupMembers();
 #endif
-            h4_int.particles.cm.pos += h4_int.particles.cm.vel * _time_end;
+            auto& pcm = h4_int.particles.cm;
+            pcm.pos += pcm.vel * _time_end;
 
 #ifdef PETAR_USE_MPFRC
             shiftToOriginFrameWithPosMP(h4_int.particles);
@@ -1529,16 +1530,17 @@ public:
             h4_int.particles.shiftToOriginFrame();
 #endif
 
+            // back up center of mass pos and vel
+            PS::F64vec cm_pos_org = pcm.pos;
+            PS::F64vec cm_vel_org = pcm.vel;
 #ifdef  HARD_CHECK_ENERGY
             // update cm kinetic energy change
-            auto& pcm = h4_int.particles.cm;
-            Float vcm_org[3] = {pcm.vel[0], pcm.vel[1], pcm.vel[2]};
             Float mcm_bk = pcm.mass;
             h4_int.particles.calcCenterOfMass();
             Float dm = pcm.mass - mcm_bk;
-            Float de_kin = 0.5*dm*(vcm_org[0]*vcm_org[0]+vcm_org[1]*vcm_org[1]+vcm_org[2]*vcm_org[2]);
-            Float dvcm[3] = {pcm.vel[0] - vcm_org[0], pcm.vel[1] - vcm_org[1], pcm.vel[2] - vcm_org[2]};
-            de_kin += pcm.mass*(dvcm[0]*vcm_org[0]+dvcm[1]*vcm_org[1]+dvcm[2]*vcm_org[2]);
+            Float de_kin = 0.5*dm*(cm_vel_org[0]*cm_vel_org[0]+cm_vel_org[1]*cm_vel_org[1]+cm_vel_org[2]*cm_vel_org[2]);
+            Float dcm_vel[3] = {pcm.vel[0] - cm_vel_org[0], pcm.vel[1] - cm_vel_org[1], pcm.vel[2] - cm_vel_org[2]};
+            de_kin += pcm.mass*(dcm_vel[0]*cm_vel_org[0]+dcm_vel[1]*cm_vel_org[1]+dcm_vel[2]*cm_vel_org[2]);
 
             ekin    = h4_int.getEkin();
             epot    = h4_int.getEpot();
@@ -1597,9 +1599,9 @@ public:
 
                         // update new cm. pos and vel for binarytree root
                         auto& bink = groupk.info.getBinaryTreeRoot();
-                        bink.pos += groupk.particles.cm.pos + pcm.pos;
-                        bink.vel += groupk.particles.cm.vel + pcm.vel;
-                        
+                        bink.pos += groupk.particles.cm.pos + cm_pos_org;
+                        bink.vel += groupk.particles.cm.vel + cm_vel_org;
+
                         ap_manager.updateArtificialParticles(&_ptcl_artificial[adr_arti], groupk.info.getBinaryTreeRoot());
 
                         // set mass back to backup mass                
