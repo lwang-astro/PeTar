@@ -888,13 +888,20 @@ public:
             sym_int.perturber.global_cm = &sym_int.particles.cm;
 #endif
             
+            // initial cm acc0, acc1, pot, time and dt
+            auto& pcm = sym_int.particles.cm;
+            pcm.acc0[0] = pcm.acc0[1] = pcm.acc0[2] = 0.0;
+            pcm.acc1[0] = pcm.acc1[1] = pcm.acc1[2] = 0.0;
+            pcm.pot = 0.0;
+            pcm.time = 0.0;
+            pcm.dt   = 0.0;
+
             // initialization 
             sym_int.initialIntegration(0.0);
             sym_int.info.time_offset = time_origin;
             sym_int.info.calcDsAndStepOption(ar_manager.step.getOrder(),  ar_manager.interaction.gravitational_constant, ar_manager.ds_scale); 
 
             // calculate c.m. changeover
-            auto& pcm = sym_int.particles.cm;
             PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
             pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
 
