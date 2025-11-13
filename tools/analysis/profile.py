@@ -27,14 +27,19 @@ class FDPSProfile(DictNpArrayMix):
         Using the keyword argument 'FDPS_version=old' in the initialization for the old version.
     """
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        keys = [["collect_sam_ptcl",np.float64], ["decompose_domain",np.float64], ["exchange_ptcl",np.float64], 
-                ["set_particle_local_tree",np.float64],["set_particle_global_tree",np.float64],
-                ["make_local_tree",np.float64], ["make_global_tree",np.float64], ["set_root_cell",np.float64],
-                ["calc_force",np.float64], ["calc_mom_loc_tree",np.float64], ["calc_mom_gb_tree",np.float64],
-                ["make_LET_1st",np.float64], ["make_LET_2nd",np.float64], ["exchange_LET_1st",np.float64], ["exchange_LET_2nd",np.float64],
-                ["write_back",np.float64]]
+        keys = [["select_sample_particle",np.float64], ["decompose_domain",np.float64], ["exchange_particle",np.float64], 
+                ["set_root_cell",np.float64], ["construct_lt",np.float64], ["construct_exchange_let",np.float64],
+                ["construct_gt",np.float64], ["construct_ipg",np.float64],["construct_interaction_list",np.float64],
+                ["calculate_force",np.float64], ["write_back",np.float64]]
         if ('FDPS_version' in kwargs.keys()): 
-            if (kwargs['FDPS_version']=='old'):
+            if (kwargs['FDPS_version']<8.0):
+                keys = [["collect_sam_ptcl",np.float64], ["decompose_domain",np.float64], ["exchange_ptcl",np.float64], 
+                        ["set_particle_local_tree",np.float64],["set_particle_global_tree",np.float64],
+                        ["make_local_tree",np.float64], ["make_global_tree",np.float64], ["set_root_cell",np.float64],
+                        ["calc_force",np.float64], ["calc_mom_loc_tree",np.float64], ["calc_mom_gb_tree",np.float64],
+                        ["make_LET_1st",np.float64], ["make_LET_2nd",np.float64], ["exchange_LET_1st",np.float64], ["exchange_LET_2nd",np.float64],
+                        ["write_back",np.float64]]
+            elif (kwargs['FDPS_version']<5.0):
                 keys = [["collect_sam_ptcl",np.float64], ["decompose_domain",np.float64], ["exchange_ptcl",np.float64], 
                         ["make_local_tree",np.float64], ["make_global_tree",np.float64], 
                         ["calc_force",np.float64], ["calc_mom_loc_tree",np.float64], ["calc_mom_gb_tree",np.float64], 
