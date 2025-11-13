@@ -429,7 +429,7 @@ public:
         // d(1/v^3)/dt = -3/v^5 v dot a
         Float c2 = -3*c1/v2*vdota;
         // d(v/ds)/dt  = v dot a / (v*ds) 
-        Float c3 = -c1*dIfunc*vdota/(v*sound_speed);
+        Float c3 = c1/Ifunc*dIfunc*vdota/(v*sound_speed);
         
         //_force.acc0[0] += acc0[0];
         //_force.acc0[1] += acc0[1];
