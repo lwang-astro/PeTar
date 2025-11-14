@@ -697,7 +697,7 @@ public:
         profile.create_group.start();
 #endif
 
-        // >2.3 Find ARC groups and create artificial particles
+        // >2.3 Find sdar groups and create artificial particles
         // Set local ptcl_hard for isolated  clusters
         system_hard_isolated.setPtclForIsolatedMultiClusterOMP(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
 
@@ -1440,37 +1440,50 @@ public:
     */    
     void checkTreeMakeListPossible() {
         // check whether group is modified
-        PS::S64 n_group_new=0, n_group_end=0, n_group_arti_change=0;
-        n_group_new += system_hard_isolated.ARC_n_groups_new;
-        n_group_end += system_hard_isolated.ARC_n_groups_end;
-        n_group_arti_change += system_hard_isolated.n_group_arti_change;
-        system_hard_isolated.ARC_n_groups_new =0;
-        system_hard_isolated.ARC_n_groups_end =0;
-        system_hard_isolated.n_group_arti_change =0;
+        PS::S64 n_groups_new=0, n_groups_end=0, n_groups_arti_change=0;
+        n_groups_new += system_hard_isolated.sdar_n_groups_new;
+        n_groups_end += system_hard_isolated.sdar_n_groups_end;
+        n_groups_arti_change += system_hard_isolated.sdar_n_groups_arti_change;
+        system_hard_isolated.sdar_n_groups_new =0;
+        system_hard_isolated.sdar_n_groups_end =0;
+        system_hard_isolated.sdar_n_groups_arti_change =0;
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        n_group_new += PS::Comm::getSum(system_hard_connected.ARC_n_groups_new);
-        n_group_end += PS::Comm::getSum(system_hard_connected.ARC_n_groups_end);
-        n_group_arti_change += PS::Comm::getSum(system_hard_connected.n_group_arti_change);
-        system_hard_connected.ARC_n_groups_new =0;
-        system_hard_connected.ARC_n_groups_end =0;
-        system_hard_connected.n_group_arti_change =0;
+        n_groups_new += system_hard_connected.sdar_n_groups_new;
+        n_groups_end += system_hard_connected.sdar_n_groups_end;
+        n_groups_arti_change += system_hard_connected.sdar_n_groups_arti_change;
+        system_hard_connected.sdar_n_groups_new =0;
+        system_hard_connected.sdar_n_groups_end =0;
+        system_hard_connected.sdar_n_groups_arti_change =0;
 #endif
+        n_count.sdar_n_groups_new += n_groups_new;
+        n_count.sdar_n_groups_end += n_groups_end;
+        n_count.sdar_n_groups_arti_change += n_groups_arti_change;
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        n_groups_new = PS::Comm::getSum(n_groups_new);
+        n_groups_end = PS::Comm::getSum(n_groups_end);
+        n_groups_arti_change = PS::Comm::getSum(n_groups_arti_change);
+#endif
+        n_count_sum.sdar_n_groups_new += n_groups_new;
+        n_count_sum.sdar_n_groups_end += n_groups_end;
+        n_count_sum.sdar_n_groups_arti_change += n_groups_arti_change;
+
         tree_mklist_flag = (n_loop % input_parameters.tree_nstep_mklist.value == 0);
 
         // if new/end group exist, need to rebuild tree and neighbor list
-        if (n_group_arti_change >0 ) tree_mklist_flag = true;
+        if (n_groups_arti_change >0 ) tree_mklist_flag = true;
 
         // also check if particle need to be removed, if so need to rebuild tree and neighbor list
-        if (remove_list.size()>0) tree_mklist_flag = true;
+        //if (remove_list.size()>0) tree_mklist_flag = true;
 
 #ifdef PETAR_DEBUG
         if (my_rank==0) {
             std::cerr<<"[Debug] n_loop: "<<n_loop
                      <<" tree_mklist_flag="<<tree_mklist_flag
-                     <<" n_group_new = "<<n_group_new
-                     <<" n_group_end = "<<n_group_end
-                     <<" n_group_arti_change = "<<n_group_arti_change
-                     <<" remove_list.size() = "<<remove_list.size()
+                     <<" n_group_new = "<<n_groups_new
+                     <<" n_group_end = "<<n_groups_end
+                     <<" n_group_arti_change = "<<n_groups_arti_change
+                     //<<" remove_list.size() = "<<remove_list.size()
                      <<std::endl;
         }
 #endif
@@ -1841,10 +1854,10 @@ public:
         n_count_sum.hard_single      += PS::Comm::getSum(n_hard_single);
         n_count_sum.hard_isolated    += PS::Comm::getSum(n_hard_isolated);
 
-        PS::S64 ARC_substep_sum   = system_hard_isolated.ARC_substep_sum;
-        PS::S64 ARC_tsyn_step_sum   = system_hard_isolated.ARC_tsyn_step_sum;
-        PS::S64 ARC_n_groups      = system_hard_isolated.ARC_n_groups;
-        PS::S64 ARC_n_groups_iso  = system_hard_isolated.ARC_n_groups_iso;
+        PS::S64 sdar_substep_sum   = system_hard_isolated.sdar_substep_sum;
+        PS::S64 sdar_tsyn_step_sum   = system_hard_isolated.sdar_tsyn_step_sum;
+        PS::S64 sdar_n_groups      = system_hard_isolated.sdar_n_groups;
+        PS::S64 sdar_n_groups_iso  = system_hard_isolated.sdar_n_groups_iso;
         PS::S64 H4_step_sum       = system_hard_isolated.H4_step_sum;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         PS::S64 n_neighbor_zero   = system_hard_isolated.n_neighbor_zero;
@@ -1855,48 +1868,48 @@ public:
         n_count.hard_connected   += n_hard_connected;
         n_count_sum.hard_connected += PS::Comm::getSum(n_hard_connected);
 
-        ARC_substep_sum += system_hard_connected.ARC_substep_sum;
-        ARC_tsyn_step_sum += system_hard_connected.ARC_tsyn_step_sum;
-        ARC_n_groups += system_hard_connected.ARC_n_groups;
-        ARC_n_groups_iso += system_hard_connected.ARC_n_groups_iso;
+        sdar_substep_sum += system_hard_connected.sdar_substep_sum;
+        sdar_tsyn_step_sum += system_hard_connected.sdar_tsyn_step_sum;
+        sdar_n_groups += system_hard_connected.sdar_n_groups;
+        sdar_n_groups_iso += system_hard_connected.sdar_n_groups_iso;
         H4_step_sum +=  system_hard_connected.H4_step_sum;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         n_neighbor_zero+= system_hard_connected.n_neighbor_zero;
 #endif
 #endif
                                            
-        n_count.ARC_substep_sum  += ARC_substep_sum;
-        n_count.ARC_tsyn_step_sum+= ARC_tsyn_step_sum;
-        n_count.ARC_n_groups     += ARC_n_groups;
-        n_count.ARC_n_groups_iso += ARC_n_groups_iso;
+        n_count.sdar_substep_sum  += sdar_substep_sum;
+        n_count.sdar_tsyn_step_sum+= sdar_tsyn_step_sum;
+        n_count.sdar_n_groups     += sdar_n_groups;
+        n_count.sdar_n_groups_iso += sdar_n_groups_iso;
         n_count.H4_step_sum      += H4_step_sum;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         n_count.n_neighbor_zero  += n_neighbor_zero;
 #endif
 
-        n_count_sum.ARC_substep_sum  += PS::Comm::getSum(ARC_substep_sum);
-        n_count_sum.ARC_tsyn_step_sum+= PS::Comm::getSum(ARC_tsyn_step_sum);
-        n_count_sum.ARC_n_groups     += PS::Comm::getSum(ARC_n_groups);
-        n_count_sum.ARC_n_groups_iso     += PS::Comm::getSum(ARC_n_groups_iso);
+        n_count_sum.sdar_substep_sum  += PS::Comm::getSum(sdar_substep_sum);
+        n_count_sum.sdar_tsyn_step_sum+= PS::Comm::getSum(sdar_tsyn_step_sum);
+        n_count_sum.sdar_n_groups     += PS::Comm::getSum(sdar_n_groups);
+        n_count_sum.sdar_n_groups_iso     += PS::Comm::getSum(sdar_n_groups_iso);
         n_count_sum.H4_step_sum      += PS::Comm::getSum(H4_step_sum);
 #ifdef HARD_COUNT_NO_NEIGHBOR
         n_count_sum.n_neighbor_zero  += PS::Comm::getSum(n_neighbor_zero);
 #endif
 
-        system_hard_isolated.ARC_substep_sum = 0;
-        system_hard_isolated.ARC_tsyn_step_sum=0;
-        system_hard_isolated.ARC_n_groups = 0;
-        system_hard_isolated.ARC_n_groups_iso = 0;
+        system_hard_isolated.sdar_substep_sum = 0;
+        system_hard_isolated.sdar_tsyn_step_sum=0;
+        system_hard_isolated.sdar_n_groups = 0;
+        system_hard_isolated.sdar_n_groups_iso = 0;
         system_hard_isolated.H4_step_sum = 0;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         system_hard_isolated.n_neighbor_zero = 0;
 #endif
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        system_hard_connected.ARC_substep_sum = 0;
-        system_hard_connected.ARC_tsyn_step_sum=0;
-        system_hard_connected.ARC_n_groups = 0;
-        system_hard_connected.ARC_n_groups_iso = 0;
+        system_hard_connected.sdar_substep_sum = 0;
+        system_hard_connected.sdar_tsyn_step_sum=0;
+        system_hard_connected.sdar_n_groups = 0;
+        system_hard_connected.sdar_n_groups_iso = 0;
         system_hard_connected.H4_step_sum = 0;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         system_hard_connected.n_neighbor_zero = 0;
@@ -2009,13 +2022,15 @@ public:
 #endif
 
             std::cout<<"**** Number per step (global):\n";
-            n_count_sum.dumpName(std::cout);
-            std::cout<<std::endl;
-            n_count_sum.dump(std::cout,dn_loop);
-            std::cout<<std::endl;
+            for (PS::S32 ipart=1; ipart<=2; ipart++) {
+                n_count_sum.dumpName(std::cout, ipart);
+                std::cout<<std::endl;
+                n_count_sum.dump(std::cout,dn_loop, ipart);
+                std::cout<<std::endl;
+            }
                 
             std::cout<<"**** Number of members in clusters (global):\n";
-            n_count_sum.printHist(std::cout,dn_loop);
+            n_count_sum.printHist(std::cout, dn_loop, 14);
         }
 
         if(input_parameters.write_style.value>0) {

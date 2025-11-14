@@ -672,13 +672,13 @@ public:
 #endif
 
 #ifdef PROFILE
-    PS::S64 ARC_substep_sum;
-    PS::S64 ARC_tsyn_step_sum;
+    PS::S64 sdar_substep_sum;
+    PS::S64 sdar_tsyn_step_sum;
     PS::S64 H4_step_sum;
 #endif
-    PS::S64 ARC_n_groups_new;
-    PS::S64 ARC_n_groups_end;
-    PS::S64 n_group_arti_change;
+    PS::S64 sdar_n_groups_new;
+    PS::S64 sdar_n_groups_end;
+    PS::S64 sdar_n_groups_arti_change;
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
     PS::ReallocatableArray<bool> table_neighbor_exist;
@@ -698,9 +698,9 @@ public:
                       n_group_sub_init(), n_group_sub_tot_init(0),
 #endif
 #ifdef PROFILE
-                      ARC_substep_sum(0), ARC_tsyn_step_sum(0), H4_step_sum(0), 
+                      sdar_substep_sum(0), sdar_tsyn_step_sum(0), H4_step_sum(0), 
 #endif
-                      ARC_n_groups_new(0), ARC_n_groups_end(0), n_group_arti_change(0),
+                      sdar_n_groups_new(0), sdar_n_groups_end(0), sdar_n_groups_arti_change(0),
 #ifdef HARD_COUNT_NO_NEIGHBOR
                       table_neighbor_exist(), n_neighbor_zero(0),
 #endif
@@ -1497,7 +1497,7 @@ public:
 #endif
 
 #ifdef PROFILE
-            ARC_substep_sum += sym_int.profile.step_count;
+            sdar_substep_sum += sym_int.profile.step_count;
 #endif
 #ifdef HARD_CHECK_ENERGY
             ekin    = sym_int.getEkin();
@@ -1632,7 +1632,7 @@ public:
 
                 // count number of artificial particles not updated                
                 for (PS::S32 i=0; i<_n_group; i++) {
-                    if (!group_arti_update_list[i]) n_group_arti_change ++;
+                    if (!group_arti_update_list[i]) sdar_n_groups_arti_change ++;
                 }
                         
             }
@@ -1687,18 +1687,18 @@ public:
 #endif
 
 #ifdef PROFILE
-            //ARC_substep_sum += Aint.getNsubstep();
+            //sdar_substep_sum += Aint.getNsubstep();
             H4_step_sum += h4_int.profile.hermite_single_step_count + h4_int.profile.hermite_group_step_count;
-            ARC_substep_sum += h4_int.profile.ar_step_count;
-            ARC_tsyn_step_sum += h4_int.profile.ar_step_count_tsyn;
+            sdar_substep_sum += h4_int.profile.ar_step_count;
+            sdar_tsyn_step_sum += h4_int.profile.ar_step_count_tsyn;
 
             if (h4_int.profile.ar_step_count>manager->ar_manager.step_count_max) {
                 std::cerr<<"Large AR step cluster found: total step: "<<h4_int.profile.ar_step_count<<std::endl;
                 //DATADUMP("dump_large_step");
             } 
 #endif
-            ARC_n_groups_new += h4_int.profile.new_group_count;
-            ARC_n_groups_end += h4_int.profile.break_group_count;
+            sdar_n_groups_new += h4_int.profile.new_group_count;
+            sdar_n_groups_end += h4_int.profile.break_group_count;
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
             for (PS::S32 i=0; i<table_neighbor_exist.size(); i++) {
@@ -1757,8 +1757,8 @@ public:
                  <<"  dE_SD_change_binary: "<<energy.de_sd_change_binary_interrupt
                  <<"  dE_SD_change_single: "<<energy.de_sd_change_modify_single
                  <<"  H4_step_sum: "<<H4_step_sum
-                 <<"  ARC_substep_sum: "<<ARC_substep_sum
-                 <<"  ARC_tsyn_step_sum: "<<ARC_tsyn_step_sum
+                 <<"  sdar_substep_sum: "<<sdar_substep_sum
+                 <<"  sdar_tsyn_step_sum: "<<sdar_tsyn_step_sum
                  <<std::endl;
         fout_debug.close();
 #endif        
@@ -1812,13 +1812,13 @@ public:
         is_initialized = false;
 
 #ifdef PROFILE
-        ARC_substep_sum = 0;
-        ARC_tsyn_step_sum = 0;
+        sdar_substep_sum = 0;
+        sdar_tsyn_step_sum = 0;
         H4_step_sum = 0;
 #endif
-        ARC_n_groups_new = 0;
-        ARC_n_groups_end = 0;
-        n_group_arti_change = 0;
+        sdar_n_groups_new = 0;
+        sdar_n_groups_end = 0;
+        sdar_n_groups_arti_change = 0;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         table_neighbor_exist.resizeNoInitialize(0);
         n_neighbor_zero = 0;
@@ -1861,15 +1861,15 @@ public:
     HardManager* manager;
 
 #ifdef PROFILE
-    PS::S64 ARC_substep_sum;
-    PS::S64 ARC_tsyn_step_sum;
-    PS::S64 ARC_n_groups;
-    PS::S64 ARC_n_groups_iso;
+    PS::S64 sdar_substep_sum;
+    PS::S64 sdar_tsyn_step_sum;
+    PS::S64 sdar_n_groups;
+    PS::S64 sdar_n_groups_iso;
     PS::S64 H4_step_sum;
 #endif
-    PS::S64 ARC_n_groups_new;
-    PS::S64 ARC_n_groups_end;
-    PS::S64 n_group_arti_change;
+    PS::S64 sdar_n_groups_new;
+    PS::S64 sdar_n_groups_end;
+    PS::S64 sdar_n_groups_arti_change;
 #ifdef HARD_COUNT_NO_NEIGHBOR
     PS::S64 n_neighbor_zero;
 #endif
@@ -2299,15 +2299,15 @@ public:
     SystemHard(){
         manager = NULL;
 #ifdef PROFILE
-        ARC_substep_sum = 0;
-        ARC_tsyn_step_sum =0;
-        ARC_n_groups = 0;
-        ARC_n_groups_iso = 0;
+        sdar_substep_sum = 0;
+        sdar_tsyn_step_sum =0;
+        sdar_n_groups = 0;
+        sdar_n_groups_iso = 0;
         H4_step_sum = 0;
 #endif
-        ARC_n_groups_new = 0;
-        ARC_n_groups_end = 0;
-        n_group_arti_change = 0;
+        sdar_n_groups_new = 0;
+        sdar_n_groups_end = 0;
+        sdar_n_groups_arti_change = 0;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         n_neighbor_zero = 0;
 #endif
@@ -2801,22 +2801,22 @@ public:
         HardIntegrator hard_int_thread[num_thread];
 
 #ifdef PROFILE
-        PS::S64 ARC_n_groups_threads[num_thread], ARC_substep_sum_threads[num_thread];
-        PS::S64 ARC_tsyn_step_sum_threads[num_thread], H4_step_sum_threads[num_thread];
+        PS::S64 sdar_n_groups_threads[num_thread], sdar_substep_sum_threads[num_thread];
+        PS::S64 sdar_tsyn_step_sum_threads[num_thread], H4_step_sum_threads[num_thread];
         for (PS::S32 i=0; i<num_thread; i++) {
-            ARC_n_groups_threads[i] = 0;
-            ARC_substep_sum_threads[i] = 0;
-            ARC_tsyn_step_sum_threads[i] = 0;
+            sdar_n_groups_threads[i] = 0;
+            sdar_substep_sum_threads[i] = 0;
+            sdar_tsyn_step_sum_threads[i] = 0;
             H4_step_sum_threads[i] = 0;
         }
 #endif
-        PS::S64 ARC_n_groups_new_threads[num_thread];
-        PS::S64 ARC_n_groups_end_threads[num_thread];
-        PS::S64 n_group_arti_change_threads[num_thread];
+        PS::S64 sdar_n_groups_new_threads[num_thread];
+        PS::S64 sdar_n_groups_end_threads[num_thread];
+        PS::S64 sdar_n_groups_arti_change_threads[num_thread];
         for (PS::S32 i=0; i<num_thread; i++) {
-            ARC_n_groups_new_threads[i] = 0;
-            ARC_n_groups_end_threads[i] = 0;
-            n_group_arti_change_threads[i] = 0;
+            sdar_n_groups_new_threads[i] = 0;
+            sdar_n_groups_end_threads[i] = 0;
+            sdar_n_groups_arti_change_threads[i] = 0;
         }
 #ifdef HARD_COUNT_NO_NEIGHBOR
         PS::S64 n_neighbor_zero_threads[num_thread];
@@ -2850,7 +2850,7 @@ public:
                 PS::S32 ptcl_arti_first_index = adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]];
                 if (ptcl_arti_first_index>=0) ptcl_artificial_ptr = &(_ptcl_soft[ptcl_arti_first_index]);
 #ifdef PROFILE
-                else ARC_n_groups_iso += 1;
+                else sdar_n_groups_iso += 1;
 #endif // END PROFILE
                 n_member_in_group_ptr = &(n_member_in_group_[n_group_in_cluster_offset_[i]]);
             }
@@ -2858,7 +2858,7 @@ public:
             num_cluster[ith] += n_ptcl;
 #endif // END OMP_PROFILE
 #ifdef PROFILE
-            ARC_n_groups_threads[ith] += n_group;
+            sdar_n_groups_threads[ith] += n_group;
 #endif // END PROFILE
 
 #ifdef HARD_DUMP
@@ -2886,13 +2886,13 @@ public:
 #endif
 
 #ifdef PROFILE
-            ARC_substep_sum_threads[ith]    += hard_int_thread[ith].ARC_substep_sum;
-            ARC_tsyn_step_sum_threads[ith]  += hard_int_thread[ith].ARC_tsyn_step_sum;
+            sdar_substep_sum_threads[ith]    += hard_int_thread[ith].sdar_substep_sum;
+            sdar_tsyn_step_sum_threads[ith]  += hard_int_thread[ith].sdar_tsyn_step_sum;
             H4_step_sum_threads[ith]        += hard_int_thread[ith].H4_step_sum;
 #endif
-            ARC_n_groups_new_threads[ith] += hard_int_thread[ith].ARC_n_groups_new;
-            ARC_n_groups_end_threads[ith] += hard_int_thread[ith].ARC_n_groups_end;
-            n_group_arti_change_threads[ith] += hard_int_thread[ith].n_group_arti_change;
+            sdar_n_groups_new_threads[ith] += hard_int_thread[ith].sdar_n_groups_new;
+            sdar_n_groups_end_threads[ith] += hard_int_thread[ith].sdar_n_groups_end;
+            sdar_n_groups_arti_change_threads[ith] += hard_int_thread[ith].sdar_n_groups_arti_change;
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
             n_neighbor_zero_threads[ith]    += hard_int_thread[ith].n_neighbor_zero;
@@ -2946,16 +2946,16 @@ public:
 
 #ifdef PROFILE
         for (PS::S32 i=0; i<num_thread; i++) {
-            ARC_n_groups += ARC_n_groups_threads[i];
-            ARC_substep_sum += ARC_substep_sum_threads[i];
-            ARC_tsyn_step_sum += ARC_tsyn_step_sum_threads[i];
+            sdar_n_groups += sdar_n_groups_threads[i];
+            sdar_substep_sum += sdar_substep_sum_threads[i];
+            sdar_tsyn_step_sum += sdar_tsyn_step_sum_threads[i];
             H4_step_sum += H4_step_sum_threads[i];
         }
 #endif
         for (PS::S32 i=0; i<num_thread; i++) {
-            ARC_n_groups_new += ARC_n_groups_new_threads[i];
-            ARC_n_groups_end += ARC_n_groups_end_threads[i];
-            n_group_arti_change += n_group_arti_change_threads[i];
+            sdar_n_groups_new += sdar_n_groups_new_threads[i];
+            sdar_n_groups_end += sdar_n_groups_end_threads[i];
+            sdar_n_groups_arti_change += sdar_n_groups_arti_change_threads[i];
         }
 #ifdef HARD_COUNT_NO_NEIGHBOR
         for (PS::S32 i=0; i<num_thread; i++) n_neighbor_zero += n_neighbor_zero_threads[i];
