@@ -156,7 +156,7 @@ public:
                      r_search_vel_factor (input_par_store, 3.0,  "r-search-vel-factor", "Neighbor search coefficient for velocity check (v*dt)"),
                      r_search_peri_factor(input_par_store, 1.5, "r-search-peri-factor", "Neighbor search coefficient for periapsis check"),
                      r_search_min     (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters; = 0: auto-determine by max(search-vel-factor*sigma_1D*dt_soft + rout, 1.2 r_out); > 0: custom search radius value"),
-                     r_escape         (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Object escape radius criterion; = 0: no escaper removal; < 0: remove objects when r>-r_escape; > 0: remove objects when r>r_escape and energy>0"),
+                     r_escape         (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Object escape radius criterion; < 0: remove objects when r>-r_escape; >= 0: remove objects when r>r_escape and energy>0"),
                      dt_snap          (input_par_store, 1.0,  "o", "Output time interval for particle dataset snapshots"),
                      data_format      (input_par_store, 1,    "i", "Data file reading and writing format; 0: read and write in BINARY; 1: read and write in ASCII; 2: read in ASCII, write in BINARY; 3: read in BINARY, write in ASCII"),
                      write_style      (input_par_store, 1,    "w", "Data file writing style; 0: no output; 1: write all files separately; 2. write snapshots in status files in one line per step (no MPI support); 3. write files except snapshots"),
