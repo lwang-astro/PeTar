@@ -569,7 +569,7 @@ public:
     //}
 
     void dump(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 print_part=0, const PS::S32 width=PROFILE_PRINT_WIDTH) const{
-        int n_start, n_end;
+        int n_start=0, n_end=n_counter;
         if (print_part==0) {
             n_start = 0;
             n_end = n_counter;
@@ -579,6 +579,9 @@ public:
         } else if (print_part==2) {
             n_start = 6;
             n_end = n_counter;
+        } else {
+            std::cerr<<"Error in SysCounts::dump: print_part should be 0, 1, or 2."<<std::endl;
+            PS::Abort();
         }
         for(PS::S32 i=n_start; i<n_end; ++i) {
             NumCounter* iptr = (NumCounter*)this+i;
@@ -593,7 +596,7 @@ public:
     }
 
     void dumpName(std::ostream & fout, const PS::S32 print_part=0, const PS::S32 width=PROFILE_PRINT_WIDTH) const{
-        int n_start, n_end;
+        int n_start=0, n_end=n_counter;
         if (print_part==0) {
             n_start = 0;
             n_end = n_counter;
@@ -603,6 +606,9 @@ public:
         } else if (print_part==2) {
             n_start = 6;
             n_end = n_counter;
+        } else {
+            std::cerr<<"Error in SysCounts::dumpName: print_part should be 0, 1, or 2."<<std::endl;
+            PS::Abort();
         }
         for(PS::S32 i=n_start; i<n_end; ++i) {
             NumCounter* iptr = (NumCounter*)this+i;

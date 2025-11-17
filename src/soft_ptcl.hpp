@@ -194,9 +194,9 @@ public:
 
     void print(std::ostream & fout){
         Ptcl::print(fout);
-        fout<<" acc= "<<acc
+        fout<<" acc= "<<acc[0]<<" "<<acc[1]<<" "<<acc[2]
 #ifdef COLLECT_SP_ACC
-            <<" acc_sp= "<<acc_sp
+            <<" acc_sp= "<<acc_sp[0]<<" "<<acc_sp[1]<<" "<<acc_sp[2]
 #endif
             <<" pot_tot= "<<pot_tot
             <<" pot_soft= "<<pot_soft

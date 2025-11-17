@@ -2047,7 +2047,7 @@ public:
             gpu_profile.dump(fprofile, dn_loop, WRITE_WIDTH);
             gpu_counter.dump(fprofile, dn_loop, WRITE_WIDTH);
 #endif
-            n_count.dump(fprofile, dn_loop, WRITE_WIDTH);
+            n_count.dump(fprofile, dn_loop, 0, WRITE_WIDTH);
             fprofile<<std::endl;
         }
     }
@@ -2601,7 +2601,7 @@ public:
                 gpu_profile.dumpName(fprofile, WRITE_WIDTH);
                 gpu_counter.dumpName(fprofile, WRITE_WIDTH);
 #endif
-                n_count.dumpName(fprofile, WRITE_WIDTH);
+                n_count.dumpName(fprofile, 0, WRITE_WIDTH);
                 fprofile<<std::endl;
             }
             fprofile<<std::setprecision(WRITE_PRECISION);
