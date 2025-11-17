@@ -74,6 +74,7 @@ public:
     IOParams<PS::F64> sd_factor;
     IOParams<PS::F64> reinit_dt_dm_crit;
     IOParams<PS::F64> reinit_dt_de_crit;
+    IOParams<PS::S64> n_neighbor_max;
 #ifdef STELLAR_EVOLUTION
     IOParams<PS::S64> interrupt_detection_option;
 #ifdef BSE_BASE
@@ -116,6 +117,7 @@ public:
                     sd_factor    (input_par_store, 1e-4,     "ar-slowdown-factor", "Slowdown perturbation criterion"),
                     reinit_dt_dm_crit(input_par_store, 1e-4, "hermite-dm-crit", "Mass change rate criterion for reinitializing hermite time step"),
                     reinit_dt_de_crit(input_par_store, 1e-4, "hermite-de-crit", "Ekin change rate criterion for reinitializing hermite time step"),
+                    n_neighbor_max(input_par_store, 300,     "hermite-n-neighbor-max", "Maximum number of group neighbors to be stored"),
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
                     interrupt_detection_option(input_par_store, 1, "detect-interrupt", "Stellar evolution of binaries in SDAR integration; 0: switch off; 1: using BSE based code (if '--stellar-evolution != 0)"),
@@ -167,6 +169,7 @@ public:
             {sd_factor.key,              required_argument, &hard_flag, 15},
             {reinit_dt_dm_crit.key,      required_argument, &hard_flag, 24},
             {reinit_dt_de_crit.key,      required_argument, &hard_flag, 25},
+            {n_neighbor_max.key,         required_argument, &hard_flag, 26},
 #ifdef STELLAR_EVOLUTION
             {interrupt_detection_option.key,  required_argument, &hard_flag, 16},
 #ifdef BSE_BASE
@@ -293,6 +296,12 @@ public:
                         if(print_flag) reinit_dt_de_crit.print(std::cout);
                         opt_used += 2;
                         assert(reinit_dt_de_crit.value>=0.0);
+                        break;
+                    case 26:
+                        n_neighbor_max.value = atoi(optarg);
+                        if(print_flag) n_neighbor_max.print(std::cout);
+                        opt_used += 2;
+                        assert(n_neighbor_max.value>0);
                         break;
 #ifdef STELLAR_EVOLUTION
                     case 16:
@@ -501,6 +510,7 @@ public:
         setDtRange(_input.dt_max_hermite.value, _input.dt_min_hermite_index.value);
         h4_manager.reinitialize_step_dm_criterion = _input.reinit_dt_dm_crit.value;
         h4_manager.reinitialize_step_de_criterion = _input.reinit_dt_de_crit.value;
+        h4_manager.n_neighbor_max = _input.n_neighbor_max.value;
 
         ar_manager.step.initialSymplecticCofficients(-6);
         ar_manager.slowdown_timescale_max = _input.dt_max_hermite.value*n_step_per_orbit;
@@ -961,12 +971,19 @@ public:
 #else
             h4_int.particles.shiftToCenterOfMassFrame();
 #endif            
-            
+
             PS::S32 n_group_size_max = _n_ptcl+_n_group;
             h4_int.groups.setMode(COMM::ListMode::local);
             h4_int.groups.reserveMem(n_group_size_max);
             h4_int.reserveIntegratorMem();
 
+            auto pcm = h4_int.particles.cm;
+            pcm.acc0[0] = pcm.acc0[1] = pcm.acc0[2] = 0.0;
+            pcm.acc1[0] = pcm.acc1[1] = pcm.acc1[2] = 0.0;
+            pcm.pot = 0.0;
+            pcm.time = 0.0;
+            pcm.dt   = 0.0;
+            
             // initial system 
             h4_int.initialSystemSingle(0.0);
             h4_int.setTimeOffset(time_origin);
@@ -3293,8 +3310,9 @@ public:
         // overwrite the new ptcl list for group members by reorderd list
         for (int i=0; i<group_ptcl_adr_offset; i++) ptcl_list_reorder[i] = group_ptcl_adr_list[i];
 
-        // templately copy ptcl data
-        Tptcl ptcl_tmp[_n_ptcl];
+        // templately copy ptcl data, use heap-backed containers to avoid OMP stack overflow
+        PS::ReallocatableArray<Tptcl> ptcl_tmp;
+        ptcl_tmp.resizeNoInitialize(_n_ptcl);
         for (int i=0; i<_n_ptcl; i++) ptcl_tmp[i]=_ptcl_in_cluster[i];
 
         // reorder ptcl
