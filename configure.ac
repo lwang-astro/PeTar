@@ -95,9 +95,12 @@ AS_IF([test x"$with_debug" == xg],
       [PROG_SUFFIX=".g"
        OPTFLAGS=$DEBFLAGS],
       [AS_IF([test x"$with_debug" != xno],
-             [PROG_SUFFIX=".d"])
-       AX_CHECK_COMPILE_FLAG([-O3],
-                             [OPTFLAGS=" -O3"])])
+             [PROG_SUFFIX=".d"
+              OPTFLAGS=' -g'
+              AX_CHECK_COMPILE_FLAG([-O2],
+                                    [OPTFLAGS=$OPTFLAGS" -O2"])],
+             [AX_CHECK_COMPILE_FLAG([-O3],
+                                    [OPTFLAGS=" -O3"])])])
 
 
 AX_CHECK_COMPILE_FLAG([-Wall],
