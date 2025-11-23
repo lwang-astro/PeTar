@@ -1667,9 +1667,11 @@ public:
                     auto* pj = h4_int.groups[k].particles.getMemberOriginAddress(j);
 #ifdef STELLAR_EVOLUTION
                     if (pj->mass==0.0) {
-                        ASSERT(pj->group_data.artificial.isUnused());
-                        continue;
+                        ASSERT(pj->group_data.artificial.getMassBackup()!=0.0);
                     }
+                    //    ASSERT(pj->group_data.artificial.isUnused());
+                    //    continue;
+                    //}
 #ifdef BSE_BASE
                     ASSERT(pj->star.tphys<=time_origin+_time_end);
 #endif
@@ -3618,6 +3620,26 @@ public:
                 // calculate c.m. data and recover mass for members of group
                 PS::F64 mass_cm=0.0;
                 PS::F64vec vel_cm=PS::F64vec(0.0);
+                if (indices.size() <2) {
+                    // this is the case of single particle in broken group in previous steps.
+                    auto& pj = ptcl_local[indices[0]];
+                    // should not be a member with zero mass
+                    assert (!(pj.mass == 0.0 && pj.group_data.artificial.isMember()));
+                    pj.setBinaryPairID(0);
+                    pj.setBinaryInterruptState(BinaryInterruptState::none);
+                    pj.calcRSearch(_dt_tree);
+                    PS::S32 adr = pj.adr_org;
+                    if(adr>=0) {
+                        assert(ptcl_local[indices[0]].id==_ptcl_soft[adr].id);
+                        _ptcl_soft[adr].binary_state = ptcl_local[indices[0]].binary_state;
+                        _ptcl_soft[adr].group_data.cm.mass  = pj.mass;
+                        _ptcl_soft[adr].group_data.cm.vel   = pj.vel;
+                        _ptcl_soft[adr].r_search = pj.r_search;
+                    }
+                    continue;
+                }
+
+                PS::F64 r_out_max=0.0;
                 for (const auto& idx : indices) {
                     auto& pj = ptcl_local[idx];
                     if (pj.mass == 0.0 && pj.group_data.artificial.isMember()) {
@@ -3628,6 +3650,7 @@ public:
                     vel_cm.x += pj.mass*pj.vel.x;
                     vel_cm.y += pj.mass*pj.vel.y;
                     vel_cm.z += pj.mass*pj.vel.z;
+                    r_out_max = std::max(r_out_max, pj.changeover.getRout());
                 }
                 vel_cm /= mass_cm;
                 
@@ -3637,13 +3660,20 @@ public:
                 pcm.vel = vel_cm;
                 PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                 pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                // in case the member has larger r_out due to previously existing binaries, use largest r_out among members to determine r_search
+                Float r_ratio = r_out_max/pcm.changeover.getRout();
+                if (r_ratio>1.0) {
+                    pcm.changeover.r_scale_next = r_ratio;
+                    pcm.changeover.updateWithRScale();
+                }
                 pcm.calcRSearch(_dt_tree);
                 for (const auto& idx : indices) {
+                    assert(pcm.r_search > ptcl_local[idx].changeover.getRout());
+                    ptcl_local[idx].r_search = pcm.r_search;
                     auto& pj_cm = ptcl_local[idx].group_data.cm;
                     pj_cm.mass = mass_cm;
                     pj_cm.vel = vel_cm;
                     PS::S32 adr = ptcl_local[idx].adr_org;
-                    ptcl_local[idx].r_search = pcm.r_search;
                     if(adr>=0) {
                         assert(ptcl_local[idx].id==_ptcl_soft[adr].id);
                         _ptcl_soft[adr].mass = ptcl_local[idx].mass; // recover mass
