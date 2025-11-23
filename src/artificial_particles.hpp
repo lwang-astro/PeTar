@@ -572,9 +572,16 @@ public:
         pos_cm_check /= mass_cm_check;
 
         auto* pcm = getCMParticles(_ptcl_artificial);
+#ifndef STELLAR_EVOLUTION
+        // stellar mass loss may cause inconsistence
         assert(abs(mass_cm_check-pcm->group_data.artificial.getMassBackup())<1e-10);
         PS::F64vec dpos = pos_cm_check-pcm->pos;
         assert(abs(dpos*dpos)<1e-20);
+#else
+        assert(abs(mass_cm_check-pcm->group_data.artificial.getMassBackup())<1e-3);
+        PS::F64vec dpos = pos_cm_check-pcm->pos;
+        assert(abs(dpos*dpos)<1e-10);
+#endif
     }
 #endif
 

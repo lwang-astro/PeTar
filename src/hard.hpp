@@ -1050,8 +1050,14 @@ public:
 
 #ifdef HARD_DEBUG
                     PS::F64 r_out_cm = pcm.changeover.getRout();
-                    for (PS::S32 k=0; k<groupi.particles.getSize(); k++) 
+                    for (PS::S32 k=0; k<groupi.particles.getSize(); k++) {
+#ifdef STELLAR_EVOLUTION
+                        // if mass changed, r_out may be different within some tolerance
+                        ASSERT(abs(groupi.particles[k].changeover.getRout()-r_out_cm)<1e-3);
+#else
                         ASSERT(abs(groupi.particles[k].changeover.getRout()-r_out_cm)<1e-10);
+#endif
+                    }
 #endif
                 }
             }
