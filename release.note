@@ -50,6 +50,7 @@
 48. Write EPI and EPJ particle information when i or j particle number in groups exceed the limitation.
 49. Add support of reuse tree interaction list to speed up tree force calculation, modify options for tree and domain and include new option to set make list frequency
 50. Add hermite_n_neighbor_max option to set the maximum neighbor number (default 300) for groups to avoid huge memory requirement when a large cluster forms. This need SDAR version >=326e.
+51. Add hermite_only_calc_neighbor_force support to reduce hermite interactions, add hermite interaction counts, This need SDAR version >=335e.
 
 **Some existing issues include**
 

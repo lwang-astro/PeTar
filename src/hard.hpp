@@ -685,6 +685,7 @@ public:
     PS::S64 sdar_substep_sum;
     PS::S64 sdar_tsyn_step_sum;
     PS::S64 H4_step_sum;
+    PS::S64 H4_force_sum;
 #endif
     PS::S64 sdar_n_groups_new;
     PS::S64 sdar_n_groups_end;
@@ -708,7 +709,7 @@ public:
                       n_group_sub_init(), n_group_sub_tot_init(0),
 #endif
 #ifdef PROFILE
-                      sdar_substep_sum(0), sdar_tsyn_step_sum(0), H4_step_sum(0), 
+                      sdar_substep_sum(0), sdar_tsyn_step_sum(0), H4_step_sum(0), H4_force_sum(0),
 #endif
                       sdar_n_groups_new(0), sdar_n_groups_end(0), sdar_n_groups_arti_change(0),
 #ifdef HARD_COUNT_NO_NEIGHBOR
@@ -1714,6 +1715,7 @@ public:
 #ifdef PROFILE
             //sdar_substep_sum += Aint.getNsubstep();
             H4_step_sum += h4_int.profile.hermite_single_step_count + h4_int.profile.hermite_group_step_count;
+            H4_force_sum += h4_int.profile.hermite_single_interact_count + h4_int.profile.hermite_group_interact_count;
             sdar_substep_sum += h4_int.profile.ar_step_count;
             sdar_tsyn_step_sum += h4_int.profile.ar_step_count_tsyn;
 
@@ -1782,6 +1784,7 @@ public:
                  <<"  dE_SD_change_binary: "<<energy.de_sd_change_binary_interrupt
                  <<"  dE_SD_change_single: "<<energy.de_sd_change_modify_single
                  <<"  H4_step_sum: "<<H4_step_sum
+                 <<"  H4_force_sum: "<<H4_force_sum
                  <<"  sdar_substep_sum: "<<sdar_substep_sum
                  <<"  sdar_tsyn_step_sum: "<<sdar_tsyn_step_sum
                  <<std::endl;
@@ -1840,6 +1843,7 @@ public:
         sdar_substep_sum = 0;
         sdar_tsyn_step_sum = 0;
         H4_step_sum = 0;
+        H4_force_sum = 0;
 #endif
         sdar_n_groups_new = 0;
         sdar_n_groups_end = 0;
@@ -1891,6 +1895,7 @@ public:
     PS::S64 sdar_n_groups;
     PS::S64 sdar_n_groups_iso;
     PS::S64 H4_step_sum;
+    PS::S64 H4_force_sum;
 #endif
     PS::S64 sdar_n_groups_new;
     PS::S64 sdar_n_groups_end;
@@ -2329,6 +2334,7 @@ public:
         sdar_n_groups = 0;
         sdar_n_groups_iso = 0;
         H4_step_sum = 0;
+        H4_force_sum = 0;
 #endif
         sdar_n_groups_new = 0;
         sdar_n_groups_end = 0;
@@ -2828,11 +2834,13 @@ public:
 #ifdef PROFILE
         PS::S64 sdar_n_groups_threads[num_thread], sdar_substep_sum_threads[num_thread];
         PS::S64 sdar_tsyn_step_sum_threads[num_thread], H4_step_sum_threads[num_thread];
+        PS::S64 H4_force_sum_threads[num_thread];
         for (PS::S32 i=0; i<num_thread; i++) {
             sdar_n_groups_threads[i] = 0;
             sdar_substep_sum_threads[i] = 0;
             sdar_tsyn_step_sum_threads[i] = 0;
             H4_step_sum_threads[i] = 0;
+            H4_force_sum_threads[i] = 0;
         }
 #endif
         PS::S64 sdar_n_groups_new_threads[num_thread];
@@ -2895,6 +2903,8 @@ public:
 #ifdef HARD_DEBUG_PROFILE
             PS::F64 tstart = PS::GetWtime();
 #endif 
+            // For test hard dump
+            if (n_ptcl > 100) DATADUMP("large_cluster");
 
             // if interrupt exist, escape initial
             hard_int_thread[ith].initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, manager, time_origin_);
@@ -2914,6 +2924,7 @@ public:
             sdar_substep_sum_threads[ith]    += hard_int_thread[ith].sdar_substep_sum;
             sdar_tsyn_step_sum_threads[ith]  += hard_int_thread[ith].sdar_tsyn_step_sum;
             H4_step_sum_threads[ith]        += hard_int_thread[ith].H4_step_sum;
+            H4_force_sum_threads[ith]       += hard_int_thread[ith].H4_force_sum;
 #endif
             sdar_n_groups_new_threads[ith] += hard_int_thread[ith].sdar_n_groups_new;
             sdar_n_groups_end_threads[ith] += hard_int_thread[ith].sdar_n_groups_end;
@@ -2975,6 +2986,7 @@ public:
             sdar_substep_sum += sdar_substep_sum_threads[i];
             sdar_tsyn_step_sum += sdar_tsyn_step_sum_threads[i];
             H4_step_sum += H4_step_sum_threads[i];
+            H4_force_sum += H4_force_sum_threads[i];
         }
 #endif
         for (PS::S32 i=0; i<num_thread; i++) {
