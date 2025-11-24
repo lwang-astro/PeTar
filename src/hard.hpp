@@ -1504,7 +1504,7 @@ public:
                 auto& pi = ptcl_origin[i];
 #ifdef STELLAR_EVOLUTION
                 if (pi.mass==0.0) {
-                    ASSERT(pi.group_data.artificial.isUnused());
+                    ASSERT(pi.group_data.artificial.isMember() || pi.group_data.artificial.isUnused());
                     continue;
                 }
 #ifdef BSE_BASE
@@ -3622,9 +3622,18 @@ public:
                 // reset all particles first
                 auto bid = AR::Information<PtclHard,PtclH4>::getBinaryID(ptcl_local[k]);
                 if (bid ==0 ) {
-                    auto& pj_cm = ptcl_local[k].group_data.cm;
-                    pj_cm.mass  = pj_cm.vel.x = pj_cm.vel.y = pj_cm.vel.z = 0.0;
-                    ptcl_local[k].calcRSearch(_dt_tree);
+                    auto& pj_cm = ptcl_local[k].group_data.cm;    
+#ifdef STELLAR_EVOLUTION
+                    if (ptcl_local[k].mass==0.0) {
+                        ASSERT(ptcl_local[k].group_data.artificial.isUnused());
+                    }
+                    else {
+#endif
+                        pj_cm.mass  = pj_cm.vel.x = pj_cm.vel.y = pj_cm.vel.z = 0.0;
+                        ptcl_local[k].calcRSearch(_dt_tree);
+#ifdef STELLAR_EVOLUTION
+                    }
+#endif
                     PS::S32 adr = ptcl_local[k].adr_org;
                     if(adr>=0) {
                         assert(ptcl_local[k].id==_ptcl_soft[adr].id);
