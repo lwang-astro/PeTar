@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/Float.h"
+#include "Common/particle_kdtree.h"
 #include "changeover.hpp"
 #include "external_hard.hpp"
 
@@ -508,15 +509,27 @@ public:
     template<class Tp, class Tgroup, class Tpert>
     inline void calcEnergy(H4::HermiteEnergy& _energy, const Tp* _particles, const int _n_particle, const Tgroup* _groups, const int* _group_index, const int _n_group, const Tpert& _perturber) {
         _energy.ekin = _energy.epot = _energy.epert = 0.0;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+        // in this mode, we only calculate the energy of neighbor particles
+        COMM::ParticleKDTree kdtree;
+        kdtree.addParticles(_particles, _n_particle);
+#endif
         for (int i=0; i<_n_particle; i++) {
             auto& pi = _particles[i];
             if (pi.mass==0.0) continue;
             _energy.ekin += pi.mass* (pi.vel[0]*pi.vel[0] + pi.vel[1]*pi.vel[1] + pi.vel[2]*pi.vel[2]);
             Float poti = 0.0;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE            
+            kdtree.searchNeighborParticlesApply(pi, [&](int j_idx) {
+                const auto& pj = _particles[j_idx];
+                if (pi.id == pj.id) return;
+                if (pj.mass==0.0) return;
+#else
             for (int j=0; j<i; j++) {
                 if (i==j) continue;
                 auto& pj = _particles[j];
                 if (pj.mass==0.0) continue;
+#endif
                 const Float dr[3] = {pj.pos[0] - pi.pos[0], 
                                      pj.pos[1] - pi.pos[1],
                                      pj.pos[2] - pi.pos[2]};
@@ -528,7 +541,11 @@ public:
                 const Float k = ChangeOver::calcPotWTwo(pi.changeover, pj.changeover, r);
         
                 poti += -pj.mass*rinv*k;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE                
+            });
+#else
             }
+#endif
             _energy.epot += gravitational_constant*poti*pi.mass;
         }
 
@@ -549,6 +566,9 @@ public:
         }
 #endif
         _energy.ekin *= 0.5;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+        _energy.epot *= 0.5;
+#endif
         //_energy.epert *= 0.5;
     }
 

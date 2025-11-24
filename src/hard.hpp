@@ -2904,7 +2904,10 @@ public:
             PS::F64 tstart = PS::GetWtime();
 #endif 
             // For test hard dump
-            if (n_ptcl > 100) DATADUMP("large_cluster");
+            if (n_ptcl > 1000) {
+                std::cout<<"Dump large cluster: n_ptcl="<<n_ptcl<<"; n_group="<<n_group<<std::endl;   
+                DATADUMP("large_cluster");
+            }
 
             // if interrupt exist, escape initial
             hard_int_thread[ith].initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, manager, time_origin_);
