@@ -13,6 +13,10 @@
 #endif
 #include "external_hard.hpp"
 
+#ifdef SDAR_PN
+#include "pn.hpp"
+#endif
+
 //! AR interaction clas
 class ARInteraction{
 public:
@@ -36,6 +40,11 @@ public:
 #ifdef EXTERNAL_HARD
     ExternalHardForce *ext_force; // external hard to calculate perturbation
 #endif
+#ifdef SDAR_PN
+    PostNewtonian pn; // PN force for AR (compile-time enabled by SDAR_PN)
+#endif
+
+
 
     ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), interrupt_detection_option(0)
 #ifdef STELLAR_EVOLUTION
@@ -49,6 +58,7 @@ public:
 #ifdef EXTERNAL_HARD
                    , ext_force(NULL)
 #endif
+                   
     {}
 
     //! (Necessary) check whether publicly initialized parameters are correctly set
@@ -58,6 +68,9 @@ public:
         ASSERT(eps_sq>=0.0);
         ASSERT(gravitational_constant>0.0);
         ASSERT(interrupt_detection_option>=0 && interrupt_detection_option<=2);
+#ifdef SDAR_PN
+    ASSERT(pn.checkParams());
+#endif
 #ifdef STELLAR_EVOLUTION
         ASSERT(time_interrupt_max>=0.0);
 #ifdef BSE_BASE
@@ -76,6 +89,9 @@ public:
         _fout<<"eps_sq : "<<eps_sq<<std::endl
              <<"G      : "<<gravitational_constant<<std::endl
              <<"Interrupt_opt: "<<interrupt_detection_option<<std::endl;
+#ifdef SDAR_PN
+    pn.print(_fout);
+#endif
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
         _fout<<"SE_opt : "<<stellar_evolution_option<<std::endl;
@@ -397,6 +413,39 @@ public:
 //            ASSERT(abs(mcm-_particle_cm.mass)<1e-10);
 //#endif
                 
+            // （n_pert>0 can add corss term in PN with oher particle) (treat PN at same status as external hard)
+#ifdef SDAR_PN
+            if (_n_particle==2) {
+                const Float m1 = _particles[0].mass;
+                const Float m2 = _particles[1].mass;
+                Float dr_int[3] = {_particles[1].pos[0]-_particles[0].pos[0],
+                                   _particles[1].pos[1]-_particles[0].pos[1],
+                                   _particles[1].pos[2]-_particles[0].pos[2]};
+                Float dv_int[3] = {_particles[1].vel[0]-_particles[0].vel[0],
+                                   _particles[1].vel[1]-_particles[0].vel[1],
+                                   _particles[1].vel[2]-_particles[0].vel[2]};
+                Float r2_int = dr_int[0]*dr_int[0] + dr_int[1]*dr_int[1] + dr_int[2]*dr_int[2];
+                Float r_int = sqrt(r2_int + eps_sq);
+                bool used_pn_orders[6] = {false,false,false,false,false,false};
+                if (pn.setUsedPNOrders(used_pn_orders, r_int, m1+m2)) {
+                    Float ai[6][3], aj[6][3], adi[6][3], adj[6][3];
+                    pn.calcAccJerkPN(ai, aj, adi, adj, NULL, NULL, m1, m2, dr_int, dv_int, NULL, NULL, used_pn_orders);
+                    Float adot_tmp[3] = {0.0,0.0,0.0};
+                    Float acc_tmp1[3] = {0.0,0.0,0.0};
+                    Float acc_tmp2[3] = {0.0,0.0,0.0};
+                    pn.sumAccJerkPN(acc_tmp1, adot_tmp, ai, adi);
+                    pn.sumAccJerkPN(acc_tmp2, adot_tmp, aj, adj);
+                    // add PN correction to perturbation acceleration of each member
+                    _force[0].acc_pert[0] += acc_tmp1[0];
+                    _force[0].acc_pert[1] += acc_tmp1[1];
+                    _force[0].acc_pert[2] += acc_tmp1[2];
+                    _force[1].acc_pert[0] += acc_tmp2[0];
+                    _force[1].acc_pert[1] += acc_tmp2[1];
+                    _force[1].acc_pert[2] += acc_tmp2[2];
+                }
+            }
+#endif
+
             // get cm perturbation (exclude soft pert)
             acc_pert_cm[0] /= mcm;
             acc_pert_cm[1] /= mcm;
@@ -488,6 +537,41 @@ public:
                 }
             }
 #endif
+//where to put ? before acc_pert_cm or after?
+#ifdef SDAR_PN
+            if (_n_particle==2) {
+                const Float m1 = _particles[0].mass;
+                const Float m2 = _particles[1].mass;
+                Float dr_int[3] = {_particles[1].pos[0]-_particles[0].pos[0],
+                                   _particles[1].pos[1]-_particles[0].pos[1],
+                                   _particles[1].pos[2]-_particles[0].pos[2]};
+                Float dv_int[3] = {_particles[1].vel[0]-_particles[0].vel[0],
+                                   _particles[1].vel[1]-_particles[0].vel[1],
+                                   _particles[1].vel[2]-_particles[0].vel[2]};
+                Float r2_int = dr_int[0]*dr_int[0] + dr_int[1]*dr_int[1] + dr_int[2]*dr_int[2];
+                Float r_int = sqrt(r2_int + eps_sq);
+                bool used_pn_orders[6] = {false,false,false,false,false,false};
+                if (pn.setUsedPNOrders(used_pn_orders, r_int, m1+m2)) {
+                    Float ai[6][3], aj[6][3], adi[6][3], adj[6][3];
+                    pn.calcAccJerkPN(ai, aj, adi, adj, NULL, NULL, m1, m2, dr_int, dv_int, NULL, NULL, used_pn_orders);
+                    Float adot_tmp[3] = {0.0,0.0,0.0};
+                    //adot? 
+                    Float acc_tmp1[3] = {0.0,0.0,0.0};
+                    Float acc_tmp2[3] = {0.0,0.0,0.0};
+                    pn.sumAccJerkPN(acc_tmp1, adot_tmp, ai, adi);
+                    pn.sumAccJerkPN(acc_tmp2, adot_tmp, aj, adj);
+                    // add PN correction to perturbation acceleration of each member
+                    _force[0].acc_pert[0] += acc_tmp1[0];
+                    _force[0].acc_pert[1] += acc_tmp1[1];
+                    _force[0].acc_pert[2] += acc_tmp1[2];
+                    _force[1].acc_pert[0] += acc_tmp2[0];
+                    _force[1].acc_pert[1] += acc_tmp2[1];
+                    _force[1].acc_pert[2] += acc_tmp2[2];
+                }
+            }
+
+#endif 
+
 
 #ifdef SOFT_PERT
             if(_perturber.soft_pert!=NULL) {
@@ -1464,6 +1548,11 @@ public:
 #endif // BSE_BASE
             }
         }
+#endif
+
+#ifdef SDAR_PN
+
+
 #endif
         return modify_return;
     }

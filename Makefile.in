@@ -188,6 +188,15 @@ ifeq ($(pn_mode), hermite)
 MT_FLAGS += -D HERMITE_PN
 endif
 
+ifeq ($(pn_mode), sdar)
+# When building with --with-pn=sdar, define SDAR_PN so
+# code guarded by #ifdef SDAR_PN is compiled.
+MT_FLAGS += -D SDAR_PN
+# Note: include path for SDAR (sdar_prefix) is handled in configure.ac
+# which appends -I$sdar_prefix/src to PETAR_INCLUDE when --with-sdar-prefix
+# finds the SDAR headers.
+endif
+
 ifeq ($(step_mode),kdkdk)
 MT_FLAGS += -D KDKDK_2ND
 else ifeq ($(step_mode),kdkdk4)
