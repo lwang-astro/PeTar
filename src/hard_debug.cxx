@@ -36,6 +36,9 @@ int main(int argc, char **argv){
   PS::S32 n_crit_group = 0;
   PS::S32 istart = -1;
   PS::S32 iend = -1;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE  
+  PS::S32 n_kdtree_min = 0;
+#endif
   std::string filename="hard_dump";
   std::string fhardpar="input.par.hard.dump";
 #ifdef STELLAR_EVOLUTION
@@ -90,6 +93,9 @@ int main(int argc, char **argv){
       {"iend",              required_argument, &opt_flag, 14},
       {"n-crit-group",      required_argument, &opt_flag, 15},
       {"n-crit-arti",       required_argument, &opt_flag, 16},
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE  
+      {"kdtree-n-particles-min", required_argument, &opt_flag, 17},
+#endif      
       {"help",        no_argument, 0, 'h'},        
       {0,0,0,0}
   };
@@ -159,6 +165,11 @@ int main(int argc, char **argv){
         case 16:
             n_crit_arti = atoi(optarg);
             break;            
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+        case 17:
+            n_kdtree_min = atoi(optarg);
+            break;
+#endif
         default:
             break;
         }
@@ -239,6 +250,9 @@ int main(int argc, char **argv){
                  <<"        --slowdown-factor   [double]:  change slowdown factor reference\n"
                  <<"        --step-limit-ar     [int]:     AR step count limit\n"
                  <<"        --step-scale-ar     [double]:  AR step scaling factor\n";
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+        std::cout<<"        --kdtree-n-particles-min [int]: Minimum number of particles + groups for building kdtree to speed up neighbor search in Hermite-only neighbor force calculation: "<<n_kdtree_min<<std::endl;
+#endif
         return 0;
     default:
         std::cerr<<"Unknown argument. check '-h' for help.\n";
@@ -385,6 +399,13 @@ int main(int argc, char **argv){
       std::cerr<<"New AR relative energy error maximum: "<<e_err_ar<<std::endl;
       hard_manager.ar_manager.energy_error_relative_max = e_err_ar;
   }
+
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+    if (n_kdtree_min>0) {
+        std::cerr<<"New KDTree minimum particles+groups for Hermite neighbor force calculation: "<<n_kdtree_min<<std::endl;
+        hard_manager.h4_manager.kdtree_n_particles_min = n_kdtree_min;
+    }
+#endif  
 
   hard_manager.checkParams();
   hard_manager.print(std::cerr);

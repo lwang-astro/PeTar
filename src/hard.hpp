@@ -88,6 +88,9 @@ public:
     IOParams<PS::S64> record_id_end_one;
     IOParams<PS::S64> record_id_start_two;
     IOParams<PS::S64> record_id_end_two;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+    IOParams<PS::S64> kdtree_n_particles_min;
+#endif
     IOParams<std::string> fname_par;
 
     // flag
@@ -133,6 +136,9 @@ public:
                     record_id_end_one  (input_par_store, 0, "record-id-end-one", "Ending of the first id range for hard dump; notice that the ending id is not included in hard dump"),
                     record_id_start_two(input_par_store, 0, "record-id-start-two", "Starting of the 2nd id range for hard dump recording every tree step"),
                     record_id_end_two  (input_par_store, 0, "record-id-end-two", "Ending of the 2nd id range for hard dump; notice that the ending id is not included in hard dump"),
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+                    kdtree_n_particles_min(input_par_store, 32, "kdtree-n-particles-min", "Minimum number of particles + groups for building kdtree to speed up neighbor search in Hermite-only neighbor force calculation"),
+#endif                    
                     fname_par          (input_par_store, "input.par", "p", "Input parameter file for hard (this option should be used first before any other options)",NULL,false),
                     print_flag(false) {}
 
@@ -183,6 +189,9 @@ public:
             {record_id_end_one.key,    required_argument, &hard_flag, 20},
             {record_id_start_two.key,  required_argument, &hard_flag, 21},
             {record_id_end_two.key,    required_argument, &hard_flag, 22},
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+            {kdtree_n_particles_min.key, required_argument, &hard_flag, 27},
+#endif            
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
         };
@@ -349,6 +358,14 @@ public:
                         if(print_flag) r_acc_offset.print(std::cout);
                         opt_used += 2;
                         break;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+                    case 27:
+                        kdtree_n_particles_min.value = atoi(optarg);
+                        if(print_flag) kdtree_n_particles_min.print(std::cout);
+                        opt_used += 2;
+                        assert(kdtree_n_particles_min.value>0);
+                        break;
+#endif
                     default:
                         break;
                     }
@@ -548,6 +565,10 @@ public:
         record_id_range.id_start_two = _input.record_id_start_two.value;
         record_id_range.id_end_two = _input.record_id_end_two.value;
 
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+        h4_manager.kdtree_n_particles_min = _input.kdtree_n_particles_min.value;
+#endif        
+
         // link global status 
         status = &_stat;
 
@@ -562,6 +583,9 @@ public:
                      <<" AR slowdown maximum timescale     = "<<ar_manager.slowdown_timescale_max<<std::endl
                      <<" AR slowdown perturbation criterion= "<<ar_manager.slowdown_pert_ratio_ref<<std::endl
                      <<" Artificial particle ID offset     = "<<ap_manager.id_offset<<std::endl;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+            std::cout<<" KDTree minimum particles+groups   = "<<h4_manager.kdtree_n_particles_min<<std::endl;
+#endif                     
         }
 
         checkParams();
