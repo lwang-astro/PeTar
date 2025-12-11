@@ -90,4 +90,13 @@ public:
         return r_search;
     }
 
+    //! Set neighbor distance criterion
+    void setRNeighbor(const PS::F64 _r_neighbor) {
+#ifdef HARD_DEBUG
+        // If a binary's velocity is zero. its r_search can be the same as r_out, because r_out can be > r_search_min, then calcRSearch return r_out.
+        assert(_r_neighbor>=changeover.getRout());
+#endif 
+        r_search = _r_neighbor;
+    }
+
 };
