@@ -1,7 +1,7 @@
 import collections
 import numpy as np
 from scipy import spatial as sp
-from .base import *
+from sdar.base import *
 from .data import *
 from .bse import *
 

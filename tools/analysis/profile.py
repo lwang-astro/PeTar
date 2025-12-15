@@ -1,6 +1,6 @@
 # analysis profile data
 
-from .base import *
+from sdar.base import *
 
 class FDPSProfile(DictNpArrayMix):
     """ FDPS time profile for tree for one tree step

@@ -309,7 +309,8 @@ AC_ARG_WITH([sdar-prefix],
             [sdar_prefix="../SDAR"])
 
 AC_CHECK_FILE(["$sdar_prefix/src/Hermite/hermite_integrator.h"],
-	      [PETAR_INCLUDE=$PETAR_INCLUDE" -I$sdar_prefix/src"],
+	      [PETAR_INCLUDE=$PETAR_INCLUDE" -I$sdar_prefix/src"
+             SDAR_PATH=$sdar_prefix],
 	      [AC_MSG_FAILURE([can't find SDAR library, please provide correct PREFIX by using --with-sdar-prefix])])
 
 # GALPY
@@ -536,6 +537,7 @@ AC_SUBST([GPERFLIBS])
 AC_SUBST([MPFRCFLAGS])
 AC_SUBST([MPFRCLIBS])
 AC_SUBST([GALPY_PATH])
+AC_SUBST([SDAR_PATH])
 AC_SUBST([AGAMA_PATH])
 AC_SUBST([GSL_CFLAGS])
 AC_SUBST([GSL_LIBS])
