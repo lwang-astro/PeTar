@@ -90,9 +90,10 @@ public:
       @param[out] _epot: total inner potential energy
       @param[in] _p1: particle 1
       @param[in] _p2: particle 2
+      @param[in] _pos_offset: position offset need to be added to calculate dr
       \return the inverse time transformation factor (gt_kick_inv) for kick step
     */
-    inline Float calcInnerAccPotAndGTKickInvTwo(AR::Force& _f1, AR::Force& _f2, Float& _epot, const PtclHard& _p1, const PtclHard& _p2) {
+    inline Float calcInnerAccPotAndGTKickInvTwo(AR::Force& _f1, AR::Force& _f2, Float& _epot, const PtclHard& _p1, const PtclHard& _p2, const Float* _pos_offset) {
         // acceleration
         const Float mass1 = _p1.mass;
         const auto& pos1 = _p1.pos;
@@ -103,10 +104,16 @@ public:
         Float gm1 = gravitational_constant*mass1;
         Float gm2 = gravitational_constant*mass2;
         Float gm1m2 = gm1*mass2;
-        
+
+#ifdef USE_CM_FRAME
+        Float dr[3] = {pos2[0] -pos1[0] + _pos_offset[0],
+                       pos2[1] -pos1[1] + _pos_offset[1],
+                       pos2[2] -pos1[2] + _pos_offset[2]};
+#else
         Float dr[3] = {pos2[0] -pos1[0],
                        pos2[1] -pos1[1],
                        pos2[2] -pos1[2]};
+#endif
         Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
         Float inv_r = 1.0/sqrt(r2);
         Float inv_r3 = inv_r*inv_r*inv_r;
@@ -507,28 +514,6 @@ public:
         }
     }
     
-    //! (Necessary) calculate acceleration from internal members and perturbers
-    /*! The Force class acc_pert should be updated
-      @param[out] _force: force array to store the calculation results (in acc_pert[3], notice acc_pert may need to reset zero to avoid accummulating old values)
-      @param[out] _epot: potential 
-      @param[in] _particles: member particle array
-      @param[in] _n_particle: number of member particles
-      @param[in] _particle_cm: center-of-mass particle
-      @param[in] _perturber: pertuber container
-      @param[in] _time: current time
-      \return perturbation energy to calculate slowdown factor
-    */
-    Float calcAccPotAndGTKickInv(AR::Force* _force, Float& _epot, const PtclHard* _particles, const int _n_particle, const H4Ptcl& _particle_cm, const ARPerturber& _perturber, const Float _time) {
-        // inner force
-        Float gt_kick_inv;
-        if (_n_particle==2) gt_kick_inv = calcInnerAccPotAndGTKickInvTwo(_force[0], _force[1], _epot, _particles[0], _particles[1]);
-        else gt_kick_inv = calcInnerAccPotAndGTKickInv(_force, _epot, _particles, _n_particle);
-
-        calcAccPert(_force, _particles, _n_particle, _particle_cm, _perturber, _time);
-
-        return gt_kick_inv;
-    }
-
 
     //! calculate perturbation from c.m. acceleration
     Float calcPertFromForce(const Float* _force, const Float _mp, const Float _mpert) {
@@ -1321,8 +1306,8 @@ public:
                             }
                             else if (_bin.semi>0||(_bin.semi<0&&drdv<0)) {
                                 // ensure to set pair id for delayed collision
-                                p1->setBinaryPairID(p2->id);
-                                p2->setBinaryPairID(p1->id);
+                                //p1->setBinaryPairID(p2->id);
+                                //p2->setBinaryPairID(p1->id);
                                 p1->setBinaryInterruptState(BinaryInterruptState::delaycollision);
                                 p2->setBinaryInterruptState(BinaryInterruptState::delaycollision);
                                 p1->time_interrupt = std::min(_bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri), time_interrupt_max);
@@ -1476,6 +1461,7 @@ public:
     Float calcGTDriftInv(Float _ekin_minus_etot) {
         return _ekin_minus_etot;
     }
+#endif   
 
     //! (Necessary) calculate the time transformed Hamiltonian
     /*! calculate the time transformed Hamiltonian
@@ -1484,7 +1470,6 @@ public:
     Float calcH(Float _ekin_minus_etot, Float _epot) {
         return log(_ekin_minus_etot) - log(-_epot);
     }
-#endif   
 
     //! write class data to file with binary format
     /*! @param[in] _fp: FILE type file for output
