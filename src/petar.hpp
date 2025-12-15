@@ -2911,6 +2911,9 @@ public:
 #ifdef HERMITE_PN
             hard_parameters.speed_of_light.value = SPEED_OF_LIGHT;
 #endif
+#ifdef SDAR_PN
+            hard_parameters.speed_of_light.value = SPEED_OF_LIGHT;
+#endif
             if(print_flag) {
                 std::cout<<"----- Unit set 1: Msun, pc, Myr -----\n"
                          <<"gravitational_constant = "<<input_parameters.gravitational_constant.value<<" pc^3/(Msun*Myr^2)\n";
@@ -2927,6 +2930,10 @@ public:
                          <<" vscale = "<<agama_parameters.vscale.value<<"  [km/s] / [pc/Myr]\n";
 #endif
 #ifdef HERMITE_PN
+                std::cout<<"----- Unit for Post Newtonian -----\n"
+                         <<" speed of light = "<<hard_parameters.speed_of_light.value<<" pc/Myr\n";
+#endif
+#ifdef SDAR_PN
                 std::cout<<"----- Unit for Post Newtonian -----\n"
                          <<" speed of light = "<<hard_parameters.speed_of_light.value<<" pc/Myr\n";
 #endif

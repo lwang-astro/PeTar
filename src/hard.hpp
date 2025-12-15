@@ -88,6 +88,13 @@ public:
     IOParams<PS::F64> speed_of_light;
     IOParams<PS::F64> precession_criterion;
 #endif
+
+#ifdef SDAR_PN
+    IOParams<PS::F64> speed_of_light;
+    IOParams<PS::F64> precession_criterion;
+#endif
+
+
     IOParams<std::string> fname_par;
 
     // flag
@@ -133,6 +140,12 @@ public:
                     speed_of_light(input_par_store, 1, "pn-c", "speed of light value for Post Newtonian; if -u 1 is used, auto determined"),
                     precession_criterion(input_par_store, 1e-8, "pn-p", "Precession criterion to switch on PN terms, in unit of radian"),
 #endif
+
+#ifdef SDAR_PN
+                    speed_of_light(input_par_store, 1, "pn-c", "speed of light value for Post Newtonian; if -u 1 is used, auto determined"),
+                    precession_criterion(input_par_store, 1e-8, "pn-p", "Precession criterion to switch on PN terms, in unit of radian"),
+#endif
+
                     fname_par          (input_par_store, "input.par", "p", "Input parameter file for hard (this option should be used first before any other options)",NULL,false),
                     print_flag(false) {}
 
@@ -182,6 +195,11 @@ public:
 #ifdef HERMITE_PN
             {speed_of_light.key,       required_argument, &hard_flag, 23},
             {precession_criterion.key, required_argument, &hard_flag, 24},
+#endif
+
+#ifdef SDAR_PN
+            {speed_of_light.key,       required_argument, &hard_flag, 25},
+            {precession_criterion.key, required_argument, &hard_flag, 26},
 #endif
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
@@ -338,6 +356,19 @@ public:
                         opt_used += 2;
                         break;
 #endif
+
+#ifdef SDAR_PN
+                    case 25:
+                        speed_of_light.value = atof(optarg);
+                        if(print_flag) speed_of_light.print(std::cout);
+                        opt_used += 2;
+                        break;
+                    case 26:
+                        precession_criterion.value = atof(optarg);
+                        if(print_flag) precession_criterion.print(std::cout);
+                        opt_used += 2;
+                        break;
+#endif
                     default:
                         break;
                     }
@@ -423,6 +454,9 @@ public:
         ar_manager.interaction.tide.gravitational_constant = _g;
 #endif
 #ifdef HERMITE_PN
+        h4_manager.interaction.pn.gravitational_constant = _g;
+#endif
+#ifdef SDAR_PN
         h4_manager.interaction.pn.gravitational_constant = _g;
 #endif
     }
@@ -531,6 +565,10 @@ public:
 #endif
 
 #ifdef HERMITE_PN
+        h4_manager.interaction.pn.speed_of_light = _input.speed_of_light.value;
+        h4_manager.interaction.pn.precession_criterion = _input.precession_criterion.value;
+#endif
+#ifdef SDAR_PN
         h4_manager.interaction.pn.speed_of_light = _input.speed_of_light.value;
         h4_manager.interaction.pn.precession_criterion = _input.precession_criterion.value;
 #endif
