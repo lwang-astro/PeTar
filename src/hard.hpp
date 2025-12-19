@@ -457,7 +457,7 @@ public:
         h4_manager.interaction.pn.gravitational_constant = _g;
 #endif
 #ifdef SDAR_PN
-        h4_manager.interaction.pn.gravitational_constant = _g;
+        ar_manager.interaction.pn.gravitational_constant = _g;
 #endif
     }
 
@@ -569,8 +569,8 @@ public:
         h4_manager.interaction.pn.precession_criterion = _input.precession_criterion.value;
 #endif
 #ifdef SDAR_PN
-        h4_manager.interaction.pn.speed_of_light = _input.speed_of_light.value;
-        h4_manager.interaction.pn.precession_criterion = _input.precession_criterion.value;
+        ar_manager.interaction.pn.speed_of_light = _input.speed_of_light.value;
+        ar_manager.interaction.pn.precession_criterion = _input.precession_criterion.value;
 #endif
 
         // record id range
