@@ -17,10 +17,10 @@ class PostNewtonian{
 public:
     Float speed_of_light;
     Float gravitational_constant;
-    Float precession_criterion; // precession angle to determine which order of PN should be on
-    
-    PostNewtonian(): speed_of_light(1.0), gravitational_constant(1.0), precession_criterion(1.0e-8) {}
-    
+    Float speed_criterion; // v^2/c^2 criterion to determine whether PN should be used
+
+    PostNewtonian(): speed_of_light(1.0), gravitational_constant(1.0), speed_criterion(1.0e-6) {}
+
     //! check whether parameters values are correct
     /*! \return true: all correct
      */
@@ -34,7 +34,18 @@ public:
     void print(std::ostream & _fout) const{
         _fout<<"speed_of_light: "<<speed_of_light<<std::endl
              <<"G: "<<gravitational_constant<<std::endl
-             <<"precession_criterion: "<<precession_criterion<<std::endl;
+             <<"speed_criterion: "<<speed_criterion<<std::endl;
+    }
+
+    //！estimate the PN1/Newtonian ratio upper limit
+    /*! ratio = (500*v/c)^6
+      @param[in] v2: relative velocity square between two particles
+      \return ratio
+    */
+    Float calcPN1OverNewton(Float v2) {
+        const Float c2 = speed_of_light*speed_of_light;
+        const Float voc2 = 2.5e5*v2/c2;
+        return voc2*voc2*voc2; // rough estimation
     }
 
     //! determine which PN terms should be switched on based on an estimator due to Einstein drift
@@ -42,17 +53,16 @@ public:
       If satisfy, switch on PN1, 2, 2.5, others are not yet tested.
       @param[out] used_pn_orders: determine which PN orders are calculated: set in a bool array: [PN1, PN2, PN2.5, PN3, PN3.5, SPIN]
       @param[in] r: distance between two particles
-      @param[in] m: total mass of two particles
-      
       return: if use PN: true
     */
-    bool setUsedPNOrders(bool used_pn_orders[6], Float r, Float m) {
+    bool setUsedPNOrders(bool used_pn_orders[6], Float v2) {
         const Float c = speed_of_light;
         Float c2 = c*c;
-        Float theta = 4*gravitational_constant*m/(r*c2); // precession angle 
+        //Float theta = 4*gravitational_constant*m/(r*c2); // precession angle 
+        Float voc2 = v2/c2;
         bool used_pn = false;
         // PN1
-        if (theta > precession_criterion) {
+        if (voc2 > speed_criterion) {
             used_pn_orders[0] = true;
             used_pn_orders[1] = true;
             used_pn_orders[2] = true;
@@ -701,14 +711,17 @@ public:
       @param[out] adot[3]: jerk, to be added (not reset to zero)
       @param[in] a_pn[6][3]: (3D) Newton and PN acceleration of particle, each PN term are separately saved in array: [Newton, PN1, PN2, PN2.5, PN3, PN3.5]
       @param[in] adot_pn[6][3]: Newton and PN jerk of particle for each PN order
+      @param[in] istart: starting index for summation (default 0: sum all PN orders)
+      @param[in] iend: ending index for summation (default 6: sum all PN orders)
      */
-    void sumAccJerkPN(Float acc[3], Float adot[3], Float a_pn[][3], Float adot_pn[][3]) {
-        for (int i=0; i<6; i++) {
-            for (int k=0; k<3; k++) {
+    void sumAccJerkPN(Float acc[3], Float adot[3], Float a_pn[][3], Float adot_pn[][3], const int istart=0, const int iend=6) const {
+        for (int i=istart; i<iend; i++) 
+            for (int k=0; k<3; k++)
                 acc[k] += a_pn[i][k];
-                adot[k] += adot_pn[i][k];
-            }
-        }
+        if (adot!=NULL)
+            for (int i=istart; i<iend; i++)
+                for (int k=0; k<3; k++)
+                    adot[k] += adot_pn[i][k];
     }
 
     //! write class data to file with binary format
@@ -724,7 +737,7 @@ public:
     void readBinary(FILE *_fin) {
         size_t rcount = fread(this, sizeof(*this), 1, _fin);
         if (rcount<1) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: pn:readBinary fail!\n";
             abort();
         }
     }    

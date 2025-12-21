@@ -4,6 +4,7 @@
 #include <mpreal.h>
 #define MPFR_PREC 128
 #endif
+#include <cinttypes> 
 
 #ifdef BSE_BASE
 #include "bse_interface.h"
@@ -216,7 +217,7 @@ public:
 #ifdef PETAR_USE_MPFRC
         fprintf(fp, "%26.17e %26.17e %26.17e ", this->pos_high.x, this->pos_high.y, this->pos_high.z);
 #endif
-        fprintf(fp, "%26.17e %26.17e %26.17e %lld ", this->vel.x, this->vel.y, this->vel.z, this->binary_state);
+        fprintf(fp, "%26.17e %26.17e %26.17e %" PRId64 " ", this->vel.x, this->vel.y, this->vel.z, this->binary_state);
 #ifdef STELLAR_EVOLUTION        
         fprintf(fp, "%26.17e %26.17e %26.17e %26.17e ", 
                 this->radius, this->dm, this->time_record, this->time_interrupt);
@@ -238,7 +239,7 @@ public:
             abort();
         }
 #endif
-        rcount += fscanf(fp, "%lf %lf %lf %lld ", &this->vel.x, &this->vel.y, &this->vel.z, &this->binary_state);
+        rcount += fscanf(fp, "%lf %lf %lf %" PRId64 " ", &this->vel.x, &this->vel.y, &this->vel.z, &this->binary_state);
 #ifdef STELLAR_EVOLUTION        
         rcount += fscanf(fp, "%lf %lf %lf %lf ",
                               &this->radius, &this->dm, &this->time_record, &this->time_interrupt);

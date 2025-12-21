@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/Float.h"
+#include "Common/particle_kdtree.h"
 #include "changeover.hpp"
 #include "external_hard.hpp"
 #ifdef HERMITE_PN
@@ -96,7 +97,8 @@ public:
         ASSERT(r>0.0);
 #ifdef HERMITE_PN
         bool used_pn_orders[6] = {false, false, false, false, false, false};
-        if (pn.setUsedPNOrders(used_pn_orders, r, _pi.mass+_pj.mass)) {
+        const Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
+        if (pn.setUsedPNOrders(used_pn_orders, v2)) {
          
             if (r > _pi.changeover.getRin() || r > _pj.changeover.getRin()) {
                 std::cerr<<"Warning: GR is switched on, but changeover radius is less than GR influence radius. This will cause inconsistent force calculation! particle distance = "
@@ -550,15 +552,27 @@ public:
     template<class Tp, class Tgroup, class Tpert>
     inline void calcEnergy(H4::HermiteEnergy& _energy, const Tp* _particles, const int _n_particle, const Tgroup* _groups, const int* _group_index, const int _n_group, const Tpert& _perturber) {
         _energy.ekin = _energy.epot = _energy.epert = 0.0;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE_POT
+        // in this mode, we only calculate the energy of neighbor particles, should not be used, this is incorrect for changeover potential.
+        COMM::ParticleKDTree kdtree;
+        kdtree.addParticles(_particles, nullptr, _n_particle);
+#endif
         for (int i=0; i<_n_particle; i++) {
             auto& pi = _particles[i];
             if (pi.mass==0.0) continue;
             _energy.ekin += pi.mass* (pi.vel[0]*pi.vel[0] + pi.vel[1]*pi.vel[1] + pi.vel[2]*pi.vel[2]);
             Float poti = 0.0;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE_POT        
+            kdtree.searchNeighborParticlesApply(pi, [&](int j_idx) {
+                const auto& pj = _particles[j_idx];
+                if (pi.id == pj.id) return;
+                if (pj.mass==0.0) return;
+#else
             for (int j=0; j<i; j++) {
                 if (i==j) continue;
                 auto& pj = _particles[j];
                 if (pj.mass==0.0) continue;
+#endif
                 const Float dr[3] = {pj.pos[0] - pi.pos[0], 
                                      pj.pos[1] - pi.pos[1],
                                      pj.pos[2] - pi.pos[2]};
@@ -570,7 +584,11 @@ public:
                 const Float k = ChangeOver::calcPotWTwo(pi.changeover, pj.changeover, r);
         
                 poti += -pj.mass*rinv*k;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE_POT            
+            });
+#else
             }
+#endif
             _energy.epot += gravitational_constant*poti*pi.mass;
         }
 
@@ -591,6 +609,9 @@ public:
         }
 #endif
         _energy.ekin *= 0.5;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE_POT
+        _energy.epot *= 0.5;
+#endif
         //_energy.epert *= 0.5;
     }
 
@@ -607,7 +628,7 @@ public:
     void readBinary(FILE *_fin) {
         size_t rcount = fread(this, sizeof(*this), 1, _fin);
         if (rcount<1) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: HermiteInteraction::readBinary(): cannot read data correctly."<<std::endl;
             abort();
         }
     }    

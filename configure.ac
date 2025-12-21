@@ -85,13 +85,22 @@ AX_CHECK_COMPILE_FLAG([-O0],
 AX_CHECK_COMPILE_FLAG([-fbounds-check],
                       [DEBFLAGS=$DEBFLAGS" -fbounds-check"])
 
+AX_CHECK_COMPILE_FLAG([-fsanitize=address,undefined],
+                      [DEBFLAGS=$DEBFLAGS" -fsanitize=address,undefined"])
+
+AX_CHECK_COMPILE_FLAG([-fno-omit-frame-pointer],
+                      [DEBFLAGS=$DEBFLAGS" -fno-omit-frame-pointer"])
+
 AS_IF([test x"$with_debug" == xg],
       [PROG_SUFFIX=".g"
        OPTFLAGS=$DEBFLAGS],
       [AS_IF([test x"$with_debug" != xno],
-             [PROG_SUFFIX=".d"])
-       AX_CHECK_COMPILE_FLAG([-O3],
-                             [OPTFLAGS=" -O3"])])
+             [PROG_SUFFIX=".d"
+              OPTFLAGS=' -g'
+              AX_CHECK_COMPILE_FLAG([-O2],
+                                    [OPTFLAGS=$OPTFLAGS" -O2"])],
+             [AX_CHECK_COMPILE_FLAG([-O3],
+                                    [OPTFLAGS=" -O3"])])])
 
 
 AX_CHECK_COMPILE_FLAG([-Wall],
@@ -173,12 +182,12 @@ AS_IF([test x"$with_arch" == xfugaku],
                              [OPTFLAGS=$OPTFLAGS" -Kfast -Nclang"])
        PROG_NAME=$PROG_NAME".fugaku"])
 
-AC_ARG_ENABLE([simd-64],
-              [AS_HELP_STRING([--enable-simd-64],
-                              [enable x86 SIMD 64 bits floating point support for long-distant tree force])],
+AC_ARG_ENABLE([64b],
+              [AS_HELP_STRING([--enable-64b],
+                              [enable 64 bits floating point support for long-distant tree force])],
               [PROG_NAME=$PROG_NAME".64b"
-               use_simd_64=yes],
-              [use_simd_64=no])
+               use_64b=yes],
+              [use_64b=no])
 
 # QUAD
 AC_ARG_ENABLE([quad],
@@ -300,7 +309,8 @@ AC_ARG_WITH([sdar-prefix],
             [sdar_prefix="../SDAR"])
 
 AC_CHECK_FILE(["$sdar_prefix/src/Hermite/hermite_integrator.h"],
-	      [PETAR_INCLUDE=$PETAR_INCLUDE" -I$sdar_prefix/src"],
+	      [PETAR_INCLUDE=$PETAR_INCLUDE" -I$sdar_prefix/src"
+             SDAR_PATH=$sdar_prefix],
 	      [AC_MSG_FAILURE([can't find SDAR library, please provide correct PREFIX by using --with-sdar-prefix])])
 
 # GALPY
@@ -390,7 +400,10 @@ AC_ARG_WITH([external],
                                   [GALPY_PATH=$galpy_prefix],
                                   [AC_MSG_FAILURE([can't find Galpy library, please provide correct PREFIX by using --with-galpy-prefix])])
                     AC_CHECK_FILE(["$galpy_prefix/__init__.py"],
-                                  [GALPY_VERSION=`head -1 $galpy_prefix/__init__.py|cut -d'"' -f2 `],
+                                  [GALPY_VERSION=`head -1 $galpy_prefix/__init__.py|cut -d'"' -f2 `
+                                   version_check=`echo -e "$GALPY_VERSION\n1.10.2" | sort -V | head -1`
+                                   AS_IF([test "$version_check" != "$GALPY_VERSION"],
+                                         [AC_MSG_FAILURE([Galpy version $GALPY_VERSION is not supported. Please use Galpy <= 1.10.2])])],
                                   [AC_MSG_FAILURE([can't find Galpy __init__.py, which contains the version number])])
                     AC_CHECK_PROG([GSL_CFLAGS],[gsl-config],[`gsl-config --cflags`],[])
                     AC_CHECK_PROG([GSL_LIBS],[gsl-config],[`gsl-config --libs`],[none])
@@ -426,7 +439,7 @@ AC_ARG_WITH([external-hard],
 # pn force
 AC_ARG_WITH([pn],
             [AS_HELP_STRING([--with-pn],
-                            [Post-Newtonian correct: hermite, none: Default: none])],
+                            [Post-Newtonian correct: hermite, sdar, all: Default: none])],
             [with_pn=$withval
              PROG_NAME=$PROG_NAME'.'pn$with_pn],
             [with_pn=none])
@@ -502,7 +515,7 @@ VERSION=$petar_version'_'$sdar_version
 
 AC_SUBST([with_arch])
 AC_SUBST([use_simd])
-AC_SUBST([use_simd_64])
+AC_SUBST([use_64b])
 AC_SUBST([use_quad])
 AC_SUBST([use_mpi])
 AC_SUBST([use_cuda])
@@ -533,6 +546,7 @@ AC_SUBST([GPERFLIBS])
 AC_SUBST([MPFRCFLAGS])
 AC_SUBST([MPFRCLIBS])
 AC_SUBST([GALPY_PATH])
+AC_SUBST([SDAR_PATH])
 AC_SUBST([AGAMA_PATH])
 AC_SUBST([GSL_CFLAGS])
 AC_SUBST([GSL_LIBS])
@@ -554,10 +568,9 @@ AC_MSG_NOTICE([     FDPS Version:      $FDPS_VERSION])
 AC_MSG_NOTICE([     Using MPI:         $use_mpi])
 AC_MSG_NOTICE([     Using GPU:         $use_cuda])
 AC_MSG_NOTICE([     Using arch:        $with_arch])
+AC_MSG_NOTICE([     Using 64b:         $use_64b])
 AS_IF([test "x$use_simd" != xno],
-      [AS_IF([test "x$use_simd_64" != xno],
-             [AC_MSG_NOTICE([     SIMD type:         $SIMD_TYPE 64 bits])],
-             [AC_MSG_NOTICE([     SIMD type:         $SIMD_TYPE ])])
+      [AC_MSG_NOTICE([     SIMD type:         $SIMD_TYPE ])
        AS_IF([test "x$with_simd" == xauto],
              [AC_MSG_NOTICE([  Notice: this is auto-detected based on the host CPU architecture])
               AC_MSG_NOTICE([          If different CPU is used for running, check whether $SIMD_TYPE is also supported])])])

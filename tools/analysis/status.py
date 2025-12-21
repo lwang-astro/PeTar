@@ -1,5 +1,5 @@
 # analysis status data
-from .base import *
+from sdar.base import *
 from .data import *
 
 class Energy(DictNpArrayMix):

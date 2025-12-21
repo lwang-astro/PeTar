@@ -26,6 +26,10 @@ struct IOParamsPrintHelp{
     }
 
     static char getValueTypeShortName(const long long int& value) {
+        return 'L';
+    }
+
+    static char getValueTypeShortName(const long int& value) {
         return 'I';
     }
 
@@ -54,7 +58,12 @@ struct IOParams{
     }
 
     void print(std::ostream& os) const{
-        os<<description<<":   "<<value<<std::endl;
+        //os<<description<<":   "<<value<<std::endl;
+        std::stringstream ss(description);
+        std::string token;
+
+        std::getline(ss, token, ';');
+        os<<token<<": "<<value<<std::endl;
     }
     
     void printHelp(std::ostream& os, const IOParamsPrintHelp& _align, const bool print_short_flag, const bool always_print=false) const {
@@ -116,26 +125,37 @@ class IOParamsContainer{
         }
     };
     std::map<const char*, IOParams<double>*, char_cmp> d_f64;
-    std::map<const char*, IOParams<long long int>*, char_cmp> d_i64;
+    std::map<const char*, IOParams<long int>*, char_cmp> d_l64;
+    std::map<const char*, IOParams<long long int>*, char_cmp> d_ll64;
     std::map<const char*, IOParams<std::string>*, char_cmp> d_str;
+    std::map<const char*, int, char_cmp> name_types;
     
 public:
 
     void store(const char* _name, IOParams<double>* _item) {
         d_f64[_name] = _item;
+        name_types[_name] = 0;
     }
 
+    void store(const char* _name, IOParams<long int>* _item) {
+        d_l64[_name] = _item;
+        name_types[_name] = 1;
+    }
+    
     void store(const char* _name, IOParams<long long int>* _item) {
-        d_i64[_name] = _item;
+        d_ll64[_name] = _item;
+        name_types[_name] = 2;
     }
 
     void store(const char* _name, IOParams<std::string>* _item) {
         d_str[_name] = _item;
+        name_types[_name] = 3;
     }
 
     void writeAscii(FILE *_fout) {
         for(auto iter = d_f64.begin(); iter!=d_f64.end(); iter++) fprintf(_fout, "%c %s %26.15e\n", IOParamsPrintHelp::getValueTypeShortName(iter->second->value), iter->first, iter->second->value);
-        for(auto iter = d_i64.begin(); iter!=d_i64.end(); iter++) fprintf(_fout, "%c %s %lld\n",    IOParamsPrintHelp::getValueTypeShortName(iter->second->value), iter->first, iter->second->value);
+        for(auto iter = d_l64.begin(); iter!=d_l64.end(); iter++) fprintf(_fout, "%c %s %ld\n",     IOParamsPrintHelp::getValueTypeShortName(iter->second->value), iter->first, iter->second->value);
+        for(auto iter = d_ll64.begin();iter!=d_ll64.end();iter++) fprintf(_fout, "%c %s %lld\n",    IOParamsPrintHelp::getValueTypeShortName(iter->second->value), iter->first, iter->second->value);
         for(auto iter = d_str.begin(); iter!=d_str.end(); iter++) fprintf(_fout, "%c %s %s\n",      IOParamsPrintHelp::getValueTypeShortName(iter->second->value), iter->first, iter->second->value.c_str());
     }
     
@@ -169,14 +189,29 @@ public:
             }
             case 'I':
             {
+                long int dtmp;
+                rcount=fscanf(_fin, "%s %ld\n", key_name, &dtmp);
+                if (rcount<2) {
+                    std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
+                    abort();
+                }
+                auto search = d_l64.find(key_name);
+                if (search == d_l64.end()) 
+                    std::cerr<<"Warning: parameter name key "<<key_name<<" is not found!\n";
+                else 
+                    search->second->value = dtmp;
+                break;
+            }
+            case 'L':
+            {
                 long long int dtmp;
                 rcount=fscanf(_fin, "%s %lld\n", key_name, &dtmp);
                 if (rcount<2) {
                     std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
                     abort();
                 }
-                auto search = d_i64.find(key_name);
-                if (search == d_i64.end()) 
+                auto search = d_ll64.find(key_name);
+                if (search == d_ll64.end()) 
                     std::cerr<<"Warning: parameter name key "<<key_name<<" is not found!\n";
                 else 
                     search->second->value = dtmp;
@@ -207,7 +242,8 @@ public:
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
     void mpi_broadcast() {
         for(auto iter=d_f64.begin(); iter!=d_f64.end(); iter++) PS::Comm::broadcast(&(iter->second->value), 1, 0);
-        for(auto iter=d_i64.begin(); iter!=d_i64.end(); iter++) PS::Comm::broadcast(&(iter->second->value), 1, 0);
+        for(auto iter=d_l64.begin(); iter!=d_l64.end(); iter++) PS::Comm::broadcast(&(iter->second->value), 1, 0);
+        for(auto iter=d_ll64.begin(); iter!=d_ll64.end(); iter++) PS::Comm::broadcast(&(iter->second->value), 1, 0);
         for(auto iter=d_str.begin(); iter!=d_str.end(); iter++) {
             size_t str_size=iter->second->value.size();
             PS::Comm::broadcast(&str_size, 1, 0);
@@ -221,7 +257,8 @@ public:
 
     void print(std::ostream& os) const{
         for(auto iter=d_f64.begin(); iter!=d_f64.end(); iter++) os<<iter->first<<": "<<iter->second->value<<std::endl;
-        for(auto iter=d_i64.begin(); iter!=d_i64.end(); iter++) os<<iter->first<<": "<<iter->second->value<<std::endl;
+        for(auto iter=d_l64.begin(); iter!=d_l64.end(); iter++) os<<iter->first<<": "<<iter->second->value<<std::endl;
+        for(auto iter=d_ll64.begin(); iter!=d_ll64.end(); iter++) os<<iter->first<<": "<<iter->second->value<<std::endl;
         for(auto iter=d_str.begin(); iter!=d_str.end(); iter++) os<<iter->first<<": "<<iter->second->value<<std::endl;
     }
 
@@ -232,24 +269,38 @@ public:
               <<"** The char in [] indicates argument type: ";
             print_help.printTypeShortNameDescription(os);
         }
-        // short key
-        for(auto iter=d_f64.begin(); iter!=d_f64.end(); iter++) iter->second->printHelp(os, print_help, true, print_all_flag);
-        for(auto iter=d_i64.begin(); iter!=d_i64.end(); iter++) iter->second->printHelp(os, print_help, true, print_all_flag);
-        for(auto iter=d_str.begin(); iter!=d_str.end(); iter++) iter->second->printHelp(os, print_help, true, print_all_flag);
-        // long key
-        for(auto iter=d_f64.begin(); iter!=d_f64.end(); iter++) iter->second->printHelp(os, print_help, false, print_all_flag);
-        for(auto iter=d_i64.begin(); iter!=d_i64.end(); iter++) iter->second->printHelp(os, print_help, false, print_all_flag);
-        for(auto iter=d_str.begin(); iter!=d_str.end(); iter++) iter->second->printHelp(os, print_help, false, print_all_flag);
+        for (int i = 0; i < 2; i++) {
+            for (auto iter=name_types.begin(); iter!=name_types.end(); iter++) {
+                auto name = iter->first;
+                auto type = iter->second;
+                bool print_short_flag = (i==0);
+                if (type == 0) {
+                    auto search = d_f64.find(name);
+                    if (search != d_f64.end()) search->second->printHelp(os, print_help, print_short_flag, print_all_flag);
+                }
+                else if (type == 1) {
+                    auto search = d_l64.find(name);
+                    if (search != d_l64.end()) search->second->printHelp(os, print_help, print_short_flag, print_all_flag);
+                }
+                else if (type == 2) {
+                    auto search = d_ll64.find(name);
+                    if (search != d_ll64.end()) search->second->printHelp(os, print_help, print_short_flag, print_all_flag);
+                }
+                else if (type == 3) {
+                    auto search = d_str.find(name);
+                    if (search != d_str.end()) search->second->printHelp(os, print_help, print_short_flag, print_all_flag);
+                }
+                else {
+                    std::cerr<<"Warning: parameter name "<<name<<" has unknown type "<<type<<", should be one of 0, 1, 2, 3\n";
+                }
+            }
+        }
     }
 
     //! check whether the key is defined
     bool isDefined(const char* _key) const {
-        auto search_f64 = d_f64.find(_key);
-        if (search_f64 != d_f64.end()) return true;
-        auto search_i64 = d_i64.find(_key);
-        if (search_i64 != d_i64.end()) return true;
-        auto search_str = d_str.find(_key);
-        if (search_str != d_str.end()) return true;
+        auto search = name_types.find(_key);
+        if (search != name_types.end()) return true;
         return false;
     }    
 };

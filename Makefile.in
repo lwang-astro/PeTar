@@ -1,6 +1,6 @@
 use_arch=@with_arch@
 use_simd=@use_simd@
-use_simd_64=@use_simd_64@
+use_64b=@use_64b@
 use_mpi =@use_mpi@
 use_gpu_cuda=@use_cuda@
 use_omp = @use_omp@
@@ -29,6 +29,16 @@ ifeq ($(use_fdps_comm),yes)
 FDPSFLAGS = -D FDPS_COMM
 endif
 
+FDPS_VERSION=@FDPS_VERSION@
+FDPS_VERSION_MAJOR := $(shell echo $(FDPS_VERSION) | cut -d. -f1)
+#FDPS_VERSION_MINOR := $(shell echo $(FDPS_VERSION) | cut -d. -f2)
+FDPS_VERSION_GE_8 := $(shell [ $(FDPS_VERSION_MAJOR) -ge 8 ] && echo yes || echo no)
+ifeq ($(FDPS_VERSION_GE_8),yes)
+FDPSFLAGS += -D FDPS_V8
+HARD_FDPSFLAGS += -D FDPS_V8
+endif
+
+
 ifeq ($(use_mpfrc),yes)
 MT_FLAGS += -D PETAR_USE_MPFRC
 PETAR_INCLUDE += @MPFRCFLAGS@
@@ -39,6 +49,7 @@ endif
 ifeq ($(use_quad),yes)
 MT_FLAGS += -D USE_QUAD
 endif
+#MT_FLAGS += -D COLLECT_SP_ACC
 MT_FLAGS += -D SOFT_PERT
 MT_FLAGS += -D AR_TTL
 MT_FLAGS += -D AR_SLOWDOWN_TREE
@@ -55,6 +66,8 @@ MT_FLAGS += -D ADJUST_GROUP_PRINT
 #MT_FLAGS += -D ONLY_SOFT
 #MT_FLAGS += -D INTEGRATED_CUTOFF_FUNCTION
 MT_FLAGS += -D SMOOTH_CM_USING_RECORES
+MT_FLAGS += -D HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+MT_FLAGS += -D AR_KDK_PERT
 
 ifeq ($(tt_mode),3rd)
 MT_FLAGS += -D TIDAL_TENSOR_3RD
@@ -186,15 +199,10 @@ endif
 
 ifeq ($(pn_mode), hermite)
 MT_FLAGS += -D HERMITE_PN
-endif
-
-ifeq ($(pn_mode), sdar)
-# When building with --with-pn=sdar, define SDAR_PN so
-# code guarded by #ifdef SDAR_PN is compiled.
+else ifeq ($(pn_mode), sdar)
 MT_FLAGS += -D SDAR_PN
-# Note: include path for SDAR (sdar_prefix) is handled in configure.ac
-# which appends -I$sdar_prefix/src to PETAR_INCLUDE when --with-sdar-prefix
-# finds the SDAR headers.
+else ifeq ($(pn_mode), all)
+MT_FLAGS += -D HERMITE_PN -D SDAR_PN
 endif
 
 ifeq ($(step_mode),kdkdk)
@@ -209,6 +217,7 @@ ifneq ($(debug_mode),no)
 
 DEBFLAGS += -D PETAR_DEBUG
 DEBFLAGS += -D AR_DEBUG
+DEBFLAGS += -D BINARY_DEBUG
 DEBFLAGS += -D STABLE_CHECK_DEBUG
 DEBFLAGS += -D AR_WARN
 DEBFLAGS += -D CLUSTER_DEBUG
@@ -272,13 +281,15 @@ ifeq ($(use_simd),yes)
 CXXFLAGS += @SIMDFLAGS@
 CXXFLAGS += -D DIV_FIX
 CXXFLAGS += -D USE_SIMD
-ifeq ($(use_simd_64),yes)
-CXXFLAGS += -D P3T_64BIT
-endif # simd 64
 endif  # simd
 #-------------------------------------
 
 endif # x86
+
+#-------------------------------------
+ifeq ($(use_64b),yes)
+CXXFLAGS += -D P3T_64BIT
+endif # 64b
 
 #-------------------------------------
 ifeq ($(use_arch),fugaku)
@@ -318,7 +329,7 @@ SIMD_DEBFLAGS += -DAVX_PRELOAD
 
 DEBUG_OPT_FLAGS = @DEBFLAGS@ -D SANITY_CHECK_REALLOCATABLE_ARRAY
 HARD_DEBFLAGS+= -D AR_DEBUG -D AR_DEBUG_DUMP -D AR_DEBUG_PRINT -D AR_WARN -D HARD_DEBUG -D HARD_DEBUG_PRINT -D ADJUST_GROUP_DEBUG -D HERMITE_DEBUG -D AR_COLLECT_DS_MODIFY_INFO -D STABLE_CHECK_DEBUG_PRINT -D ARTIFICIAL_PARTICLE_DEBUG -D ARTIFICIAL_PARTICLE_DEBUG_PRINT
-HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_TREE -D AR_SLOWDOWN_TIMESCALE -D HARD_CHECK_ENERGY 
+HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_TREE -D AR_SLOWDOWN_TIMESCALE -D HARD_CHECK_ENERGY -D HERMITE_ONLY_CALC_NEIGHBOR_FORCE
 
 build/petar.format.transfer: format_transfer.cxx |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS)
@@ -330,10 +341,10 @@ build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) |bui
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(OMPFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS) $(RANDLIBS)
 
 build/petar.hard.test: hard_test.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) |build
-	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(OMPFLAGS) $(HARD_MT_FLAGS) -o $@ $< $(CXXLIBS) $(RANDLIBS)
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(HARD_FDPSFLAGS) $(OMPFLAGS) $(HARD_MT_FLAGS) -o $@ $< $(CXXLIBS) $(RANDLIBS)
 
-build/petar.simd.test: simd_test.cxx $(OBJS) |build
-	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS) $^ -o $@  $(CXXLIBS)
+build/petar.simd.test: simd_test.cxx soft_force.hpp io.hpp hard_ptcl.hpp static_variables.hpp force_gpu_cuda.hpp phantomquad_for_p3t_k.hpp phantomquad_for_p3t_x86.hpp $(OBJS) |build
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS) $< $(OBJS) -o $@  $(CXXLIBS)
 
 build/petar.tt.test: tidal_tensor_test.cxx |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $< -o $@  $(CXXLIBS)
@@ -351,6 +362,7 @@ build/force_gpu_cuda.o: force_gpu_cuda.cu |build
 	$(NVCC) $(CUDA_INCLUDE) -c $< -o $@ 
 
 install_script_tool:
+	install -d @prefix@/bin/
 	install -m 755 tools/initdata.sh @prefix@/bin/petar.init
 	install -m 755 tools/find_dt.sh @prefix@/bin/petar.find.dt
 	install -m 755 tools/update_par.sh @prefix@/bin/petar.update.par
@@ -364,6 +376,8 @@ install_script_tool:
 	install -m 755 tools/external_pot_movie.py @prefix@/bin/petar.external.pot.movie
 	install -d @prefix@/include/
 	install -d @prefix@/include/petar
+	install -d @prefix@/include/sdar
+	install -m 644 @SDAR_PATH@/tools/*.py @prefix@/include/sdar/
 	install -m 644 tools/analysis/*.py @prefix@/include/petar/
 
 install: $(TARGET) SE_INSTALL EXT_INSTALL install_script_tool

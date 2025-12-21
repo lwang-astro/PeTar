@@ -1,5 +1,5 @@
 import numpy as np
-from .base import *
+from sdar.base import *
 from .data import *
 
 def calcCenterPotExt(particles, rsel):

@@ -89,6 +89,20 @@ public:
         }
     }
 
+    //! shift tidal tensor measurement particles by _dpos and _dvel
+    /*!
+        @param[in,out] _ptcl_tt: tidal tensor measurement particles
+        @param[in] _dpos: position shift
+        @param[in] _dvel: velocity shift
+    */
+    template<class Tptcl>
+    static void shiftTidalTensorParticles(Tptcl* _ptcl_tt, const PS::F64vec& _dpos, const PS::F64vec& _dvel) {
+        for (int k=0; k<getParticleN(); k++) {
+            _ptcl_tt[k].pos += _dpos;
+            _ptcl_tt[k].vel += _dvel;
+        }
+    }
+
     //! subtract c.m. force from measure points
     template<class Tptcl>
     static void subtractCMForce(Tptcl* _ptcl_tt, const Tptcl& _ptcl_cm) {

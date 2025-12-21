@@ -90,4 +90,14 @@ public:
         return r_search;
     }
 
+    //! Set neighbor distance criterion, ensure to be larger than r_out and r_search_min
+    void setRNeighbor(const PS::F64 _r_neighbor) {
+        r_search = _r_neighbor;    
+        if (r_search<changeover.getRout())
+            r_search = changeover.getRout();
+        if (r_search<Ptcl::r_search_min)
+            r_search = Ptcl::r_search_min;
+            
+    }
+
 };

@@ -1,6 +1,6 @@
-from .base import *
+from sdar.base import *
+from sdar.functions import *
 from .data import *
-from .functions import *
 
 class IsolatedSDARParticle(SimpleParticle):
     """ SDAR particle of isolated SDAR sample code

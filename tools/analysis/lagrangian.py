@@ -1,7 +1,7 @@
 import collections
 import numpy as np
 from scipy import spatial as sp
-from .base import *
+from sdar.base import *
 from .data import *
 from .bse import *
 
@@ -151,7 +151,7 @@ class Core(DictNpArrayMix):
         parameters={'galcen_distance':8.0*u.kpc, 'z_sun':15.*u.pc, 'galcen_v_sun':CartesianDifferential([10.0,235.,7.]*u.km/u.s)}
         for key in parameters.keys():
             if key in kwargs.keys():
-                parameter[key] = kwargs[key]
+                parameters[key] = kwargs[key]
 
         core_g = SkyCoord(x=self.pos[:,0]*pos_unit, 
                           y=self.pos[:,1]*pos_unit, 
@@ -811,9 +811,9 @@ class LagrangianMultiple(DictNpArrayMix):
             mmin = float(mmin)
             mmax = float(mmax)
             all_sort.mass = np.zeros(all_sort.size) # clear up mass, final mass is the sum of matched component masses
-            sel1 = (all_sort.m1 >= mmin) & (all_sort.m2 < mmax)
-            sel2 = (all_sort.m1 >= mmin) & (all_sort.m2 < mmax)
-            sel = (sel1 | sel2)            
+            sel1 = (all_sort.m1 >= mmin) & (all_sort.m1 < mmax)
+            sel2 = (all_sort.m2 >= mmin) & (all_sort.m2 < mmax)
+            sel = (sel1 & sel2)
 
             all_sort.mass = np.zeros(all_sort.size) # clear up mass, final mass is the sum of matched component masses
             all_sort.mass[sel1] += all_sort.m1[sel1]

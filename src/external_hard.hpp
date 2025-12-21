@@ -47,7 +47,7 @@ public:
                             scale_density(input_par_store, 1/G_ASTRO, "ext-scale-density", "scale factor for galpy potential density","1/G"),
 #else
                             gas_density  (input_par_store, 1.0, "ext-gas-density",  "gas density in units of PeTar input"),
-                            decay_time   (input_par_store, 0.0, "ext-decay-time",  "gas density decay time scale in units of PeTar input"),
+                            decay_time   (input_par_store, 0.0, "ext-decay-time",  "gas density decay time scale in units of PeTar input, if 0, no decay"),
 #endif
                             gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant", NULL, false),
                             fname_par    (input_par_store, "input.par", "p", "Input parameter file for external force (this option should be used first before any other options)",NULL,false),
@@ -255,7 +255,8 @@ public:
     //! update time and gas density
     void updateTime(const Float _time) {
         time = _time;
-        gas_density = gas_density_init * exp(-time/decay_time);
+        if (decay_time>0.0) gas_density = gas_density_init * exp(-time/decay_time);
+        else gas_density = gas_density_init;
     }
 #endif
 
@@ -429,7 +430,7 @@ public:
         // d(1/v^3)/dt = -3/v^5 v dot a
         Float c2 = -3*c1/v2*vdota;
         // d(v/ds)/dt  = v dot a / (v*ds) 
-        Float c3 = -c1*dIfunc*vdota/(v*sound_speed);
+        Float c3 = c1/Ifunc*dIfunc*vdota/(v*sound_speed);
         
         //_force.acc0[0] += acc0[0];
         //_force.acc0[1] += acc0[1];
