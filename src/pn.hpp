@@ -501,10 +501,10 @@ public:
 
             // PN3 ~1/c^6
             if (used_pn_orders[3]) {
-                Float A3D =  6.0*eta*rdot*rdot*rdot*rdot*rdot*V2R*(35.0-175.0*eta+175.0*eta*eta)/16.0 + eta*(4.0*rdot*rdot*rdot*V2R*dv2 
+                Float A3D =  6.0*rdot*rdot*rdot*rdot*rdot*V2R*(35.0-175.0*eta*eta+175.0*eta*eta*eta)/16.0 + eta*(4.0*rdot*rdot*rdot*V2R*dv2 
                             + 2.0*rdot*rdot*rdot*rdot*VA)*(-15.0+135.0*eta/2.0-255.0*eta*eta/4.0)/2.0 
-                            + eta*(2.0*rdot*V2R*dv2*dv2+4.0*rdot*rdot*dv2*VA)/2.0*(15.0-237.0*eta/2.0+45.0*eta*eta) 
-                            + 6.0*dv2*dv2*VA*eta*(-11.0/4.0-49.0*eta/4.0-13.0*eta*eta) 
+                            + eta*(2.0*rdot*V2R*dv2*dv2+4.0*rdot*rdot*dv2*VA)/2.0*(15.0-237.0*eta/4.0+45.0*eta*eta) 
+                            + 6.0*dv2*dv2*VA*eta*(-11.0/4.0+49.0*eta/4.0-13.0*eta*eta) 
                             + GMOR*(4.0*rdot*rdot*rdot*V2R*eta*(-79.0+69.0/2.0*eta+30.0*eta*eta) 
                                     + eta*(2.0*rdot*V2R*dv2+2.0*rdot*rdot*VA)*(121.0-16.0*eta-20.0*eta*eta)
                                     +4.0*dv2*VA*eta*(-75.0/4.0-8.0*eta+10.0*eta*eta)) 
@@ -516,64 +516,6 @@ public:
                             + GMOR*GMOR*(2.0*rdot*V2R*((-1.0-615*PI2*eta/64.0)-22717.0*eta/168.0-11.0*eta*eta/8.0+7*eta*eta*eta)
                                          +2.0*eta*VA*((20827.0/840.0 +123.0*PI2/64.0)-eta*eta))
                             - 3.0*GMOR*GMOR*GMOR*rdot*(16.0+(1399.0/12.0-41.0*PI2/16.0)*eta+71.0*eta*eta/2.0)/r;
-                /*
-
-                // --- Optimized A3D Calculation (Strict Logic Preserved) ---
-                // Assumptions: 
-                // All inputs (GMOR, mu, rd, v, av, V2R, r, M_PI) are defined as doubles before this block.
-
-                // [1] Pre-calculate Powers (Avoid repeated std::pow)
-                Float rd2 = rdot * rdot;
-                Float rd3 = rd2 * rdot;
-                Float rd4 = rd2 * rd2;
-                Float rd5 = rd4 * rdot;
-
-                Float v4 = dv2 * dv2;
-
-                Float eta2 = eta * eta;
-                Float eta3 = eta2 * eta;
-
-                Float GMR2 = GMOR * GMOR;
-                Float pi_sq = M_PI * M_PI; // Pre-calculate PI^2
-
-                // [2] Intermediate Terms (x0 - eta2*rd2dv2) implemented efficiently
-                Float V2Rrd  = V2R * rdot;
-                Float GMR2eta  = eta * GMR2;
-                Float rd3V2R = V2R * rd3;
-                Float GMORrd2 = GMOR * rd2;
-                Float GMORdv2 = GMOR * dv2;
-                Float VAeta3 = VA * eta3;
-                Float eta2v4 = eta2 * v4;
-                Float eta3v4 = eta3 * v4;
-                Float rd3V2Reta2 = rd3V2R * eta2;
-                Float rd2dv2 = rd2 * dv2;
-
-                // [3] Final Calculation Split into Logical Blocks
-
-                // Part A: The large fraction term containing 1/r
-                // (1.0/3360.0) * GMOR * rd * (Big Bracket) / r
-                Float bracket_content = 12915.0 * GMOR * eta * dv2 * pi_sq + 166616.0 * GMOR * eta * dv2  + 47040.0 * GMOR * rd2 * eta3  + 1175160.0 * eta * GMR2 
-                                      + 406560.0 * eta * rd2 * dv2  + 357840.0 * GMR2 * eta2  + 161280.0 * GMR2  - 6720.0 * GMORrd2 - 64575.0 * eta * GMORrd2 * pi_sq  - 908680.0 * eta * GMORrd2 
-                                      - 67200.0 * eta3 * rd2dv2 + 100800.0 * eta3 * rd4 + 33600.0 * eta3 * v4 + 115920.0 * eta2 * rd4 - 26880.0 * eta2v4 - 9240.0 * GMORrd2*eta2 
-                                      - 25830.0 * pi_sq*GMR2eta - 6720.0 * GMORdv2*eta3 - 53760.0 * eta2*rd2dv2 - 265440.0 * eta * rd4 - 63000.0 * eta * v4;
-                Float term_inv_r = (1.0 / 3360.0) * GMOR * rdot * bracket_content / r;
-                // Part B: The remaining linear terms
-                Float term_linear = - 138.0 * GMOR * rd3V2Reta2 - 30.0 * VA * eta * rd2dv2 - 242.0 * VA * eta * GMORrd2 + 75.0 * VA * eta*GMORdv2 
-                                    + 63.75 * VA * eta3 * rd4      // 255.0/4.0
-                                    - 67.5 * VA * eta2 * rd4       // 135.0/2.0
-                                    - 73.5 * VA * eta2v4            // 147.0/2.0
-                                    + 78.0 * VA * eta3v4  + 118.5 * VA * eta2*rd2dv2           // 237.0/2.0
-                                    + 15.0 * VA * eta * rd4 + 16.5 * VA * eta * v4             // 33.0/2.0
-                                    + 316.0 * eta * GMOR*rd3V2R  + 30.0 * eta * rd3V2R*dv2  - 13.125 * V2R * rd5                // 105.0/8.0
-                                    - 14.0 * GMR2 * eta3 * V2Rrd + 2.75 * GMR2 * eta2 * V2Rrd       // 11.0/4.0
-                                    - 120.0 * GMOR*rd3V2R * eta3 + GMORrd2 * 40.0*VAeta3 - 135.0 * dv2 * rd3V2Reta2 - GMORdv2 * 40.0*VAeta3 - 242.0 * eta*GMORdv2 * V2Rrd - eta3 * 65.625 * V2R * rd5 + 127.5 * eta3 * rd3V2R*dv2          // 255.0/2.0
-                                    + VAeta3 * 2.0*GMR2 - 90.0 * VAeta3 * rd2dv2 + 2.0*GMR2 * V2Rrd + eta2 * 65.625 * V2R * rd5 + 59.25 * eta2v4 * V2Rrd           // 237.0/4.0
-                                    - 45.0 * eta3v4 * V2Rrd - 3.84375 * pi_sq * VA * GMR2eta         // 123.0/32.0
-                                    + GMORrd2*eta2 * 32.0*VA + 32.0*VA * GMORdv2*eta2 + 32.0 * GMORdv2*eta2 * V2Rrd + 19.21875 * V2Rrd * pi_sq*GMR2eta        // 615.0/32.0
-                                    + 40.0 * V2Rrd * GMORdv2*eta3 + (22717.0/84.0) * V2Rrd * GMR2eta - 15.0 * V2Rrd * eta * v4 - (20827.0/420.0) * VA * GMR2eta;
-                // Final Result
-                Float A3D = term_inv_r + term_linear;
-                */
 
                 Float B3D = 75.0*rdot*rdot*rdot*rdot*V2R*eta*(3.0/8.0-eta-.25*eta*eta)+eta*(3.0*rdot*rdot*V2R*dv2+2.0*rdot*rdot*rdot*VA)*(-12.0+111.0*eta/4.0+12.0*eta*eta)+eta*(V2R*dv2*dv2+4.0*rdot*dv2*VA)*(65.0/8.0-19.0*eta-6.0*eta*eta)-GMOR*rdot*(rdot*rdot*rdot*eta*(-329.0/6.0-59.0*eta/2.0-18.0*eta*eta)+rdot*dv2*eta*(15.0+27.0*eta+10.0*eta*eta))/r+GMOR*(3.0*rdot*rdot*V2R*eta*(-329.0/6.0-59.0*eta/2.0-18.0*eta*eta)+eta*(V2R*dv2+2.0*rdot*VA)*(15.0+27.0*eta+10.0*eta*eta))-2.0*GMOR*GMOR*rdot*(rdot*((4.0+123.0*PI2*eta/32.0)+5849.0*eta/840.0-25.0*eta*eta-8.0*eta*eta*eta))/r+GMOR*GMOR*(V2R*((4.0+123.0*PI2*eta/32.0)+5849.0/840.0*eta-25.0*eta*eta-8.0*eta*eta*eta));
 
@@ -596,7 +538,12 @@ public:
 
             // PN3.5 ~1/c^7
             if (used_pn_orders[4]) {
-                Float A3_5D = GMOR*eta*(-rdot*(dv2*dv2*(-366.0/35.0-12.0*eta)+dv2*rdot*rdot*(114.0+12.0*eta)+rdot*rdot*rdot*rdot*(-112.0))/r+4.0*dv2*VA*(-366.0/35.0-12.0*eta)+2.0*(VA*rdot*rdot+rdot*V2R*dv2)*(114.0+12.0*eta)+4.0*rdot*rdot*rdot*V2R*(-112.0)+GMOR*(2.0*VA*(-692.0/35.0+724.0*eta/15.0)+2.0*rdot*V2R*(-294.0/5.0-376.0*eta/5.0)-2.0*rdot*(dv2*(-692.0/35.0+724.0*eta/15.0)+rdot*rdot*(-294.0/5.0-376.0*eta/5.0))/r-3.0*GMOR*rdot*(-3956.0/35.0-184.0*eta/5.0)/r));
+                Float A3_5D = GMOR*eta*((V2R-rdot*rdot/r)*(dv2*dv2*(-366.0/35.0-12.0*eta)+dv2*rdot*rdot*(114.0+12.0*eta)- 112.0*rdot*rdot*rdot*rdot)
+                                        +rdot*(4.0*dv2*VA*(-366.0/35.0-12.0*eta)+2.0*(VA*rdot*rdot+rdot*V2R*dv2)*(114.0+12.0*eta)+4.0*rdot*rdot*rdot*V2R*(-112.0))
+                                        +GMOR*(rdot*(2.0*VA*(-692.0/35.0+724.0*eta/15.0)+3.0*rdot*V2R*(-294.0/5.0-376.0*eta/5.0)
+                                                     -2.0*rdot*(dv2*(-692.0/35.0+724.0*eta/15.0)+rdot*rdot*(-294.0/5.0-376.0*eta/5.0))/r)
+                                               + dv2*V2R*(-692.0/35.0 + 724.0/15.0*eta)
+                                               - GMOR*(3.0*rdot*rdot*(-3956.0/35.0-184.0*eta/5.0)/r + (184.0/5.0*eta + 3956.0/35.0)*V2R)));
                 Float B3_5D = GMOR*eta*(4.0*dv2*VA*(626.0/35.0+12.0*eta/5.0)+2.0*(VA*rdot*rdot+dv2*rdot*V2R)*(-678.0/5.0-12.0*eta/5.0)+4.0*rdot*rdot*rdot*V2R*120.0-rdot*(dv2*dv2*(626.0/35.0+12.0*eta/5.0)+dv2*rdot*rdot*(-678.0/5.0-12.0*eta/5.0)+120.0*rdot*rdot*rdot*rdot)/r+GMOR*(2.0*VA*(-164.0/21.0-148.0*eta/5.0)+2*rdot*V2R*(82.0/3.0+848.0*eta/15.0)-2.0*rdot*(dv2*(-164.0/21-148.0*eta/5.0)+rdot*rdot*(82.0/3.0+848.0*eta/15.0))/r-3.0*GMOR*rdot*(1060.0/21.0+104.0*eta/5.0)/r));
 
                 Float ADK7 = A3_5D/c_7;

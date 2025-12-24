@@ -9,6 +9,7 @@
 
 #define ASSERT(expr) assert(expr)
 
+#define COMPARE_PN_BH
 #include "pn.hpp"
 #ifdef COMPARE_PN_BH
 #include "pn_BH.h"
