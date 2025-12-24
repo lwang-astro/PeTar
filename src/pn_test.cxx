@@ -60,8 +60,8 @@ int main(int argc, char **argv){
     p2.spin[1] = 0.0;
     p2.spin[2] = 0.0;
 
-    int width = 16;
-    std::cout<<std::setprecision(9);
+    int width = 20;
+    std::cout<<std::setprecision(14);
 
     p1.printColumnTitle(std::cout, width);
     std::cout<<std::endl;
@@ -73,7 +73,7 @@ int main(int argc, char **argv){
     PostNewtonian pn;
     pn.speed_of_light = SPEED_OF_LIGHT;
     pn.gravitational_constant = G;
-    pn.precession_criterion = 1e-9;
+    pn.speed_criterion = 1e-6;
 
     Float a1[6][3], a2[6][3], ad1[6][3], ad2[6][3], s1[3]={0.0}, s2[3]={0.0};
     bool used_pn_orders[6] = {true, true, true, true, true, true};
@@ -133,7 +133,7 @@ int main(int argc, char **argv){
 
     std::string pn_name[6]={"N","pn1", "pn2", "pn2.5", "pn3", "pn3.5"};
 
-    for (int i=0; i<5; i++) {
+    for (int i=0; i<6; i++) {
         std::cout<<std::setw(width)<<"";
         std::cout<<std::setw(width)<<"a1_"+pn_name[i]+".x"
                  <<std::setw(width)<<"a1_"+pn_name[i]+".y"
