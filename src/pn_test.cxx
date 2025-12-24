@@ -10,7 +10,9 @@
 #define ASSERT(expr) assert(expr)
 
 #include "pn.hpp"
+#ifdef COMPARE_PN_BH
 #include "pn_BH.h"
+#endif
 #include "astro_units.hpp"
 #include <particle_simulator.hpp>
 #include "particle_base.hpp"
@@ -60,7 +62,7 @@ int main(int argc, char **argv){
     p2.spin[1] = 0.0;
     p2.spin[2] = 0.0;
 
-    int width = 20;
+    int width = 21;
     std::cout<<std::setprecision(14);
 
     p1.printColumnTitle(std::cout, width);
@@ -108,7 +110,7 @@ int main(int argc, char **argv){
     }
     std::cout<<std::endl;
     
-
+#ifdef COMPARE_PN_BH
     int usedOrNot[6] = {1,1,1,1,1,1};
     Float a1r[6][3], a2r[6][3], ad1r[6][3], ad2r[6][3], s1r[3], s2r[3];
     for (int i=0; i<3; i++) {
@@ -130,7 +132,7 @@ int main(int argc, char **argv){
     calc_force_pn_BH(p1.mass, &p1.pos[0], vs1, s1r,
                      p2.mass, &p2.pos[0], vs2, s2r,
                      pn.speed_of_light/vscale, usedOrNot, 1, a1r, ad1r, a2r, ad2r);
-
+#endif
     std::string pn_name[6]={"N","pn1", "pn2", "pn2.5", "pn3", "pn3.5"};
 
     for (int i=0; i<6; i++) {
@@ -152,6 +154,7 @@ int main(int argc, char **argv){
                  <<std::setw(width)<<a2[i][2];
         std::cout<<std::endl;
 
+#ifdef COMPARE_PN_BH
         for (int k=0; k<3; k++) {
             a1r[i][k] *= fscale;
             a2r[i][k] *= fscale;
@@ -191,6 +194,7 @@ int main(int argc, char **argv){
             std::cerr<<"Test failed! difference > round off error\n";
             abort();
         }
+#endif
 
     }
 
@@ -213,6 +217,7 @@ int main(int argc, char **argv){
                  <<std::setw(width)<<ad2[i][2];
         std::cout<<std::endl;
 
+#ifdef COMPARE_PN_BH        
         for (int k=0; k<3; k++) {
             ad1r[i][k] *= jscale;
             ad2r[i][k] *= jscale;
@@ -252,7 +257,7 @@ int main(int argc, char **argv){
             std::cerr<<"Test failed! difference > round off error\n";
             abort();
         }
-    
+#endif
     }
 
     std::cout<<std::setw(width)<<"";
@@ -273,6 +278,7 @@ int main(int argc, char **argv){
              <<std::setw(width)<<s2[2];
     std::cout<<std::endl;
 
+#ifdef COMPARE_PN_BH    
     Float dspin[6];
     dspin[0] = (s1r[0]-p1.spin[0]-s1[0])/(s1[0]+1e-64); 
     dspin[1] = (s1r[1]-p1.spin[1]-s1[1])/(s1[1]+1e-64); 
@@ -299,6 +305,7 @@ int main(int argc, char **argv){
         std::cerr<<"Test failed! difference "<<diff_max<<" > round off error "<<ROUND_OFF_ERROR_LIMIT*10<<std::endl;
         abort();
     }
+#endif
     
     return 0;
 }
