@@ -126,6 +126,10 @@ class PeTarCount(DictNpArrayMix):
         AR_tsyn_step_sum: total AR steps for time synchronization
         AR_group_number: number of AR groups
         iso_group_number: number of isolated AR groups 
+        if keyword argument group_count == True:
+            AR_group_new: number of newly created AR groups in this step
+            AR_group_end: number of deleted AR groups in this step
+            AR_group_arti_change: number of AR groups with artificial particles change in this step
         Hermite_step_sum: total Hermite steps
         n_neighbor_zero: particles have zero neighbors in Hermite 
         Ep_Ep_interaction: number of essential (active) i and j particle interactions 
@@ -133,8 +137,17 @@ class PeTarCount(DictNpArrayMix):
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+        Keyword arguments:
+            group_count: bool (True)
+                whether to include AR group counting keys
         """
-        keys = [["hard_single",np.int64], ["hard_isolated",np.int64], ["hard_connected",np.int64], ["hard_interrupt",np.int64], ["cluster_isolated",np.int64], ["cluster_connected",np.int64], ["AR_step_sum",np.int64], ["AR_tsyn_step_sum",np.int64], ["AR_group_number",np.int64], ["iso_group_number",np.int64], ["Hermite_step_sum",np.int64], ["n_neighbor_zero",np.int64], ["Ep_Ep_interaction",np.int64], ["Ep_Sp_interaction",np.int64]]
+        keys = [["hard_single",np.int64], ["hard_isolated",np.int64], ["hard_connected",np.int64], ["hard_interrupt",np.int64], 
+                ["cluster_isolated",np.int64], ["cluster_connected",np.int64], ["AR_step_sum",np.int64], ["AR_tsyn_step_sum",np.int64], ["AR_group_number",np.int64], ["iso_group_number",np.int64]]
+        keys_group = [["AR_group_new",np.int64], ["AR_group_end",np.int64], ["AR_group_arti_change",np.int64]]                
+        if ('group_count' in kwargs.keys()):
+            if (kwargs['group_count']==False):
+                keys_group = []
+        keys += keys_group + [["Hermite_step_sum",np.int64], ["n_neighbor_zero",np.int64], ["Ep_Ep_interaction",np.int64], ["Ep_Sp_interaction",np.int64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 class Profile(DictNpArrayMix):
