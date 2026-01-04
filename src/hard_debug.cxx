@@ -538,7 +538,7 @@ int main(int argc, char **argv){
           hard_int.output_filename_prefix = filename;
           auto* ptcl_artificial_ptr =  hard_dump.ptcl_arti_bk.getPointer();
           if (hard_dump.n_arti == 0) ptcl_artificial_ptr = NULL; // if no artificial particle, avoid reading artificial data from last hard_dump
-          hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, ptcl_artificial_ptr, hard_dump.n_group, hard_dump.n_member_in_group.getPointer(), &hard_manager, hard_dump.time_offset);
+          hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, ptcl_artificial_ptr, hard_dump.n_group, hard_dump.n_member_in_group.getPointer(), &hard_manager, hard_dump.time_offset, hard_dump.time_end);
 
           hard_int.integrateToTime(hard_dump.time_end);
           hard_int.driftClusterAndArtificialCMAndWriteBack(hard_dump.time_end, ptcl_artificial_ptr, hard_dump.n_group);

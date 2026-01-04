@@ -848,6 +848,7 @@ public:
        @param[in] _n_member_in_group: number of members in each group
        @param[in] _manager: hard manager
        @param[in] _time_origin: initial physical time 
+       @param[in] _dt: soft time step
      */
     template <class Tsoft>
     void initial(PtclH4 * _ptcl,
@@ -856,7 +857,8 @@ public:
                  const PS::S32 _n_group,
                  const PS::S32* _n_member_in_group,
                  HardManager* _manager,
-                 const PS::F64 _time_origin) {
+                 const PS::F64 _time_origin,
+                 const PS::F64 _dt) {
 
         // ensure the integrator is not used
         ASSERT(ptcl_origin==NULL);
@@ -1024,6 +1026,7 @@ public:
             // calculate c.m. changeover
             PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
             pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+            pcm.calcRSearch(_dt);
 
 #ifdef HARD_DEBUG
             if(_ptcl_artificial==NULL) {
@@ -1157,6 +1160,7 @@ public:
 
                     ASSERT(m_fac>0.0);
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                    pcm.calcRSearch(_dt);
 
 #ifdef HARD_DEBUG
                     PS::F64 r_out_cm = pcm.changeover.getRout();
@@ -1200,6 +1204,7 @@ public:
                 PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                 ASSERT(m_fac>0.0);
                 pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                pcm.calcRSearch(_dt);
 
 #ifdef EXTERNAL_HARD
                 // hard external perturbation
@@ -1325,6 +1330,7 @@ public:
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                     ASSERT(m_fac>0.0);
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                    pcm.calcRSearch(_time_end);
 
 #ifdef EXTERNAL_HARD
                     // hard external perturbation
@@ -3019,7 +3025,7 @@ public:
             }
 
             // if interrupt exist, escape initial
-            hard_int_thread[ith].initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, manager, time_origin_);
+            hard_int_thread[ith].initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, manager, time_origin_, dt);
 
             hard_int_thread[ith].integrateToTime(dt);
 
