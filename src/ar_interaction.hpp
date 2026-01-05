@@ -558,13 +558,13 @@ public:
     
 
     //! calculate perturbation from c.m. acceleration
-    Float calcPertFromForce(const Float* _force, const Float _mp, const Float _mpert) {
+    Float calcPertFromForcePot(const Float* _force, const Float& _pot) {
         Float force2 = _force[0]*_force[0]+_force[1]*_force[1]+_force[2]*_force[2];
 #ifdef AR_SLOWDOWN_PERT_R4
-        return force2/(gravitational_constant*_mp*_mpert);
+        Float inv_r = -force2/_pot;
+        return sqrt(force2)*inv_r*inv_r*inv_r/gravitational_constant;
 #else
-        Float force = sqrt(force2)/gravitational_constant;
-        return sqrt(force/(_mp*_mpert))*force;
+        return -force2/(_pot*gravitational_constant);
 #endif
     }
 
