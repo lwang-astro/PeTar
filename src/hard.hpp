@@ -615,9 +615,9 @@ public:
         ar_manager.interaction.interrupt_detection_option = _input.interrupt_detection_option.value;
 #ifdef BSE_BASE
         ar_manager.interaction.stellar_evolution_option = _input.stellar_evolution_option.value;
-        if (_write_style) ar_manager.interaction.stellar_evolution_write_flag = true;
-        else ar_manager.interaction.stellar_evolution_write_flag = false;
         if (_input.stellar_evolution_option.value>0) {
+            if (_write_style) ar_manager.interaction.stellar_evolution_write_flag = true;
+            else ar_manager.interaction.stellar_evolution_write_flag = false;
             ar_manager.interaction.bse_manager.initial(_input_bse, _print_flag);
             ar_manager.interaction.tide.speed_of_light = ar_manager.interaction.bse_manager.getSpeedOfLight();
         }
