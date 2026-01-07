@@ -100,12 +100,14 @@ public:
         const Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
         if (pn.setUsedPNOrders(used_pn_orders, v2)) {
          
+#ifdef HARD_DEBUG_PRINT
             if (r > _pi.changeover.getRin() || r > _pj.changeover.getRin()) {
                 std::cerr<<"Warning: GR is switched on, but changeover radius is less than GR influence radius. This will cause inconsistent force calculation! particle distance = "
                          <<r<<"; two changeover inner radii = "
                          <<_pi.changeover.getRin()<<" "<<_pj.changeover.getRin()
                          <<std::endl;
             }
+#endif
 
             Float ai[6][3], aj[6][3], adi[6][3], adj[6][3];
             pn.calcAccJerkPN(ai, aj, adi, adj, NULL, NULL, _pi.mass, _pj.mass, dr, dv, NULL, NULL, used_pn_orders);
