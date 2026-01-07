@@ -801,7 +801,7 @@ public:
     PS::S64 sdar_n_groups_arti_change;
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
-    PS::ReallocatableArray<bool> table_neighbor_exist;
+    PS::ReallocatableArray<PS::S32> table_n_neighbors;
     PS::S32 n_neighbor_zero;
 #endif
 
@@ -822,7 +822,7 @@ public:
 #endif
                       sdar_n_groups_new(0), sdar_n_groups_end(0), sdar_n_groups_arti_change(0),
 #ifdef HARD_COUNT_NO_NEIGHBOR
-                      table_neighbor_exist(), n_neighbor_zero(0),
+                      table_n_neighbors(), n_neighbor_zero(0),
 #endif
                       use_sym_int(true), is_initialized(false) {
 #ifdef HARD_CHECK_ENERGY
@@ -1106,8 +1106,8 @@ public:
             tidal_tensor.resizeNoInitialize(_n_group+1);
 #endif
 #ifdef HARD_COUNT_NO_NEIGHBOR
-            table_neighbor_exist.resizeNoInitialize(_n_ptcl);
-            for (int k=0; k<_n_ptcl; k++) table_neighbor_exist[k] = false;
+            table_n_neighbors.resizeNoInitialize(_n_ptcl);
+            for (int k=0; k<_n_ptcl; k++) table_n_neighbors[k] = 0;
 #endif
             
             // add groups
@@ -1484,7 +1484,7 @@ public:
             PS::F64 rij2 = h4_int.neighbors[i].r_min_sq;
             PS::F64 r_out_i = h4_int.particles[i].changeover.getRout();
             PS::F64 r_out_j = (j<index_offset_group)? h4_int.particles[j].changeover.getRout() : h4_int.groups[j-index_offset_group].particles.cm.changeover.getRout();
-            if (rij2<std::max(r_out_i, r_out_j)) table_neighbor_exist[i] = true;
+            if (rij2<std::max(r_out_i, r_out_j)) table_n_neighbors[i]++;
         }
         PS::S32 n_act_group = h4_int.getNActGroup();
         PS::S32* act_group_index = h4_int.getSortDtIndexGroup();
@@ -1500,8 +1500,8 @@ public:
             if (rij2<std::max(r_out_i, r_out_j)) {
                 for (int ki=0; ki<h4_int.groups[i].particles.getSize(); ki++) {
                     PS::S32 ki_index = h4_int.groups[i].info.particle_index[ki];
-                    ASSERT(ki_index>=0&&ki_index<table_neighbor_exist.size());
-                    table_neighbor_exist[ki_index] = true;
+                    ASSERT(ki_index>=0&&ki_index<table_n_neighbors.size());
+                    table_n_neighbors[ki_index]++;
                 }
             }
         }
@@ -1843,8 +1843,8 @@ public:
             sdar_n_groups_end += h4_int.profile.break_group_count;
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
-            for (PS::S32 i=0; i<table_neighbor_exist.size(); i++) {
-                if(!table_neighbor_exist[i]) n_neighbor_zero++;
+            for (PS::S32 i=0; i<table_n_neighbors.size(); i++) {
+                if(table_n_neighbors[i] == 0) n_neighbor_zero++;
             }
 #endif
 
@@ -1964,7 +1964,7 @@ public:
         sdar_n_groups_end = 0;
         sdar_n_groups_arti_change = 0;
 #ifdef HARD_COUNT_NO_NEIGHBOR
-        table_neighbor_exist.resizeNoInitialize(0);
+        table_n_neighbors.resizeNoInitialize(0);
         n_neighbor_zero = 0;
 #endif
 #ifdef HARD_CHECK_ENERGY
