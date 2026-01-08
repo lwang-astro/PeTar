@@ -1278,14 +1278,34 @@ public:
         // integration
         if (use_sym_int) {
             sym_interrupt_binary = sym_int.integrateToTime(_time_end);
+            auto& bink = sym_int.info.getBinaryTreeRoot();
+            auto& pcm = sym_int.particles.cm;
+            
+            // case of binary disruption            
+            bool reset_flag = (bink.semi < 0 ) && (bink.ecca > 0);
 
 #ifdef STELLAR_EVOLUTION
+            if (sym_interrupt_binary.status!=AR::InterruptStatus::none) {
+                if (manager->ar_manager.interaction.interrupt_detection_option==1) {
+                      if (sym_interrupt_binary.status==AR::InterruptStatus::merge||sym_interrupt_binary.status==AR::InterruptStatus::destroy)
+                            reset_flag = true;
+                }
+
 #ifndef BSE_BASE
-            // backup binary information if record option is used
-            if (sym_interrupt_binary.status!=AR::InterruptStatus::none 
-                && manager->ar_manager.interaction.interrupt_detection_option == 2) 
-                sym_interrupt_binary.backupBinaryTreeLocal();
+                // backup binary information if record option is used
+                if(manager->ar_manager.interaction.interrupt_detection_option == 2) 
+                    sym_interrupt_binary.backupBinaryTreeLocal();
 #endif
+#endif
+            }
+
+            sym_int.info.checkAndSetBinaryPairIDIter(bink, reset_flag);
+
+#ifdef ADJUST_GROUP_PRINT
+            if (manager->h4_manager.adjust_group_write_flag && reset_flag) {
+                // print break group information
+                sym_int.printGroupInfo(1, manager->h4_manager.fgroup, WRITE_WIDTH, &pcm);
+            }
 #endif
 
 
@@ -1562,17 +1582,6 @@ public:
 
             ASSERT(!std::isinf(pcm.vel[0]));
             ASSERT(!std::isnan(pcm.vel[0]));
-
-            bool reset_flag = (bink.semi < 0 ) && (bink.ecca > 0);
-            sym_int.info.checkAndSetBinaryPairIDIter(bink, reset_flag);
-
-#ifdef ADJUST_GROUP_PRINT
-            if (manager->h4_manager.adjust_group_write_flag && reset_flag) {
-                // print break group information
-                sym_int.printGroupInfo(1, manager->h4_manager.fgroup, WRITE_WIDTH, &pcm);
-            }
-#endif
-
 
 #ifdef HARD_CHECK_ENERGY
             // correct cm kinetic energy
