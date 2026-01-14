@@ -1296,8 +1296,8 @@ public:
                 if(manager->ar_manager.interaction.interrupt_detection_option == 2) 
                     sym_interrupt_binary.backupBinaryTreeLocal();
 #endif
-#endif
             }
+#endif
 
             sym_int.info.checkAndSetBinaryPairIDIter(bink, reset_flag);
 
