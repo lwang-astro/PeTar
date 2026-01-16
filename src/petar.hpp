@@ -3364,6 +3364,7 @@ public:
 
 #ifdef BSE_BASE
         hard_manager.initial(hard_parameters, bse_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
+        hard_manager.ar_manager.interaction.time_interrupt_max = stat.time + dt_max_hermite;
 
         // initial random seeds
         rand_manager.initialAll(rand_parameters, my_rank);
