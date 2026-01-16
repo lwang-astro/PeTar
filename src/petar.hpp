@@ -1440,49 +1440,57 @@ public:
     */    
     void checkTreeMakeListPossible() {
         // check whether group is modified
-        PS::S64 n_groups_new=0, n_groups_end=0, n_groups_arti_change=0;
+        PS::S64 n_groups_new=0, n_groups_end=0, n_groups_arti_change=0, n_groups_merge=0;
         n_groups_new += system_hard_isolated.sdar_n_groups_new;
         n_groups_end += system_hard_isolated.sdar_n_groups_end;
         n_groups_arti_change += system_hard_isolated.sdar_n_groups_arti_change;
+        n_groups_merge += system_hard_isolated.sdar_n_groups_merge;
         system_hard_isolated.sdar_n_groups_new =0;
         system_hard_isolated.sdar_n_groups_end =0;
         system_hard_isolated.sdar_n_groups_arti_change =0;
+        system_hard_isolated.sdar_n_groups_merge =0;
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         n_groups_new += system_hard_connected.sdar_n_groups_new;
         n_groups_end += system_hard_connected.sdar_n_groups_end;
         n_groups_arti_change += system_hard_connected.sdar_n_groups_arti_change;
+        n_groups_merge += system_hard_connected.sdar_n_groups_merge;
         system_hard_connected.sdar_n_groups_new =0;
         system_hard_connected.sdar_n_groups_end =0;
         system_hard_connected.sdar_n_groups_arti_change =0;
+        system_hard_connected.sdar_n_groups_merge =0;
 #endif
         n_count.sdar_n_groups_new += n_groups_new;
         n_count.sdar_n_groups_end += n_groups_end;
         n_count.sdar_n_groups_arti_change += n_groups_arti_change;
+        n_count.sdar_n_groups_merge += n_groups_merge;
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         n_groups_new = PS::Comm::getSum(n_groups_new);
         n_groups_end = PS::Comm::getSum(n_groups_end);
         n_groups_arti_change = PS::Comm::getSum(n_groups_arti_change);
+        n_groups_merge = PS::Comm::getSum(n_groups_merge);
 #endif
         n_count_sum.sdar_n_groups_new += n_groups_new;
         n_count_sum.sdar_n_groups_end += n_groups_end;
         n_count_sum.sdar_n_groups_arti_change += n_groups_arti_change;
+        n_count_sum.sdar_n_groups_merge += n_groups_merge;
 
         tree_mklist_flag = (n_loop % input_parameters.tree_nstep_mklist.value == 0);
 
-        // if new/end group exist, need to rebuild tree and neighbor list
-        if (n_groups_arti_change >0 ) tree_mklist_flag = true;
+        // if new/end group exist, or merger exists, need to rebuild tree and neighbor list
+        if (n_groups_arti_change >0 || n_groups_merge >0) tree_mklist_flag = true;
 
         // also check if particle need to be removed, if so need to rebuild tree and neighbor list
         //if (remove_list.size()>0) tree_mklist_flag = true;
 
-#ifdef PETAR_DEBUG
+#ifdef PETAR_DEBUG_PRINT
         if (my_rank==0) {
             std::cerr<<"[Debug] n_loop: "<<n_loop
                      <<" tree_mklist_flag="<<tree_mklist_flag
                      <<" n_group_new = "<<n_groups_new
                      <<" n_group_end = "<<n_groups_end
                      <<" n_group_arti_change = "<<n_groups_arti_change
+                     <<" n_group_merge = "<<n_groups_merge
                      //<<" remove_list.size() = "<<remove_list.size()
                      <<std::endl;
         }

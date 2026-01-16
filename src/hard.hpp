@@ -799,6 +799,7 @@ public:
     PS::S64 sdar_n_groups_new;
     PS::S64 sdar_n_groups_end;
     PS::S64 sdar_n_groups_arti_change;
+    PS::S64 sdar_n_groups_merge;
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
     PS::ReallocatableArray<PS::S32> table_n_neighbors;
@@ -820,7 +821,7 @@ public:
 #ifdef PROFILE
                       sdar_substep_sum(0), sdar_tsyn_step_sum(0), H4_step_sum(0), H4_force_sum(0),
 #endif
-                      sdar_n_groups_new(0), sdar_n_groups_end(0), sdar_n_groups_arti_change(0),
+                      sdar_n_groups_new(0), sdar_n_groups_end(0), sdar_n_groups_arti_change(0), sdar_n_groups_merge(0),
 #ifdef HARD_COUNT_NO_NEIGHBOR
                       table_n_neighbors(), n_neighbor_zero(0),
 #endif
@@ -1287,8 +1288,10 @@ public:
 #ifdef STELLAR_EVOLUTION
             if (sym_interrupt_binary.status!=AR::InterruptStatus::none) {
                 if (manager->ar_manager.interaction.interrupt_detection_option==1) {
-                      if (sym_interrupt_binary.status==AR::InterruptStatus::merge||sym_interrupt_binary.status==AR::InterruptStatus::destroy)
+                      if (sym_interrupt_binary.status==AR::InterruptStatus::merge||sym_interrupt_binary.status==AR::InterruptStatus::destroy) {
                             reset_flag = true;
+                            sdar_n_groups_merge ++;
+                      }
                 }
 
 #ifndef BSE_BASE
@@ -1300,6 +1303,7 @@ public:
 #endif
 
             sym_int.info.checkAndSetBinaryPairIDIter(bink, reset_flag);
+            if (reset_flag) sdar_n_groups_end ++;
 
 #ifdef ADJUST_GROUP_PRINT
             if (manager->h4_manager.adjust_group_write_flag && reset_flag) {
@@ -1850,6 +1854,7 @@ public:
 #endif
             sdar_n_groups_new += h4_int.profile.new_group_count;
             sdar_n_groups_end += h4_int.profile.break_group_count;
+            sdar_n_groups_merge += h4_int.profile.merge_group_count;
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
             for (PS::S32 i=0; i<table_n_neighbors.size(); i++) {
@@ -1972,6 +1977,7 @@ public:
         sdar_n_groups_new = 0;
         sdar_n_groups_end = 0;
         sdar_n_groups_arti_change = 0;
+        sdar_n_groups_merge = 0;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         table_n_neighbors.resizeNoInitialize(0);
         n_neighbor_zero = 0;
@@ -2024,6 +2030,7 @@ public:
     PS::S64 sdar_n_groups_new;
     PS::S64 sdar_n_groups_end;
     PS::S64 sdar_n_groups_arti_change;
+    PS::S64 sdar_n_groups_merge;
 #ifdef HARD_COUNT_NO_NEIGHBOR
     PS::S64 n_neighbor_zero;
 #endif
@@ -2463,6 +2470,7 @@ public:
         sdar_n_groups_new = 0;
         sdar_n_groups_end = 0;
         sdar_n_groups_arti_change = 0;
+        sdar_n_groups_merge = 0;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         n_neighbor_zero = 0;
 #endif
@@ -2970,10 +2978,12 @@ public:
         PS::S64 sdar_n_groups_new_threads[num_thread];
         PS::S64 sdar_n_groups_end_threads[num_thread];
         PS::S64 sdar_n_groups_arti_change_threads[num_thread];
+        PS::S64 sdar_n_groups_merge_threads[num_thread];
         for (PS::S32 i=0; i<num_thread; i++) {
             sdar_n_groups_new_threads[i] = 0;
             sdar_n_groups_end_threads[i] = 0;
             sdar_n_groups_arti_change_threads[i] = 0;
+            sdar_n_groups_merge_threads[i] = 0;
         }
 #ifdef HARD_COUNT_NO_NEIGHBOR
         PS::S64 n_neighbor_zero_threads[num_thread];
@@ -3056,6 +3066,7 @@ public:
             sdar_n_groups_new_threads[ith] += hard_int_thread[ith].sdar_n_groups_new;
             sdar_n_groups_end_threads[ith] += hard_int_thread[ith].sdar_n_groups_end;
             sdar_n_groups_arti_change_threads[ith] += hard_int_thread[ith].sdar_n_groups_arti_change;
+            sdar_n_groups_merge_threads[ith] += hard_int_thread[ith].sdar_n_groups_merge;
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
             n_neighbor_zero_threads[ith]    += hard_int_thread[ith].n_neighbor_zero;
@@ -3120,6 +3131,7 @@ public:
             sdar_n_groups_new += sdar_n_groups_new_threads[i];
             sdar_n_groups_end += sdar_n_groups_end_threads[i];
             sdar_n_groups_arti_change += sdar_n_groups_arti_change_threads[i];
+            sdar_n_groups_merge += sdar_n_groups_merge_threads[i];
         }
 #ifdef HARD_COUNT_NO_NEIGHBOR
         for (PS::S32 i=0; i<num_thread; i++) n_neighbor_zero += n_neighbor_zero_threads[i];

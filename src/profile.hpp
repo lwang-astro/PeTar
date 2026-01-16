@@ -462,6 +462,7 @@ public:
     NumCounter sdar_n_groups_new;
     NumCounter sdar_n_groups_end;
     NumCounter sdar_n_groups_arti_change;
+    NumCounter sdar_n_groups_merge;
     NumCounter H4_step_sum;
     NumCounter n_neighbor_zero;
     NumCounter ep_ep_interact;
@@ -483,6 +484,7 @@ public:
                  sdar_n_groups_new (NumCounter("Form_Ngroup")),
                  sdar_n_groups_end (NumCounter("End_Ngroup ")),
                  sdar_n_groups_arti_change(NumCounter("Modf_Ngroup")),
+                 sdar_n_groups_merge(NumCounter("Merg_Ngroup")),
                  H4_step_sum      (NumCounter("H4_step_sum")),
                  n_neighbor_zero  (NumCounter("H4_no_NB   ")),
                  ep_ep_interact   (NumCounter("Ep-Ep_sum  ")),
