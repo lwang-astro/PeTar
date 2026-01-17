@@ -153,10 +153,10 @@ public:
                     speed_of_light(input_par_store, 1, "pn-c", "speed of light value for Post Newtonian; if -u 1 is used, auto determined"),
 #endif
 #ifdef HERMITE_PN
-                    h4_speed_criterion(input_par_store, 1e-6, "pn-crit-h4", "Hermite speed criterion to switch on PN terms, in unit of radian"),
+                    h4_speed_criterion(input_par_store, 1e-6, "pn-crit-h4", "Hermite speed criterion to switch on PN terms, min (v/c)^2"),
 #endif
 #ifdef SDAR_PN
-                    ar_speed_criterion(input_par_store, 1e-6, "pn-crit-ar", "AR speed criterion to switch on PN terms, in unit of radian"),
+                    ar_speed_criterion(input_par_store, 1e-6, "pn-crit-ar", "AR speed criterion to switch on PN terms, min (v/c)^2"),
 #endif
 #ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
                     kdtree_n_particles_min(input_par_store, 32, "kdtree-n-particles-min", "Minimum number of particles + groups for building kdtree to speed up neighbor search in Hermite-only neighbor force calculation"),
