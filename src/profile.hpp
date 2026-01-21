@@ -4,6 +4,7 @@
 #include<iostream>
 //#include<fstream>
 #include<map>
+#include<iterator>
 
 #define PROFILE_PRINT_WIDTH 13
 
@@ -454,15 +455,19 @@ public:
     NumCounter hard_interrupt;
     NumCounter cluster_isolated;
     NumCounter cluster_connected;
-    NumCounter ARC_substep_sum;
-    NumCounter ARC_tsyn_step_sum;
-    NumCounter ARC_n_groups;
-    NumCounter ARC_n_groups_iso;
+    NumCounter sdar_substep_sum;
+    NumCounter sdar_tsyn_step_sum;
+    NumCounter sdar_n_groups;
+    NumCounter sdar_n_groups_iso;
+    NumCounter sdar_n_groups_new;
+    NumCounter sdar_n_groups_end;
+    NumCounter sdar_n_groups_arti_change;
+    NumCounter sdar_n_groups_merge;
     NumCounter H4_step_sum;
     NumCounter n_neighbor_zero;
     NumCounter ep_ep_interact;
     NumCounter ep_sp_interact;
-    //NumCounter ARC_step_group;
+    //NumCounter sdar_step_group;
     const PS::S32 n_counter;
     std::map<PS::S32,PS::S32> n_cluster; ///<Histogram of number of particles in clusters
 
@@ -472,16 +477,20 @@ public:
                  hard_interrupt   (NumCounter("PP_intrpt* ")),
                  cluster_isolated (NumCounter("Cluster    ")),
                  cluster_connected(NumCounter("Cross      ")),
-                 ARC_substep_sum  (NumCounter("AR_step_sum")),
-                 ARC_tsyn_step_sum(NumCounter("AR_tsyn_sum")),
-                 ARC_n_groups     (NumCounter("AR_group_N ")),
-                 ARC_n_groups_iso (NumCounter("Iso_group_N")),
+                 sdar_substep_sum  (NumCounter("AR_step_sum")),
+                 sdar_tsyn_step_sum(NumCounter("AR_tsyn_sum")),
+                 sdar_n_groups     (NumCounter("Stab_Ngroup")),
+                 sdar_n_groups_iso (NumCounter("Iso_Ngroup ")),
+                 sdar_n_groups_new (NumCounter("Form_Ngroup")),
+                 sdar_n_groups_end (NumCounter("End_Ngroup ")),
+                 sdar_n_groups_arti_change(NumCounter("Modf_Ngroup")),
+                 sdar_n_groups_merge(NumCounter("Merg_Ngroup")),
                  H4_step_sum      (NumCounter("H4_step_sum")),
                  n_neighbor_zero  (NumCounter("H4_no_NB   ")),
                  ep_ep_interact   (NumCounter("Ep-Ep_sum  ")),
                  ep_sp_interact   (NumCounter("Ep-Sp_sum  ")),
-                 //ARC_step_group   (NumCounter("ARC step per group")),
-                 n_counter(14) {}
+                 //sdar_step_group   (NumCounter("sdar step per group")),
+                 n_counter(17) {}
 
     void clusterCount(const PS::S32 n, const PS::S32 ntimes=1) {
         if (n_cluster.count(n)) n_cluster[n] += ntimes;
@@ -514,12 +523,32 @@ public:
             else n_cluster[i->first] = i->second;
         }
     }
-
-    void printHist(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
-        for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i) fout<<std::setw(width)<<i->first;
-        fout<<std::endl;
-        for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i) fout<<std::setw(width)<<i->second/((n_loop==1)?1:(PS::F64)n_loop);
-        fout<<std::endl;
+    void printHist(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 n_col = 0, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
+        if (n_col>0) {
+            const PS::S32 n_items = static_cast<PS::S32>(n_cluster.size());
+            if (n_items == 0) return;
+            PS::S32 n_row = n_items / n_col + ((n_items % n_col)==0 ? 0 : 1);
+            for(PS::S32 ir=0; ir<n_row; ir++) {
+                PS::S32 start_index = ir * n_col;
+                PS::S32 end_index = std::min(n_items, (ir + 1) * n_col);
+                auto row_begin = std::next(n_cluster.begin(), start_index);
+                auto row_end = std::next(n_cluster.begin(), end_index);
+                fout<<"N_members: ";
+                for(auto i = row_begin; i != row_end; ++i) fout<<std::setw(width)<<i->first;
+                fout<<std::endl;
+                fout<<"Count    : ";
+                for(auto i = row_begin; i != row_end; ++i) fout<<std::setw(width)<<i->second/((n_loop==1)?1:(PS::F64)n_loop);
+                fout<<std::endl;
+            }
+        }
+        else {
+            fout<<"N_members: ";
+            for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i) fout<<std::setw(width)<<i->first;
+            fout<<std::endl;
+            fout<<"Count    : ";
+            for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i) fout<<std::setw(width)<<i->second/((n_loop==1)?1:(PS::F64)n_loop);
+            fout<<std::endl;
+        }
     }
 
     //void dump(std::ofstream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH, const PS::S64 n_loop=1){
@@ -540,9 +569,23 @@ public:
     //        iptr->dumpName(fout, width);
     //    }
     //}
-    
-    void dump(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 width=PROFILE_PRINT_WIDTH) const{
-        for(PS::S32 i=0; i<n_counter; i++) {
+
+    void dump(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 print_part=0, const PS::S32 width=PROFILE_PRINT_WIDTH) const{
+        int n_start=0, n_end=n_counter;
+        if (print_part==0) {
+            n_start = 0;
+            n_end = n_counter;
+        } else if (print_part==1) {
+            n_start = 0;
+            n_end = 6;
+        } else if (print_part==2) {
+            n_start = 6;
+            n_end = n_counter;
+        } else {
+            std::cerr<<"Error in SysCounts::dump: print_part should be 0, 1, or 2."<<std::endl;
+            PS::Abort();
+        }
+        for(PS::S32 i=n_start; i<n_end; ++i) {
             NumCounter* iptr = (NumCounter*)this+i;
             iptr->dump(fout, n_loop, width);
         }
@@ -554,15 +597,29 @@ public:
             fout<<std::setw(width)<<i->first<<std::setw(width)<<i->second/((n_loop==1)?1:(PS::F64)n_loop);
     }
 
-    void dumpName(std::ostream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH) const{
-        for(PS::S32 i=0; i<n_counter; i++) {
+    void dumpName(std::ostream & fout, const PS::S32 print_part=0, const PS::S32 width=PROFILE_PRINT_WIDTH) const{
+        int n_start=0, n_end=n_counter;
+        if (print_part==0) {
+            n_start = 0;
+            n_end = n_counter;
+        } else if (print_part==1) {
+            n_start = 0;
+            n_end = 6;
+        } else if (print_part==2) {
+            n_start = 6;
+            n_end = n_counter;
+        } else {
+            std::cerr<<"Error in SysCounts::dumpName: print_part should be 0, 1, or 2."<<std::endl;
+            PS::Abort();
+        }
+        for(PS::S32 i=n_start; i<n_end; ++i) {
             NumCounter* iptr = (NumCounter*)this+i;
             iptr->dumpName(fout, width);
         }
     }
     
     void clear() {
-        for(PS::S32 i=0; i<n_counter; i++) {
+        for(PS::S32 i=0; i<n_counter; ++i) {
             NumCounter* iptr = (NumCounter*)this+i;
             *iptr = 0;
         }

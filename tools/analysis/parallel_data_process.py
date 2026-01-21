@@ -1,11 +1,11 @@
 import numpy as np
 import multiprocessing as mp
-from .base import *
+from sdar.base import *
+from sdar.functions import *
 from .data import *
 from .lagrangian import *
 from .escaper import *
 from .bse import *
-from .functions import *
 from .external import *
 import time
 import os

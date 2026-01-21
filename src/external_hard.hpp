@@ -49,7 +49,7 @@ public:
                             scale_density(input_par_store, 1/G_ASTRO, "ext-scale-density", "scale factor for galpy potential density","1/G"),
 #else
                             gas_density  (input_par_store, 1.0, "ext-gas-density",  "gas density in units of PeTar input"),
-                            decay_time   (input_par_store, 0.0, "ext-decay-time",  "gas density decay time scale in units of PeTar input"),
+                            decay_time   (input_par_store, 0.0, "ext-decay-time",  "gas density decay time scale in units of PeTar input, if 0, no decay"),
 #endif
                             gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant", NULL, false),
                             center_id    (input_par_store, -1, "ext-center-id", "id of the central object, if given, the central object does not feel gas drag; and gas is assumed to rotating in kepler orbit around the center", "None"),
@@ -266,7 +266,8 @@ public:
     //! update time and gas density
     void updateTime(const Float _time) {
         time = _time;
-        gas_density = gas_density_init * exp(-time/decay_time);
+        if (decay_time>0.0) gas_density = gas_density_init * exp(-time/decay_time);
+        else gas_density = gas_density_init;
     }
 #endif
 
@@ -466,7 +467,7 @@ public:
             Float c2 = -3*c1/v2*vdota;
 #endif
             // d(v/ds)/dt  = v dot a / (v*ds) 
-            Float c3 = -c1*dIfunc*vdota/(v*sound_speed);
+            Float c3 = c1/Ifunc*dIfunc*vdota/(v*sound_speed);
             
             if (mode==1) {
                 // GDF force derivative

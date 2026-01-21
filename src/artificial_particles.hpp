@@ -13,9 +13,9 @@ typedef PseudoParticleMultipoleManager OrbitManager;
 
 //! class to store necessary information for using artificial particles
 /*!
-                  single    c.m.             members          initial     artificial
-      mass_backup 0         mass      (+)    mass     (+)     -LARGE       default is 0.0 / data stored (-/0)
-      status      0         n_members (+)    c.m. adr (-)     -LARGE       position in artificial particle array / data stored (+)
+                  single    c.m.             members          initial   unused     artificial
+      mass_backup 0         mass      (+)    mass     (+)     -LARGE    <0         default is 0.0 / data stored (-/0)
+      status      0         n_members (+)    c.m. adr (-)     -LARGE    <0         position in artificial particle array / data stored (+)
  */
 class ArtificialParticleInformation{
 private:
@@ -39,7 +39,7 @@ public:
 
     //! return whether the particle type is member
     bool isMember() const {
-        return (status<0.0);
+        return (status<0.0 && mass_backup>0.0);
     }
 
     //! set particle type to artificial
@@ -334,6 +334,29 @@ public:
         pcm->id  = - std::abs(_bin.id);
     }
 
+    // update artificial particles position and velocity
+    /*!
+      @param[in,out] _ptcl_artificial: one group of artificial particles 
+      @param[in]     _bin: binary tree root
+    */    
+    template <class Tptcl, class Tbin>
+    void updateArtificialParticles(Tptcl* _ptcl_artificial, 
+                                   Tbin &_bin) {
+        // for c.m. and tidal tensor particles, update position and velocity
+        auto* apcm = getCMParticles(_ptcl_artificial);
+        PS::F64vec dpos = _bin.pos - apcm->pos;
+        PS::F64vec dvel = _bin.vel - apcm->vel;
+        apcm->pos = _bin.pos;
+        apcm->vel = _bin.vel;
+
+        auto* aptt = getTidalTensorParticles(_ptcl_artificial);
+        TidalTensor::shiftTidalTensorParticles(aptt, dpos, dvel);
+
+        // for orbital artificial particles, recalculate new data
+        auto* aporb = getOrbitalParticles(_ptcl_artificial);
+        orbit_manager.createSampleParticles(aporb, _bin);
+    }
+
     //! correct orbit-samping/pseudo particles force
     /*!
       replace c.m. force by the averaged force on sample/pseudo particles
@@ -549,9 +572,16 @@ public:
         pos_cm_check /= mass_cm_check;
 
         auto* pcm = getCMParticles(_ptcl_artificial);
+#ifndef STELLAR_EVOLUTION
+        // stellar mass loss may cause inconsistence
         assert(abs(mass_cm_check-pcm->group_data.artificial.getMassBackup())<1e-10);
         PS::F64vec dpos = pos_cm_check-pcm->pos;
         assert(abs(dpos*dpos)<1e-20);
+#else
+        assert(abs(mass_cm_check-pcm->group_data.artificial.getMassBackup())<1e-3);
+        PS::F64vec dpos = pos_cm_check-pcm->pos;
+        assert(abs(dpos*dpos)<1e-10);
+#endif
     }
 #endif
 

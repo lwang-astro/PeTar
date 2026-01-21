@@ -95,9 +95,12 @@ AS_IF([test x"$with_debug" == xg],
       [PROG_SUFFIX=".g"
        OPTFLAGS=$DEBFLAGS],
       [AS_IF([test x"$with_debug" != xno],
-             [PROG_SUFFIX=".d"])
-       AX_CHECK_COMPILE_FLAG([-O3],
-                             [OPTFLAGS=" -O3"])])
+             [PROG_SUFFIX=".d"
+              OPTFLAGS=' -g'
+              AX_CHECK_COMPILE_FLAG([-O2],
+                                    [OPTFLAGS=$OPTFLAGS" -O2"])],
+             [AX_CHECK_COMPILE_FLAG([-O3],
+                                    [OPTFLAGS=" -O3"])])])
 
 
 AX_CHECK_COMPILE_FLAG([-Wall],
@@ -306,7 +309,8 @@ AC_ARG_WITH([sdar-prefix],
             [sdar_prefix="../SDAR"])
 
 AC_CHECK_FILE(["$sdar_prefix/src/Hermite/hermite_integrator.h"],
-	      [PETAR_INCLUDE=$PETAR_INCLUDE" -I$sdar_prefix/src"],
+	      [PETAR_INCLUDE=$PETAR_INCLUDE" -I$sdar_prefix/src"
+             SDAR_PATH=$sdar_prefix],
 	      [AC_MSG_FAILURE([can't find SDAR library, please provide correct PREFIX by using --with-sdar-prefix])])
 
 # GALPY
@@ -431,6 +435,14 @@ AC_ARG_WITH([external-hard],
             [with_external_hard=$withval
              PROG_NAME=$PROG_NAME'.'$with_external_hard],
             [with_external_hard=none])
+
+# pn force
+AC_ARG_WITH([pn],
+            [AS_HELP_STRING([--with-pn],
+                            [Post-Newtonian correct: hermite, sdar, all: Default: none])],
+            [with_pn=$withval
+             PROG_NAME=$PROG_NAME'.'pn$with_pn],
+            [with_pn=none])
             
 
 # tidal tensor 3rd order mode
@@ -515,6 +527,7 @@ AC_SUBST([with_step_mode])
 AC_SUBST([with_interrupt])
 AC_SUBST([with_external])
 AC_SUBST([with_external_hard])
+AC_SUBST([with_pn])
 AC_SUBST([with_tidal_tensor])
 AC_SUBST([with_orbit])
 AC_SUBST([OPTFLAGS])
@@ -533,6 +546,7 @@ AC_SUBST([GPERFLIBS])
 AC_SUBST([MPFRCFLAGS])
 AC_SUBST([MPFRCLIBS])
 AC_SUBST([GALPY_PATH])
+AC_SUBST([SDAR_PATH])
 AC_SUBST([AGAMA_PATH])
 AC_SUBST([GSL_CFLAGS])
 AC_SUBST([GSL_LIBS])
@@ -568,6 +582,7 @@ AC_MSG_NOTICE([     external mode:     $with_external])
 AS_IF([test x"$with_external" == xgalpy],
       [AC_MSG_NOTICE([     Galpy version:     $GALPY_VERSION])])
 AC_MSG_NOTICE([     external hard mode:$with_external_hard])
+AC_MSG_NOTICE([     pn mode:           $with_pn])
 AC_MSG_NOTICE([     tidal tensor mode: $with_tidal_tensor])
 AC_MSG_NOTICE([     orbit mode:        $with_orbit])
 AC_MSG_NOTICE([     Using quad:        $use_quad])

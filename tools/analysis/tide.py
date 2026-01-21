@@ -1,8 +1,8 @@
 # Tide data interface
-from .base import *
-from .functions import *
+from sdar.base import *
+from sdar.functions import *
+from sdar.group import BinaryTreeSDAR
 from .bse import SSEStarParameter
-from .group import BinaryTreeSDAR
 
 class Tide(DictNpArrayMix):
     """ Tide event record

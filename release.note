@@ -45,9 +45,13 @@
 43. Add new option 'sigma-dt-soft-factor' to control the factor determing dt_soft and changeover radii; switch the default method to nstep-dt-soft-kepler with 64.0
 44. Add 32 bit tree force for non-simd mode; change configure option '--enable-simd-64' to '--enable-64b', not limited to SIMD case; update petar.simd.test to print more information.
 45. Add COLLECT_SP_ACC macro to allow record superparticle acc in snapshot.
-46. Add support for FDPS 8.0.
+46. Add support for FDPS 8.0, implement inherited Momentum class to overwrite set function to avoid divide zero mass.
 47. Improve IOParams by printing all options with different data types in order of characters.
 48. Write EPI and EPJ particle information when i or j particle number in groups exceed the limitation.
+49. Add support of reuse tree interaction list to speed up tree force calculation, modify options for tree and domain and include new option to set make list frequency
+50. Add hermite_n_neighbor_max option to set the maximum neighbor number (default 300) for groups to avoid huge memory requirement when a large cluster forms. This need SDAR version >=326e.
+51. Add hermite_only_calc_neighbor_force support to reduce hermite interactions, add hermite interaction counts, This need SDAR version >=335e.
+52. Add PN term for Hermite and SDAR integrator, use v/c as criterion to switch on PN (Need SDAR version >=380e).
 
 **Some existing issues include**
 

@@ -23,7 +23,7 @@ public:
 
     void readAscii(FILE* _fin) {
         ParticleBase::readAscii(_fin);
-        PS::S64 rcount=fscanf(_fin, "%lf %lld ",
+        PS::S64 rcount=fscanf(_fin, "%lf %" PRId64 " ",
                               &this->r_search, &this->id);
         if (rcount<2) {
             std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
@@ -31,7 +31,7 @@ public:
         }
         group_data.artificial.readAscii(_fin);
         changeover.readAscii(_fin);
-        rcount=fscanf(_fin, "%lf %lf %lf %lf %lf %lld\n",
+        rcount=fscanf(_fin, "%lf %lf %lf %lf %lf %" PRId64 "\n",
                       &this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
                       &this->pot_tot, &this->pot_soft, &this->n_ngb);
         if (rcount<6) {

@@ -98,8 +98,9 @@ public:
     // IO parameters
     IOParamsContainer input_par_store;
     IOParams<PS::F64> theta;
-    IOParams<PS::S64> n_leaf_limit;
-    IOParams<PS::S64> n_group_limit;
+    IOParams<PS::S64> tree_nleaf_limit;
+    IOParams<PS::S64> tree_ngroup_limit;
+    IOParams<PS::S64> tree_nstep_mklist;
     IOParams<PS::S64> n_smp_ave;
     IOParams<PS::S64> n_bin;
     IOParams<PS::F64> time_end;
@@ -109,10 +110,10 @@ public:
     IOParams<PS::F64> dt_soft;
     IOParams<PS::F64> r_out;
     IOParams<PS::F64> r_in_over_out;
-    IOParams<PS::F64> nstep_dt_soft_kepler;
-    IOParams<PS::F64> sigma_dt_soft_factor; // factor for dt_soft based on sigma_1D
-    IOParams<PS::F64> search_vel_factor;
-    IOParams<PS::F64> search_peri_factor;
+    IOParams<PS::F64> dt_soft_kepler_nstep;
+    IOParams<PS::F64> dt_soft_sigma_factor; // factor for dt_soft based on sigma_1D
+    IOParams<PS::F64> r_search_vel_factor;
+    IOParams<PS::F64> r_search_peri_factor;
     IOParams<PS::F64> r_search_min;
     IOParams<PS::F64> r_escape;
     IOParams<PS::F64> dt_snap;
@@ -121,6 +122,7 @@ public:
     IOParams<PS::S64> append_switcher;
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
     IOParams<PS::S64> domain_weight_mode;
+    IOParams<PS::S64> domain_nstep;
 #endif
     IOParams<std::string> fname_snp;
     IOParams<std::string> fname_par;
@@ -133,13 +135,14 @@ public:
 
     IOParamsPeTar(): input_par_store(), 
                      theta            (input_par_store, 0.3,  "T",  "Particle-tree opening angle theta"),
-                     n_leaf_limit     (input_par_store, 20,   "number-leaf-limit", "Particle-tree leaf number limit; Optimal value should be slightly >= artificial particle number (tidal tensor 8 + anti-force sample 3) + 2 (binary member) + 1 (binary c.m.)"),
+                     tree_nleaf_limit     (input_par_store, 20,   "tree-nleaf-limit", "Particle-tree leaf number limit; Optimal value should be slightly >= artificial particle number (tidal tensor 8 + anti-force sample 3) + 2 (binary member) + 1 (binary c.m.)"),
 #ifdef USE__AVX512
-                     n_group_limit    (input_par_store, 1024, "number-group-limit", "Particle-tree group number limit; Optimal value for x86-AVX512 is 1024"),    
+                     tree_ngroup_limit    (input_par_store, 1024, "tree-ngroup-limit", "Particle-tree group number limit; Optimal value for x86-AVX512 is 1024"),    
 #else
-                     n_group_limit    (input_par_store, 512,  "number-group-limit", "Particle-tree group number limit; Optimal value for x86-AVX2 is 512"),
+                     tree_ngroup_limit    (input_par_store, 512,  "tree-ngroup-limit", "Particle-tree group number limit; Optimal value for x86-AVX2 is 512"),
 #endif
-                     n_smp_ave        (input_par_store, 100,  "number-sample-average", "Average target number of sample particles per process"),
+                     tree_nstep_mklist    (input_par_store, 2,    "tree-nstep-mklist", "Particle-tree make-list interval in number of soft-step"),
+                     n_smp_ave        (input_par_store, 100,  "n-sample-average", "Average target number of sample particles per process"),
                      n_bin            (input_par_store, 0,    "b", "Number of primordial binaries (n_bin) for initialization (assuming the binaries' IDs are 1,2*n_bin)"),
                      time_end         (input_par_store, 10.0, "t", "End time of simulation"),
                      unit_set         (input_par_store, 0,    "u", "Input data unit; 0: based on the value of G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr, modify G to fit this unit set"),
@@ -148,18 +151,19 @@ public:
                      dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft); > 0: custom dt_soft value, regularized to 0.5^n, where n is an integer; = 0: check '-r r_out':;      r_out = 0 (default): dt_soft = 2.6E-4*GM/sigma_3D^3, and is regularized to 0.5^n;          sigma_3D: global 3D velocity dispersion;      r_out > 0: check '--dt-soft-sigma-factor alpha':;          alpha > 0: dt_soft = alpha*r_in/(sqrt(3)*sigma);              r_in: determined by --r-ratio and r_out;          alpha = 0 (default): dt_soft = P(r_in)/nstep;              P(r_in): the binary period with the semi-major axis of r_in;              nstep: defined by --dt-soft-kepler-nstep"),
                      r_out            (input_par_store, 0.0,  "r", "Outer changeover radius (r_out); > 0: custom r_out value and check '-s dt_soft';      dt_soft = 0: calculate dt_soft and then adjust r_out by dt_soft;      dt_soft > 0: use custom r_out directly; = 0 (default): check '--dt-soft-sigma-factor alpha':;      alpha > 0: r_out = alpha*dt_soft*sigma_3D/r-ratio;          sigma_3D: global 3D velocity dispersion;          r-ratio: defined by --r-ratio;      alpha = 0 (default): r_out = a(r_in)/r-ratio;          a(r_in): the binary semi-major axis with the period of nstep*dt_soft;          nstep: defined by --dt-soft-kepler-nstep"),
                      r_in_over_out    (input_par_store, 0.1,  "r-ratio", "Ratio between inner (r_in) and outer (r_out) changeover radii"),
-                     nstep_dt_soft_kepler(input_par_store, 64.0, "dt-soft-kepler-nstep", "Factor 'nstep' to determine dt_soft by P(r_in)/nstep, see option '-s' and '-r'"),
-                     sigma_dt_soft_factor(input_par_store, 0.0, "dt-soft-sigma-factor", "Factor 'alpha' to determine dt_soft by alpha*r_in/sigma_3D, see option '-s' and '-r'; = 0: not used, apply --dt-soft-kepler-nstep; > 0: use this option instead of '--dt-soft-kepler-nstep'"),
-                     search_vel_factor (input_par_store, 3.0,  "search-vel-factor", "Neighbor search coefficient for velocity check (v*dt)"),
-                     search_peri_factor(input_par_store, 1.5, "search-peri-factor", "Neighbor search coefficient for periapsis check"),
+                     dt_soft_kepler_nstep(input_par_store, 64.0, "dt-soft-kepler-nstep", "Factor 'nstep' to determine dt_soft by P(r_in)/nstep, see option '-s' and '-r'"),
+                     dt_soft_sigma_factor(input_par_store, 0.0, "dt-soft-sigma-factor", "Factor 'alpha' to determine dt_soft by alpha*r_in/sigma_3D, see option '-s' and '-r'; = 0: not used, apply --dt-soft-kepler-nstep; > 0: use this option instead of '--dt-soft-kepler-nstep'"),
+                     r_search_vel_factor (input_par_store, 3.0,  "r-search-vel-factor", "Neighbor search coefficient for velocity check (v*dt)"),
+                     r_search_peri_factor(input_par_store, 1.5, "r-search-peri-factor", "Neighbor search coefficient for periapsis check"),
                      r_search_min     (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters; = 0: auto-determine by max(search-vel-factor*sigma_1D*dt_soft + rout, 1.2 r_out); > 0: custom search radius value"),
-                     r_escape         (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Object escape radius criterion; = 0: no escaper removal; < 0: remove objects when r>-r_escape; > 0: remove objects when r>r_escape and energy>0"),
+                     r_escape         (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Object escape radius criterion; < 0: remove objects when r>-r_escape; >= 0: remove objects when r>r_escape and energy>0"),
                      dt_snap          (input_par_store, 1.0,  "o", "Output time interval for particle dataset snapshots"),
                      data_format      (input_par_store, 1,    "i", "Data file reading and writing format; 0: read and write in BINARY; 1: read and write in ASCII; 2: read in ASCII, write in BINARY; 3: read in BINARY, write in ASCII"),
                      write_style      (input_par_store, 1,    "w", "Data file writing style; 0: no output; 1: write all files separately; 2. write snapshots in status files in one line per step (no MPI support); 3. write files except snapshots"),
                      append_switcher  (input_par_store, 1,    "a", "Data file output mode; 0: overwrite files except object dump files, include header lines; 1: append files except snapshots, no header line"),
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
                      domain_weight_mode(input_par_store, 0, "domain-weight-mode", "Domain decomposition weight mode for MPI parallel; 0: equal weight for each MPI processor; 1: use force calculation time as weight to obtain better load balance with losing simulation reproducibility"),
+                     domain_nstep      (input_par_store, 16, "domain-nstep", "Number of steps between domain decompositions"),
 #endif                     
                      fname_snp        (input_par_store, "data", "f", "Prefix of filenames for output data: [prefix].**"),
                      fname_par        (input_par_store, "input.par", "p", "Input parameter file (this option should be used first before any other options)"),
@@ -177,20 +181,22 @@ public:
     int read(int argc, char *argv[], const int opt_used_pre=0) {
         static int petar_flag=-1;
         static struct option long_options[] = {
-            {n_leaf_limit.key,         required_argument, &petar_flag, 1},
-            {n_group_limit.key,        required_argument, &petar_flag, 2},
-            {n_smp_ave.key,            required_argument, &petar_flag, 3},
-            {r_in_over_out.key,        required_argument, &petar_flag, 4},
-            {nstep_dt_soft_kepler.key, required_argument, &petar_flag, 5},
-            {sigma_dt_soft_factor.key, required_argument, &petar_flag, 6},
-            {search_vel_factor.key,    required_argument, &petar_flag, 7},  
-            {search_peri_factor.key,   required_argument, &petar_flag, 8}, 
-            {r_search_min.key,         required_argument, &petar_flag, 9},
-            {r_escape.key,             required_argument, &petar_flag, 10},
+            {tree_nleaf_limit.key,         required_argument, &petar_flag, 1},
+            {tree_ngroup_limit.key,        required_argument, &petar_flag, 2},
+            {tree_nstep_mklist.key,      required_argument, &petar_flag, 3},
+            {n_smp_ave.key,            required_argument, &petar_flag, 4},
+            {r_in_over_out.key,        required_argument, &petar_flag, 5},
+            {dt_soft_kepler_nstep.key, required_argument, &petar_flag, 6},
+            {dt_soft_sigma_factor.key, required_argument, &petar_flag, 7},
+            {r_search_vel_factor.key,    required_argument, &petar_flag, 8},  
+            {r_search_peri_factor.key,   required_argument, &petar_flag, 9}, 
+            {r_search_min.key,         required_argument, &petar_flag, 10},
+            {r_escape.key,             required_argument, &petar_flag, 11},
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-            {domain_weight_mode.key,   required_argument, &petar_flag, 11},
+            {domain_weight_mode.key,   required_argument, &petar_flag, 12},
+            {domain_nstep.key,        required_argument, &petar_flag, 13},
 #endif
-            {"disable-print-info",     no_argument,       &petar_flag, 12},
+            {"disable-print-info",     no_argument,       &petar_flag, 14},
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
         };
@@ -204,24 +210,30 @@ public:
             case 0:
                 switch (petar_flag) {
                 case 1:
-                    n_leaf_limit.value = atoi(optarg);
-                    if(print_flag) n_leaf_limit.print(std::cout);
+                    tree_nleaf_limit.value = atoi(optarg);
+                    if(print_flag) tree_nleaf_limit.print(std::cout);
                     opt_used += 2;
-                    assert(n_leaf_limit.value>0);
+                    assert(tree_nleaf_limit.value>0);
                     break;
                 case 2:
-                    n_group_limit.value = atoi(optarg);
-                    if(print_flag) n_group_limit.print(std::cout);
+                    tree_ngroup_limit.value = atoi(optarg);
+                    if(print_flag) tree_ngroup_limit.print(std::cout);
                     opt_used += 2;
-                    assert(n_group_limit.value>0);
+                    assert(tree_ngroup_limit.value>0);
                     break;
                 case 3:
+                    tree_nstep_mklist.value = atoi(optarg);
+                    if(print_flag) tree_nstep_mklist.print(std::cout);
+                    opt_used += 2;
+                    assert(tree_nstep_mklist.value>0);
+                    break;
+                case 4:
                     n_smp_ave.value = atoi(optarg);
                     if(print_flag) n_smp_ave.print(std::cout);
                     opt_used += 2;
                     assert(n_smp_ave.value>0.0);
                     break;
-                case 4:
+                case 5:
                     r_in_over_out.value = atof(optarg);
                     if(print_flag) r_in_over_out.print(std::cout);
                     update_changeover_flag = true;
@@ -229,50 +241,56 @@ public:
                     assert(r_in_over_out.value>0.0);
                     assert(r_in_over_out.value<1.0);
                     break;
-                case 5:
-                    nstep_dt_soft_kepler.value = atof(optarg);
-                    if(print_flag) nstep_dt_soft_kepler.print(std::cout);
-                    opt_used += 2;
-                    assert(nstep_dt_soft_kepler.value>0.0);
-                    break;
                 case 6:
-                    sigma_dt_soft_factor.value = atof(optarg);
-                    if(print_flag) sigma_dt_soft_factor.print(std::cout);
+                    dt_soft_kepler_nstep.value = atof(optarg);
+                    if(print_flag) dt_soft_kepler_nstep.print(std::cout);
                     opt_used += 2;
-                    assert(sigma_dt_soft_factor.value>0.0);
+                    assert(dt_soft_kepler_nstep.value>0.0);
                     break;
                 case 7:
-                    search_vel_factor.value = atof(optarg);
-                    if(print_flag) search_vel_factor.print(std::cout);
+                    dt_soft_sigma_factor.value = atof(optarg);
+                    if(print_flag) dt_soft_sigma_factor.print(std::cout);
                     opt_used += 2;
-                    update_rsearch_flag = true;
-                    assert(search_vel_factor.value>0.0);
+                    assert(dt_soft_sigma_factor.value>0.0);
                     break;
                 case 8:
-                    search_peri_factor.value = atof(optarg);
-                    if(print_flag) search_peri_factor.print(std::cout);
+                    r_search_vel_factor.value = atof(optarg);
+                    if(print_flag) r_search_vel_factor.print(std::cout);
                     opt_used += 2;
-                    assert(search_peri_factor.value>=1.0);
+                    update_rsearch_flag = true;
+                    assert(r_search_vel_factor.value>0.0);
                     break;
                 case 9:
+                    r_search_peri_factor.value = atof(optarg);
+                    if(print_flag) r_search_peri_factor.print(std::cout);
+                    opt_used += 2;
+                    assert(r_search_peri_factor.value>=1.0);
+                    break;
+                case 10:
                     r_search_min.value = atof(optarg);
                     if(print_flag) r_search_min.print(std::cout);
                     update_rsearch_flag = true;
                     opt_used += 2;
                     break;
-                case 10:
+                case 11:
                     r_escape.value = atof(optarg);
                     if(print_flag) r_escape.print(std::cout);
                     opt_used += 2;
                     break;
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-                    case 11:
+                case 12:
                     domain_weight_mode.value = atoi(optarg);
                     if(print_flag) domain_weight_mode.print(std::cout);
                     opt_used += 2;
                     break;
+                case 13:
+                    domain_nstep.value = atoi(optarg);
+                    if(print_flag) domain_nstep.print(std::cout);
+                    opt_used += 2;
+                    assert(domain_nstep.value>0);
+                    break;
 #endif
-                case 12:
+                case 14:
                     print_flag = false;
                     opt_used ++;
                     break;
@@ -426,20 +444,22 @@ public:
 #ifdef ORBIT_SAMPLING
         assert(n_split.value>=0);
 #endif
-        assert(search_vel_factor.value>0.0);
-        assert(search_peri_factor.value>=1.0);
+        assert(r_search_vel_factor.value>0.0);
+        assert(r_search_peri_factor.value>=1.0);
         assert(data_format.value>=0||data_format.value<=3);
         assert(time_end.value>=0.0);
         assert(dt_soft.value>=0.0);
         assert(dt_snap.value>0.0);
         assert(n_bin.value>=0);
         assert(n_glb.value>0);
-        assert(n_group_limit.value>0);
-        assert(n_leaf_limit.value>0);
+        assert(tree_ngroup_limit.value>0);
+        assert(tree_nleaf_limit.value>0);
+        assert(tree_nstep_mklist.value>0);
         assert(n_smp_ave.value>0.0);
         assert(theta.value>=0.0);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         assert(domain_weight_mode.value>=0 && domain_weight_mode.value<=1);
+        assert(domain_nstep.value>0);
 #endif
         return true;
     }
@@ -451,9 +471,11 @@ public:
 class PeTar {
 public:
 #ifdef USE_QUAD
-    typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::QuadrupoleWithSymmetrySearch TreeForce; 
+    typedef PS::TreeForForce<PS::SEARCH_MODE_LONG_SYMMETRY, ForceSoft, EPISoft, EPJSoft, MomentQuadrupole, MomentQuadrupole, PS::SPJQuadrupole> TreeForce;
+    //typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::QuadrupoleWithSymmetrySearch TreeForce; 
 #else
-    typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::MonopoleWithSymmetrySearch TreeForce;
+    typedef PS::TreeForForce<PS::SEARCH_MODE_LONG_SYMMETRY, ForceSoft, EPISoft, EPJSoft, MomentMonopole, MomentMonopole, PS::SPJMonopole> TreeForce;
+    //typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::MonopoleWithSymmetrySearch TreeForce;
 #endif
     typedef PS::ParticleSystem<FPSoft> SystemSoft;
 
@@ -522,6 +544,7 @@ public:
     // tree
     TreeNB tree_nb;
     TreeForce tree_soft;
+    bool tree_mklist_flag;
 
     // random manager
 #ifdef BSE_BASE
@@ -597,7 +620,7 @@ public:
         file_header(), system_soft(), id_adr_map(),
         n_loop(0), domain_decompose_weight(1.0), dinfo(), pos_domain(NULL), 
         dt_manager(),
-        tree_nb(), tree_soft(), 
+        tree_nb(), tree_soft(), tree_mklist_flag(true),
 #ifdef BSE_BASE
         rand_manager(),
 #endif
@@ -627,12 +650,14 @@ public:
         tree_nb.clearNumberOfInteraction();
         tree_nb.clearTimeProfile();
 #endif
+        const auto mklist_mode = tree_mklist_flag ? PS::MAKE_LIST_FOR_REUSE : PS::REUSE_LIST;
+
 #ifdef USE_SIMD
-        tree_nb.calcForceAllAndWriteBack(SearchNeighborEpEpSimd(), system_soft, dinfo);
+        tree_nb.calcForceAllAndWriteBack(SearchNeighborEpEpSimd(), system_soft, dinfo, true, mklist_mode);
 #elif USE_FUGAKU
-        tree_nb.calcForceAllAndWriteBack(SearchNeighborEpEpFugaku(), system_soft, dinfo);
+        tree_nb.calcForceAllAndWriteBack(SearchNeighborEpEpFugaku(), system_soft, dinfo, true, mklist_mode);
 #else
-        tree_nb.calcForceAllAndWriteBack(SearchNeighborEpEpNoSimd(), system_soft, dinfo);
+        tree_nb.calcForceAllAndWriteBack(SearchNeighborEpEpNoSimd(), system_soft, dinfo, true, mklist_mode);
 #endif
         
 #ifdef PROFILE
@@ -651,7 +676,7 @@ public:
 #endif
         // >2.1 search clusters ----------------------------------------
         search_cluster.searchNeighborOMP<SystemSoft, TreeNB, EPJSoft>
-            (system_soft, tree_nb, pos_domain, 1.0, input_parameters.search_peri_factor.value);
+            (system_soft, tree_nb, pos_domain, 1.0, input_parameters.r_search_peri_factor.value);
 
         search_cluster.searchClusterLocal();
         search_cluster.setIdClusterLocal();
@@ -678,7 +703,7 @@ public:
         profile.create_group.start();
 #endif
 
-        // >2.3 Find ARC groups and create artificial particles
+        // >2.3 Find sdar groups and create artificial particles
         // Set local ptcl_hard for isolated  clusters
         system_hard_isolated.setPtclForIsolatedMultiClusterOMP(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
 
@@ -740,6 +765,7 @@ public:
         tree_soft.clearNumberOfInteraction();
         tree_soft.clearTimeProfile();
 #endif
+        const auto mklist_mode = tree_mklist_flag ? PS::MAKE_LIST_FOR_REUSE : PS::REUSE_LIST;
 
 #ifdef USE_GPU
         const PS::S32 n_walk_limit = 200;
@@ -774,8 +800,10 @@ public:
                                            CalcForceEpSpMonoFugaku(eps2, G),
 #endif // end quad
                                            system_soft,
-                                           dinfo);
-        
+                                           dinfo,
+                                           true, // clear force
+                                           mklist_mode);
+
 #elif USE_SIMD // end use_gpu
         tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(),
 #ifdef USE_QUAD
@@ -784,7 +812,9 @@ public:
                                            CalcForceEpSpMonoSimd(),
 #endif // end quad
                                            system_soft,
-                                           dinfo);
+                                           dinfo,
+                                           true, // clear force
+                                           mklist_mode);
 #else // end use_simd
         tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSimd(),
 #ifdef USE_QUAD
@@ -793,7 +823,9 @@ public:
                                            CalcForceEpSpMonoNoSimd(),
 #endif
                                            system_soft,
-                                           dinfo);
+                                           dinfo,
+                                           true, // clear force
+                                           mklist_mode);
 #endif // end else
 
 #ifdef PROFILE
@@ -1083,9 +1115,9 @@ public:
         //tree_soft.setParticaleLocalTree(system_soft, false);
 
 #ifdef USE_SIMD
-        tree_nb.calcForceAllAndWriteBack(CalcCorrectEpEpWithLinearCutoffSimd(), system_soft, dinfo);
+        tree_nb.calcForceAllAndWriteBack(CalcCorrectEpEpWithLinearCutoffSimd(), system_soft, dinfo, true, PS::REUSE_LIST);
 #else
-        tree_nb.calcForceAllAndWriteBack(CalcCorrectEpEpWithLinearCutoffNoSimd(), system_soft, dinfo);
+        tree_nb.calcForceAllAndWriteBack(CalcCorrectEpEpWithLinearCutoffNoSimd(), system_soft, dinfo, true, PS::REUSE_LIST);
 #endif
 
 #ifdef PROFILE
@@ -1405,9 +1437,72 @@ public:
 #ifdef GALPY
         galpy_manager.driftMovePot(_dt_drift);
 #endif
-        
-        Ptcl::group_data_mode = GroupDataMode::cm;
     }
+
+    //! check whether need to rebuild tree and neighbor list
+    /*! 1. check whether group is modified (new group formed or group ended)
+        if yes, set tree_mklist_flag to true; 
+        2. also check the regular interval to rebuild tree and neighbor list
+        3. reset the new/end group counter to zero in system_hard_isolated and system_hard_connected
+    */    
+    void checkTreeMakeListPossible() {
+        // check whether group is modified
+        PS::S64 n_groups_new=0, n_groups_end=0, n_groups_arti_change=0, n_groups_merge=0;
+        n_groups_new += system_hard_isolated.sdar_n_groups_new;
+        n_groups_end += system_hard_isolated.sdar_n_groups_end;
+        n_groups_arti_change += system_hard_isolated.sdar_n_groups_arti_change;
+        n_groups_merge += system_hard_isolated.sdar_n_groups_merge;
+        system_hard_isolated.sdar_n_groups_new =0;
+        system_hard_isolated.sdar_n_groups_end =0;
+        system_hard_isolated.sdar_n_groups_arti_change =0;
+        system_hard_isolated.sdar_n_groups_merge =0;
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        n_groups_new += system_hard_connected.sdar_n_groups_new;
+        n_groups_end += system_hard_connected.sdar_n_groups_end;
+        n_groups_arti_change += system_hard_connected.sdar_n_groups_arti_change;
+        n_groups_merge += system_hard_connected.sdar_n_groups_merge;
+        system_hard_connected.sdar_n_groups_new =0;
+        system_hard_connected.sdar_n_groups_end =0;
+        system_hard_connected.sdar_n_groups_arti_change =0;
+        system_hard_connected.sdar_n_groups_merge =0;
+#endif
+        n_count.sdar_n_groups_new += n_groups_new;
+        n_count.sdar_n_groups_end += n_groups_end;
+        n_count.sdar_n_groups_arti_change += n_groups_arti_change;
+        n_count.sdar_n_groups_merge += n_groups_merge;
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        n_groups_new = PS::Comm::getSum(n_groups_new);
+        n_groups_end = PS::Comm::getSum(n_groups_end);
+        n_groups_arti_change = PS::Comm::getSum(n_groups_arti_change);
+        n_groups_merge = PS::Comm::getSum(n_groups_merge);
+#endif
+        n_count_sum.sdar_n_groups_new += n_groups_new;
+        n_count_sum.sdar_n_groups_end += n_groups_end;
+        n_count_sum.sdar_n_groups_arti_change += n_groups_arti_change;
+        n_count_sum.sdar_n_groups_merge += n_groups_merge;
+
+        tree_mklist_flag = (n_loop % input_parameters.tree_nstep_mklist.value == 0);
+
+        // if new/end group exist, or merger exists, need to rebuild tree and neighbor list
+        if (n_groups_arti_change >0 || n_groups_merge >0) tree_mklist_flag = true;
+
+        // also check if particle need to be removed, if so need to rebuild tree and neighbor list
+        //if (remove_list.size()>0) tree_mklist_flag = true;
+
+#ifdef PETAR_DEBUG_PRINT
+        if (my_rank==0) {
+            std::cerr<<"[Debug] n_loop: "<<n_loop
+                     <<" tree_mklist_flag="<<tree_mklist_flag
+                     <<" n_group_new = "<<n_groups_new
+                     <<" n_group_end = "<<n_groups_end
+                     <<" n_group_arti_change = "<<n_groups_arti_change
+                     <<" n_group_merge = "<<n_groups_merge
+                     //<<" remove_list.size() = "<<remove_list.size()
+                     <<std::endl;
+        }
+#endif
+    }    
 
 
     //! Calculate the maximum time step limit for next block step
@@ -1483,16 +1578,17 @@ public:
     }
 
     // update group_data.cm to pcm data for search cluster after restart
-    void setParticleGroupDataToCMData() {
+    void calcRsearchAndGetMassBackupAndsetGroupDataToCM() {
+        PS::F64 dt_tree = dt_manager.getStep();
 #ifdef PROFILE
         profile.search_cluster.start();
 #endif
 #ifdef CLUSTER_VELOCITY
         // update status and mass_bk to pcm data for search cluster after restart
         system_hard_one_cluster.resetParticleGroupData(system_soft);
-        system_hard_isolated.setParticleGroupDataToCMData(system_soft);
+        system_hard_isolated.calcRsearchAndGetMassBackupAndsetGroupDataToCM(system_soft, dt_tree);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        system_hard_connected.setParticleGroupDataToCMData(system_soft);
+        system_hard_connected.calcRsearchAndGetMassBackupAndsetGroupDataToCM(system_soft, dt_tree);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), mass_modify_list);
         system_hard_connected.updateTimeWriteBack();
         mass_modify_list.resizeNoInitialize(0);
@@ -1537,11 +1633,14 @@ public:
         // > 6. Domain decomposition
         profile.domain.start();
 #endif
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // Domain decomposition, parrticle exchange and force calculation
-        if(n_loop % 16 == 0 || _enforce) {
+        if(n_loop % input_parameters.domain_nstep.value == 0 || _enforce) {
             dinfo.decomposeDomainAll(system_soft,domain_decompose_weight);
             //std::cout<<"rank: "<<my_rank<<" weight: "<<domain_decompose_weight<<std::endl;
         }
+#endif
 #ifdef PROFILE
         profile.domain.barrier();
         PS::Comm::barrier();
@@ -1770,10 +1869,10 @@ public:
         n_count_sum.hard_single      += PS::Comm::getSum(n_hard_single);
         n_count_sum.hard_isolated    += PS::Comm::getSum(n_hard_isolated);
 
-        PS::S64 ARC_substep_sum   = system_hard_isolated.ARC_substep_sum;
-        PS::S64 ARC_tsyn_step_sum   = system_hard_isolated.ARC_tsyn_step_sum;
-        PS::S64 ARC_n_groups      = system_hard_isolated.ARC_n_groups;
-        PS::S64 ARC_n_groups_iso  = system_hard_isolated.ARC_n_groups_iso;
+        PS::S64 sdar_substep_sum   = system_hard_isolated.sdar_substep_sum;
+        PS::S64 sdar_tsyn_step_sum   = system_hard_isolated.sdar_tsyn_step_sum;
+        PS::S64 sdar_n_groups      = system_hard_isolated.sdar_n_groups;
+        PS::S64 sdar_n_groups_iso  = system_hard_isolated.sdar_n_groups_iso;
         PS::S64 H4_step_sum       = system_hard_isolated.H4_step_sum;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         PS::S64 n_neighbor_zero   = system_hard_isolated.n_neighbor_zero;
@@ -1784,48 +1883,48 @@ public:
         n_count.hard_connected   += n_hard_connected;
         n_count_sum.hard_connected += PS::Comm::getSum(n_hard_connected);
 
-        ARC_substep_sum += system_hard_connected.ARC_substep_sum;
-        ARC_tsyn_step_sum += system_hard_connected.ARC_tsyn_step_sum;
-        ARC_n_groups += system_hard_connected.ARC_n_groups;
-        ARC_n_groups_iso += system_hard_connected.ARC_n_groups_iso;
+        sdar_substep_sum += system_hard_connected.sdar_substep_sum;
+        sdar_tsyn_step_sum += system_hard_connected.sdar_tsyn_step_sum;
+        sdar_n_groups += system_hard_connected.sdar_n_groups;
+        sdar_n_groups_iso += system_hard_connected.sdar_n_groups_iso;
         H4_step_sum +=  system_hard_connected.H4_step_sum;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         n_neighbor_zero+= system_hard_connected.n_neighbor_zero;
 #endif
 #endif
                                            
-        n_count.ARC_substep_sum  += ARC_substep_sum;
-        n_count.ARC_tsyn_step_sum+= ARC_tsyn_step_sum;
-        n_count.ARC_n_groups     += ARC_n_groups;
-        n_count.ARC_n_groups_iso += ARC_n_groups_iso;
+        n_count.sdar_substep_sum  += sdar_substep_sum;
+        n_count.sdar_tsyn_step_sum+= sdar_tsyn_step_sum;
+        n_count.sdar_n_groups     += sdar_n_groups;
+        n_count.sdar_n_groups_iso += sdar_n_groups_iso;
         n_count.H4_step_sum      += H4_step_sum;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         n_count.n_neighbor_zero  += n_neighbor_zero;
 #endif
 
-        n_count_sum.ARC_substep_sum  += PS::Comm::getSum(ARC_substep_sum);
-        n_count_sum.ARC_tsyn_step_sum+= PS::Comm::getSum(ARC_tsyn_step_sum);
-        n_count_sum.ARC_n_groups     += PS::Comm::getSum(ARC_n_groups);
-        n_count_sum.ARC_n_groups_iso     += PS::Comm::getSum(ARC_n_groups_iso);
+        n_count_sum.sdar_substep_sum  += PS::Comm::getSum(sdar_substep_sum);
+        n_count_sum.sdar_tsyn_step_sum+= PS::Comm::getSum(sdar_tsyn_step_sum);
+        n_count_sum.sdar_n_groups     += PS::Comm::getSum(sdar_n_groups);
+        n_count_sum.sdar_n_groups_iso     += PS::Comm::getSum(sdar_n_groups_iso);
         n_count_sum.H4_step_sum      += PS::Comm::getSum(H4_step_sum);
 #ifdef HARD_COUNT_NO_NEIGHBOR
         n_count_sum.n_neighbor_zero  += PS::Comm::getSum(n_neighbor_zero);
 #endif
 
-        system_hard_isolated.ARC_substep_sum = 0;
-        system_hard_isolated.ARC_tsyn_step_sum=0;
-        system_hard_isolated.ARC_n_groups = 0;
-        system_hard_isolated.ARC_n_groups_iso = 0;
+        system_hard_isolated.sdar_substep_sum = 0;
+        system_hard_isolated.sdar_tsyn_step_sum=0;
+        system_hard_isolated.sdar_n_groups = 0;
+        system_hard_isolated.sdar_n_groups_iso = 0;
         system_hard_isolated.H4_step_sum = 0;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         system_hard_isolated.n_neighbor_zero = 0;
 #endif
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        system_hard_connected.ARC_substep_sum = 0;
-        system_hard_connected.ARC_tsyn_step_sum=0;
-        system_hard_connected.ARC_n_groups = 0;
-        system_hard_connected.ARC_n_groups_iso = 0;
+        system_hard_connected.sdar_substep_sum = 0;
+        system_hard_connected.sdar_tsyn_step_sum=0;
+        system_hard_connected.sdar_n_groups = 0;
+        system_hard_connected.sdar_n_groups_iso = 0;
         system_hard_connected.H4_step_sum = 0;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         system_hard_connected.n_neighbor_zero = 0;
@@ -1938,13 +2037,15 @@ public:
 #endif
 
             std::cout<<"**** Number per step (global):\n";
-            n_count_sum.dumpName(std::cout);
-            std::cout<<std::endl;
-            n_count_sum.dump(std::cout,dn_loop);
-            std::cout<<std::endl;
+            for (PS::S32 ipart=1; ipart<=2; ipart++) {
+                n_count_sum.dumpName(std::cout, ipart);
+                std::cout<<std::endl;
+                n_count_sum.dump(std::cout,dn_loop, ipart);
+                std::cout<<std::endl;
+            }
                 
             std::cout<<"**** Number of members in clusters (global):\n";
-            n_count_sum.printHist(std::cout,dn_loop);
+            n_count_sum.printHist(std::cout, dn_loop, 14);
         }
 
         if(input_parameters.write_style.value>0) {
@@ -1961,7 +2062,7 @@ public:
             gpu_profile.dump(fprofile, dn_loop, WRITE_WIDTH);
             gpu_counter.dump(fprofile, dn_loop, WRITE_WIDTH);
 #endif
-            n_count.dump(fprofile, dn_loop, WRITE_WIDTH);
+            n_count.dump(fprofile, dn_loop, 0, WRITE_WIDTH);
             fprofile<<std::endl;
         }
     }
@@ -2495,8 +2596,8 @@ public:
         // help case, return directly
         if (read_flag==-1) {
             // avoid segmentation fault due to FDPS clear function bug
-            tree_nb.initialize(input_parameters.n_glb.value, input_parameters.theta.value, input_parameters.n_leaf_limit.value, input_parameters.n_group_limit.value);
-            tree_soft.initialize(input_parameters.n_glb.value, input_parameters.theta.value, input_parameters.n_leaf_limit.value, input_parameters.n_group_limit.value);
+            tree_nb.initialize(input_parameters.n_glb.value, input_parameters.theta.value, input_parameters.tree_nleaf_limit.value, input_parameters.tree_ngroup_limit.value);
+            tree_soft.initialize(input_parameters.n_glb.value, input_parameters.theta.value, input_parameters.tree_nleaf_limit.value, input_parameters.tree_ngroup_limit.value);
 
             return read_flag;
         }
@@ -2530,7 +2631,7 @@ public:
                 gpu_profile.dumpName(fprofile, WRITE_WIDTH);
                 gpu_counter.dumpName(fprofile, WRITE_WIDTH);
 #endif
-                n_count.dumpName(fprofile, WRITE_WIDTH);
+                n_count.dumpName(fprofile, 0, WRITE_WIDTH);
                 fprofile<<std::endl;
             }
             fprofile<<std::setprecision(WRITE_PRECISION);
@@ -2637,11 +2738,11 @@ public:
         }
 
         // tree for neighbor search
-        tree_nb.initialize(input_parameters.n_glb.value, input_parameters.theta.value, input_parameters.n_leaf_limit.value, input_parameters.n_group_limit.value);
+        tree_nb.initialize(input_parameters.n_glb.value, input_parameters.theta.value, input_parameters.tree_nleaf_limit.value, input_parameters.tree_ngroup_limit.value);
 
         // tree for force
         PS::S64 n_tree_init = input_parameters.n_glb.value + input_parameters.n_bin.value;
-        tree_soft.initialize(n_tree_init, input_parameters.theta.value, input_parameters.n_leaf_limit.value, input_parameters.n_group_limit.value);
+        tree_soft.initialize(n_tree_init, input_parameters.theta.value, input_parameters.tree_nleaf_limit.value, input_parameters.tree_ngroup_limit.value);
 
         // initial search cluster
         search_cluster.initialize();
@@ -2975,6 +3076,12 @@ public:
             agama_parameters.rscale.value = 0.001; // kpc
             agama_parameters.vscale.value = PCMYR_TO_KMS;
 #endif
+#ifdef HERMITE_PN
+            hard_parameters.speed_of_light.value = SPEED_OF_LIGHT;
+#endif
+#ifdef SDAR_PN
+            hard_parameters.speed_of_light.value = SPEED_OF_LIGHT;
+#endif
             if(print_flag) {
                 std::cout<<"----- Unit set 1: Msun, pc, Myr -----\n"
                          <<"gravitational_constant = "<<input_parameters.gravitational_constant.value<<" pc^3/(Msun*Myr^2)\n";
@@ -2990,6 +3097,14 @@ public:
                          <<" rscale = "<<agama_parameters.rscale.value<<"  kpc / pc\n"
                          <<" vscale = "<<agama_parameters.vscale.value<<"  [km/s] / [pc/Myr]\n";
 #endif
+#ifdef HERMITE_PN
+                std::cout<<"----- Unit for Post Newtonian -----\n"
+                         <<" speed of light = "<<hard_parameters.speed_of_light.value<<" pc/Myr\n";
+#endif
+#ifdef SDAR_PN
+                std::cout<<"----- Unit for Post Newtonian -----\n"
+                         <<" speed of light = "<<hard_parameters.speed_of_light.value<<" pc/Myr\n";
+#endif
 
             }
 //#ifdef GALPY
@@ -3004,12 +3119,12 @@ public:
         PS::F64& r_search_min = input_parameters.r_search_min.value;
         PS::F64& dt_soft = input_parameters.dt_soft.value;
         PS::F64& dt_snap = input_parameters.dt_snap.value;
-        PS::F64& search_vel_factor =  input_parameters.search_vel_factor.value;
+        PS::F64& r_search_vel_factor =  input_parameters.r_search_vel_factor.value;
         PS::F64& r_in_over_out =  input_parameters.r_in_over_out.value;
         PS::S64& n_bin         =  input_parameters.n_bin.value;
         PS::F64& G             =  input_parameters.gravitational_constant.value;
-        PS::F64& nstep_dt_soft_kepler = input_parameters.nstep_dt_soft_kepler.value;
-        PS::F64& sigma_dt_soft_factor = input_parameters.sigma_dt_soft_factor.value;
+        PS::F64& dt_soft_kepler_nstep = input_parameters.dt_soft_kepler_nstep.value;
+        PS::F64& dt_soft_sigma_factor = input_parameters.dt_soft_sigma_factor.value;
 
         // local particle number
         const PS::S64 n_loc = system_soft.getNumberOfParticleLocal();
@@ -3112,10 +3227,10 @@ public:
                 // if r_out is already defined, calculate r_in based on r_in_over_out
                 r_in = r_out * r_in_over_out;
                 // calculate dt_soft from r_in 
-                if (sigma_dt_soft_factor>0)  
-                    dt_soft = regularTimeStep(sigma_dt_soft_factor * r_in / (std::sqrt(3)*vel_disp));
+                if (dt_soft_sigma_factor>0)  
+                    dt_soft = regularTimeStep(dt_soft_sigma_factor * r_in / (std::sqrt(3)*vel_disp));
                 else 
-                    dt_soft = regularTimeStep(COMM::Binary::semiToPeriod(r_in, 2.0*mass_average, G)/nstep_dt_soft_kepler);
+                    dt_soft = regularTimeStep(COMM::Binary::semiToPeriod(r_in, 2.0*mass_average, G)/dt_soft_kepler_nstep);
             }
             else {
                 // if tree time step is not defined, calculate tree time step by 2.6e-4 GM/sigma(3D)^3 = 5e-5 GM/sigma(1D)^3
@@ -3149,12 +3264,12 @@ public:
                 if (print_flag) std::cout<<"In one particle case, changeover radius is set to a small value\n";
             }
             else {
-                if (sigma_dt_soft_factor>0) {
-                    r_in = dt_soft*std::sqrt(3)*vel_disp/sigma_dt_soft_factor;
+                if (dt_soft_sigma_factor>0) {
+                    r_in = dt_soft*std::sqrt(3)*vel_disp/dt_soft_sigma_factor;
                     r_out = r_in / r_in_over_out;		      
                 }
                 else {
-                    r_in = COMM::Binary::periodToSemi(dt_soft*nstep_dt_soft_kepler, 2.0*mass_average, G);
+                    r_in = COMM::Binary::periodToSemi(dt_soft*dt_soft_kepler_nstep, 2.0*mass_average, G);
                     r_out = r_in / r_in_over_out;
                     // r_out = 10.0*dt_soft*vel_disp;
                     //r_in = r_out * r_in_over_out;
@@ -3162,12 +3277,12 @@ public:
             }
         }
 
-        // if r_search_min is not defined, calculate by search_vel_factor*velocity_dispersion*tree_time_step + r_out
-        if (r_search_min==0.0) r_search_min = std::max(search_vel_factor*vel_disp*dt_soft + r_out, 1.2*r_out);
+        // if r_search_min is not defined, calculate by r_search_vel_factor*velocity_dispersion*tree_time_step + r_out
+        if (r_search_min==0.0) r_search_min = std::max(r_search_vel_factor*vel_disp*dt_soft + r_out, 1.2*r_out);
         // if r_search_max is not defined, calcualte by 5*r_out
 //        if (r_search_max==0.0) r_search_max = 5*r_out;
-        // calculate v_max based on r_search_max, tree time step and search_vel_factor
-        //vel_max = (r_search_max - r_out) / dt_soft / search_vel_factor;
+        // calculate v_max based on r_search_max, tree time step and r_search_vel_factor
+        //vel_max = (r_search_max - r_out) / dt_soft / r_search_vel_factor;
 
         // regularize output time to be integer times of dt_soft
         if (dt_snap<dt_soft) 
@@ -3178,7 +3293,7 @@ public:
         EPISoft::eps   = hard_parameters.eps.value;
         EPISoft::r_out = r_out;
         ForceSoft::grav_const = hard_parameters.gravitational_constant.value;
-        Ptcl::search_factor = search_vel_factor;
+        Ptcl::search_factor = r_search_vel_factor;
         Ptcl::r_search_min = r_search_min;
         Ptcl::mean_mass_inv = 1.0/mass_average;
         //Ptcl::vel_cm = vel_cm_glb;
@@ -3222,7 +3337,7 @@ public:
                 system_soft[i].changeover.setR(m_fac, r_in, r_out);
 
                 // calculate r_search for particles, for binary, r_search depend on vel_disp
-                if(id<=2*n_bin) system_soft[i].r_search = std::max(r_search_min,vel_disp*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
+                if(id<=2*n_bin) system_soft[i].r_search = std::max(r_search_min,vel_disp*dt_soft*r_search_vel_factor + system_soft[i].changeover.getRout());
                 else system_soft[i].calcRSearch(dt_soft);
 
                 auto& pi_cm = system_soft[i].group_data.cm;
@@ -3245,11 +3360,11 @@ public:
                 if (input_parameters.update_rsearch_flag) {
                     if (pi_cm.mass!=0.0) {
 //#ifdef GROUP_DATA_WRITE_ARTIFICIAL
-                        system_soft[i].r_search = std::max(r_search_min, vel_disp*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
+                        system_soft[i].r_search = std::max(r_search_min, vel_disp*dt_soft*r_search_vel_factor + system_soft[i].changeover.getRout());
 // not correct, when data is dumped, it is not cm information but artificial particle data
 //#else
 //                        PS::F64 vcm = std::sqrt(pi_cm.vel*pi_cm.vel);
-//                        system_soft[i].r_search = std::max(r_search_min,vcm*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
+//                        system_soft[i].r_search = std::max(r_search_min,vcm*dt_soft*r_search_vel_factor + system_soft[i].changeover.getRout());
 //#endif
                     }
                     else system_soft[i].calcRSearch(dt_soft);
@@ -3288,6 +3403,7 @@ public:
 
 #ifdef BSE_BASE
         hard_manager.initial(hard_parameters, bse_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
+        hard_manager.ar_manager.interaction.time_interrupt_max = stat.time + dt_max_hermite;
 
         // initial random seeds
         rand_manager.initialAll(rand_parameters, my_rank);
@@ -3540,7 +3656,7 @@ public:
         system_soft.setNumberOfParticleLocal(stat.n_real_loc);
 
 #ifdef CLUSTER_VELOCITY
-        setParticleGroupDataToCMData();
+        calcRsearchAndGetMassBackupAndsetGroupDataToCM();
 #endif
 
 #ifdef PROFILE
@@ -3772,34 +3888,37 @@ public:
             correctSoftPotMassChange();
 #endif
 
-            // remove artificial and ununsed particles in system_soft.
-            removeParticles();
+            if (tree_mklist_flag) {
 
-#ifdef RECORD_CM_IN_HEADER
-            // update center
-            stat.calcAndShiftCenterOfMass(&system_soft[0], stat.n_real_loc);
-#endif
+                // remove artificial and ununsed particles in system_soft.
+                removeParticles();
 
-            // update stat time
-            stat.time = system_hard_one_cluster.getTimeOrigin();
+    #ifdef RECORD_CM_IN_HEADER
+                // update center
+                stat.calcAndShiftCenterOfMass(&system_soft[0], stat.n_real_loc);
+    #endif
 
-            // >9. Domain decomposition
-            domainDecompose();
+                // update stat time
+                stat.time = system_hard_one_cluster.getTimeOrigin();
 
-            // >10. exchange particles
-            exchangeParticle();
+                // >9. Domain decomposition
+                domainDecompose();
 
-            // >1. Tree for neighbor searching 
-            /// get neighbor list to tree_nb
-            treeNeighborSearch();
+                // >10. exchange particles
+                exchangeParticle();
 
-            // >2. search clusters
-            /// gether clusters information to search_cluster, using tree_nb and velocity criterion (particles status/mass_bk)
-            searchCluster();
+                // >1. Tree for neighbor searching 
+                /// get neighbor list to tree_nb
+                treeNeighborSearch();
 
-            // >3. find group and create artificial particles
-            /// find group and create artificial particles, using search_cluster, save to system_hard and system_soft (particle status/mass_bk updated)
-            createGroup(dt_tree);
+                // >2. search clusters
+                /// gether clusters information to search_cluster, using tree_nb and velocity criterion (particles status/mass_bk)
+                searchCluster();
+
+                // >3. find group and create artificial particles
+                /// find group and create artificial particles, using search_cluster, save to system_hard and system_soft (particle status/mass_bk updated)
+                createGroup(dt_tree);
+            }
 
             // >4 tree soft force
             /// calculate tree force with linear cutoff, save to system_soft.acc
@@ -3919,7 +4038,7 @@ public:
             // interrupt
             if(interrupt_flag) {
 #ifdef CLUSTER_VELOCITY
-                setParticleGroupDataToCMData();
+                calcRsearchAndGetMassBackupAndsetGroupDataToCM();
 #endif
                 // correct force due to the change over update
                 correctForceChangeOverUpdate();
@@ -3982,6 +4101,14 @@ public:
             drift(dt_drift);
             // update stat time 
             stat.time = system_hard_one_cluster.getTimeOrigin();
+
+            checkTreeMakeListPossible();
+
+            // if need make new list, set particle group data to cm data
+            if (tree_mklist_flag) {
+                calcRsearchAndGetMassBackupAndsetGroupDataToCM();
+            }
+            
 
 #ifdef PROFILE
             // calculate profile
