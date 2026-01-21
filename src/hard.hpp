@@ -1608,7 +1608,7 @@ public:
 #endif
             sym_int.particles.template writeBackMemberAll<PtclH4>();
 
-
+            PS::S32 n_members = sym_int.particles.getSize();
 #ifdef DISK_STAR_MERGER
             for (PS::S32 i=0; i<n_members; i++) {
                 auto& pi = ptcl_origin[i];
@@ -1631,7 +1631,6 @@ public:
 #endif
 
                 // set mass back to backup mass                
-                const int n_members = sym_int.particles.getSize();                
                 for (int i=0; i<n_members; i++) {
                     auto& pi = ptcl_origin[i];
                     pi.group_data.artificial.setMassBackup(pi.mass);
@@ -1640,7 +1639,6 @@ public:
             }    
 
 #ifdef HARD_DEBUG
-            PS::S32 n_members = sym_int.particles.getSize();
             for (PS::S32 i=0; i<n_members; i++) {
                 auto& pi = ptcl_origin[i];
 #ifdef STELLAR_EVOLUTION
@@ -1703,6 +1701,7 @@ public:
 #endif
 
 #ifdef DISK_STAR_MERGER
+            auto& h4_pcm = h4_int.particles.cm;
             for (PS::S32 i=0; i<h4_int.particles.getSize(); i++) {
                 auto& pi = ptcl_origin[i];
                 if (pi.mass==0.0) 
@@ -1811,7 +1810,6 @@ public:
             }
 
 #ifdef HARD_DEBUG
-            //auto& h4_pcm = h4_int.particles.cm;
             const PS::S32* group_index = h4_int.getSortDtIndexGroup();
             for(PS::S32 i=0; i<h4_int.getNGroup(); i++) {
                 const PS::S32 k =group_index[i];

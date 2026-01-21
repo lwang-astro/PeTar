@@ -175,7 +175,7 @@ EXT_INSTALL:
 EXT_CLEAN:
 	$(MAKE) -C galpy-interface clean
 
-TARGET += build/petar.external
+TARGET += build/petar.external.test
 all: $(TARGET)
 
 endif # galpy
@@ -200,7 +200,7 @@ EXTFLAGS = -D AGAMA $(AGAMA_INCLUDE)
 EXTLIBFILES = $(AGAMALIBFILES)
 EXTLIBS = $(AGAMALIBS)
 
-TARGET += build/petar.external
+TARGET += build/petar.external.test
 all: $(TARGET)
 
 endif
