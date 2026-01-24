@@ -1118,10 +1118,13 @@ public:
         // correction calculation
         //tree_soft.setParticaleLocalTree(system_soft, false);
 
+        // Since artificial particles are not included in tree_nb neighbor search, should remake tree if necessary
+        const auto mklist_mode = tree_mklist_flag ? PS::MAKE_LIST_FOR_REUSE : PS::REUSE_LIST;
+
 #ifdef USE_SIMD
-        tree_nb.calcForceAllAndWriteBack(CalcCorrectEpEpWithLinearCutoffSimd(), system_soft, dinfo, true, PS::REUSE_LIST);
+        tree_nb.calcForceAllAndWriteBack(CalcCorrectEpEpWithLinearCutoffSimd(), system_soft, dinfo, true, mklist_mode);
 #else
-        tree_nb.calcForceAllAndWriteBack(CalcCorrectEpEpWithLinearCutoffNoSimd(), system_soft, dinfo, true, PS::REUSE_LIST);
+        tree_nb.calcForceAllAndWriteBack(CalcCorrectEpEpWithLinearCutoffNoSimd(), system_soft, dinfo, true, mklist_mode);
 #endif
 
 #ifdef PROFILE
