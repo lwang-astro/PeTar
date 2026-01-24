@@ -85,7 +85,7 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #ifdef GALPY
 #include"galpy_interface.h"
 #endif
-#ifdef BSE_BASE
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
 #include"rand_interface.hpp"
 #endif
 #ifdef AGAMA
@@ -489,10 +489,12 @@ public:
     IOParamsBSE bse_parameters;
     std::string fbse_par_suffix = BSEManager::getBSEOutputFilenameSuffix();
     std::string fsse_par_suffix = BSEManager::getSSEOutputFilenameSuffix();
-    IOParamsRand rand_parameters;
 #endif // BSE_BASE
 #ifdef DISK_STAR_MERGER
     IOParamsDiskStarMerger disk_star_merger_parameters;
+#endif
+#if (defined(BSE_BASE) || defined(DISK_STAR_MERGER))
+    IOParamsRand rand_parameters;
 #endif
 #ifdef GALPY
     IOParamsGalpy galpy_parameters;
@@ -547,7 +549,7 @@ public:
     bool tree_mklist_flag;
 
     // random manager
-#ifdef BSE_BASE
+#if (defined(BSE_BASE) || defined(DISK_STAR_MERGER))      
     RandomManager rand_manager;
 #endif
 
@@ -597,10 +599,12 @@ public:
         hard_parameters(),
 #ifdef BSE_BASE
         bse_parameters(),
-        rand_parameters(),
 #endif
 #ifdef DISK_STAR_MERGER
         disk_star_merger_parameters(),
+#endif
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
+        rand_parameters(),
 #endif
 #ifdef GALPY
         galpy_parameters(),
@@ -621,7 +625,7 @@ public:
         n_loop(0), domain_decompose_weight(1.0), dinfo(), pos_domain(NULL), 
         dt_manager(),
         tree_nb(), tree_soft(), tree_mklist_flag(true),
-#ifdef BSE_BASE
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
         rand_manager(),
 #endif
 #ifdef GALPY
@@ -1819,7 +1823,7 @@ public:
                 galpy_manager.writePotentialPars(fname+".galpy", stat.time);
 #endif
             }
-#ifdef BSE_BASE
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
             std::string fname_seed = fname+".randseeds";
             rand_manager.writeRandSeeds(fname_seed.c_str());
 #endif
@@ -2534,6 +2538,11 @@ public:
         all_pars.push_back(&hard_parameters.input_par_store);
 #ifdef BSE_BASE
         all_pars.push_back(&bse_parameters.input_par_store);
+#endif
+#ifdef DISK_STAR_MERGER
+        all_pars.push_back(&disk_star_merger_parameters.input_par_store);
+#endif
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
         all_pars.push_back(&rand_parameters.input_par_store);
 #endif
 #ifdef GALPY
@@ -2544,9 +2553,6 @@ public:
 #endif
 #ifdef AGAMA
         all_pars.push_back(&agama_parameters.input_par_store);
-#endif
-#ifdef DISK_STAR_MERGER
-        all_pars.push_back(&disk_star_merger_parameters.input_par_store);
 #endif
         // Check whether all options are defined
         std::vector<std::string> known_options;
@@ -2568,14 +2574,16 @@ public:
         if (my_rank==0) bse_parameters.print_flag=true;
         else bse_parameters.print_flag=false;
         bse_parameters.read(argc,argv,false);
-        if (my_rank==0) rand_parameters.print_flag=true;
-        else rand_parameters.print_flag=false;
-        rand_parameters.read(argc,argv,false);
 #endif
 #ifdef DISK_STAR_MERGER
         if (my_rank==0) disk_star_merger_parameters.print_flag=true;
         else disk_star_merger_parameters.print_flag=false;
         disk_star_merger_parameters.read(argc,argv,false);
+#endif
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
+        if (my_rank==0) rand_parameters.print_flag=true;
+        else rand_parameters.print_flag=false;
+        rand_parameters.read(argc,argv,false);
 #endif
 #ifdef GALPY
         if (my_rank==0) galpy_parameters.print_flag=true;
@@ -3379,7 +3387,7 @@ public:
 #endif
             //Ptcl::vel_cm = stat.pcm.vel;
 
-#ifdef BSE_BASE
+#if (defined BSE_BASE) || defined(DISK_STAR_MERGER)
             // set randseeds filename to read later
             std::string &data_filename = input_parameters.fname_inp.value;
             rand_parameters.seedfile.value = data_filename + ".randseeds";
@@ -3401,13 +3409,15 @@ public:
         // notice the maximum step depending on step mode, KDKDK2 and KDKDK4 should be half step
         PS::F64 dt_max_hermite = dt_manager.getDtDriftOneStep();
 
-#ifdef BSE_BASE
-        hard_manager.initial(hard_parameters, bse_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
-        hard_manager.ar_manager.interaction.time_interrupt_max = stat.time + dt_max_hermite;
-
+#if (defined(BSE_BASE) || defined(DISK_STAR_MERGER))      
         // initial random seeds
         rand_manager.initialAll(rand_parameters, my_rank);
         rand_manager.printRandSeeds(std::cout);
+#endif
+
+#ifdef BSE_BASE
+        hard_manager.initial(hard_parameters, bse_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
+        hard_manager.ar_manager.interaction.time_interrupt_max = stat.time + dt_max_hermite;
 
         // initial stellar evolution for each star
         if (!restart_flag) {
@@ -3500,7 +3510,9 @@ public:
             }
             bse_parameters.input_par_store.writeAscii(fpar_out);
             fclose(fpar_out);
+#endif
 
+#if (defined BSE_BASE) || defined(DISK_STAR_MERGER)
             // save random parameters
             std::string frand_par = input_parameters.fname_par.value + ".rand";
             if (print_flag) std::cout<<"Save rand_parameters to file "<<frand_par<<std::endl;

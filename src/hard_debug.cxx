@@ -14,7 +14,7 @@
 #include "static_variables.hpp"
 #include "status.hpp"
 
-#ifdef BSE_BASE
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
 #include "../parallel-random/rand_interface.hpp"
 #endif
 
@@ -44,7 +44,6 @@ int main(int argc, char **argv){
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
   int stellar_evolution_option = -1;
-  uint64_t seed = 0;
   std::string bse_name = BSEManager::getBSEName();
   std::string fsse_suffix = BSEManager::getSSEOutputFilenameSuffix();
   std::string fbse_suffix = BSEManager::getBSEOutputFilenameSuffix();
@@ -55,6 +54,9 @@ int main(int argc, char **argv){
   int interrupt_detection_option = -1;
 #else
   int interrupt_detection_option = -1;
+#endif
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
+  uint64_t seed = 0;
 #endif
 #endif
 #ifdef EXTERNAL_HARD
@@ -92,9 +94,11 @@ int main(int argc, char **argv){
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
       {"stellar-evolution", required_argument, &opt_flag, 9},
-      {"rand-seed",         required_argument, &opt_flag, 10},
 #else
       {"detect-interrupt", required_argument, &opt_flag, 9},
+#endif
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
+      {"rand-seed",         required_argument, &opt_flag, 10},
 #endif
 #endif
       {"tstart",            required_argument, &opt_flag, 11},
@@ -281,10 +285,12 @@ int main(int argc, char **argv){
 #endif
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
-                 <<"        --rand-seed         [int]:     random seed to generate kick velocity\n"
                  <<"        --stellar-evolution [int]:     Stellar evolution option: \n"
 #else
                  <<"        --detect-interrupt  [int]:     interrupt detection option: 0: no interrupt; 1: merge; 2: record binary status\n"
+#endif
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
+                 <<"        --rand-seed         [int]:     random seed to generate kick velocity\n"
 #endif
 #endif
                  <<"        --slowdown-factor   [double]:  change slowdown factor reference\n"
@@ -490,7 +496,7 @@ int main(int argc, char **argv){
       hard_manager.h4_manager.interaction.ext_force.center.readBinary(fp);
 #endif
 
-#ifdef BSE_BASE
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
       if (seed!=0) hard_dump.rand_manager.initialFromSeed(seed, 0);
 #endif
 
@@ -508,7 +514,7 @@ int main(int argc, char **argv){
       if (iend>0 && ncount>iend) continue;
 
       std::cerr<<"Dump "<<ncount<<"\nTime: "<<hard_dump.time_offset<<std::endl;
-#ifdef BSE_BASE
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
       hard_dump.rand_manager.printRandSeeds(std::cerr);
 #endif
 
