@@ -408,7 +408,6 @@ public:
 
         Float v2 = vel_rel[0]*vel_rel[0] + vel_rel[1]*vel_rel[1] + vel_rel[2]*vel_rel[2];
         Float v = std::sqrt(v2);
-        //Float v3 = v2*v;
         Float cs2 = sound_speed*sound_speed;
         Float v2_cs2 = v2 + cs2;
 
@@ -437,6 +436,7 @@ public:
 #ifdef DISK_STAR_MERGER
         Float c1 = -4*PI*G2*mass*gas_density*v/(v2_cs2*v2_cs2)*Ifunc;
 #else
+        Float v3 = v2*v;
         Float c1 = -4*PI*G2*mass*gas_density/v3*Ifunc;
 #endif        
 
