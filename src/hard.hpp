@@ -1620,21 +1620,29 @@ public:
 
             // drift artificial particles and move particle mass to backup mass
             if (_ptcl_artificial!=NULL) {
-                auto& ap_manager = manager->ap_manager;
+                // in case of merge or destroy, need to indicate that artificial particle is changed (removed)
+                if (sym_interrupt_binary.status==AR::InterruptStatus::merge ||
+                    sym_interrupt_binary.status==AR::InterruptStatus::destroy) {
+                    sdar_n_groups_arti_change ++;
+                }
+                else {
+                    auto& ap_manager = manager->ap_manager;
 
-                // update new cm. pos and vel for binarytree root                
-                bink.pos = pcm.pos;
-                bink.vel = pcm.vel;
-                ap_manager.updateArtificialParticles(_ptcl_artificial, bink);
-#ifdef ARTIFICIAL_PARTICLE_DEBUG                
-                ap_manager.checkConsistence(ptcl_origin, _ptcl_artificial);
-#endif
+                    // update new cm. pos and vel for binarytree root                
+                    bink.pos = pcm.pos;
+                    bink.vel = pcm.vel;
+                    ap_manager.updateArtificialParticles(_ptcl_artificial, bink);
+    #ifdef ARTIFICIAL_PARTICLE_DEBUG                
+                    ap_manager.checkConsistence(ptcl_origin, _ptcl_artificial);
+    #endif
 
-                // set mass back to backup mass                
-                for (int i=0; i<n_members; i++) {
-                    auto& pi = ptcl_origin[i];
-                    pi.group_data.artificial.setMassBackup(pi.mass);
-                    pi.mass = 0.0; // set mass to zero
+                    // set mass back to backup mass                
+                    for (int i=0; i<n_members; i++) {
+                        auto& pi = ptcl_origin[i];
+                        ASSERT(!pi.group_data.artificial.isUnused());
+                        pi.group_data.artificial.setMassBackup(pi.mass);
+                        pi.mass = 0.0; // set mass to zero
+                    }
                 }
             }    
 
@@ -1802,7 +1810,7 @@ public:
                     }
                 }
 
-                // count number of artificial particles not updated                
+                // count number of artificial particles not updated (disrupted/changed groups)        
                 for (PS::S32 i=0; i<_n_group; i++) {
                     if (!group_arti_update_list[i]) sdar_n_groups_arti_change ++;
                 }
