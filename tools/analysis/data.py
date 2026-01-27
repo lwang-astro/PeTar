@@ -3,6 +3,7 @@ import collections
 from scipy import spatial as sp
 from sdar.base import *
 from sdar.functions import *
+from sdar.ar import SDARInterruptBinary
 from .bse import *
 from .dsm import *
 
@@ -602,6 +603,26 @@ class ParticleGroup(DictNpArrayMix):
 
         key = 'p'+str(index)
         return self.__dict__[key]
+
+class InterruptBinary(SDARInterruptBinary):
+    """ Data of stellar evolution interrupted binary in base mode
+        Inherit from sdar.ar.SDARInterruptBinary
+    """
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ Initial InterruptBinary class
+        Parameters
+        ----------
+        ----------
+        keyword arguments:
+            particle_type: type (HardParticle)
+                particle data type
+        """
+
+        if (not 'particle_type' in kwargs.keys()):
+            kwargs['particle_type'] = HardParticle
+        particle_type = kwargs['particle_type']
+
+        SDARInterruptBinary.__init__(self, _dat, _offset, _append, **kwargs)
 
 def calculateParticleCMDict(pcm, _p1, _p2):
     """ Calculate the center-of-the-mass of two particle sets

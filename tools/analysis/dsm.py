@@ -1,6 +1,6 @@
 # DSM data interface
-from .base import *
-from .functions import *
+from sdar.base import *
+from sdar.functions import *
 
 class DSMStarParameter(DictNpArrayMix):
     """
