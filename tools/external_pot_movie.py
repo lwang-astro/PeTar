@@ -218,8 +218,8 @@ if __name__ == '__main__':
     pool = mp.Pool(n_cpu)
     
     n_files=int(nstep)+1
-    file_list = range(nstep+1)
-    n_pieces = np.ones(n_cpu)*int(n_files/n_cpu)
+    file_list = range(0,nstep+1,int(float(dt_out)/float(dt)))
+    n_pieces = np.ones(n_cpu)*int(len(file_list)/n_cpu)
     n_left = n_files%n_cpu
     n_pieces[:n_left]+=1
     n_offset=np.append([0],n_pieces.cumsum()).astype(int)
@@ -236,6 +236,6 @@ if __name__ == '__main__':
     pool.close()
     pool.join()
 
-    png_list = ['pot'+str(file_list[i])+'.png' for i in range(n_files)]
+    png_list = ['pot'+str(file_list[i])+'.png' for i in range(len(file_list))]
     create_movie(png_list, fps, output_file+'.'+plot_format)
     
