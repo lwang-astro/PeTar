@@ -139,7 +139,7 @@ int main(int argc, char** argv){
                      <<"Options:\n"
                      <<"    -m    : instead of reading particle list, generate a mesh of points in the x-y plane and x-z plane to create the acceleration, potential and density map.\n"
                      <<"            output filenames are xy[time] and xz[time]\n"
-                     <<"            header line:  time nx ny\n"
+                     <<"            header line:  time nx ny(nz)\n"
                      <<"            each line: mass x y z vx vy vz ax ay az pot den\n"
                      <<"            Time-dependent potential is also supported.\n"
                      <<"    -A    : output in ASCII format when -m mode is used (default: BINARY)\n"
@@ -226,7 +226,7 @@ int main(int argc, char** argv){
                     fxz<<time<<" "<<nx<<" "<<nz<<std::endl;
                 }
                 Particle particle_xy[nx][ny];
-                Particle particle_xz[nx][ny];
+                Particle particle_xz[nx][nz];
                 for (int j=0; j<nx; j++) {
                     double x = xmin + (xmax-xmin)/(nx-1)*j;
                     for (int k=0; k<ny; k++) {

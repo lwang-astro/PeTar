@@ -65,25 +65,23 @@ def createImage(index_list, xyscale, plot_format, log_flag, dtype_data, dtype_he
                 fp.close()
                 time, nx, ny = header.split()
                 x, y, z, ax, ay, az, pot = np.loadtxt(fname, unpack=True, usecols=(1,2,3,7,8,9,10),skiprows=1)
-
                 nx=int(nx)
                 ny=int(ny)
                 data[key]['x']=x.reshape(nx,ny)
                 data[key]['y']=y.reshape(nx,ny)
                 data[key]['z']=z.reshape(nx,ny)
                 data[key]['pot']=pot.reshape(nx,ny)
-
+            x_grid, y_grid = data[key][key[0]], data[key][key[1]]
             count = np.log10(-data[key]['pot']) if log_flag else -data[key]['pot']
             if (with_countour):
-                cset = axes[i].contour(count,linewidths=2,extent=xyscale[i], **kwargs)
+                cset = axes[i].contour(x_grid, y_grid, count, linewidths=2, **kwargs)
                 #axes[i].clabel(cset,inline=True,fmt='%1.1f',fontsize=10)
             axes[i].set_xlabel(xylabels[i][0])
             axes[i].set_ylabel(xylabels[i][1])            
 
-            im = axes[i].imshow(count,cmap=pb.cm.RdBu,
-                                aspect=(xyscale[i][1]-xyscale[i][0])/(xyscale[i][3]-xyscale[i][2]),
-                                interpolation='bilinear', origin='lower', 
-                                extent=xyscale[i], **kwargs)
+            im = axes[i].pcolormesh(x_grid, y_grid, count, cmap=pb.cm.RdBu,
+                                    shading='auto', **kwargs)
+            axes[i].set_aspect('equal', adjustable='box')
 
         axes[0].set_title('Time = %s' % time)
         if (only_xy):

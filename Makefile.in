@@ -175,7 +175,7 @@ EXT_INSTALL:
 EXT_CLEAN:
 	$(MAKE) -C galpy-interface clean
 
-TARGET += build/petar.external.test
+TARGET += build/petar.external
 all: $(TARGET)
 
 endif # galpy
@@ -200,7 +200,7 @@ EXTFLAGS = -D AGAMA $(AGAMA_INCLUDE)
 EXTLIBFILES = $(AGAMALIBFILES)
 EXTLIBS = $(AGAMALIBS)
 
-TARGET += build/petar.external.test
+TARGET += build/petar.external
 all: $(TARGET)
 
 endif
@@ -352,7 +352,7 @@ build/@PROG_NAME@.format.transfer: format_transfer.cxx |build
 build/@PROG_NAME@.hard.debug: hard_debug.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(OMPFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS) $(RANDLIBS)
 
-build/petar.external.test: external_test.cxx $(EXTLIBFILES) $(EXT_SRC) |build
+build/petar.external: external_test.cxx $(EXTLIBFILES) $(EXT_SRC) |build
 	$(CXX) $(OPTFLAGS) $(CXXFLAGS) $(EXTFLAGS) $< -o $@ $(EXTLIBS)
 
 build/petar.hard.test: hard_test.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) |build
