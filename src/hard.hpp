@@ -5,6 +5,7 @@
 
 #include"cstdlib"
 #include <algorithm>
+#include<cmath>
 
 #include"AR/symplectic_integrator.h"
 #include"Hermite/hermite_integrator.h"
@@ -1338,6 +1339,11 @@ public:
 #endif
             // integration loop
             while (h4_int.getTimeInt()<_time_end) {
+#ifdef HARD_DEBUG_PRINT
+                // count steps
+                h4_int.countStepHist();
+#endif
+
                 // integrate groups
                 h4_int.integrateGroupsOneStep();
 
@@ -1458,7 +1464,8 @@ public:
                 if (n_single>0) dt_max = std::max(dt_max, h4_int.particles[h4_int.getSortDtIndexSingle()[n_single-1]].dt);
                 ASSERT(dt_max>0.0);
                 auto& h4_manager = manager->h4_manager;
-                if (fmod(h4_int.getTimeInt(), dt_max/HARD_DEBUG_PRINT_FEQ)==0.0) {
+                PS::F64 time_ratio = std::llround(h4_int.getTimeInt()/dt_max)*HARD_DEBUG_PRINT_FEQ;
+                if ( int(time_ratio) - time_ratio == 0) {
                     h4_int.calcEnergySlowDown(false);
 
                     h4_int.printColumn(fout_debug, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
@@ -1487,9 +1494,8 @@ public:
 #endif
                         ///abort();
                     }
-                }
-                if (fmod(h4_int.getTimeInt(), h4_manager.step.getDtMax())==0.0) {
                     h4_int.printStepHist();
+                    h4_int.profile.stephist.clear();
                 }
 #endif
             }
