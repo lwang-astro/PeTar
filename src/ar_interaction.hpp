@@ -1373,7 +1373,7 @@ public:
                         p2->mass = 0.0;
 
                         p2->radius = 0.0;
-                        p1->mass += p2->mass 
+                        p1->mass += p2->mass;
 
                         p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
 #endif
