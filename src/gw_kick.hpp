@@ -122,10 +122,10 @@ public:
         return result;
     }
 
-    std::array<Float, 3> randomVectorWithMagnitude(const Float& magnitude) {
+    std::array<Float, 3> randomVectorWithMagnitude(const Float& magnitude) const {
 
-        Float theta = 2 * M_PI * rand_f64(); // 随机角度在 0 到 2π 之间
-        Float phi = std::acos(2 * rand_f64() - 1); // 随机角度在 0 到 π 之间
+        Float theta = 2 * M_PI * rand_f64(); 
+        Float phi = std::acos(2 * rand_f64() - 1); 
 
         Float x = magnitude * std::sin(phi) * std::cos(theta);
         Float y = magnitude * std::sin(phi) * std::sin(theta);

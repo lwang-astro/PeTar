@@ -30,7 +30,10 @@ class SSEStarParameter(DictNpArrayMix):
         rad   (1D): stellar radius (Rsun)
         mcore (1D): core mass (Msun)
         rcore (1D): core radius (Rsun)
-        spin  (2D,3): stellar rotation, if type is BH, it is dimensionless 3D spin (chi); otherwise it is 1D spin (rad/day） and only spin[0] is used.
+        if keyword argument "spin_3d" == False:
+            spin  (1D): stellar rotation, 1D spin (rad/day)
+        else (default):
+            spin  (2D,3): stellar rotation, if type is BH, it is dimensionless 3D spin (chi); otherwise it is 1D spin (rad/day) and only spin[0] is used.
         epoch (1D): time offset at each evolution stage (Myr)
         time  (1D): current physical time (Myr)
         lum   (1D): bolometric luminosity (Lsun)
@@ -38,7 +41,11 @@ class SSEStarParameter(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [['type',np.int64],['mass0',np.float64],['mass',np.float64],['rad',np.float64],['mcore',np.float64],['rcore',np.float64],['spin', (np.float64,3)],['epoch',np.float64],['time',np.float64],['lum',np.float64]]
+        if kwargs.get('spin_3d', True):
+            key_spin_type = (np.float64,3)
+        else:
+            key_spin_type = np.float64
+        keys = [['type',np.int64],['mass0',np.float64],['mass',np.float64],['rad',np.float64],['mcore',np.float64],['rcore',np.float64],['spin', key_spin_type],['epoch',np.float64],['time',np.float64],['lum',np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 
@@ -160,8 +167,12 @@ class BSEBinaryEvent(DictNpArrayMix):
             mcore2 (1D): core mass of component 2 (Msun)
             rcore1 (1D): core radius of component 1 (Rsun)
             rcore2 (1D): core radius of component 2 (Rsun)
-            spin1  (2D,3): stellar rotation of component 1, if type is BH, it is dimensionless 3D spin (chi); otherwise it is 1D spin (rad/day） and only spin[0] is used.
-            spin2  (2D,3): stellar rotation of component 2, if type is BH, it is dimensionless 3D spin (chi); otherwise it is 1D spin (rad/day） and only spin[0] is used. 
+            if keyword argument "spin_3d" == False:
+                spin1 (1D): stellar rotation of component 1, 1D spin (rad/day）
+                spin2 (1D): stellar rotation of component 2, 1D spin (rad/day）
+            else:
+                spin1  (2D,3): stellar rotation of component 1, if type is BH, it is dimensionless 3D spin (chi); otherwise it is 1D spin (rad/day） and only spin[0] is used.
+                spin2  (2D,3): stellar rotation of component 2, if type is BH, it is dimensionless 3D spin (chi); otherwise it is 1D spin (rad/day） and only spin[0] is used. 
 
         if keyword argument "base_output" == False (default)
            class members: Base + Add
@@ -171,8 +182,12 @@ class BSEBinaryEvent(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
+        if kwargs.get('spin_3d', True):
+            key_spin_type = (np.float64,3)
+        else:
+            key_spin_type = np.float64
         keys_base = [['time',np.float64],['m1',np.float64],['m2',np.float64],['type1',np.float64],['type2',np.float64],['semi',np.float64],['ecc',np.float64],['radro1',np.float64],['radro2',np.float64],['binary_type',np.float64]]
-        keys_add = [['lum1', np.float64],['lum2', np.float64],['rad1', np.float64],['rad2', np.float64],['mcore1',np.float64],['mcore2',np.float64],['rcore1',np.float64],['rcore2',np.float64],['spin1',(np.float64,3)],['spin2',(np.float64,3)]]
+        keys_add = [['lum1', np.float64],['lum2', np.float64],['rad1', np.float64],['rad2', np.float64],['mcore1',np.float64],['mcore2',np.float64],['rcore1',np.float64],['rcore2',np.float64],['spin1',key_spin_type],['spin2',key_spin_type]]
         keys = keys_base + keys_add
         if ('base_output' in kwargs.keys()):
             if kwargs['base_output']:
@@ -195,6 +210,8 @@ class BSETypeChange(DictNpArrayMix):
     base_output (bool): False
           False: init and final have full output (see help of petar.BSEBinaryEvent)
           True:  init and final have old output 
+    spin_3d (bool): True
+          True:  spin is 3D spin for BHs, otherwise 1D spin (rad/day)
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
@@ -229,15 +246,24 @@ class BSETypeChange(DictNpArrayMix):
                               ('final.rad1','%8.2g','r1[R*]'),('final.rad2','%8.2g','r2[R*]'),
                               ('final.mcore1','%9.3f','mc1f[M*]'),('final.mcore2','%9.3f','mc2f[M*]'),
                               ('final.spin1','%8.2g','spin1f'),('final.spin2','%8.2g','spin2f')]
+                       if keyword argument "spin_3d" == True: final.spin1 and final.spin2 show only spin1[0] and spin2[0]
         print_title: print title of keys (default: True)
         """
+        if self.initargs.get('spin_3d', True):
+            # for 3D spin, only show spin[0]
+            key_spin1 = 'final.spin1[0]'
+            key_spin2 = 'final.spin2[0]'
+        else:
+            key_spin1 = 'final.spin1'
+            key_spin2 = 'final.spin2'
+            
         if (column_format == 'final'):
             column_format = [('type', '%3d', 'kb'), ('id1','%9d','id1'), ('id2','%9d','id2'),
                              ('final.time','%12.4g','timef[Myr]'), ('final.type1','%4d','k1f'),('final.type2','%4d','k2f'), 
                              ('final.m1','%10.3f','m1f[M*]'),('final.m2','%10.3f','m2f[M*]'),('final.semi','%8.2g','af[R*]'),('final.ecc','%13.8f','eccf'),
                              ('final.rad1','%8.2g','r1[R*]'),('final.rad2','%8.2g','r2[R*]'),#('final.lum1','%8.2g','L1f[L*]'),('final.lum2','%8.2g','L2f[L*]'),
                              ('final.mcore1','%9.3f','mc1f[M*]'),('final.mcore2','%9.3f','mc2f[M*]'),#('final.rcore1','%9.2g','rc1f[R*]'),('final.rcore2','%9.2g','rc2f[R*]'),
-                             ('final.spin1','%8.2g','spin1f'),('final.spin2','%8.2g','spin2f')]
+                             (key_spin1,'%8.2g','spin1f'),(key_spin2,'%8.2g','spin2f')]
 
         elif (column_format =='init-final'):
             column_format = [('type', '%3d', 'kb'), ('id1','%8d','id1'), ('id2','%8d','id2'), 

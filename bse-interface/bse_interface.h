@@ -478,12 +478,6 @@ static double EstimateRocheRadiusOverSemi(double& _q) {
     return rad_semi;
 }
 
-//! convert ospin to dimensionless chi for compact objects (WD/NS/BH)
-static std::array<double, 3> CompactOspinToChi(double _ospin[3], double _mc, double _rc) {
-    const double k3 = 0.21;
-    const double grav_over_cele = 30.12;
-    return { _ospin[0] * (k3*_rc*_rc) / (grav_over_cele*_mc), _ospin[1] * (k3*_rc*_rc) / (grav_over_cele*_mc), _ospin[2] * (k3*_rc*_rc) / (grav_over_cele*_mc)};
-}
 
 //! convert dimensionless chi to ospin for compact objects (WD/NS/BH)
 /*double CompactChiToOspin(double _chi, double _mc, double _rc) {
@@ -656,15 +650,6 @@ class BinaryEvent{
         return record[18][index];
     }
 
-    //! get Chi (dimensionless spin) of the first compact objects (WD/NS/BH)
-    std::array<double,3> getCompactChi1Random(const int index) const {
-        GWKick gw_kick;
-        double r = getRad1(index);
-        double mt = getMass1(index);
-        std::array<double, 3> ospin = gw_kick.randomVectorWithMagnitude(getSpin1(index));
-        return CompactOspinToChi(ospin.data(), mt, r);
-    }
-    
     //! set Chi of the first star
     void setSpin1(const int index, double spin[3]) {
         record[18][index] = spin[0];
@@ -677,16 +662,6 @@ class BinaryEvent{
         return record[19][index];
     }        
 
-    //! get BH chi (dimensionless spin) of the second compact objects (WD/NS/BH)
-    
-    std::array<double,3>  getCompactChi2Random(const int index) const {
-        GWKick gw_kick;
-        double r = getRad2(index);
-        double mt = getMass2(index);
-        std::array<double, 3> ospin = gw_kick.randomVectorWithMagnitude(getSpin2(index));
-        return CompactOspinToChi(ospin.data(), mt, r);
-    }
-    
     //! set chi2 of the second star
     void setSpin2(const int index, double spin[3]) {
         record[19][index] = spin[0];
@@ -1237,6 +1212,7 @@ public:
     double mscale; ///> mass scaling factor from NB to Msun
     double vscale; ///> velocity scaling factor from NB to km/s
     const double year_to_day; ///> year to day 
+    GWKick gw_kick; ///> GW recoil kick calculator
     const char* single_type[16]; ///> name of single type from SSE
     const char* binary_type[15]; ///> name of binary type return from BSE evolv2, notice if it is -1, it indicate the end of record
 
@@ -1244,7 +1220,7 @@ public:
 #ifdef BSEEMP
                   trackmode(0),
 #endif
-                  tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0), year_to_day(3.6525e8),
+                  tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0), year_to_day(3.6525e8), gw_kick(),
                   single_type{"LMS", "MS", "HG", "GB", "CHeB", "FAGB", "SAGB", "HeMS", "HeHG", "HeGB", "HeWD", "COWD", "ONWD", "NS", "BH", "SN"},
                   binary_type{"Unset",               //0
                               "Initial",             //1
@@ -1273,6 +1249,7 @@ public:
         assert(rscale>0.0);
         assert(mscale>0.0);
         assert(vscale>0.0);
+        gw_kick.checkParams();
         return true;
     }
 
@@ -1429,6 +1406,7 @@ public:
         rscale = _input.rscale.value;
         mscale = _input.mscale.value;
         vscale = _input.vscale.value;
+        gw_kick.vscale = vscale;
 
         // Set parameters which depend on the metallicity 
         z = _input.z.value;
@@ -1474,10 +1452,33 @@ public:
         _star.mt = _m*mscale;
     }   
 
+    //! convert ospin to dimensionless chi for compact objects (WD/NS/BH)
+    std::array<double, 3> compactOspinToChi(double _ospin[3], double _mc, double _rc) const {
+        const double k3 = 0.21;
+        const double grav_over_cele = 30.12;
+        return { _ospin[0] * (k3*_rc*_rc) / (grav_over_cele*_mc), _ospin[1] * (k3*_rc*_rc) / (grav_over_cele*_mc), _ospin[2] * (k3*_rc*_rc) / (grav_over_cele*_mc)};
+    }
+
     //! get Chi (dimensionless spin) from ospin
     std::array<double, 3> getCompactChi(StarParameter& _star) {
         assert(_star.kw>=10);    
-        return CompactOspinToChi(_star.ospin, _star.mt, _star.r);
+        return compactOspinToChi(_star.ospin, _star.mt, _star.r);
+    }
+
+    //! get Chi (dimensionless spin) of the first compact objects (WD/NS/BH)
+    std::array<double,3> getCompactChi1Random(BinaryEvent& _bse_event, const int index) const {
+        double r = _bse_event.getRad1(index);
+        double mt = _bse_event.getMass1(index);
+        std::array<double, 3> ospin = gw_kick.randomVectorWithMagnitude(_bse_event.getSpin1(index));
+        return compactOspinToChi(ospin.data(), mt, r);
+    }
+
+    //! get BH chi (dimensionless spin) of the second compact objects (WD/NS/BH)
+    std::array<double,3> getCompactChi2Random(BinaryEvent& _bse_event, const int index) const {
+        double r = _bse_event.getRad2(index);
+        double mt = _bse_event.getMass2(index);
+        std::array<double, 3> ospin = gw_kick.randomVectorWithMagnitude(_bse_event.getSpin2(index));
+        return compactOspinToChi(ospin.data(), mt, r);
     }
 
     //! set Chi (dimensionless spin) and convert to ospin
@@ -1607,7 +1608,7 @@ public:
             for (int k=0; k<3; k++) _star.ospin[k] = chi[k];
         }
         if (_star.kw !=14 && kw==14) {
-            std::array<double, 3> chi_array = CompactOspinToChi(_star.ospin, _star.mt, _star.r);
+            std::array<double, 3> chi_array = compactOspinToChi(_star.ospin, _star.mt, _star.r);
             for(int k=0;k<3;k++) _star.ospin[k] = chi_array[k];
         }
         _star.kw = kw;
@@ -1832,14 +1833,18 @@ public:
                     m1_pre = _bse_event.getMass1(merger_event_index-1);
                     m2_pre = _bse_event.getMass2(merger_event_index-1);
                     //ASSERT(m1_pre>0 && m2_pre>0);
-                    if (chi1[2] == 0 && chi1[1] == 0) chi1_pre = _bse_event.getCompactChi1Random(merger_event_index-1);
+                    if (chi1[2] == 0 && chi1[1] == 0) {
+                        chi1_pre = getCompactChi1Random(_bse_event, merger_event_index-1);
+                    }
                     else {
                         chi1_pre[0] = chi1[0];
                         chi1_pre[1] = chi1[1];
                         chi1_pre[2] = chi1[2];
                     }
 
-                    if (chi2[2] == 0 && chi2[1] == 0) chi2_pre = _bse_event.getCompactChi2Random(merger_event_index-1); 
+                    if (chi2[2] == 0 && chi2[1] == 0) {
+                        chi2_pre = getCompactChi2Random(_bse_event, merger_event_index-1); 
+                    }
                     else {
                         chi2_pre[0] = chi2[0];
                         chi2_pre[1] = chi2[1];
@@ -1850,7 +1855,6 @@ public:
                 }
             
                 // calculate kick properties                    
-                GWKick gw_kick;
                 gw_kick.calcKickVel(vkick_gw, chi1_pre.data(), chi2_pre.data(), _am, pos_red, q);
                 gw_kick.calcFinalMass(mf_ratio, chi1_pre.data(), chi2_pre.data(), _am, pos_red, q);
                 gw_kick.calcFinalSpin(chif_vec, chi1_pre.data(), chi2_pre.data(), _am, pos_red, q);

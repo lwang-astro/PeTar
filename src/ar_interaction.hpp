@@ -12,7 +12,6 @@
 #ifdef BSE_BASE
 #include "bse_interface.h"
 #include "two_body_tide.hpp"
-#include "gw_kick.hpp"
 #endif
 #ifdef DISK_STAR_MERGER
 #include "disk_star_merger.hpp"
@@ -37,7 +36,6 @@ public:
     bool stellar_evolution_write_flag;
     BSEManager bse_manager;
     TwoBodyTide tide;
-    GWKick gw_kick;
     std::ofstream fout_sse; ///> log file for SSE event
     std::ofstream fout_bse; ///> log file for BSE event
 #else
@@ -87,7 +85,7 @@ public:
 #ifdef STELLAR_EVOLUTION
         ASSERT(time_interrupt_max>=0.0);
 #ifdef BSE_BASE
-        ASSERT(stellar_evolution_option==0 || (stellar_evolution_option==1 && bse_manager.checkParams()) || (stellar_evolution_option==2 && bse_manager.checkParams() && tide.checkParams() && gw_kick.checkParams()));
+        ASSERT(stellar_evolution_option==0 || (stellar_evolution_option==1 && bse_manager.checkParams()) || (stellar_evolution_option==2 && bse_manager.checkParams() && tide.checkParams()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
 #else

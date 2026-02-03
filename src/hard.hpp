@@ -623,7 +623,6 @@ public:
             else ar_manager.interaction.stellar_evolution_write_flag = false;
             ar_manager.interaction.bse_manager.initial(_input_bse, _print_flag);
             ar_manager.interaction.tide.speed_of_light = ar_manager.interaction.bse_manager.getSpeedOfLight();
-            ar_manager.interaction.gw_kick.vscale = _input_bse.vscale.value;
         }
 #elif DISK_STAR_MERGER
         ar_manager.interaction.disk_star_merger_manager.initial(_input_dsm, _print_flag);
@@ -1464,7 +1463,6 @@ public:
                 if (n_group>0) dt_max = h4_int.groups[h4_int.getSortDtIndexGroup()[n_group-1]].particles.cm.dt;
                 if (n_single>0) dt_max = std::max(dt_max, h4_int.particles[h4_int.getSortDtIndexSingle()[n_single-1]].dt);
                 ASSERT(dt_max>0.0);
-                auto& h4_manager = manager->h4_manager;
                 PS::F64 time_ratio = std::llround(h4_int.getTimeInt()/dt_max)*HARD_DEBUG_PRINT_FEQ;
                 if ( int(time_ratio) - time_ratio == 0) {
                     h4_int.calcEnergySlowDown(false);
