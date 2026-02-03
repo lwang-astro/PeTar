@@ -5,6 +5,7 @@
 
 #include"cstdlib"
 #include <algorithm>
+#include<cmath>
 
 #include"AR/symplectic_integrator.h"
 #include"Hermite/hermite_integrator.h"
@@ -58,6 +59,7 @@ public:
     IOParams<PS::F64> eps;
     IOParams<PS::F64> r_group;
     IOParams<PS::F64> r_search_group;
+    IOParams<PS::F64> r_acc_offset;
     IOParams<PS::S64> n_step_per_orbit;
     IOParams<PS::S64> tidal_tensor_switcher;
 #ifdef ORBIT_SAMPLING
@@ -70,7 +72,12 @@ public:
     IOParams<PS::S64> dt_min_hermite_index;
     IOParams<PS::F64> e_err_ar;
     IOParams<PS::S64> step_limit_ar;
+    IOParams<PS::S64> sym_order_ar;
+    IOParams<PS::F64> ds_scale_ar;
     IOParams<PS::F64> sd_factor;
+    IOParams<PS::F64> reinit_dt_dm_crit;
+    IOParams<PS::F64> reinit_dt_de_crit;
+    IOParams<PS::S64> n_neighbor_max;
 #ifdef STELLAR_EVOLUTION
     IOParams<PS::S64> interrupt_detection_option;
 #ifdef BSE_BASE
@@ -84,6 +91,18 @@ public:
     IOParams<PS::S64> record_id_end_one;
     IOParams<PS::S64> record_id_start_two;
     IOParams<PS::S64> record_id_end_two;
+#if (defined HERMITE_PN) || (defined SDAR_PN)
+    IOParams<PS::F64> speed_of_light;
+#endif
+#ifdef HERMITE_PN
+    IOParams<PS::F64> h4_speed_criterion;
+#endif
+#ifdef SDAR_PN
+    IOParams<PS::F64> ar_speed_criterion;
+#endif
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+    IOParams<PS::S64> kdtree_n_particles_min;
+#endif
     IOParams<std::string> fname_par;
 
     // flag
@@ -97,6 +116,7 @@ public:
                     eps              (input_par_store, 0.0,  "soft-eps", "Softening epsilon"),
                     r_group          (input_par_store,-1.0,  "r-group", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.); = -1: auto-determine by 0.8*r_in; = 0: switch off SDAR; > 0: custom criterion value"),
                     r_search_group   (input_par_store,-1.0,  "r-search-group", "The radial criterion for detecting multiple group candidates; = -1: auto-determine by 1.0*r_in; = 0: switch off SDAR; > 0: custom criterion value"),
+                    r_acc_offset     (input_par_store, 0.0,  "hermite-r-acc0", "radius for computing acceleration offset in time step calculation to avoid too small step when weak acceleration exist; = 0: use r_out; > 0: custom offset value"),
                     n_step_per_orbit (input_par_store, 8,    "tt-nstep", "Number of steps per slow-down binary orbits (period/dt_soft) for isolated binaries; also the maximum criterion for activating tidal tensor method"),
                     tidal_tensor_switcher(input_par_store, 1,"tt-switch", "Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0: off, 1: on"),
 #ifdef ORBIT_SAMPLING
@@ -109,7 +129,12 @@ public:
                     dt_min_hermite_index(input_par_store, 40,"hermite-dt-min-index",  "Power index n for the smallest timestep (0.5^n) allowed in the Hermite integrator"),
                     e_err_ar     (input_par_store, 1e-8,     "ar-max-error", "Maximum energy error allowed for the SDAR integrator"),
                     step_limit_ar(input_par_store, 1000000,  "ar-max-nstep", "Maximum step allowed for the SDAR sym integrator"),
+                    sym_order_ar (input_par_store, -6,       "ar-sym-order", "Order of the symplectic integrator for SDAR, should be even number; -6,-8: Yoshida 2nd symplectic method; 4,6,8,...: Yoshida 1st symplectic method"),
+                    ds_scale_ar  (input_par_store, 1.0,      "ar-ds-scale", "Scale factor for SDAR step size calculation"),
                     sd_factor    (input_par_store, 1e-4,     "ar-slowdown-factor", "Slowdown perturbation criterion"),
+                    reinit_dt_dm_crit(input_par_store, 1e-4, "hermite-dm-crit", "Mass change rate criterion for reinitializing hermite time step"),
+                    reinit_dt_de_crit(input_par_store, 1e-4, "hermite-de-crit", "Ekin change rate criterion for reinitializing hermite time step"),
+                    n_neighbor_max(input_par_store, 300,     "hermite-n-neighbor-max", "Maximum number of group neighbors to be stored"),
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
                     interrupt_detection_option(input_par_store, 1, "detect-interrupt", "Stellar evolution of binaries in SDAR integration; 0: switch off; 1: using BSE based code (if '--stellar-evolution != 0)"),
@@ -125,6 +150,18 @@ public:
                     record_id_end_one  (input_par_store, 0, "record-id-end-one", "Ending of the first id range for hard dump; notice that the ending id is not included in hard dump"),
                     record_id_start_two(input_par_store, 0, "record-id-start-two", "Starting of the 2nd id range for hard dump recording every tree step"),
                     record_id_end_two  (input_par_store, 0, "record-id-end-two", "Ending of the 2nd id range for hard dump; notice that the ending id is not included in hard dump"),
+#if (defined HERMITE_PN) || (defined SDAR_PN)
+                    speed_of_light(input_par_store, 1, "pn-c", "speed of light value for Post Newtonian; if -u 1 is used, auto determined"),
+#endif
+#ifdef HERMITE_PN
+                    h4_speed_criterion(input_par_store, 1e-6, "pn-crit-h4", "Hermite speed criterion to switch on PN terms, min (v/c)^2"),
+#endif
+#ifdef SDAR_PN
+                    ar_speed_criterion(input_par_store, 1e-6, "pn-crit-ar", "AR speed criterion to switch on PN terms, min (v/c)^2"),
+#endif
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+                    kdtree_n_particles_min(input_par_store, 32, "kdtree-n-particles-min", "Minimum number of particles + groups for building kdtree to speed up neighbor search in Hermite-only neighbor force calculation"),
+#endif                    
                     fname_par          (input_par_store, "input.par", "p", "Input parameter file for hard (this option should be used first before any other options)",NULL,false),
                     print_flag(false) {}
 
@@ -145,6 +182,7 @@ public:
             {eps.key,                    required_argument, &hard_flag, 2},
             {r_group.key,                required_argument, &hard_flag, 3},
             {r_search_group.key,         required_argument, &hard_flag, 4},
+            {r_acc_offset.key,           required_argument, &hard_flag, 23},
             {n_step_per_orbit.key,       required_argument, &hard_flag, 5},
             {tidal_tensor_switcher.key,  required_argument, &hard_flag, 6},
 #ifdef ORBIT_SAMPLING
@@ -158,6 +196,11 @@ public:
             {e_err_ar.key,               required_argument, &hard_flag, 13},
             {step_limit_ar.key,          required_argument, &hard_flag, 14},
             {sd_factor.key,              required_argument, &hard_flag, 15},
+            {sym_order_ar.key,           required_argument, &hard_flag, 31},
+            {ds_scale_ar.key,            required_argument, &hard_flag, 32},
+            {reinit_dt_dm_crit.key,      required_argument, &hard_flag, 24},
+            {reinit_dt_de_crit.key,      required_argument, &hard_flag, 25},
+            {n_neighbor_max.key,         required_argument, &hard_flag, 26},
 #ifdef STELLAR_EVOLUTION
             {interrupt_detection_option.key,  required_argument, &hard_flag, 16},
 #ifdef BSE_BASE
@@ -171,6 +214,18 @@ public:
             {record_id_end_one.key,    required_argument, &hard_flag, 20},
             {record_id_start_two.key,  required_argument, &hard_flag, 21},
             {record_id_end_two.key,    required_argument, &hard_flag, 22},
+#if (defined HERMITE_PN) || (defined SDAR_PN)
+            {speed_of_light.key,       required_argument, &hard_flag, 27},
+#endif
+#ifdef HERMITE_PN
+            {h4_speed_criterion.key, required_argument, &hard_flag, 28},
+#endif
+#ifdef SDAR_PN
+            {ar_speed_criterion.key, required_argument, &hard_flag, 29},
+#endif
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+            {kdtree_n_particles_min.key, required_argument, &hard_flag, 30},
+#endif            
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
         };
@@ -273,6 +328,36 @@ public:
                         opt_used += 2;
                         assert(sd_factor.value>0.0);
                         break;
+                    case 31:
+                        sym_order_ar.value = atoi(optarg);
+                        if(print_flag) sym_order_ar.print(std::cout);
+                        opt_used += 2;
+                        assert((sym_order_ar.value==-6 || sym_order_ar.value==-8) || (sym_order_ar.value%2==0));
+                        break;
+                    case 32:
+                        ds_scale_ar.value = atof(optarg);
+                        if(print_flag) ds_scale_ar.print(std::cout);
+                        opt_used += 2;
+                        assert(ds_scale_ar.value>0.0);
+                        break;
+                    case 24:
+                        reinit_dt_dm_crit.value = atof(optarg);
+                        if(print_flag) reinit_dt_dm_crit.print(std::cout);
+                        opt_used += 2;
+                        assert(reinit_dt_dm_crit.value>=0.0);
+                        break;
+                    case 25:
+                        reinit_dt_de_crit.value = atof(optarg);
+                        if(print_flag) reinit_dt_de_crit.print(std::cout);
+                        opt_used += 2;
+                        assert(reinit_dt_de_crit.value>=0.0);
+                        break;
+                    case 26:
+                        n_neighbor_max.value = atoi(optarg);
+                        if(print_flag) n_neighbor_max.print(std::cout);
+                        opt_used += 2;
+                        assert(n_neighbor_max.value>0);
+                        break;
 #ifdef STELLAR_EVOLUTION
                     case 16:
                         interrupt_detection_option.value = atoi(optarg);
@@ -314,6 +399,40 @@ public:
                         if(print_flag) record_id_end_two.print(std::cout);
                         opt_used += 2;
                         break;
+                    case 23:
+                        r_acc_offset.value = atof(optarg);
+                        if(print_flag) r_acc_offset.print(std::cout);
+                        opt_used += 2;
+                        break;
+#if (defined HERMITE_PN) || (defined SDAR_PN)
+                    case 27:
+                        speed_of_light.value = atof(optarg);
+                        if(print_flag) speed_of_light.print(std::cout);
+                        opt_used += 2;
+                        break;
+#endif
+#ifdef HERMITE_PN
+                    case 28:
+                        h4_speed_criterion.value = atof(optarg);
+                        if(print_flag) h4_speed_criterion.print(std::cout);
+                        opt_used += 2;
+                        break;
+#endif
+#ifdef SDAR_PN
+                    case 29:
+                        ar_speed_criterion.value = atof(optarg);
+                        if(print_flag) ar_speed_criterion.print(std::cout);
+                        opt_used += 2;
+                        break;
+#endif
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+                    case 30:
+                        kdtree_n_particles_min.value = atoi(optarg);
+                        if(print_flag) kdtree_n_particles_min.print(std::cout);
+                        opt_used += 2;
+                        assert(kdtree_n_particles_min.value>0);
+                        break;
+#endif
                     default:
                         break;
                     }
@@ -398,6 +517,12 @@ public:
 #ifdef BSE_BASE
         ar_manager.interaction.tide.gravitational_constant = _g;
 #endif
+#ifdef HERMITE_PN
+        h4_manager.interaction.pn.gravitational_constant = _g;
+#endif
+#ifdef SDAR_PN
+        ar_manager.interaction.pn.gravitational_constant = _g;
+#endif
     }
 
     //! set time step range
@@ -423,6 +548,8 @@ public:
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
                  const IOParamsBSE& _input_bse,
+#elif DISK_STAR_MERGER
+                 const IOParamsDiskStarMerger& _input_dsm,
 #endif
 #endif
                  const PS::F64 _mass_average, 
@@ -469,16 +596,21 @@ public:
 #endif
         h4_manager.step.eta_4th = _input.eta.value;
         h4_manager.step.eta_2nd = _input.eta_init.value;
-        h4_manager.step.calcAcc0OffsetSq(_mass_average, r_out_base, _input.gravitational_constant.value);
+        if (_input.r_acc_offset.value==0.0) _input.r_acc_offset.value = _r_out_base;
+        h4_manager.step.calcAcc0OffsetSq(_mass_average, _input.r_acc_offset.value, _input.gravitational_constant.value);
         if (_input.dt_max_hermite.value==0.0) _input.dt_max_hermite.value = _dt_soft;
         setDtRange(_input.dt_max_hermite.value, _input.dt_min_hermite_index.value);
+        h4_manager.reinitialize_step_dm_criterion = _input.reinit_dt_dm_crit.value;
+        h4_manager.reinitialize_step_de_criterion = _input.reinit_dt_de_crit.value;
+        h4_manager.n_neighbor_max = _input.n_neighbor_max.value;
 
-        ar_manager.step.initialSymplecticCofficients(-6);
+        ar_manager.step.initialSymplecticCofficients(_input.sym_order_ar.value);
         ar_manager.slowdown_timescale_max = _input.dt_max_hermite.value*n_step_per_orbit;
         ar_manager.slowdown_pert_ratio_ref = _input.sd_factor.value;
         ar_manager.energy_error_relative_max = _input.e_err_ar.value;
         ar_manager.step_count_max = _input.step_limit_ar.value;
         //ar_manager.slowdown_timescale_max = dt_soft;
+        ar_manager.ds_scale = _input.ds_scale_ar.value;
 #ifdef SLOWDOWN_MASSRATIO
         ar_manager.slowdown_mass_ref = _mass_average;
 #endif
@@ -486,13 +618,15 @@ public:
         ar_manager.interaction.interrupt_detection_option = _input.interrupt_detection_option.value;
 #ifdef BSE_BASE
         ar_manager.interaction.stellar_evolution_option = _input.stellar_evolution_option.value;
-        if (_write_style) ar_manager.interaction.stellar_evolution_write_flag = true;
-        else ar_manager.interaction.stellar_evolution_write_flag = false;
         if (_input.stellar_evolution_option.value>0) {
+            if (_write_style) ar_manager.interaction.stellar_evolution_write_flag = true;
+            else ar_manager.interaction.stellar_evolution_write_flag = false;
             ar_manager.interaction.bse_manager.initial(_input_bse, _print_flag);
             ar_manager.interaction.tide.speed_of_light = ar_manager.interaction.bse_manager.getSpeedOfLight();
             ar_manager.interaction.gw_kick.vscale = _input_bse.vscale.value;
         }
+#elif DISK_STAR_MERGER
+        ar_manager.interaction.disk_star_merger_manager.initial(_input_dsm, _print_flag);
 #endif
 #endif        
 
@@ -504,11 +638,24 @@ public:
             h4_manager.adjust_group_write_flag=false;
 #endif
 
+#ifdef HERMITE_PN
+        h4_manager.interaction.pn.speed_of_light = _input.speed_of_light.value;
+        h4_manager.interaction.pn.speed_criterion = _input.h4_speed_criterion.value;
+#endif
+#ifdef SDAR_PN
+        ar_manager.interaction.pn.speed_of_light = _input.speed_of_light.value;
+        ar_manager.interaction.pn.speed_criterion = _input.ar_speed_criterion.value;
+#endif
+
         // record id range
         record_id_range.id_start_one = _input.record_id_start_one.value;
         record_id_range.id_end_one = _input.record_id_end_one.value;
         record_id_range.id_start_two = _input.record_id_start_two.value;
         record_id_range.id_end_two = _input.record_id_end_two.value;
+
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+        h4_manager.kdtree_n_particles_min = _input.kdtree_n_particles_min.value;
+#endif        
 
         // link global status 
         status = &_stat;
@@ -524,6 +671,9 @@ public:
                      <<" AR slowdown maximum timescale     = "<<ar_manager.slowdown_timescale_max<<std::endl
                      <<" AR slowdown perturbation criterion= "<<ar_manager.slowdown_pert_ratio_ref<<std::endl
                      <<" Artificial particle ID offset     = "<<ap_manager.id_offset<<std::endl;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+            std::cout<<" KDTree minimum particles+groups   = "<<h4_manager.kdtree_n_particles_min<<std::endl;
+#endif                     
         }
 
         checkParams();
@@ -570,6 +720,9 @@ public:
         ap_manager.readBinary(_fin);
         h4_manager.readBinary(_fin);
         ar_manager.readBinary(_fin);
+#ifdef EXTERNAL_HARD
+        ar_manager.interaction.ext_force = &h4_manager.interaction.ext_force;
+#endif
     }
 
     //! print parameters
@@ -644,13 +797,18 @@ public:
 #endif
 
 #ifdef PROFILE
-    PS::S64 ARC_substep_sum;
-    PS::S64 ARC_tsyn_step_sum;
+    PS::S64 sdar_substep_sum;
+    PS::S64 sdar_tsyn_step_sum;
     PS::S64 H4_step_sum;
+    PS::S64 H4_force_sum;
 #endif
+    PS::S64 sdar_n_groups_new;
+    PS::S64 sdar_n_groups_end;
+    PS::S64 sdar_n_groups_arti_change;
+    PS::S64 sdar_n_groups_merge;
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
-    PS::ReallocatableArray<bool> table_neighbor_exist;
+    PS::ReallocatableArray<PS::S32> table_n_neighbors;
     PS::S32 n_neighbor_zero;
 #endif
 
@@ -667,10 +825,11 @@ public:
                       n_group_sub_init(), n_group_sub_tot_init(0),
 #endif
 #ifdef PROFILE
-                      ARC_substep_sum(0), ARC_tsyn_step_sum(0), H4_step_sum(0), 
+                      sdar_substep_sum(0), sdar_tsyn_step_sum(0), H4_step_sum(0), H4_force_sum(0),
 #endif
+                      sdar_n_groups_new(0), sdar_n_groups_end(0), sdar_n_groups_arti_change(0), sdar_n_groups_merge(0),
 #ifdef HARD_COUNT_NO_NEIGHBOR
-                      table_neighbor_exist(), n_neighbor_zero(0),
+                      table_n_neighbors(), n_neighbor_zero(0),
 #endif
                       use_sym_int(true), is_initialized(false) {
 #ifdef HARD_CHECK_ENERGY
@@ -696,6 +855,7 @@ public:
        @param[in] _n_member_in_group: number of members in each group
        @param[in] _manager: hard manager
        @param[in] _time_origin: initial physical time 
+       @param[in] _dt: soft time step
      */
     template <class Tsoft>
     void initial(PtclH4 * _ptcl,
@@ -704,7 +864,8 @@ public:
                  const PS::S32 _n_group,
                  const PS::S32* _n_member_in_group,
                  HardManager* _manager,
-                 const PS::F64 _time_origin) {
+                 const PS::F64 _time_origin,
+                 const PS::F64 _dt) {
 
         // ensure the integrator is not used
         ASSERT(ptcl_origin==NULL);
@@ -856,15 +1017,23 @@ public:
             sym_int.perturber.global_cm = &sym_int.particles.cm;
 #endif
             
+            // initial cm acc0, acc1, pot, time and dt
+            auto& pcm = sym_int.particles.cm;
+            pcm.acc0[0] = pcm.acc0[1] = pcm.acc0[2] = 0.0;
+            pcm.acc1[0] = pcm.acc1[1] = pcm.acc1[2] = 0.0;
+            pcm.pot = 0.0;
+            pcm.time = 0.0;
+            pcm.dt   = 0.0;
+
             // initialization 
             sym_int.initialIntegration(0.0);
             sym_int.info.time_offset = time_origin;
             sym_int.info.calcDsAndStepOption(ar_manager.step.getOrder(),  ar_manager.interaction.gravitational_constant, ar_manager.ds_scale); 
 
             // calculate c.m. changeover
-            auto& pcm = sym_int.particles.cm;
             PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
             pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+            pcm.calcRSearch(_dt);
 
 #ifdef HARD_DEBUG
             if(_ptcl_artificial==NULL) {
@@ -880,12 +1049,15 @@ public:
             ASSERT(sym_int.info.checkParams());
             ASSERT(sym_int.perturber.checkParams());
 
+            bool pre_exit_flag = sym_int.info.checkAndSetBinaryPairIDIter(sym_int.info.getBinaryTreeRoot(),false);
+
 #ifdef ADJUST_GROUP_PRINT
-            if (manager->h4_manager.adjust_group_write_flag) {
+            if (manager->h4_manager.adjust_group_write_flag && !pre_exit_flag) {
                 // print new group information
                 sym_int.printGroupInfo(0, manager->h4_manager.fgroup, WRITE_WIDTH, &pcm);
             }
 #endif
+
 
 #ifdef HARD_DEBUG_PRINT_TITLE
             sym_int.printColumnTitle(std::cerr, WRITE_WIDTH, sym_int.info.binarytree.getSize());
@@ -919,12 +1091,19 @@ public:
 #else
             h4_int.particles.shiftToCenterOfMassFrame();
 #endif            
-            
+
             PS::S32 n_group_size_max = _n_ptcl+_n_group;
             h4_int.groups.setMode(COMM::ListMode::local);
             h4_int.groups.reserveMem(n_group_size_max);
             h4_int.reserveIntegratorMem();
 
+            auto pcm = h4_int.particles.cm;
+            pcm.acc0[0] = pcm.acc0[1] = pcm.acc0[2] = 0.0;
+            pcm.acc1[0] = pcm.acc1[1] = pcm.acc1[2] = 0.0;
+            pcm.pot = 0.0;
+            pcm.time = 0.0;
+            pcm.dt   = 0.0;
+            
             // initial system 
             h4_int.initialSystemSingle(0.0);
             h4_int.setTimeOffset(time_origin);
@@ -934,8 +1113,8 @@ public:
             tidal_tensor.resizeNoInitialize(_n_group+1);
 #endif
 #ifdef HARD_COUNT_NO_NEIGHBOR
-            table_neighbor_exist.resizeNoInitialize(_n_ptcl);
-            for (int k=0; k<_n_ptcl; k++) table_neighbor_exist[k] = false;
+            table_n_neighbors.resizeNoInitialize(_n_ptcl);
+            for (int k=0; k<_n_ptcl; k++) table_n_neighbors[k] = 0;
 #endif
             
             // add groups
@@ -988,11 +1167,18 @@ public:
 
                     ASSERT(m_fac>0.0);
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                    pcm.calcRSearch(_dt);
 
 #ifdef HARD_DEBUG
                     PS::F64 r_out_cm = pcm.changeover.getRout();
-                    for (PS::S32 k=0; k<groupi.particles.getSize(); k++) 
+                    for (PS::S32 k=0; k<groupi.particles.getSize(); k++) {
+#ifdef STELLAR_EVOLUTION
+                        // if mass changed, r_out may be different within some tolerance
+                        ASSERT(abs(groupi.particles[k].changeover.getRout()-r_out_cm)<1e-3);
+#else
                         ASSERT(abs(groupi.particles[k].changeover.getRout()-r_out_cm)<1e-10);
+#endif
+                    }
 #endif
                 }
             }
@@ -1025,6 +1211,7 @@ public:
                 PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                 ASSERT(m_fac>0.0);
                 pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                pcm.calcRSearch(_dt);
 
 #ifdef EXTERNAL_HARD
                 // hard external perturbation
@@ -1098,22 +1285,39 @@ public:
         // integration
         if (use_sym_int) {
             sym_interrupt_binary = sym_int.integrateToTime(_time_end);
+            auto& bink = sym_int.info.getBinaryTreeRoot();
+            auto& pcm = sym_int.particles.cm;
+            
+            // case of binary disruption            
+            bool reset_flag = (bink.semi < 0 ) && (bink.ecca > 0);
 
 #ifdef STELLAR_EVOLUTION
-#ifndef BSE_BASE
-            // backup binary information if record option is used
-            if (sym_interrupt_binary.status!=AR::InterruptStatus::none 
-                && manager->ar_manager.interaction.interrupt_detection_option == 2) 
-                sym_interrupt_binary.backupBinaryTreeLocal();
-#endif
-#endif
+            if (sym_interrupt_binary.status!=AR::InterruptStatus::none) {
+                if (manager->ar_manager.interaction.interrupt_detection_option==1) {
+                      if (sym_interrupt_binary.status==AR::InterruptStatus::merge||sym_interrupt_binary.status==AR::InterruptStatus::destroy) {
+                            reset_flag = true;
+                            sdar_n_groups_merge ++;
+                      }
+                }
 
-#ifdef ADJUST_GROUP_PRINT
-            if (manager->h4_manager.adjust_group_write_flag) {
-                // print new group information
-                sym_int.printGroupInfo(1, manager->h4_manager.fgroup, WRITE_WIDTH, &(sym_int.particles.cm));
+#ifndef BSE_BASE
+                // backup binary information if record option is used
+                if(manager->ar_manager.interaction.interrupt_detection_option == 2) 
+                    sym_interrupt_binary.backupBinaryTreeLocal();
+#endif
             }
 #endif
+
+            sym_int.info.checkAndSetBinaryPairIDIter(bink, reset_flag);
+            if (reset_flag) sdar_n_groups_end ++;
+
+#ifdef ADJUST_GROUP_PRINT
+            if (manager->h4_manager.adjust_group_write_flag && reset_flag) {
+                // print break group information
+                sym_int.printGroupInfo(1, manager->h4_manager.fgroup, WRITE_WIDTH, &pcm);
+            }
+#endif
+
 
 #ifdef PROFILE
 #ifdef HARD_DUMP
@@ -1136,6 +1340,11 @@ public:
 #endif
             // integration loop
             while (h4_int.getTimeInt()<_time_end) {
+#ifdef HARD_DEBUG_PRINT
+                // count steps
+                h4_int.countStepHist();
+#endif
+
                 // integrate groups
                 h4_int.integrateGroupsOneStep();
 
@@ -1156,6 +1365,7 @@ public:
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                     ASSERT(m_fac>0.0);
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                    pcm.calcRSearch(_time_end);
 
 #ifdef EXTERNAL_HARD
                     // hard external perturbation
@@ -1248,14 +1458,15 @@ public:
 #endif                
 
 #ifdef HARD_DEBUG_PRINT
-                //PS::F64 dt_max = 0.0;
-                //PS::S32 n_group = h4_int.getNGroup();
-                //PS::S32 n_single = h4_int.getNSingle();
-                //if (n_group>0) dt_max = h4_int.groups[h4_int.getSortDtIndexGroup()[n_group-1]].particles.cm.dt;
-                //if (n_single>0) dt_max = std::max(dt_max, h4_int.particles[h4_int.getSortDtIndexSingle()[n_single-1]].dt);
-                //ASSERT(dt_max>0.0);
+                PS::F64 dt_max = 0.0;
+                PS::S32 n_group = h4_int.getNGroup();
+                PS::S32 n_single = h4_int.getNSingle();
+                if (n_group>0) dt_max = h4_int.groups[h4_int.getSortDtIndexGroup()[n_group-1]].particles.cm.dt;
+                if (n_single>0) dt_max = std::max(dt_max, h4_int.particles[h4_int.getSortDtIndexSingle()[n_single-1]].dt);
+                ASSERT(dt_max>0.0);
                 auto& h4_manager = manager->h4_manager;
-                if (fmod(h4_int.getTimeInt(), h4_manager.step.getDtMax()/HARD_DEBUG_PRINT_FEQ)==0.0) {
+                PS::F64 time_ratio = std::llround(h4_int.getTimeInt()/dt_max)*HARD_DEBUG_PRINT_FEQ;
+                if ( int(time_ratio) - time_ratio == 0) {
                     h4_int.calcEnergySlowDown(false);
 
                     h4_int.printColumn(fout_debug, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
@@ -1284,9 +1495,8 @@ public:
 #endif
                         ///abort();
                     }
-                }
-                if (fmod(h4_int.getTimeInt(), h4_manager.step.getDtMax())==0.0) {
                     h4_int.printStepHist();
+                    h4_int.profile.stephist.clear();
                 }
 #endif
             }
@@ -1309,7 +1519,7 @@ public:
             PS::F64 rij2 = h4_int.neighbors[i].r_min_sq;
             PS::F64 r_out_i = h4_int.particles[i].changeover.getRout();
             PS::F64 r_out_j = (j<index_offset_group)? h4_int.particles[j].changeover.getRout() : h4_int.groups[j-index_offset_group].particles.cm.changeover.getRout();
-            if (rij2<std::max(r_out_i, r_out_j)) table_neighbor_exist[i] = true;
+            if (rij2<std::max(r_out_i, r_out_j)) table_n_neighbors[i]++;
         }
         PS::S32 n_act_group = h4_int.getNActGroup();
         PS::S32* act_group_index = h4_int.getSortDtIndexGroup();
@@ -1325,8 +1535,8 @@ public:
             if (rij2<std::max(r_out_i, r_out_j)) {
                 for (int ki=0; ki<h4_int.groups[i].particles.getSize(); ki++) {
                     PS::S32 ki_index = h4_int.groups[i].info.particle_index[ki];
-                    ASSERT(ki_index>=0&&ki_index<table_neighbor_exist.size());
-                    table_neighbor_exist[ki_index] = true;
+                    ASSERT(ki_index>=0&&ki_index<table_n_neighbors.size());
+                    table_n_neighbors[ki_index]++;
                 }
             }
         }
@@ -1365,34 +1575,39 @@ public:
     }
 #endif
 
-    //! drift c.m. particle of the cluster record group c.m. in group_data and write back data to original particle array
+    //! drift c.m. of the cluster and of artifical particles and write back data to original particle array
     /*!
        @param[in] _time_end: integration ending time (initial time is fixed to 0)
+       @param[in,out] _ptcl_artificial: artificial particle array
+       @param[in] _n_group: number of groups with artificial particles
      */
-    void driftClusterCMRecordGroupCMDataAndWriteBack(const PS::F64 _time_end) {
+    template <class Tsoft>
+    void driftClusterAndArtificialCMAndWriteBack(const PS::F64 _time_end,
+                                                Tsoft* _ptcl_artificial,
+                                                const PS::S32 _n_group) {
         ASSERT(checkParams());
 #ifdef HARD_CHECK_ENERGY
         PS::F64 ekin, epot, ekin_sd, epot_sd;
 #endif
         if (use_sym_int) {
+
             auto& pcm = sym_int.particles.cm;
+            auto& bink = sym_int.info.getBinaryTreeRoot();
             pcm.pos += pcm.vel * _time_end;
 
-            // update rsearch
             ASSERT(!std::isinf(pcm.vel[0]));
             ASSERT(!std::isnan(pcm.vel[0]));
-            pcm.Ptcl::calcRSearch(_time_end);
-            // copyback
 
 #ifdef HARD_CHECK_ENERGY
             // correct cm kinetic energy
-            auto& bink = sym_int.info.getBinaryTreeRoot();
             auto& vcm = pcm.vel;
             Float dm = bink.mass - pcm.mass;
             Float de_kin = 0.5*dm*(vcm[0]*vcm[0]+vcm[1]*vcm[1]+vcm[2]*vcm[2]);
             auto& vbin = bink.vel;
             de_kin += bink.mass*(vbin[0]*vcm[0]+vbin[1]*vcm[1]+vbin[2]*vcm[2]);
 #endif
+            // copyback
+
 #ifdef PETAR_USE_MPFRC
             shiftToOriginFrameWithPosMP(sym_int.particles);
 #else
@@ -1401,43 +1616,66 @@ public:
             sym_int.particles.template writeBackMemberAll<PtclH4>();
 
             PS::S32 n_members = sym_int.particles.getSize();
+#ifdef DISK_STAR_MERGER
+            for (PS::S32 i=0; i<n_members; i++) {
+                auto& pi = ptcl_origin[i];
+                if (pi.mass==0.0) {
+                    manager->ar_manager.interaction.disk_star_merger_manager.setRemnantOrbitToCM(pi, pcm);
+                }
+            }
+#endif
 
+            // drift artificial particles and move particle mass to backup mass
+            if (_ptcl_artificial!=NULL) {
+                // in case of merge or destroy, need to indicate that artificial particle is changed (removed)
+                if (sym_interrupt_binary.status==AR::InterruptStatus::merge ||
+                    sym_interrupt_binary.status==AR::InterruptStatus::destroy) {
+                    sdar_n_groups_arti_change ++;
+                }
+                else {
+                    auto& ap_manager = manager->ap_manager;
+
+                    // update new cm. pos and vel for binarytree root                
+                    bink.pos = pcm.pos;
+                    bink.vel = pcm.vel;
+                    ap_manager.updateArtificialParticles(_ptcl_artificial, bink);
+    #ifdef ARTIFICIAL_PARTICLE_DEBUG                
+                    ap_manager.checkConsistence(ptcl_origin, _ptcl_artificial);
+    #endif
+
+                    // set mass back to backup mass                
+                    for (int i=0; i<n_members; i++) {
+                        auto& pi = ptcl_origin[i];
+                        ASSERT(!pi.group_data.artificial.isUnused());
+                        pi.group_data.artificial.setMassBackup(pi.mass);
+                        pi.mass = 0.0; // set mass to zero
+                    }
+                }
+            }    
+
+#ifdef HARD_DEBUG
             for (PS::S32 i=0; i<n_members; i++) {
                 auto& pi = ptcl_origin[i];
 #ifdef STELLAR_EVOLUTION
                 if (pi.mass==0.0) {
-                    ASSERT(pi.group_data.artificial.isUnused());
+                    ASSERT(pi.group_data.artificial.isMember() || pi.group_data.artificial.isUnused());
                     continue;
                 }
-
-                // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                //pi.time_record -= _time_end;
-                //pi.time_interrupt -= _time_end;
+#ifdef BSE_BASE
+                ASSERT(pi.star.tphys<=time_origin+_time_end);
 #endif
 
-                pi.r_search = std::max(pcm.r_search, pi.r_search);
-#ifdef CLUSTER_VELOCITY
-                pi.group_data.cm.mass    = pcm.mass;
-                pi.group_data.cm.vel[0]  = pcm.vel[0];
-                pi.group_data.cm.vel[1]  = pcm.vel[1];
-                pi.group_data.cm.vel[2]  = pcm.vel[2];
 #endif
+
                 ASSERT(!std::isinf(pi.pos[0]));
                 ASSERT(!std::isnan(pi.pos[0]));
                 ASSERT(!std::isinf(pi.vel[0]));
                 ASSERT(!std::isnan(pi.vel[0]));
-
-#ifdef HARD_DEBUG
-                ASSERT(ptcl_origin[i].r_search>=ptcl_origin[i].changeover.getRout());
-#ifdef BSE_BASE
-                ASSERT(pi.star.tphys<=time_origin+_time_end);
-#endif
-#endif
             }
-
+#endif
 
 #ifdef PROFILE
-            ARC_substep_sum += sym_int.profile.step_count;
+            sdar_substep_sum += sym_int.profile.step_count;
 #endif
 #ifdef HARD_CHECK_ENERGY
             ekin    = sym_int.getEkin();
@@ -1468,7 +1706,8 @@ public:
 #else
             h4_int.writeBackGroupMembers();
 #endif
-            h4_int.particles.cm.pos += h4_int.particles.cm.vel * _time_end;
+            auto& pcm = h4_int.particles.cm;
+            pcm.pos += pcm.vel * _time_end;
 
 #ifdef PETAR_USE_MPFRC
             shiftToOriginFrameWithPosMP(h4_int.particles);
@@ -1476,16 +1715,26 @@ public:
             h4_int.particles.shiftToOriginFrame();
 #endif
 
+#ifdef DISK_STAR_MERGER
+            auto& h4_pcm = h4_int.particles.cm;
+            for (PS::S32 i=0; i<h4_int.particles.getSize(); i++) {
+                auto& pi = ptcl_origin[i];
+                if (pi.mass==0.0) 
+                    manager->ar_manager.interaction.disk_star_merger_manager.setRemnantOrbitToCM(pi, h4_pcm);
+            }
+#endif
+
+            // back up center of mass pos and vel
+            PS::F64vec cm_pos_org = pcm.pos;
+            PS::F64vec cm_vel_org = pcm.vel;
 #ifdef  HARD_CHECK_ENERGY
             // update cm kinetic energy change
-            auto& pcm = h4_int.particles.cm;
-            Float vcm_org[3] = {pcm.vel[0], pcm.vel[1], pcm.vel[2]};
             Float mcm_bk = pcm.mass;
             h4_int.particles.calcCenterOfMass();
             Float dm = pcm.mass - mcm_bk;
-            Float de_kin = 0.5*dm*(vcm_org[0]*vcm_org[0]+vcm_org[1]*vcm_org[1]+vcm_org[2]*vcm_org[2]);
-            Float dvcm[3] = {pcm.vel[0] - vcm_org[0], pcm.vel[1] - vcm_org[1], pcm.vel[2] - vcm_org[2]};
-            de_kin += pcm.mass*(dvcm[0]*vcm_org[0]+dvcm[1]*vcm_org[1]+dvcm[2]*vcm_org[2]);
+            Float de_kin = 0.5*dm*(cm_vel_org[0]*cm_vel_org[0]+cm_vel_org[1]*cm_vel_org[1]+cm_vel_org[2]*cm_vel_org[2]);
+            Float dcm_vel[3] = {pcm.vel[0] - cm_vel_org[0], pcm.vel[1] - cm_vel_org[1], pcm.vel[2] - cm_vel_org[2]};
+            de_kin += pcm.mass*(dcm_vel[0]*cm_vel_org[0]+dcm_vel[1]*cm_vel_org[1]+dcm_vel[2]*cm_vel_org[2]);
 
             ekin    = h4_int.getEkin();
             epot    = h4_int.getEpot();
@@ -1510,50 +1759,92 @@ public:
             energy.de_sd_change_modify_single = energy.de_change_modify_single;
 #endif
 #endif
-            
-            // update research and group_data.cm
-            auto& h4_pcm = h4_int.particles.cm;
+            if (_ptcl_artificial!=NULL) {
+                bool group_arti_update_list[_n_group];
+                for (PS::S32 i=0; i<_n_group; i++) group_arti_update_list[i] = false;
+
+                auto& ap_manager = manager->ap_manager;
+                for (PS::S32 k=0; k<h4_int.getNGroup(); k++) {
+                    auto& groupk = h4_int.groups[k];
+
+                    // check whether soft_pert exist                    
+                    if (groupk.perturber.soft_pert != NULL) {
+
+                        // check whether group match artifical particles
+                        PS::S32 index_arti = groupk.particles[0].getTidalTensorID()-1;
+                        PS::S32 adr_arti = index_arti*ap_manager.getArtificialParticleN();
+                        PS::S32 n_member_from_arti = ap_manager.getMemberN(&_ptcl_artificial[adr_arti]);
+                        PS::S32 n_member_from_group = groupk.particles.getSize();
+
+                        // check n_member match
+                        if (n_member_from_arti != n_member_from_group) {
+                            continue;
+                        }
+
+                        // check member tidal tensor id match
+                        bool unmatch_flag = false;
+                        for (int i=0; i<n_member_from_group; i++) {
+                            if (groupk.particles[i].getTidalTensorID()-1 != index_arti) {
+                                unmatch_flag = true;
+                                break;
+                            }
+                        }
+                        if (unmatch_flag) continue;
+
+                        // update new cm. pos and vel for binarytree root
+                        auto& bink = groupk.info.getBinaryTreeRoot();
+                        bink.pos += groupk.particles.cm.pos + cm_pos_org;
+                        bink.vel += groupk.particles.cm.vel + cm_vel_org;
+
+                        ap_manager.updateArtificialParticles(&_ptcl_artificial[adr_arti], groupk.info.getBinaryTreeRoot());
+
+                        // set mass back to backup mass                
+                        const int n_members = groupk.particles.getSize();
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+                        PtclHard ptcl_origin_list[n_members];
+                        for (int i=0; i<n_members; i++) {
+                            ptcl_origin_list[i] = *groupk.particles.getMemberOriginAddress(i);
+                        }
+                        ap_manager.checkConsistence(ptcl_origin_list, &_ptcl_artificial[adr_arti]);
+#endif
+                        for (int i=0; i<n_members; i++) {
+                            auto* pi = groupk.particles.getMemberOriginAddress(i);
+                            pi->group_data.artificial.setMassBackup(pi->mass);
+                            pi->mass = 0.0; // set mass to zero
+                        }
+
+                        group_arti_update_list[index_arti] = true;
+                    }
+                }
+
+                // count number of artificial particles not updated (disrupted/changed groups)        
+                for (PS::S32 i=0; i<_n_group; i++) {
+                    if (!group_arti_update_list[i]) sdar_n_groups_arti_change ++;
+                }
+                        
+            }
+
+#ifdef HARD_DEBUG
             const PS::S32* group_index = h4_int.getSortDtIndexGroup();
             for(PS::S32 i=0; i<h4_int.getNGroup(); i++) {
                 const PS::S32 k =group_index[i];
-#ifdef HARD_DEBUG
                 ASSERT(h4_int.groups[k].particles.cm.changeover.getRout()>0);
-#endif
-                //h4_int.groups[k].particles.cm.calcRSearch(_dt);
-                auto& pcm = h4_int.groups[k].particles.cm;
-                pcm.vel += h4_pcm.vel;
 
-                //pcm.calcRSearch(h4_manager.interaction.G*(h4_pcm.mass-pcm.mass), abs(pcm.pot), h4_pcm.vel, _dt);
-                ASSERT(!std::isinf(pcm.vel[0]));
-                ASSERT(!std::isnan(pcm.vel[0]));
-                pcm.Ptcl::calcRSearch(_time_end);
                 const PS::S32 n_member = h4_int.groups[k].particles.getSize();
                 //const PS::S32 id_first = h4_int.groups[k].particles.getMemberOriginAddress(0)->id;
                 for (PS::S32 j=0; j<n_member; j++) {
                     auto* pj = h4_int.groups[k].particles.getMemberOriginAddress(j);
-                    pj->r_search = std::max(pj->r_search, pcm.r_search);
 #ifdef STELLAR_EVOLUTION
                     if (pj->mass==0.0) {
-                        ASSERT(pj->group_data.artificial.isUnused());
-                        continue;
+                        ASSERT(pj->group_data.artificial.getMassBackup()!=0.0);
                     }
+                    //    ASSERT(pj->group_data.artificial.isUnused());
+                    //    continue;
+                    //}
 #ifdef BSE_BASE
                     ASSERT(pj->star.tphys<=time_origin+_time_end);
 #endif
 
-                    // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                    //pj->time_record -= _time_end;
-                    //pj->time_interrupt -= _time_end;
-#endif
-#ifdef CLUSTER_VELOCITY
-                    // save c.m. velocity and mass for neighbor search
-                    pj->group_data.cm.mass    = pcm.mass;
-                    pj->group_data.cm.vel[0]  = pcm.vel[0];
-                    pj->group_data.cm.vel[1]  = pcm.vel[1];
-                    pj->group_data.cm.vel[2]  = pcm.vel[2];
-#endif
-#ifdef HARD_DEBUG
-                    ASSERT(pj->r_search>pj->changeover.getRout());
 #endif
                     ASSERT(!std::isinf(pj->pos[0]));
                     ASSERT(!std::isnan(pj->pos[0]));
@@ -1571,45 +1862,36 @@ public:
 #ifdef BSE_BASE
                     ASSERT(pi.star.tphys<=time_origin+_time_end);
 #endif
-
                     continue;
                 }
 
-                // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                //pi.time_record -= _time_end;
-                //pi.time_interrupt -= _time_end;
-#endif
-#ifdef CLUSTER_VELOCITY
-                // set group_data.cm to 0.0 for singles
-                pi.group_data.cm.mass    = 0.0;
-                pi.group_data.cm.vel[0]  = 0.0;
-                pi.group_data.cm.vel[1]  = 0.0;
-                pi.group_data.cm.vel[2]  = 0.0;
 #endif
                 ASSERT(!std::isinf(pi.pos[0]));
                 ASSERT(!std::isnan(pi.pos[0]));
                 ASSERT(!std::isinf(pi.vel[0]));
                 ASSERT(!std::isnan(pi.vel[0]));
-                pi.Ptcl::calcRSearch(_time_end);
-//                pi.calcRSearch(h4_manager.interaction.G*(h4_pcm.mass-pi.mass), abs(pi.pot), h4_pcm.vel, _dt);
             }
-
+#endif
 
 #ifdef PROFILE
-            //ARC_substep_sum += Aint.getNsubstep();
+            //sdar_substep_sum += Aint.getNsubstep();
             H4_step_sum += h4_int.profile.hermite_single_step_count + h4_int.profile.hermite_group_step_count;
-            ARC_substep_sum += h4_int.profile.ar_step_count;
-            ARC_tsyn_step_sum += h4_int.profile.ar_step_count_tsyn;
+            H4_force_sum += h4_int.profile.hermite_single_interact_count + h4_int.profile.hermite_group_interact_count;
+            sdar_substep_sum += h4_int.profile.ar_step_count;
+            sdar_tsyn_step_sum += h4_int.profile.ar_step_count_tsyn;
 
             if (h4_int.profile.ar_step_count>manager->ar_manager.step_count_max) {
                 std::cerr<<"Large AR step cluster found: total step: "<<h4_int.profile.ar_step_count<<std::endl;
                 //DATADUMP("dump_large_step");
             } 
 #endif
+            sdar_n_groups_new += h4_int.profile.new_group_count;
+            sdar_n_groups_end += h4_int.profile.break_group_count;
+            sdar_n_groups_merge += h4_int.profile.merge_group_count;
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
-            for (PS::S32 i=0; i<table_neighbor_exist.size(); i++) {
-                if(!table_neighbor_exist[i]) n_neighbor_zero++;
+            for (PS::S32 i=0; i<table_n_neighbors.size(); i++) {
+                if(table_n_neighbors[i] == 0) n_neighbor_zero++;
             }
 #endif
 
@@ -1664,8 +1946,9 @@ public:
                  <<"  dE_SD_change_binary: "<<energy.de_sd_change_binary_interrupt
                  <<"  dE_SD_change_single: "<<energy.de_sd_change_modify_single
                  <<"  H4_step_sum: "<<H4_step_sum
-                 <<"  ARC_substep_sum: "<<ARC_substep_sum
-                 <<"  ARC_tsyn_step_sum: "<<ARC_tsyn_step_sum
+                 <<"  H4_force_sum: "<<H4_force_sum
+                 <<"  sdar_substep_sum: "<<sdar_substep_sum
+                 <<"  sdar_tsyn_step_sum: "<<sdar_tsyn_step_sum
                  <<std::endl;
         fout_debug.close();
 #endif        
@@ -1719,12 +2002,17 @@ public:
         is_initialized = false;
 
 #ifdef PROFILE
-        ARC_substep_sum = 0;
-        ARC_tsyn_step_sum = 0;
+        sdar_substep_sum = 0;
+        sdar_tsyn_step_sum = 0;
         H4_step_sum = 0;
+        H4_force_sum = 0;
 #endif
+        sdar_n_groups_new = 0;
+        sdar_n_groups_end = 0;
+        sdar_n_groups_arti_change = 0;
+        sdar_n_groups_merge = 0;
 #ifdef HARD_COUNT_NO_NEIGHBOR
-        table_neighbor_exist.resizeNoInitialize(0);
+        table_n_neighbors.resizeNoInitialize(0);
         n_neighbor_zero = 0;
 #endif
 #ifdef HARD_CHECK_ENERGY
@@ -1765,12 +2053,17 @@ public:
     HardManager* manager;
 
 #ifdef PROFILE
-    PS::S64 ARC_substep_sum;
-    PS::S64 ARC_tsyn_step_sum;
-    PS::S64 ARC_n_groups;
-    PS::S64 ARC_n_groups_iso;
+    PS::S64 sdar_substep_sum;
+    PS::S64 sdar_tsyn_step_sum;
+    PS::S64 sdar_n_groups;
+    PS::S64 sdar_n_groups_iso;
     PS::S64 H4_step_sum;
+    PS::S64 H4_force_sum;
 #endif
+    PS::S64 sdar_n_groups_new;
+    PS::S64 sdar_n_groups_end;
+    PS::S64 sdar_n_groups_arti_change;
+    PS::S64 sdar_n_groups_merge;
 #ifdef HARD_COUNT_NO_NEIGHBOR
     PS::S64 n_neighbor_zero;
 #endif
@@ -1885,18 +2178,18 @@ private:
         const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, dr_eps);
 
         // linear cutoff 
-#if  ((! defined P3T_64BIT) && (defined USE_SIMD)) || (defined USE_GPU)
+#if  (! defined P3T_64BIT)  || (defined USE_GPU)
         const PS::F32 r_out_32 = EPISoft::r_out;
-        const PS::F32 r_out2 = r_out_32 * r_out_32;
+        const PS::F32 r_out2_32 = r_out_32 * r_out_32;
         PS::F32vec ri_32 = PS::F32vec(_pi.pos.x, _pi.pos.y, _pi.pos.z);
         PS::F32vec rj_32 = PS::F32vec(_pj.pos.x, _pj.pos.y, _pj.pos.z);
         PS::F32vec dr_32 = ri_32 - rj_32;
         PS::F32 dr2_eps_32 = dr_32*dr_32 + (PS::F32)eps_sq;
-        const PS::F32 dr2_max = (dr2_eps_32 > r_out2) ? dr2_eps_32 : r_out2;
-        const PS::F32 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F32 gmor_max = G*_pj.mass * drinv_max;
-        const PS::F32 drinv2_max = drinv_max*drinv_max;
-        const PS::F32 gmor3_max = gmor_max * drinv2_max;
+        const PS::F32 dr2_max_32 = (dr2_eps_32 > r_out2_32) ? dr2_eps_32 : r_out2_32;
+        const PS::F32 drinv_max_32 = 1.0/sqrt(dr2_max_32);
+        const PS::F32 gmor_max = (PS::F32)G * (PS::F32)_pj.mass * drinv_max_32;
+        const PS::F32 drinv2_max_32 = drinv_max_32*drinv_max_32;
+        const PS::F32 gmor3_max = gmor_max * drinv2_max_32;
 
         // correct to changeover soft acceleration
         _pi.acc -= gmor3*k*dr - gmor3_max*dr_32;
@@ -1998,9 +2291,9 @@ private:
         const PS::F64 kdot = - ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, dr_eps, 1.0); 
 
         // linear cutoff
-#if  ((! defined P3T_64BIT) && (defined USE_SIMD)) || (defined USE_GPU)
+#if  (! defined P3T_64BIT) || (defined USE_GPU)
         const PS::F32 r_out_32 = EPISoft::r_out;
-        const PS::F32 r_out2 = r_out_32 * r_out_32;
+        const PS::F32 r_out2_32 = r_out_32 * r_out_32;
         PS::F32vec ri_32 = PS::F32vec(_pi.pos.x, _pi.pos.y, _pi.pos.z);
         PS::F32vec rj_32 = PS::F32vec(_pj.pos.x, _pj.pos.y, _pj.pos.z);
         PS::F32vec ai_32 = PS::F32vec(_pi.acc.x, _pi.acc.y, _pi.acc.z);
@@ -2009,13 +2302,13 @@ private:
         PS::F32vec da_32 = ai_32 - aj_32;
         PS::F32 dr2_eps_32 = dr_32*dr_32 + (PS::F32)eps_sq;
         const PS::F32 drda_32 = dr_32*da_32;
-        const PS::F32 dr2_max = (dr2_eps_32 > r_out2) ? dr2_eps_32 : r_out2;
-        const PS::F32 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F32 gmor_max = G*_pj.mass * drinv_max;
-        const PS::F32 drinv2_max = drinv_max*drinv_max;
-        const PS::F32 gmor3_max = gmor_max * drinv2_max;
-        const PS::F32 alpha_max = drda_32 * drinv2_max;
-        const PS::F32vec acorr_max = gmor3_max * (da_32 - 3.0*alpha_max * dr_32);
+        const PS::F32 dr2_max_32 = (dr2_eps_32 > r_out2_32) ? dr2_eps_32 : r_out2_32;
+        const PS::F32 drinv_max_32 = 1.0/sqrt(dr2_max_32);
+        const PS::F32 gmor_max_32 = (PS::F32)G * (PS::F32)_pj.mass * drinv_max_32;
+        const PS::F32 drinv2_max_32 = drinv_max_32*drinv_max_32;
+        const PS::F32 gmor3_max_32 = gmor_max_32 * drinv2_max_32;
+        const PS::F32 alpha_max_32 = drda_32 * drinv2_max_32;
+        const PS::F32vec acorr_max = gmor3_max_32 * (da_32 - 3.0*alpha_max_32 * dr_32);
 #else
         const PS::F64 r_out = EPISoft::r_out;
         const PS::F64 r_out2 = r_out * r_out;
@@ -2200,12 +2493,17 @@ public:
     SystemHard(){
         manager = NULL;
 #ifdef PROFILE
-        ARC_substep_sum = 0;
-        ARC_tsyn_step_sum =0;
-        ARC_n_groups = 0;
-        ARC_n_groups_iso = 0;
+        sdar_substep_sum = 0;
+        sdar_tsyn_step_sum =0;
+        sdar_n_groups = 0;
+        sdar_n_groups_iso = 0;
         H4_step_sum = 0;
+        H4_force_sum = 0;
 #endif
+        sdar_n_groups_new = 0;
+        sdar_n_groups_end = 0;
+        sdar_n_groups_arti_change = 0;
+        sdar_n_groups_merge = 0;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         n_neighbor_zero = 0;
 #endif
@@ -2422,8 +2720,8 @@ public:
                 H4::ForceH4 fi;
                 PS::F64 ti = 0;
                 assert(_dt>=0);
-                while(ti<_dt) { // Symplectic Euler method
-                    PS::F64 dt = ext_force.calcAccJerkExternal(fi, pi);
+                while(ti<_dt) { 
+                    PS::F64 dt = ext_force.calcAccJerkExternal(fi.acc0, fi.acc1, pi, false);
                     dt = std::min(dt, _dt-ti);
                     ti += dt;
                     pi.vel[0] += fi.acc0[0]*dt;
@@ -2670,6 +2968,12 @@ public:
     template<class Tpsoft>
     void driveForMultiClusterOMP(const PS::F64 dt, Tpsoft* _ptcl_soft){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
+
+        if (n_cluster == 0) {
+            time_origin_ += dt;
+            return;
+        }
+
         //PS::ReallocatableArray<PtclH4> extra_ptcl[num_thread];
         //// For test
         //PS::ReallocatableArray<std::pair<PS::S32,PS::S32>> n_sort_list;
@@ -2693,15 +2997,27 @@ public:
         HardIntegrator hard_int_thread[num_thread];
 
 #ifdef PROFILE
-        PS::S64 ARC_n_groups_threads[num_thread], ARC_substep_sum_threads[num_thread];
-        PS::S64 ARC_tsyn_step_sum_threads[num_thread], H4_step_sum_threads[num_thread];
+        PS::S64 sdar_n_groups_threads[num_thread], sdar_substep_sum_threads[num_thread];
+        PS::S64 sdar_tsyn_step_sum_threads[num_thread], H4_step_sum_threads[num_thread];
+        PS::S64 H4_force_sum_threads[num_thread];
         for (PS::S32 i=0; i<num_thread; i++) {
-            ARC_n_groups_threads[i] = 0;
-            ARC_substep_sum_threads[i] = 0;
-            ARC_tsyn_step_sum_threads[i] = 0;
+            sdar_n_groups_threads[i] = 0;
+            sdar_substep_sum_threads[i] = 0;
+            sdar_tsyn_step_sum_threads[i] = 0;
             H4_step_sum_threads[i] = 0;
+            H4_force_sum_threads[i] = 0;
         }
 #endif
+        PS::S64 sdar_n_groups_new_threads[num_thread];
+        PS::S64 sdar_n_groups_end_threads[num_thread];
+        PS::S64 sdar_n_groups_arti_change_threads[num_thread];
+        PS::S64 sdar_n_groups_merge_threads[num_thread];
+        for (PS::S32 i=0; i<num_thread; i++) {
+            sdar_n_groups_new_threads[i] = 0;
+            sdar_n_groups_end_threads[i] = 0;
+            sdar_n_groups_arti_change_threads[i] = 0;
+            sdar_n_groups_merge_threads[i] = 0;
+        }
 #ifdef HARD_COUNT_NO_NEIGHBOR
         PS::S64 n_neighbor_zero_threads[num_thread];
         for (PS::S32 i=0; i<num_thread; i++) n_neighbor_zero_threads[i] = 0;
@@ -2734,7 +3050,7 @@ public:
                 PS::S32 ptcl_arti_first_index = adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]];
                 if (ptcl_arti_first_index>=0) ptcl_artificial_ptr = &(_ptcl_soft[ptcl_arti_first_index]);
 #ifdef PROFILE
-                else ARC_n_groups_iso += 1;
+                else sdar_n_groups_iso += 1;
 #endif // END PROFILE
                 n_member_in_group_ptr = &(n_member_in_group_[n_group_in_cluster_offset_[i]]);
             }
@@ -2742,7 +3058,7 @@ public:
             num_cluster[ith] += n_ptcl;
 #endif // END OMP_PROFILE
 #ifdef PROFILE
-            ARC_n_groups_threads[ith] += n_group;
+            sdar_n_groups_threads[ith] += n_group;
 #endif // END PROFILE
 
 #ifdef HARD_DUMP
@@ -2754,13 +3070,18 @@ public:
 #ifdef HARD_DEBUG_PROFILE
             PS::F64 tstart = PS::GetWtime();
 #endif 
+            // For test hard dump
+            if (n_ptcl > 1000) {
+                std::cout<<"Dump large cluster: n_ptcl="<<n_ptcl<<"; n_group="<<n_group<<std::endl;   
+                DATADUMP("large_cluster");
+            }
 
             // if interrupt exist, escape initial
-            hard_int_thread[ith].initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, manager, time_origin_);
+            hard_int_thread[ith].initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, manager, time_origin_, dt);
 
             hard_int_thread[ith].integrateToTime(dt);
 
-            hard_int_thread[ith].driftClusterCMRecordGroupCMDataAndWriteBack(dt);
+            hard_int_thread[ith].driftClusterAndArtificialCMAndWriteBack(dt, ptcl_artificial_ptr, n_group);
 
 #ifdef STELLAR_EVOLUTION
 #ifndef BSE_BASE
@@ -2770,10 +3091,16 @@ public:
 #endif
 
 #ifdef PROFILE
-            ARC_substep_sum_threads[ith]    += hard_int_thread[ith].ARC_substep_sum;
-            ARC_tsyn_step_sum_threads[ith]  += hard_int_thread[ith].ARC_tsyn_step_sum;
+            sdar_substep_sum_threads[ith]    += hard_int_thread[ith].sdar_substep_sum;
+            sdar_tsyn_step_sum_threads[ith]  += hard_int_thread[ith].sdar_tsyn_step_sum;
             H4_step_sum_threads[ith]        += hard_int_thread[ith].H4_step_sum;
+            H4_force_sum_threads[ith]       += hard_int_thread[ith].H4_force_sum;
 #endif
+            sdar_n_groups_new_threads[ith] += hard_int_thread[ith].sdar_n_groups_new;
+            sdar_n_groups_end_threads[ith] += hard_int_thread[ith].sdar_n_groups_end;
+            sdar_n_groups_arti_change_threads[ith] += hard_int_thread[ith].sdar_n_groups_arti_change;
+            sdar_n_groups_merge_threads[ith] += hard_int_thread[ith].sdar_n_groups_merge;
+
 #ifdef HARD_COUNT_NO_NEIGHBOR
             n_neighbor_zero_threads[ith]    += hard_int_thread[ith].n_neighbor_zero;
 #endif
@@ -2826,12 +3153,19 @@ public:
 
 #ifdef PROFILE
         for (PS::S32 i=0; i<num_thread; i++) {
-            ARC_n_groups += ARC_n_groups_threads[i];
-            ARC_substep_sum += ARC_substep_sum_threads[i];
-            ARC_tsyn_step_sum += ARC_tsyn_step_sum_threads[i];
+            sdar_n_groups += sdar_n_groups_threads[i];
+            sdar_substep_sum += sdar_substep_sum_threads[i];
+            sdar_tsyn_step_sum += sdar_tsyn_step_sum_threads[i];
             H4_step_sum += H4_step_sum_threads[i];
+            H4_force_sum += H4_force_sum_threads[i];
         }
 #endif
+        for (PS::S32 i=0; i<num_thread; i++) {
+            sdar_n_groups_new += sdar_n_groups_new_threads[i];
+            sdar_n_groups_end += sdar_n_groups_end_threads[i];
+            sdar_n_groups_arti_change += sdar_n_groups_arti_change_threads[i];
+            sdar_n_groups_merge += sdar_n_groups_merge_threads[i];
+        }
 #ifdef HARD_COUNT_NO_NEIGHBOR
         for (PS::S32 i=0; i<num_thread; i++) n_neighbor_zero += n_neighbor_zero_threads[i];
 #endif
@@ -3156,18 +3490,21 @@ public:
 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
         // check whether the list is correct
-        PS::S32 plist_new[group_ptcl_adr_offset];
-        for (int i=0; i<group_ptcl_adr_offset; i++) plist_new[i] = group_ptcl_adr_list[i];
-        std::sort(plist_new, plist_new+group_ptcl_adr_offset, [](const PS::S32 &a, const PS::S32 &b) {return a < b;});
-        std::sort(ptcl_list_reorder, ptcl_list_reorder+group_ptcl_adr_offset, [](const PS::S32 &a, const PS::S32 &b) {return a < b;});
-        for (int i=0; i<group_ptcl_adr_offset; i++) assert(ptcl_list_reorder[i]==plist_new[i]);
+        if (group_ptcl_adr_offset>0) {
+            PS::S32 plist_new[group_ptcl_adr_offset];
+            for (int i=0; i<group_ptcl_adr_offset; i++) plist_new[i] = group_ptcl_adr_list[i];
+            std::sort(plist_new, plist_new+group_ptcl_adr_offset, [](const PS::S32 &a, const PS::S32 &b) {return a < b;});
+            std::sort(ptcl_list_reorder, ptcl_list_reorder+group_ptcl_adr_offset, [](const PS::S32 &a, const PS::S32 &b) {return a < b;});
+            for (int i=0; i<group_ptcl_adr_offset; i++) assert(ptcl_list_reorder[i]==plist_new[i]);
+        }
 #endif        
 
         // overwrite the new ptcl list for group members by reorderd list
         for (int i=0; i<group_ptcl_adr_offset; i++) ptcl_list_reorder[i] = group_ptcl_adr_list[i];
 
-        // templately copy ptcl data
-        Tptcl ptcl_tmp[_n_ptcl];
+        // templately copy ptcl data, use heap-backed containers to avoid OMP stack overflow
+        PS::ReallocatableArray<Tptcl> ptcl_tmp;
+        ptcl_tmp.resizeNoInitialize(_n_ptcl);
         for (int i=0; i<_n_ptcl; i++) ptcl_tmp[i]=_ptcl_in_cluster[i];
 
         // reorder ptcl
@@ -3434,87 +3771,115 @@ public:
         }
     }
 
-    //! set group member particle group_data.cm to c.m. data for search cluster
+    //! update rsearch, recover member backuped mass and set group member particle group_data.cm to c.m. data for search cluster
     /*! update both local and global 
        @param[in,out] _ptcl_soft: global particle
     */
     template <class Tsoft>
-    void setParticleGroupDataToCMData(Tsoft& _ptcl_soft) {
+    void calcRsearchAndGetMassBackupAndsetGroupDataToCM(Tsoft& _ptcl_soft, const PS::F64 _dt_tree) {
         Ptcl::group_data_mode = GroupDataMode::cm;
-        auto& ap_manager = manager->ap_manager;
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
 #pragma omp parallel for schedule(dynamic)
         for(PS::S32 i=0; i<n_cluster; i++){
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
-            const PS::S32 n_group = n_group_in_cluster_[i];
             PtclH4* ptcl_local = ptcl_hard_.getPointer(adr_head);
 
-            PS::S32 n_group_offset_local = 0;
-            if(n_group>0) {
-                for(int k=0; k<n_group; k++) {
-                    PS::S32 n_group_in_cluster_offset_k = n_group_in_cluster_offset_[i]+k;
-                    PS::S32 ptcl_artificial_adr = adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_k];
-                    PS::S32 n_members = n_member_in_group_[n_group_in_cluster_offset_k];
-                    // when artificial particles exist
-                    if (ptcl_artificial_adr>=0) {
-                        auto* pi = &(_ptcl_soft[ptcl_artificial_adr]);
-                        auto* pcm = ap_manager.getCMParticles(pi);
-                        PS::F64 pcm_mass = pcm->group_data.artificial.getMassBackup();
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-                        assert(n_members == ap_manager.getMemberN(pi));
-                        ap_manager.checkConsistence(&ptcl_local[n_group_offset_local], pi);
-#endif
-                        for (int j=n_group_offset_local; j<n_group_offset_local+n_members; j++) {
-                            ptcl_local[j].r_search = std::max(pcm->r_search, ptcl_local[j].r_search);
-                            auto& pj_cm = ptcl_local[j].group_data.cm;
-                            pj_cm.mass  = pcm_mass;
-                            pj_cm.vel.x = pcm->vel[0];
-                            pj_cm.vel.y = pcm->vel[1];
-                            pj_cm.vel.z = pcm->vel[2];
-                            PS::S32 adr = ptcl_local[j].adr_org;
-                            if(adr>=0) {
-                                assert(ptcl_local[j].id==_ptcl_soft[adr].id);
-                                _ptcl_soft[adr].group_data.cm = pj_cm;
-                                _ptcl_soft[adr].r_search = ptcl_local[j].r_search;
-                            }
-                        }
+            std::map<PS::S64, std::vector<PS::S64>> bid_index_map;
+
+            for (int k=0; k<n_ptcl; k++) {
+                // reset all particles first
+                auto bid = AR::Information<PtclHard,PtclH4>::getBinaryID(ptcl_local[k]);
+                if (bid ==0 ) {
+                    auto& pj_cm = ptcl_local[k].group_data.cm;    
+#ifdef STELLAR_EVOLUTION
+                    if (ptcl_local[k].mass==0.0) {
+                        ASSERT(ptcl_local[k].group_data.artificial.isUnused());
                     }
                     else {
-                        // when no artificial particles, calculate c.m.
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-                        // current case only isolated binary
-                        assert(n_members == 2&&n_group==1);
 #endif
-                        PS::F32 mass_cm=0.0;
-                        PS::F32vec vel_cm=PS::F32vec(0.0);
-                        for (int j=n_group_offset_local; j<n_group_offset_local+n_members; j++) {
-                            auto& pj = ptcl_local[j];
-                            mass_cm += pj.mass;
-                            vel_cm.x += pj.mass*pj.vel.x;
-                            vel_cm.y += pj.mass*pj.vel.y;
-                            vel_cm.z += pj.mass*pj.vel.z;
-                        }
-                        vel_cm /= mass_cm;
-                        for (int j=n_group_offset_local; j<n_group_offset_local+n_members; j++) {
-                            auto& pj_cm = ptcl_local[j].group_data.cm;
-                            pj_cm.mass = mass_cm;
-                            pj_cm.vel  = vel_cm;
-                            PS::S32 adr = ptcl_local[j].adr_org;
-                            if(adr>=0) {
-                                assert(ptcl_local[j].id==_ptcl_soft[adr].id);
-                                _ptcl_soft[adr].group_data.cm = pj_cm;
-                            }
-                        }
+                        pj_cm.mass  = pj_cm.vel.x = pj_cm.vel.y = pj_cm.vel.z = 0.0;
+                        ptcl_local[k].calcRSearch(_dt_tree);
+#ifdef STELLAR_EVOLUTION
                     }
-                    n_group_offset_local += n_members;
+#endif
+                    PS::S32 adr = ptcl_local[k].adr_org;
+                    if(adr>=0) {
+                        assert(ptcl_local[k].id==_ptcl_soft[adr].id);
+                        _ptcl_soft[adr].group_data.cm = pj_cm;
+                        _ptcl_soft[adr].r_search = ptcl_local[k].r_search;
+                    }
+                }
+                else {
+                    bid_index_map[bid].push_back(k);
                 }
             }
-            for (int j=n_group_offset_local; j<n_ptcl; j++) {
-                auto& pj_cm = ptcl_local[j].group_data.cm;
-                pj_cm.mass  = pj_cm.vel.x = pj_cm.vel.y = pj_cm.vel.z = 0.0;
-                PS::S32 adr = ptcl_local[j].adr_org;
-                if(adr>=0) _ptcl_soft[adr].group_data.cm = pj_cm;
+
+            for (const auto& [bid, indices] : bid_index_map) {
+                // calculate c.m. data and recover mass for members of group
+                PS::F64 mass_cm=0.0;
+                PS::F64vec vel_cm=PS::F64vec(0.0);
+                if (indices.size() <2) {
+                    // this is the case of single particle in broken group in previous steps.
+                    auto& pj = ptcl_local[indices[0]];
+                    // should not be a member with zero mass
+                    assert (!(pj.mass == 0.0 && pj.group_data.artificial.isMember()));
+                    pj.setBinaryPairID(0);
+                    pj.setBinaryInterruptState(BinaryInterruptState::none);
+                    pj.calcRSearch(_dt_tree);
+                    PS::S32 adr = pj.adr_org;
+                    if(adr>=0) {
+                        assert(ptcl_local[indices[0]].id==_ptcl_soft[adr].id);
+                        _ptcl_soft[adr].binary_state = ptcl_local[indices[0]].binary_state;
+                        _ptcl_soft[adr].group_data.cm.mass  = pj.mass;
+                        _ptcl_soft[adr].group_data.cm.vel   = pj.vel;
+                        _ptcl_soft[adr].r_search = pj.r_search;
+                    }
+                    continue;
+                }
+
+                PS::F64 r_out_max=0.0;
+                for (const auto& idx : indices) {
+                    auto& pj = ptcl_local[idx];
+                    if (pj.mass == 0.0 && pj.group_data.artificial.isMember()) {
+                        pj.mass = pj.group_data.artificial.getMassBackup();
+                        assert(pj.mass>0.0);
+                    }
+                    mass_cm += pj.mass;
+                    vel_cm.x += pj.mass*pj.vel.x;
+                    vel_cm.y += pj.mass*pj.vel.y;
+                    vel_cm.z += pj.mass*pj.vel.z;
+                    r_out_max = std::max(r_out_max, pj.changeover.getRout());
+                }
+                vel_cm /= mass_cm;
+                
+                // update r_search of c.m. and group_data.cm
+                Ptcl pcm;
+                pcm.mass = mass_cm;
+                pcm.vel = vel_cm;
+                PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
+                pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                // in case the member has larger r_out due to previously existing binaries, use largest r_out among members to determine r_search
+                Float r_ratio = r_out_max/pcm.changeover.getRout();
+                if (r_ratio>1.0) {
+                    pcm.changeover.r_scale_next = r_ratio;
+                    pcm.changeover.updateWithRScale();
+                }
+                pcm.calcRSearch(_dt_tree);
+                for (const auto& idx : indices) {
+                    assert(pcm.r_search >= ptcl_local[idx].changeover.getRout());
+                    ptcl_local[idx].r_search = pcm.r_search;
+                    auto& pj_cm = ptcl_local[idx].group_data.cm;
+                    pj_cm.mass = mass_cm;
+                    pj_cm.vel = vel_cm;
+                    PS::S32 adr = ptcl_local[idx].adr_org;
+                    if(adr>=0) {
+                        assert(ptcl_local[idx].id==_ptcl_soft[adr].id);
+                        _ptcl_soft[adr].mass = ptcl_local[idx].mass; // recover mass
+                        _ptcl_soft[adr].group_data.cm = pj_cm;
+                        _ptcl_soft[adr].r_search = pcm.r_search;
+                    }
+                }
             }
         }
     }

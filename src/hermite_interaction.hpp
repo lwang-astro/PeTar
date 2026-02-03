@@ -1,8 +1,12 @@
 #pragma once
 
 #include "Common/Float.h"
+#include "Common/particle_kdtree.h"
 #include "changeover.hpp"
 #include "external_hard.hpp"
+#ifdef HERMITE_PN
+#include "pn.hpp"    
+#endif
 
 //! hermite interaction class 
 class HermiteInteraction{
@@ -12,11 +16,17 @@ public:
 #ifdef EXTERNAL_HARD
     ExternalHardForce ext_force; // external force
 #endif
+#ifdef HERMITE_PN
+    PostNewtonian pn; // PN force
+#endif
 
     // constructor
     HermiteInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0))
 #ifdef EXTERNAL_HARD
                         , ext_force() 
+#endif
+#ifdef HERMITE_PN
+                        , pn()
 #endif
     {}
 
@@ -29,6 +39,9 @@ public:
 #ifdef EXTERNAL_HARD
         ASSERT(ext_force.checkParams());
 #endif
+#ifdef HERMITE_PN
+        ASSERT(pn.checkParams());
+#endif
         return true;
     }        
     
@@ -38,6 +51,9 @@ public:
              <<"G     : "<<gravitational_constant<<std::endl;
 #ifdef EXTERNAL_HARD
         ext_force.print(_fout);
+#endif
+#ifdef HERMITE_PN
+        pn.print(_fout);
 #endif
     }    
 
@@ -79,32 +95,62 @@ public:
         const Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
         const Float r = sqrt(dr2_eps);
         ASSERT(r>0.0);
-        const Float rinv = 1.0/r;
-        const Float drdot = drdv*rinv;
-        const Float kp = ChangeOver::calcPotWTwo(_pi.changeover,_pj.changeover, r);
-        const Float k = ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, r);
-        const Float kdot = ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, r, drdot);
+#ifdef HERMITE_PN
+        bool used_pn_orders[6] = {false, false, false, false, false, false};
+        const Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
+        if (pn.setUsedPNOrders(used_pn_orders, v2)) {
+         
+#ifdef HARD_DEBUG_PRINT
+            if (r > _pi.changeover.getRin() || r > _pj.changeover.getRin()) {
+                std::cerr<<"Warning: GR is switched on, but changeover radius is less than GR influence radius. This will cause inconsistent force calculation! particle distance = "
+                         <<r<<"; two changeover inner radii = "
+                         <<_pi.changeover.getRin()<<" "<<_pj.changeover.getRin()
+                         <<std::endl;
+            }
+#endif
+
+            Float ai[6][3], aj[6][3], adi[6][3], adj[6][3];
+            pn.calcAccJerkPN(ai, aj, adi, adj, NULL, NULL, _pi.mass, _pj.mass, dr, dv, NULL, NULL, used_pn_orders);
+            pn.sumAccJerkPN(&_fi.acc0[0], &_fi.acc1[0], ai, adi);
+
+            const Float rinv = 1.0/r;
+            const Float gmor = gravitational_constant*_pj.mass*rinv;
+            _fi.pot += -gmor;
+
+        }
+        else {
+#endif
+            const Float rinv = 1.0/r;
+            const Float drdot = drdv*rinv;
+            const Float kp = ChangeOver::calcPotWTwo(_pi.changeover,_pj.changeover, r);
+            const Float k = ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, r);
+            const Float kdot = ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, r, drdot);
           
-        const Float rinv2 = rinv*rinv;
+            const Float rinv2 = rinv*rinv;
 
-        const Float gmor = gravitational_constant*_pj.mass*rinv;
-        const Float gmor3 = gmor*rinv2; 
-        const Float gmor3k = gmor3*k;
-        const Float gmor3kd = gmor3*kdot;
-        const Float acc0[3] = {gmor3k*dr[0], gmor3k*dr[1], gmor3k*dr[2]};
-        const Float acc1[3] = {gmor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + gmor3kd*dr[0],
-                               gmor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + gmor3kd*dr[1],
-                               gmor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + gmor3kd*dr[2]};
-        _fi.acc0[0] += acc0[0];
-        _fi.acc0[1] += acc0[1];
-        _fi.acc0[2] += acc0[2];
+            const Float gmor = gravitational_constant*_pj.mass*rinv;
+            const Float gmor3 = gmor*rinv2; 
+            const Float gmor3k = gmor3*k;
+            const Float gmor3kd = gmor3*kdot;
+            const Float acc0[3] = {gmor3k*dr[0], gmor3k*dr[1], gmor3k*dr[2]};
+            const Float acc1[3] = {gmor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + gmor3kd*dr[0],
+                                   gmor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + gmor3kd*dr[1],
+                                   gmor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + gmor3kd*dr[2]};
 
-        _fi.acc1[0] += acc1[0];
-        _fi.acc1[1] += acc1[1];
-        _fi.acc1[2] += acc1[2];
 
-        _fi.pot += - gmor*kp;
+            _fi.acc0[0] += acc0[0];
+            _fi.acc0[1] += acc0[1];
+            _fi.acc0[2] += acc0[2];
 
+            _fi.acc1[0] += acc1[0];
+            _fi.acc1[1] += acc1[1];
+            _fi.acc1[2] += acc1[2];
+
+            _fi.pot += - gmor*kp;
+
+#ifdef HERMITE_PN
+        }
+#endif
         return dr2;
     }
 
@@ -454,7 +500,7 @@ public:
             p.vel[1] += _pcm.vel[1];
             p.vel[2] += _pcm.vel[2];
 
-            ext_force.calcAccJerkExternal(_fi, p);
+            ext_force.calcAccJerkExternal(_fi.acc0, _fi.acc1, p, true);
         }
     }
 #endif
@@ -508,15 +554,27 @@ public:
     template<class Tp, class Tgroup, class Tpert>
     inline void calcEnergy(H4::HermiteEnergy& _energy, const Tp* _particles, const int _n_particle, const Tgroup* _groups, const int* _group_index, const int _n_group, const Tpert& _perturber) {
         _energy.ekin = _energy.epot = _energy.epert = 0.0;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE_POT
+        // in this mode, we only calculate the energy of neighbor particles, should not be used, this is incorrect for changeover potential.
+        COMM::ParticleKDTree kdtree;
+        kdtree.addParticles(_particles, nullptr, _n_particle);
+#endif
         for (int i=0; i<_n_particle; i++) {
             auto& pi = _particles[i];
             if (pi.mass==0.0) continue;
             _energy.ekin += pi.mass* (pi.vel[0]*pi.vel[0] + pi.vel[1]*pi.vel[1] + pi.vel[2]*pi.vel[2]);
             Float poti = 0.0;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE_POT        
+            kdtree.searchNeighborParticlesApply(pi, [&](int j_idx) {
+                const auto& pj = _particles[j_idx];
+                if (pi.id == pj.id) return;
+                if (pj.mass==0.0) return;
+#else
             for (int j=0; j<i; j++) {
                 if (i==j) continue;
                 auto& pj = _particles[j];
                 if (pj.mass==0.0) continue;
+#endif
                 const Float dr[3] = {pj.pos[0] - pi.pos[0], 
                                      pj.pos[1] - pi.pos[1],
                                      pj.pos[2] - pi.pos[2]};
@@ -528,7 +586,11 @@ public:
                 const Float k = ChangeOver::calcPotWTwo(pi.changeover, pj.changeover, r);
         
                 poti += -pj.mass*rinv*k;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE_POT            
+            });
+#else
             }
+#endif
             _energy.epot += gravitational_constant*poti*pi.mass;
         }
 
@@ -549,6 +611,9 @@ public:
         }
 #endif
         _energy.ekin *= 0.5;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE_POT
+        _energy.epot *= 0.5;
+#endif
         //_energy.epert *= 0.5;
     }
 
@@ -565,7 +630,7 @@ public:
     void readBinary(FILE *_fin) {
         size_t rcount = fread(this, sizeof(*this), 1, _fin);
         if (rcount<1) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: HermiteInteraction::readBinary(): cannot read data correctly."<<std::endl;
             abort();
         }
     }    

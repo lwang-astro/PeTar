@@ -5,7 +5,7 @@
 #include "hard_ptcl.hpp"
 #include "Hermite/hermite_particle.h"
 #include "soft_ptcl.hpp"
-#ifdef BSE_BASE
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
 #include "../parallel-random/rand_interface.hpp"
 #endif
 #ifdef EXTERNAL_HARD
@@ -29,14 +29,14 @@ public:
     PS::ReallocatableArray<PS::S32> n_member_in_group;
     PS::ReallocatableArray<FPSoft> ptcl_arti_bk;
     PS::ReallocatableArray<PtclH4> ptcl_bk;
-#ifdef BSE_BASE
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
     uint64_t rand_seed[2];
     RandomManager rand_manager;
 #endif
     bool backup_flag;
 
     HardDump(): time_offset(0), time_end(0), gcm_mass(0), gcm_pos(), gcm_vel(), n_ptcl(0), n_arti(0), n_group(0), n_member_in_group(), ptcl_arti_bk(), ptcl_bk(), 
-#ifdef BSE_BASE
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
                 rand_seed{0,0}, rand_manager(), 
 #endif
                 backup_flag(false) {}
@@ -85,7 +85,7 @@ public:
             ptcl_arti_bk.resizeNoInitialize(n_arti);
         }
         n_group = _n_group;
-#ifdef BSE_BASE
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
         rand_manager.getRandSeedLocal(rand_seed);
 #endif        
         backup_flag = true;
@@ -191,7 +191,7 @@ public:
             ptcl_arti_bk.resizeNoInitialize(n_arti);
             for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].readBinary(fp);
         }
-#ifdef BSE_BASE
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
         rand_manager.readRandSeedLocalBinary(fp);
 #endif
     }
@@ -206,6 +206,7 @@ public:
     int omp_level;
     int dump_number;
 #ifdef EXTERNAL_HARD
+    FPSoft* center;
 #ifdef GALPY
     GalpyManager* galpy_manager;
 #endif
@@ -214,6 +215,7 @@ public:
 
     HardDumpList(): size(0), mpi_rank(0), omp_level(0), dump_number(0), 
 #ifdef EXTERNAL_HARD
+                    center(NULL),
 #ifdef GALPY
                     galpy_manager(NULL),
 #endif
@@ -278,6 +280,7 @@ public:
             }
             hard_dump[ith].writeOneClusterBinary(fp);
 #ifdef EXTERNAL_HARD
+            center->writeBinary(fp);
 #ifdef GALPY
             galpy_manager->writePotentialPars((fname+".galpy").c_str(), hard_dump[ith].time_offset, false);
 #endif

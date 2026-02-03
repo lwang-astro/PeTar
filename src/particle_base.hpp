@@ -4,9 +4,13 @@
 #include <mpreal.h>
 #define MPFR_PREC 128
 #endif
+#include <cinttypes> 
 
 #ifdef BSE_BASE
 #include "bse_interface.h"
+#endif
+#ifdef DISK_STAR_MERGER
+#include "disk_star_merger.hpp"
 #endif
 #ifdef NAN_CHECK_DEBUG
 #ifndef NAN_CHECK
@@ -116,8 +120,8 @@ public:
     PS::F64 dm;
     PS::F64 time_record; 
     PS::F64 time_interrupt;
-#ifdef BSE_BASE
-    StarParameter star; // SSE/BSE based package stellar parameters
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
+    StarParameter star; // SSE/BSE based package / disk star merger stellar parameters
 #endif
 #endif
 
@@ -177,6 +181,9 @@ public:
 #ifdef BSE_BASE
         star.initial(0.0);
 #endif
+#ifdef DISK_STAR_MERGER
+        star.initial(StarType::none);
+#endif
 #endif
     }
 
@@ -185,7 +192,7 @@ public:
 #ifdef STELLAR_EVOLUTION
                  , const PS::F64 _radius, const PS::F64 _dm, 
                  const PS::F64 _time_record, const PS::F64 _time_interrupt
-#ifdef BSE_BASE
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
                  , const StarParameter& _star
 #endif
 #endif
@@ -202,7 +209,7 @@ public:
         dm = _dm;
         time_record = _time_record;
         time_interrupt = _time_interrupt;
-#ifdef BSE_BASE
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
         star = _star;
 #endif
 #endif
@@ -216,11 +223,11 @@ public:
 #ifdef PETAR_USE_MPFRC
         fprintf(fp, "%26.17e %26.17e %26.17e ", this->pos_high.x, this->pos_high.y, this->pos_high.z);
 #endif
-        fprintf(fp, "%26.17e %26.17e %26.17e %lld ", this->vel.x, this->vel.y, this->vel.z, this->binary_state);
+        fprintf(fp, "%26.17e %26.17e %26.17e %" PRId64 " ", this->vel.x, this->vel.y, this->vel.z, this->binary_state);
 #ifdef STELLAR_EVOLUTION        
         fprintf(fp, "%26.17e %26.17e %26.17e %26.17e ", 
                 this->radius, this->dm, this->time_record, this->time_interrupt);
-#ifdef BSE_BASE
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
         star.writeAscii(fp);
 #endif
 #endif
@@ -238,7 +245,7 @@ public:
             abort();
         }
 #endif
-        rcount += fscanf(fp, "%lf %lf %lf %lld ", &this->vel.x, &this->vel.y, &this->vel.z, &this->binary_state);
+        rcount += fscanf(fp, "%lf %lf %lf %" PRId64 " ", &this->vel.x, &this->vel.y, &this->vel.z, &this->binary_state);
 #ifdef STELLAR_EVOLUTION        
         rcount += fscanf(fp, "%lf %lf %lf %lf ",
                               &this->radius, &this->dm, &this->time_record, &this->time_interrupt);
@@ -248,7 +255,7 @@ public:
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
-#ifdef BSE_BASE
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
         star.readAscii(fp);
 #endif
 #else
@@ -291,7 +298,7 @@ public:
             <<" dm="<<dm
             <<" time_record="<<time_record
             <<" time_interrupt="<<time_interrupt;
-#ifdef BSE_BASE
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
         star.print(fout);
 #endif
 #endif
@@ -316,7 +323,7 @@ public:
              <<std::setw(_width)<<"dm"
              <<std::setw(_width)<<"t_record"
              <<std::setw(_width)<<"t_interrupt";
-#ifdef BSE_BASE
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
         StarParameter::printColumnTitle(_fout, _width);
 #endif
 #endif
@@ -351,7 +358,7 @@ public:
         _fout<<std::setw(_offset)<<" "<<counter<<". t_record: time record of last check (0.0)\n";
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". t_interrupt: time for next evolution check (0.0)\n";
-#ifdef BSE_BASE
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
         counter = StarParameter::printTitleWithMeaning(_fout, counter, _offset);
 #endif
 #endif
@@ -382,7 +389,7 @@ public:
              <<std::setw(_width)<<dm
              <<std::setw(_width)<<time_record
              <<std::setw(_width)<<time_interrupt;
-#ifdef BSE_BASE
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
         star.printColumn(_fout, _width);
 #endif
 #endif
@@ -422,7 +429,7 @@ public:
              <<std::setw(_width)<<dm
              <<std::setw(_width)<<time_record
              <<std::setw(_width)<<time_interrupt;
-#ifdef BSE_BASE
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
         star.printColumn(_fout, _width);
 #endif
 #endif
@@ -447,7 +454,7 @@ public:
         dm  = din.dm;
         time_record  = din.time_record;
         time_interrupt = din.time_interrupt;
-#ifdef BSE_BASE
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
         star = din.star;
 #endif
 #endif

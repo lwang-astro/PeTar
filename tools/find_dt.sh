@@ -110,19 +110,21 @@ do
     ${prefix} timeout $tcum $pbin $opts -w 0 -i $sfmt -t $tend  -s $dt -o $dt $fname &>check.perf.$dt.log
     egrep 'Wallclock' -A 3 check.perf.$dt.log |sed -n '/^\ *[0-9]/ p'|awk '{if (NR>1 && NR%2==0) print $1,$2+$3+$4+$8,$7+$9,$6+$10+$11,$12+$13}' >check.perf.$dt.tperf
     if [[ `wc -l check.perf.$dt.tperf|awk '{print $1}'` -ge 6 ]]; then 
-	dt_reg=`egrep '^\ +Tree time step' check.perf.$dt.log|awk '{OFMT="%.14g"; print $5}'`
-	tperf=(`awk -v dt=$dt_reg 'BEGIN{t=1e10; ns=1.0/dt; th=0; ts=0; tc=0; td=0;} {if (t>$1) {t=$1; th=$2; ts=$3; tc=$4; td=$5;}} END{print t*ns,th*ns,ts*ns,tc*ns,td*ns,ns}' check.perf.$dt.tperf`)
-	de=`grep 'Slowdown:' check.perf.$dt.log|awk '{print $2}'`
-	echo 'check tree step: '$dt_reg', wallclock time for one time unit: '${tperf[0]}'  hard: '${tperf[1]}'  soft: '${tperf[2]}'   clustering: '${tperf[3]}'   domain: '${tperf[4]}'   step number: '${tperf[5]}
-	[[ $tcum_flag == 'auto' ]] && tcum=`awk 'BEGIN{t=0} {t=t+$1} END{if (t<1.0) {t=1.0}; print t*3}' check.perf.$dt.tperf`
-	echo '  wallclock time first 6 steps: '`awk '{print $1}' check.perf.$dt.tperf`' next timeout check: '$tcum
-	echo '  Slowdown relative energy error: '$de
-	check_flag=`echo $tperf |awk -v pre=$tperf_pre '{if ($1<pre) print "true"; else print "false"}'`
-	[[ $check_flag == true ]] && dt_min=$dt
-	tperf_pre=$tperf
-	success_flag=true
+        dt_reg=`egrep '^\ +Tree time step' check.perf.$dt.log|awk '{OFMT="%.14g"; print $5}'`
+        tperf=(`awk -v dt=$dt_reg 'BEGIN{t=1e10; ns=1.0/dt; th=0; ts=0; tc=0; td=0;} {if (t>$1) {t=$1; th=$2; ts=$3; tc=$4; td=$5;}} END{print t*ns,th*ns,ts*ns,tc*ns,td*ns,ns}' check.perf.$dt.tperf`)
+        de=`grep 'Slowdown:' check.perf.$dt.log|awk '{print $2}'`
+        echo 'check tree step: '$dt_reg', wallclock time for one time unit: '${tperf[0]}'  hard: '${tperf[1]}'  soft: '${tperf[2]}'   clustering: '${tperf[3]}'   domain: '${tperf[4]}'   step number: '${tperf[5]}
+        [[ $tcum_flag == 'auto' ]] && tcum=`awk 'BEGIN{t=0} {t=t+$1} END{if (t<1.0) {t=1.0}; print t*3}' check.perf.$dt.tperf`
+        echo '  wallclock time first 6 steps: '`awk '{print $1}' check.perf.$dt.tperf`' next timeout check: '$tcum
+        echo '  Slowdown relative energy error: '$de
+        check_flag=`echo $tperf |awk -v pre=$tperf_pre '{if ($1<pre) print "true"; else print "false"}'`
+        if [[ $check_flag == true ]]; then
+            dt_min=$dt
+            tperf_pre=$tperf
+        fi
+        success_flag=true
     else
-	check_flag=false
+    	check_flag=false
     fi
     #rm -f check.perf.$dt.log
     #rm -f check.perf.$dt.tperf
@@ -131,7 +133,7 @@ done
 #index_min=`echo $tperf_collect|awk '{tmin=1e10; imin=0; for (i=1;i<=NF;i++) {if (tmin>$i) {tmin=$i; imin=i}}; print imin}'`
 #ds_min=`echo $dt_list|awk -v imin=$index_min '{print $imin}'`
 if [[ $success_flag == true ]];then
-    echo 'Best performance choice: tree step: '$dt_min
+    echo 'Best performance choice: tree step: '$dt_min', wallclock time for one time unit: '$tperf_pre
     echo ${prefix}' '$pbin' '$opts' -s '$dt_min' '$fname
 else
     echo 'Fail to check the performance, make sure the options are correct'

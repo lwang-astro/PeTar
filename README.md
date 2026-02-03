@@ -112,6 +112,7 @@ The subsequent sections provide detailed explanations of the installation proces
          - [Hard Dump with Errors](#hard-dump-with-errors)
          - [Hard Debug Tool](#hard-debug-tool)
          - [Crash with Assertion](#crash-with-assertion)
+         - [Crash with Segmentation Fault](#crash-with-segmentation-fault)
     - [Data Format Update for Older Versions](#data-format-update-for-older-versions)
     - [Useful Tools](#useful-tools)
          - [Initial Input Data File with `petar.init`](#initial-input-data-file)
@@ -175,6 +176,8 @@ pip3 install --user galpy
 ```
 In this scenario, PeTar can automatically detect _Galpy_.
 If `pip3` is unavailable, users can mamually download the source code from https://github.com/jobovy/galpy and specify the code path in the configure command (refer to the following guide).
+
+Note that PowerSphericalPotentialwCutoff was modified in Galpy 1.11.0, making it incompatible with the current PeTar parameter setup for MWPotential2014. PeTar only supports Galpy versions up to 1.10.2. Please ensure your installed Galpy version matches this requirement.
 
 ### Code path
 
@@ -468,6 +471,11 @@ OMP_STACKSIZE=128M OMP_NUM_THREADS=8 mpiexec -n 4 petar [options] [snapshot file
 ```
 It is important to ensure that `N_mpi x N_threads` is less than the total available CPU threads in the computing facility.
 
+In certain environments, when both MPI and OpenMP are used, each MPI process may be bound to a single core. In such cases, if the number of threads is set to be more than 2, it will not function properly, and each MPI process will only use a maximum of 2 threads. To resolve this issue, the `--bind-to none` option can be used to disable core binding:
+```shell
+OMP_STACKSIZE=128M OMP_NUM_THREADS=8 mpiexec -n 4 --bind-to none petar [options] [snapshot filename]
+```
+
 Please note that on a supercomputer, the MPI launcher may not be named `mpiexec`, and the method for setting the number of OpenMP threads may vary. Refer to the documentation of the job system or consult with the administrator to determine the appropriate approach for using MPI and OpenMP in that specific environment.
 
 ## Using GPU
@@ -570,13 +578,13 @@ The third pivotal radius influencing performance is the radius used to identify 
 
 ### Adjusting Tree Time Step and Radii
 
-When initiating a new simulation, the automatically determined tree time step and radii may not always be the optimal choice for users. To select the most suitable tree time step, users can utilize the `petar.find.dt` tool (refer to [Find tree time step](#find-tree-time-step)). This tool is compatible only with PeTar's autodetermined tree time step and changeover radii (refer to [Outer Changeover Radius](#outer-changeover-radius)).
+When initiating a new simulation, the automatically determined tree time step and radii may not always be the optimal choice for users. To select the most suitable tree time step, users can utilize the `petar.find.dt` tool (refer to [Determining the tree time step](#determining-the-tree-time-step)). This tool is compatible only with PeTar's autodetermined tree time step and changeover radii (refer to [Outer Changeover Radius](#outer-changeover-radius)).
 
 In cases where the structure of the particle system undergoes significant evolution over an extended period, users may wish to adjust the tree time step and radii mentioned earlier to enhance performance. If users prefer to modify only the tree time step while allowing `petar` to determine the radii automatically, the options in the following example are necessary to restart the simulation:
 ```shell
 petar -p input.par -s [new tree_time_step] -r 0 --r-search-min 0 --r-bin 0 [other options] [snapshot filename for restart]
 ```
-Here, `-r 0 --r-search-min 0 --r-bin 0` are employed to reset all three radii and activate autodetermination based on the new tree time step. Users can also employ `petar.find.dt` to select the optimal restart tree time step (refer to [Find tree time step](#find-tree-time-step)).
+Here, `-r 0 --r-search-min 0 --r-bin 0` are employed to reset all three radii and activate autodetermination based on the new tree time step. Users can also employ `petar.find.dt` to select the optimal restart tree time step (refer to [Determining the tree time step](#determining-the-tree-time-step)).
 
 ## Output
 ### Printed Information
@@ -982,6 +990,13 @@ SystemHard::driveForOneClusterOMP(ParticleSimulator::F64): Assertion `!std::isna
 ```
 This error is observed when FDPS version 7.1 is utilized. It appears that a bug or an inconsistent interface in FDPS can lead to such assertions within `petar`. The recommended solution is to revert to using FDPS version 7.0 to mitigate this issue.
 
+### Crash with Segmentation Fault
+
+Occasionally, the code may crash with a segmentation fault without any other output. By using gdb with debug mode (`configure --with-debug=g`), you can check where the crash occurs. When gdb indicates that the crash position is from a function starting with 'ucs', such as 'ucs_vfs_sock_mkdir()', it is likely related to MPI or UCX's internal virtual file system (VFS) monitoring, which uses FUSE. This is a known bug in some UCX versions, especially when running under certain environments (e.g., containers, or with FUSE not available or misconfigured). You can disable UCX's VFS feature by setting the following environment variable (better to include it in .bashrc) before running `petar`:
+```bash
+export UCX_VFS_ENABLE=n
+```
+
 ## Data Format Update for Older Versions
 
 Over time, the data formats of snapshots, input parameter files, and certain output files have undergone revisions. Users seeking to utilize a newer version of the code to interpret data from older versions can facilitate data transfer.
@@ -1062,7 +1077,7 @@ Several options can control the gathered data; use `petar.data.gether -h` to rev
 - `-l`: generates only the snapshot file list.
 - `-g`: gathers group files and splits them into separate files based on the number of members in a group.
 
-Below is a table detailing the files generated by the tool and the corresponding Python analysis classes for reading (refer to [Data analysis in Python3](#data-analysis-in-python3)):
+Below is a table detailing the files generated by the tool and the corresponding Python analysis classes for reading (refer to [Python Data Analysis Module](#python-data-analysis-module)):
 
 | Original files                | Output files                  | Content                                     | Python classes initialization for reading |
 | :--------------               | :------------                 | :---------                                  | :-------------------------------------    |
@@ -1122,7 +1137,7 @@ Below is a table showing the files generated by `petar.data.process` and the cor
 
 Note: The arguments [\*] for the keywords in the Python class initialization depend on the configure options for compiling (e.g., `interrupt_mode`, `external_mode`) and the options used in `petar.data.process`. These keyword arguments are optional and only needed when default values are not used. Refer to the help of the Python analysis classes and `petar.data.process -h` for more details.
 
-For details on how to use the Python analysis classes to read data, refer to [Data analysis in Python3](#data-analysis-in-python3).
+For details on how to use the Python analysis classes to read data, refer to [Python Data Analysis Module](#python-data-analysis-module).
 
 The snapshots generated by `petar.data.process` are shifted to the rest frame where the density center is the coordinate origin. By adding the core position and velocity from 'data.core' at the corresponding time, positions and velocities in the initial frame or Galactocentric frame (when Galpy is used) can be recovered.
 
@@ -1232,7 +1247,7 @@ Additional files that document the evolution history of all stars or binaries ca
 - For single stars, 'output.[sse\_name].type\_change' and 'output.[sse\_name].sn\_kick' files are created.
 - For binaries, 'output.[bse\_name].type\_change' and 'output.[bse\_name].sn\_kick' files are generated.
 
-Reading these files follows the same method as for the output files from `petar` (refer to [Data analysis in Python3](#data-analysis-in-python3) and [Gathering Output Files](#gathering-output-files-with-petar-data-gether)).
+Reading these files follows the same method as for the output files from `petar` (refer to [Python Data Analysis Module](#python-data-analysis-module) and [Gathering Output Files](#gathering-output-files-with-petar-data-gether)).
 
 ### Galpy Tool
 
@@ -1832,4 +1847,5 @@ Presently, PeTar has been integrated as a module within AMUSE, offering support 
 It is important to note that the stopping condition feature is currently under development and not yet operational. As a result, the merging of binaries and rapid stellar evolution events like supernova kicks are not supported at this time.
 
 The integration of PeTar into the AMUSE API opens up new avenues for conducting complex simulations that combine gravitational dynamics with other physical processes, paving the way for comprehensive studies of stellar systems within diverse astrophysical contexts.
+
 

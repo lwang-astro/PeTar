@@ -4,7 +4,7 @@
 #include<getopt.h>
 
 #include <particle_simulator.hpp>
-#define HARD_DEBUG_PRINT_FEQ 1024
+#define HARD_DEBUG_PRINT_FEQ 1
 
 #include "io.hpp"
 #include "hard_assert.hpp"
@@ -14,7 +14,7 @@
 #include "static_variables.hpp"
 #include "status.hpp"
 
-#ifdef BSE_BASE
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
 #include "../parallel-random/rand_interface.hpp"
 #endif
 
@@ -36,19 +36,27 @@ int main(int argc, char **argv){
   PS::S32 n_crit_group = 0;
   PS::S32 istart = -1;
   PS::S32 iend = -1;
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE  
+  PS::S32 n_kdtree_min = 0;
+#endif
   std::string filename="hard_dump";
   std::string fhardpar="input.par.hard.dump";
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
   int stellar_evolution_option = -1;
-  uint64_t seed = 0;
   std::string bse_name = BSEManager::getBSEName();
   std::string fsse_suffix = BSEManager::getSSEOutputFilenameSuffix();
   std::string fbse_suffix = BSEManager::getBSEOutputFilenameSuffix();
 
   std::string fbsepar = "input.par" + fbse_suffix;
+#elif DISK_STAR_MERGER
+  std::string fdsmpar = "input.par.disk_star_merger";
+  int interrupt_detection_option = -1;
 #else
   int interrupt_detection_option = -1;
+#endif
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
+  uint64_t seed = 0;
 #endif
 #endif
 #ifdef EXTERNAL_HARD
@@ -60,6 +68,13 @@ int main(int argc, char **argv){
 #ifdef SOFT_PERT
   bool soft_pert_flag=true;
 #endif
+#ifdef HERMITE_PN
+  PS::F64 h4_pn_crit = -1;
+#endif
+#ifdef SDAR_PN
+  PS::F64 ar_pn_crit = -1;
+#endif
+
 
   int copt;
   int option_index;
@@ -79,9 +94,11 @@ int main(int argc, char **argv){
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
       {"stellar-evolution", required_argument, &opt_flag, 9},
-      {"rand-seed",         required_argument, &opt_flag, 10},
 #else
       {"detect-interrupt", required_argument, &opt_flag, 9},
+#endif
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
+      {"rand-seed",         required_argument, &opt_flag, 10},
 #endif
 #endif
       {"tstart",            required_argument, &opt_flag, 11},
@@ -90,11 +107,20 @@ int main(int argc, char **argv){
       {"iend",              required_argument, &opt_flag, 14},
       {"n-crit-group",      required_argument, &opt_flag, 15},
       {"n-crit-arti",       required_argument, &opt_flag, 16},
+#ifdef HERMITE_PN
+      {"h4-pn-p", required_argument, &opt_flag, 17},
+#endif
+#ifdef SDAR_PN
+      {"ar-pn-p", required_argument, &opt_flag, 18},
+#endif
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE  
+      {"kdtree-n-particles-min", required_argument, &opt_flag, 19},
+#endif      
       {"help",        no_argument, 0, 'h'},        
       {0,0,0,0}
   };
 
-  while ((copt = getopt_long(argc, argv, "m:n:b:e:g:p:Sh", long_options, &option_index)) != -1)
+  while ((copt = getopt_long(argc, argv, "m:n:b:e:g:p:d:Sh", long_options, &option_index)) != -1)
     switch (copt) {
     case 0:
         switch (opt_flag) {
@@ -158,7 +184,22 @@ int main(int argc, char **argv){
             break;            
         case 16:
             n_crit_arti = atoi(optarg);
-            break;            
+            break;
+#ifdef HERMITE_PN
+        case 17:
+            h4_pn_crit = atof(optarg);
+            break;
+#endif
+#ifdef SDAR_PN
+        case 18:
+            ar_pn_crit = atof(optarg);
+            break;
+#endif
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+        case 19:
+            n_kdtree_min = atoi(optarg);
+            break;
+#endif
         default:
             break;
         }
@@ -191,6 +232,11 @@ int main(int argc, char **argv){
         fgalpypar = optarg;
         break;
 #endif
+#ifdef DISK_STAR_MERGER
+    case 'd':
+        fdsmpar = optarg;
+        break;
+#endif
 #endif
     case 'h':
         std::cout<<"A tool to integrate a dumped cluster of neighbor particles using particle-particle method (Hermite/SDAR)\n"
@@ -212,6 +258,9 @@ int main(int argc, char **argv){
 #ifdef SOFT_PERT
                  <<"    -S:           suppress soft perturbation (tidal tensor)\n"
 #endif
+#ifdef DISK_STAR_MERGER
+                 <<"    -d [string]:  disk star merger parameter file name: "<<fdsmpar<<std::endl
+#endif
                  <<"    -h (--help):  help"<<std::endl
                  <<"long options (if no default values, use values from input.par.hard):\n"
                  <<"        --n-crit-group      [int]:     if >0 only do integration when group number matches the given value: "<<n_crit_group<<std::endl 
@@ -228,17 +277,28 @@ int main(int argc, char **argv){
                  <<"        --hermite-dt-min-power [int]:  hard time step min power (should use together with -D)\n"
                  <<"        --hermite-eta-4th   [double]:  Eta 4th for hermite \n"
                  <<"        --hermite-eta-2nd   [double]:  Eta 2nd for hermite \n"
+#ifdef HERMITE_PN
+                 <<"        --pn-crit-h4        [double]:  Hermite speed criterion to switch on PN terms, in unit of radian \n"
+#endif
+#ifdef SDAR_PN
+                 <<"        --pn-crit-ar        [double]:  AR speed criterion to switch on PN terms, in unit of radian \n"
+#endif
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
-                 <<"        --rand-seed         [int]:     random seed to generate kick velocity\n"
                  <<"        --stellar-evolution [int]:     Stellar evolution option: \n"
 #else
                  <<"        --detect-interrupt  [int]:     interrupt detection option: 0: no interrupt; 1: merge; 2: record binary status\n"
+#endif
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
+                 <<"        --rand-seed         [int]:     random seed to generate kick velocity\n"
 #endif
 #endif
                  <<"        --slowdown-factor   [double]:  change slowdown factor reference\n"
                  <<"        --step-limit-ar     [int]:     AR step count limit\n"
                  <<"        --step-scale-ar     [double]:  AR step scaling factor\n";
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+        std::cout<<"        --kdtree-n-particles-min [int]: Minimum number of particles + groups for building kdtree to speed up neighbor search in Hermite-only neighbor force calculation: "<<n_kdtree_min<<std::endl;
+#endif
         return 0;
     default:
         std::cerr<<"Unknown argument. check '-h' for help.\n";
@@ -263,6 +323,11 @@ int main(int argc, char **argv){
   hard_manager.readBinary(fpar_in);
   fclose(fpar_in);
 
+#ifdef ADJUST_GROUP_PRINT
+  // Reinitialize fgroup after binary read to fix vptr corruption
+  new (&hard_manager.h4_manager.fgroup) std::ofstream();
+#endif
+
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
   if (stellar_evolution_option>=0) {
@@ -279,8 +344,6 @@ int main(int argc, char **argv){
   bse_io.input_par_store.readAscii(fpar_in);
   fclose(fpar_in);
   hard_manager.ar_manager.interaction.bse_manager.initial(bse_io);
-  hard_manager.ar_manager.interaction.tide.gravitational_constant = hard_manager.ar_manager.interaction.gravitational_constant;
-  hard_manager.ar_manager.interaction.tide.speed_of_light = hard_manager.ar_manager.interaction.bse_manager.getSpeedOfLight();
 
   if (hard_manager.ar_manager.interaction.stellar_evolution_write_flag) {
       hard_manager.ar_manager.interaction.fout_sse.open((filename+fsse_suffix).c_str(), std::ofstream::out);
@@ -297,6 +360,18 @@ int main(int argc, char **argv){
       hard_manager.ar_manager.interaction.fout_interrupt<<std::setprecision(WRITE_PRECISION);
   }
 #endif 
+#ifdef DISK_STAR_MERGER
+  IOParamsDiskStarMerger disk_star_merger_parameters;
+  std::cerr<<"DSM parameter file:"<<fdsmpar<<std::endl;
+  if( (fpar_in = fopen(fdsmpar.c_str(),"r")) == NULL) {
+      fprintf(stderr,"Error: Cannot open file %s.\n", fdsmpar.c_str());
+      abort();
+  }  
+  disk_star_merger_parameters.input_par_store.readAscii(fpar_in);
+  fclose(fpar_in);
+
+  hard_manager.ar_manager.interaction.disk_star_merger_manager.initial(disk_star_merger_parameters);
+#endif
 #endif //STELLAR_EVOLUTION
 
 #ifdef EXTERNAL_HARD
@@ -320,7 +395,6 @@ int main(int argc, char **argv){
   fclose(fpar_in);
 
 #endif
-  hard_manager.ar_manager.interaction.ext_force = &hard_manager.h4_manager.interaction.ext_force;
 #endif        
 
 
@@ -381,6 +455,26 @@ int main(int argc, char **argv){
       hard_manager.ar_manager.energy_error_relative_max = e_err_ar;
   }
 
+#ifdef HERMITE_PN
+  if(h4_pn_crit>0) {
+      std::cerr<<"New hermite speed criterion: "<<h4_pn_crit<<std::endl;
+      hard_manager.h4_manager.interaction.pn.speed_criterion = h4_pn_crit;
+  }
+#endif
+#ifdef SDAR_PN
+  if(ar_pn_crit>0) {
+      std::cerr<<"New AR speed criterion: "<<ar_pn_crit<<std::endl;
+      hard_manager.ar_manager.interaction.pn.speed_criterion = ar_pn_crit;
+  }
+#endif
+
+#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+  if (n_kdtree_min>0) {
+      std::cerr<<"New KDTree minimum particles+groups for Hermite neighbor force calculation: "<<n_kdtree_min<<std::endl;
+      hard_manager.h4_manager.kdtree_n_particles_min = n_kdtree_min;
+  }
+#endif  
+
   hard_manager.checkParams();
   hard_manager.print(std::cerr);
 
@@ -398,8 +492,11 @@ int main(int argc, char **argv){
       if (c == EOF) break;
       ungetc(c, fp);
       hard_dump.readOneClusterBinary(fp);
+#ifdef EXTERNAL_HARD
+      hard_manager.h4_manager.interaction.ext_force.center.readBinary(fp);
+#endif
 
-#ifdef BSE_BASE
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
       if (seed!=0) hard_dump.rand_manager.initialFromSeed(seed, 0);
 #endif
 
@@ -417,7 +514,7 @@ int main(int argc, char **argv){
       if (iend>0 && ncount>iend) continue;
 
       std::cerr<<"Dump "<<ncount<<"\nTime: "<<hard_dump.time_offset<<std::endl;
-#ifdef BSE_BASE
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
       hard_dump.rand_manager.printRandSeeds(std::cerr);
 #endif
 
@@ -473,10 +570,10 @@ int main(int argc, char **argv){
           hard_int.output_filename_prefix = filename;
           auto* ptcl_artificial_ptr =  hard_dump.ptcl_arti_bk.getPointer();
           if (hard_dump.n_arti == 0) ptcl_artificial_ptr = NULL; // if no artificial particle, avoid reading artificial data from last hard_dump
-          hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, ptcl_artificial_ptr, hard_dump.n_group, hard_dump.n_member_in_group.getPointer(), &hard_manager, hard_dump.time_offset);
+          hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, ptcl_artificial_ptr, hard_dump.n_group, hard_dump.n_member_in_group.getPointer(), &hard_manager, hard_dump.time_offset, hard_dump.time_end);
 
           hard_int.integrateToTime(hard_dump.time_end);
-          hard_int.driftClusterCMRecordGroupCMDataAndWriteBack(hard_dump.time_end);
+          hard_int.driftClusterAndArtificialCMAndWriteBack(hard_dump.time_end, ptcl_artificial_ptr, hard_dump.n_group);
 
       }
       // test stability

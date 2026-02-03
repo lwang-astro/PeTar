@@ -14,7 +14,14 @@
 #include "two_body_tide.hpp"
 #include "gw_kick.hpp"
 #endif
+#ifdef DISK_STAR_MERGER
+#include "disk_star_merger.hpp"
+#endif
 #include "external_hard.hpp"
+
+#ifdef SDAR_PN
+#include "pn.hpp"
+#endif
 
 //! AR interaction clas
 class ARInteraction{
@@ -34,12 +41,20 @@ public:
     std::ofstream fout_sse; ///> log file for SSE event
     std::ofstream fout_bse; ///> log file for BSE event
 #else
+#ifdef DISK_STAR_MERGER
+    DiskStarMergerManager disk_star_merger_manager;
+#endif
     std::ofstream fout_interrupt; ///> log file for interrupted binary
 #endif
 #endif
 #ifdef EXTERNAL_HARD
     ExternalHardForce *ext_force; // external hard to calculate perturbation
 #endif
+#ifdef SDAR_PN
+    PostNewtonian pn; // PN force for AR (compile-time enabled by SDAR_PN)
+#endif
+
+
 
     ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), interrupt_detection_option(0)
 #ifdef STELLAR_EVOLUTION
@@ -47,12 +62,16 @@ public:
 #ifdef BSE_BASE
                    , stellar_evolution_option(0), stellar_evolution_write_flag(false), bse_manager(), tide(), fout_sse(), fout_bse()
 #else
+#ifdef DISK_STAR_MERGER
+                   , disk_star_merger_manager()
+#endif
                    , fout_interrupt()  
 #endif
 #endif
 #ifdef EXTERNAL_HARD
                    , ext_force(NULL)
 #endif
+                   
     {}
 
     //! (Necessary) check whether publicly initialized parameters are correctly set
@@ -62,6 +81,9 @@ public:
         ASSERT(eps_sq>=0.0);
         ASSERT(gravitational_constant>0.0);
         ASSERT(interrupt_detection_option>=0 && interrupt_detection_option<=2);
+#ifdef SDAR_PN
+        ASSERT(pn.checkParams());
+#endif
 #ifdef STELLAR_EVOLUTION
         ASSERT(time_interrupt_max>=0.0);
 #ifdef BSE_BASE
@@ -69,6 +91,9 @@ public:
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
 #else
+#ifdef DISK_STAR_MERGER
+        ASSERT(disk_star_merger_manager.checkParams());
+#endif
         ASSERT(interrupt_detection_option==0||(interrupt_detection_option>0&&fout_interrupt.is_open()));
 #endif
 #endif
@@ -80,9 +105,15 @@ public:
         _fout<<"eps_sq : "<<eps_sq<<std::endl
              <<"G      : "<<gravitational_constant<<std::endl
              <<"Interrupt_opt: "<<interrupt_detection_option<<std::endl;
+#ifdef SDAR_PN
+        pn.print(_fout);
+#endif
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
         _fout<<"SE_opt : "<<stellar_evolution_option<<std::endl;
+#endif
+#ifdef DISK_STAR_MERGER
+        disk_star_merger_manager.print(_fout);
 #endif
 #endif
     }    
@@ -94,9 +125,10 @@ public:
       @param[out] _epot: total inner potential energy
       @param[in] _p1: particle 1
       @param[in] _p2: particle 2
+      @param[in] _pos_offset: position offset need to be added to calculate dr
       \return the inverse time transformation factor (gt_kick_inv) for kick step
     */
-    inline Float calcInnerAccPotAndGTKickInvTwo(AR::Force& _f1, AR::Force& _f2, Float& _epot, const PtclHard& _p1, const PtclHard& _p2) {
+    inline Float calcInnerAccPotAndGTKickInvTwo(AR::Force& _f1, AR::Force& _f2, Float& _epot, const PtclHard& _p1, const PtclHard& _p2, const Float* _pos_offset) {
         // acceleration
         const Float mass1 = _p1.mass;
         const auto& pos1 = _p1.pos;
@@ -107,10 +139,16 @@ public:
         Float gm1 = gravitational_constant*mass1;
         Float gm2 = gravitational_constant*mass2;
         Float gm1m2 = gm1*mass2;
-        
+
+#ifdef USE_CM_FRAME
+        Float dr[3] = {pos2[0] -pos1[0] + _pos_offset[0],
+                       pos2[1] -pos1[1] + _pos_offset[1],
+                       pos2[2] -pos1[2] + _pos_offset[2]};
+#else
         Float dr[3] = {pos2[0] -pos1[0],
                        pos2[1] -pos1[1],
                        pos2[2] -pos1[2]};
+#endif
         Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
         Float inv_r = 1.0/sqrt(r2);
         Float inv_r3 = inv_r*inv_r*inv_r;
@@ -276,8 +314,8 @@ public:
             auto* pert_adr = _perturber.neighbor_address.getDataAddress();
 
             Float xp[n_pert][3], xcm[3], m[n_pert];
-            ChangeOver* changeover[n_pert_single];
-            H4::NBAdr<PtclHard>::Group* ptclgroup[n_pert_group];
+            ChangeOver* changeover[n_pert_single+1];
+            H4::NBAdr<PtclHard>::Group* ptclgroup[n_pert_group+1];
 
             int n_single_count=0;
             int n_group_count=0;
@@ -386,7 +424,7 @@ public:
                     pgi.vel[1] += pi.vel[1] + _particle_cm.vel[1] + dt*(_particle_cm.acc0[1] + 0.5*dt*_particle_cm.acc1[1]) + gcm->vel[1];
                     pgi.vel[2] += pi.vel[2] + _particle_cm.vel[2] + dt*(_particle_cm.acc0[2] + 0.5*dt*_particle_cm.acc1[2]) + gcm->vel[2];
 
-                    ext_force->calcAccExternal(acc_pert, pgi);
+                    ext_force->calcAccJerkExternal(acc_pert, NULL, pgi, false);
                 }
 #endif
 
@@ -401,6 +439,8 @@ public:
 //            ASSERT(abs(mcm-_particle_cm.mass)<1e-10);
 //#endif
                 
+            // （n_pert>0 can add corss term in PN with oher particle) (treat PN at same status as external hard)
+
             // get cm perturbation (exclude soft pert)
             acc_pert_cm[0] /= mcm;
             acc_pert_cm[1] /= mcm;
@@ -467,7 +507,7 @@ public:
                     pgi.vel[2] += vcm[2] + gcm->vel[2];
 
                     Float* acc_pert = _force[i].acc_pert;
-                    ext_force->calcAccExternal(acc_pert, pgi);
+                    ext_force->calcAccJerkExternal(acc_pert, NULL, pgi, false);
 
                     acc_pert_cm[0] += pi.mass *acc_pert[0];
                     acc_pert_cm[1] += pi.mass *acc_pert[1];
@@ -509,39 +549,41 @@ public:
             }
 #endif
         }
+
+#ifdef SDAR_PN
+        for (int i=0; i<_n_particle; i++) {
+            const auto& pi = _particles[i];
+            for (int j=i+1; j<_n_particle; j++) {
+                const auto& pj = _particles[j];
+                Float dr[3] = {pj.pos[0]-pi.pos[0],
+                               pj.pos[1]-pi.pos[1],
+                               pj.pos[2]-pi.pos[2]};
+                Float dv[3] = {pj.vel[0]-pi.vel[0],
+                               pj.vel[1]-pi.vel[1],
+                               pj.vel[2]-pi.vel[2]};
+                Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
+                bool used_pn_orders[6] = {false,false,false,false,false,false};
+                if (pn.setUsedPNOrders(used_pn_orders, v2)) {
+                    Float ai[6][3], aj[6][3];
+                    pn.calcAccJerkPN(ai, aj, NULL, NULL, NULL, NULL, pi.mass, pj.mass, dr, dv, NULL, NULL, used_pn_orders, false);
+                    pn.sumAccJerkPN(&_force[i].acc_pert[0], NULL, ai, NULL, 1);
+                    pn.sumAccJerkPN(&_force[j].acc_pert[0], NULL, aj, NULL, 1);
+                }
+            }
+        }
+#endif
+
     }
     
-    //! (Necessary) calculate acceleration from internal members and perturbers
-    /*! The Force class acc_pert should be updated
-      @param[out] _force: force array to store the calculation results (in acc_pert[3], notice acc_pert may need to reset zero to avoid accummulating old values)
-      @param[out] _epot: potential 
-      @param[in] _particles: member particle array
-      @param[in] _n_particle: number of member particles
-      @param[in] _particle_cm: center-of-mass particle
-      @param[in] _perturber: pertuber container
-      @param[in] _time: current time
-      \return perturbation energy to calculate slowdown factor
-    */
-    Float calcAccPotAndGTKickInv(AR::Force* _force, Float& _epot, const PtclHard* _particles, const int _n_particle, const H4Ptcl& _particle_cm, const ARPerturber& _perturber, const Float _time) {
-        // inner force
-        Float gt_kick_inv;
-        if (_n_particle==2) gt_kick_inv = calcInnerAccPotAndGTKickInvTwo(_force[0], _force[1], _epot, _particles[0], _particles[1]);
-        else gt_kick_inv = calcInnerAccPotAndGTKickInv(_force, _epot, _particles, _n_particle);
-
-        calcAccPert(_force, _particles, _n_particle, _particle_cm, _perturber, _time);
-
-        return gt_kick_inv;
-    }
-
 
     //! calculate perturbation from c.m. acceleration
-    Float calcPertFromForce(const Float* _force, const Float _mp, const Float _mpert) {
+    Float calcPertFromForcePot(const Float* _force, const Float& _pot) {
         Float force2 = _force[0]*_force[0]+_force[1]*_force[1]+_force[2]*_force[2];
 #ifdef AR_SLOWDOWN_PERT_R4
-        return force2/(gravitational_constant*_mp*_mpert);
+        Float inv_r = -force2/_pot;
+        return sqrt(force2)*inv_r*inv_r*inv_r/gravitational_constant;
 #else
-        Float force = sqrt(force2)/gravitational_constant;
-        return sqrt(force/(_mp*_mpert))*force;
+        return -force2/(_pot*gravitational_constant);
 #endif
     }
 
@@ -633,15 +675,45 @@ public:
 #endif
     }
 
+    //! (Necessary) calculate slowdown perturbation from external effect on inner binary
+    /*!
+      @param[in] _bin: binary tree of member particles
+    */
+    void calcSlowDownPertExt(Float& _pert_out, const AR::BinaryTree<PtclHard>& _bin) {
+        // perturbation from binary tree
+#ifdef SDAR_PN
+        auto* p1 = _bin.getMember(0);
+        auto& vel1 = p1->vel;
+        auto& pos1 = p1->pos;
+        auto* p2 = _bin.getMember(1);
+        auto& vel2 = p2->vel;
+        auto& pos2 = p2->pos;
+
+        Float dv[3] = {vel2[0]-vel1[0],
+                       vel2[1]-vel1[1],
+                       vel2[2]-vel1[2]};
+        Float dr[3] = {pos2[0]-pos1[0],
+                       pos2[1]-pos1[1],
+                       pos2[2]-pos1[2]};
+        Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
+        Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+        Float ratio = pn.calcPN1OverNewton(v2);
+        Float apo = _bin.semi*(1.0+_bin.ecc);
+        _pert_out += ratio*p1->mass*p2->mass/(r2*apo);
+#endif
+    }
+    
+
     //! (Necessary) calculate slowdown perturbation and timescale
     /*!
       @param[out] _pert_out: perturbation 
       @param[out] _t_min_sq: timescale limit 
       @param[in] _time: physical time for prediction
+      @param[in] _bin: binary tree of member particles
       @param[in] _particle_cm: center-of-mass particle
       @param[in] _perturber: pertuber container
     */
-    void calcSlowDownPert(Float& _pert_out, Float& _t_min_sq, const Float& _time, const H4Ptcl& _particle_cm, const ARPerturber& _perturber) {
+    void calcSlowDownPert(Float& _pert_out, Float& _t_min_sq, const Float& _time, const AR::BinaryTree<PtclHard>& _bin, const H4Ptcl& _particle_cm, const ARPerturber& _perturber) {
         static const Float inv3 = 1.0 / 3.0;
 
         const int n_pert = _perturber.neighbor_address.getSize();
@@ -714,6 +786,8 @@ public:
         // add soft perturbation
         _pert_out += _perturber.soft_pert_min;
 
+        // external perturbation on inner binary
+        calcSlowDownPertExt(_pert_out, _bin);
     }
 #endif
 
@@ -819,8 +893,19 @@ public:
 
             return modify_flag;
         }
-
+        
 #endif // BSE_BASE
+#ifdef DISK_STAR_MERGER
+        if (_p.getBinaryInterruptState() != BinaryInterruptState::delaycollision) {
+            // call mass change function
+            if (_p.time_interrupt<=_time_end) {
+                int modify_flag = disk_star_merger_manager.calcMassChange(&_p, _time_end, time_interrupt_max);
+                return modify_flag;
+            }
+            else return 0;
+        }
+#endif
+
 #endif // STELLAR_EVOLUTION
         return 0;
     }
@@ -841,19 +926,25 @@ public:
                     modify_branch[k] = modifyAndInterruptIter(_bin_interrupt, *_bin.getMemberAsTree(k));
                     modify_return = std::max(modify_return, modify_branch[k]);
                 }
+                else {
+                    // if member is star, evolve single star 
+                    bool evolve_single_flag = false;
 #ifdef BSE_BASE
-                // if member is star, evolve single star using SSE
-                else if (stellar_evolution_option>0) {
-                    ASSERT(bse_manager.checkParams());
-                    modify_branch[k] = modifyOneParticle(*_bin.getMember(k), _bin.getMember(k)->time_record, _bin_interrupt.time_now);
-                    modify_return = std::max(modify_return, modify_branch[k]);
-                    // if status not set, set to change
-                    if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) {
-                        _bin_interrupt.status = AR::InterruptStatus::change;
-                        _bin_interrupt.setBinaryTreeAddress(&_bin);
+                    evolve_single_flag = (stellar_evolution_option>0);
+#endif
+#ifdef DISK_STAR_MERGER
+                    evolve_single_flag = true;
+#endif
+                    if (evolve_single_flag) {
+                        modify_branch[k] = modifyOneParticle(*_bin.getMember(k), _bin.getMember(k)->time_record, _bin_interrupt.time_now);
+                        modify_return = std::max(modify_return, modify_branch[k]);
+                        // if status not set, set to change
+                        if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) {
+                            _bin_interrupt.status = AR::InterruptStatus::change;
+                            _bin_interrupt.setBinaryTreeAddress(&_bin);
+                        }
                     }
                 }
-#endif
             }
             // ensure to record the root binary tree to include all changed members, if only record binary information (interrupt_detection_option == 2), should not do this
             if (modify_branch[0]>0&&modify_branch[1]>0 && interrupt_detection_option!=2) {
@@ -866,6 +957,19 @@ public:
             }
         }
         else {
+
+#ifdef DISK_STAR_MERGER
+            for (int k=0; k<2; k++) {
+                modify_branch[k] = modifyOneParticle(*_bin.getMember(k), _bin.getMember(k)->time_record, _bin_interrupt.time_now);
+                modify_return = std::max(modify_return, modify_branch[k]);
+                // if status not set, set to change
+                if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) {
+                    _bin_interrupt.status = AR::InterruptStatus::change;
+                    _bin_interrupt.setBinaryTreeAddress(&_bin);
+                }
+            }
+#endif  
+
             auto* p1 = _bin.getLeftMember();
             auto* p2 = _bin.getRightMember();
 
@@ -1271,19 +1375,19 @@ public:
                     // set return flag >0
                     modify_return = 2;
 
-                    if (_bin_interrupt.status == AR::InterruptStatus::none) 
-                        _bin_interrupt.status = AR::InterruptStatus::merge;
-
                     // merge two particles
                     if (interrupt_detection_option == 1) {
                         p1->time_record = _bin_interrupt.time_now;
                         p2->time_record = _bin_interrupt.time_now;
 
-                        // reset collision state since binary orbit changes
-                        p1->setBinaryInterruptState(BinaryInterruptState::none);
-                        p2->setBinaryInterruptState(BinaryInterruptState::none);
+#ifdef DISK_STAR_MERGER
+                        // use disk star merger
+                        disk_star_merger_manager.calcMergerProperties(p1, p2, _bin_interrupt.time_now);
 
-                        // new particle data
+                        if (p1->mass ==0.0) p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+                        if (p2->mass ==0.0) p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+#else
+                        // merge two particles
                         Float mcm = p1->mass + p2->mass;
                         for (int k=0; k<3; k++) {
                             p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
@@ -1296,9 +1400,17 @@ public:
                         p2->mass = 0.0;
 
                         p2->radius = 0.0;
+                        p1->mass += p2->mass;
 
                         p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+#endif
 
+                        // reset collision state since binary orbit changes
+                        p1->setBinaryInterruptState(BinaryInterruptState::none);
+                        p2->setBinaryInterruptState(BinaryInterruptState::none);
+
+                        if (_bin_interrupt.status != AR::InterruptStatus::destroy) 
+                            _bin_interrupt.status = AR::InterruptStatus::merge;
                     }
                     // record particle information, only set status
                     else if (interrupt_detection_option == 2) {
@@ -1348,8 +1460,8 @@ public:
                             }
                             else if (_bin.semi>0||(_bin.semi<0&&drdv<0)) {
                                 // ensure to set pair id for delayed collision
-                                p1->setBinaryPairID(p2->id);
-                                p2->setBinaryPairID(p1->id);
+                                //p1->setBinaryPairID(p2->id);
+                                //p2->setBinaryPairID(p1->id);
                                 p1->setBinaryInterruptState(BinaryInterruptState::delaycollision);
                                 p2->setBinaryInterruptState(BinaryInterruptState::delaycollision);
                                 p1->time_interrupt = std::min(_bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri), time_interrupt_max);
@@ -1491,6 +1603,11 @@ public:
             }
         }
 #endif
+
+#ifdef SDAR_PN
+
+
+#endif
         return modify_return;
     }
 
@@ -1502,6 +1619,7 @@ public:
     Float calcGTDriftInv(Float _ekin_minus_etot) {
         return _ekin_minus_etot;
     }
+#endif   
 
     //! (Necessary) calculate the time transformed Hamiltonian
     /*! calculate the time transformed Hamiltonian
@@ -1510,7 +1628,6 @@ public:
     Float calcH(Float _ekin_minus_etot, Float _epot) {
         return log(_ekin_minus_etot) - log(-_epot);
     }
-#endif   
 
     //! write class data to file with binary format
     /*! @param[in] _fp: FILE type file for output
@@ -1524,7 +1641,11 @@ public:
 #ifdef BSE_BASE
         fwrite(&stellar_evolution_option, sizeof(int),1,_fp);
         fwrite(&stellar_evolution_write_flag, sizeof(bool),1,_fp);
+        fwrite(&tide, sizeof(TwoBodyTide),1,_fp);
 #endif
+#endif
+#ifdef SDAR_PN
+        pn.writeBinary(_fp);
 #endif
     }
 
@@ -1533,26 +1654,46 @@ public:
      */
     void readBinary(FILE *_fin) {
         size_t rcount = fread(&eps_sq, sizeof(Float),1,_fin);
-        rcount += fread(&gravitational_constant, sizeof(Float),1,_fin);
-        rcount += fread(&interrupt_detection_option, sizeof(int),1,_fin);
-        if (rcount<3) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
+        if (rcount<1) {
+            std::cerr<<"Error: ARInteraction:readBinary: get eps_sq fails!\n";
+            abort();
+        }
+        rcount = fread(&gravitational_constant, sizeof(Float),1,_fin);
+        if (rcount<1) {
+            std::cerr<<"Error: ARInteraction:readBinary: get gravitational_constant fails!\n";
+            abort();
+        }
+        rcount = fread(&interrupt_detection_option, sizeof(int),1,_fin);
+        if (rcount<1) {
+            std::cerr<<"Error: ARInteraction:readBinary: get interrupt_detection_option fails!\n";
             abort();
         }
 #ifdef STELLAR_EVOLUTION
-        rcount += fread(&time_interrupt_max, sizeof(Float),1,_fin);
-        if (rcount<4) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
+        rcount = fread(&time_interrupt_max, sizeof(Float),1,_fin);
+        if (rcount<1) {
+            std::cerr<<"Error: ARInteraction:readBinary: get time_interrupt_max fails!\n";
             abort();
         }
 #ifdef BSE_BASE
-        rcount += fread(&stellar_evolution_option, sizeof(int),1,_fin);
-        rcount += fread(&stellar_evolution_write_flag, sizeof(bool),1,_fin);
-        if (rcount<6) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 6, only obtain "<<rcount<<".\n";
+        rcount = fread(&stellar_evolution_option, sizeof(int),1,_fin);
+        if (rcount<1) {
+            std::cerr<<"Error: ARInteraction:readBinary: get stellar_evolution_option fails!\n";
+            abort();
+        }
+        rcount = fread(&stellar_evolution_write_flag, sizeof(bool),1,_fin);
+        if (rcount<1) {
+            std::cerr<<"Error: ARInteraction:readBinary: get stellar_evolution_write_flag fails!\n";
+            abort();
+        }
+        rcount = fread(&tide, sizeof(TwoBodyTide),1,_fin);
+        if (rcount<1) {
+            std::cerr<<"Error: ARInteraction:readBinary: get tide fails!\n";
             abort();
         }
 #endif
+#endif
+#ifdef SDAR_PN
+        pn.readBinary(_fin);
 #endif
     }    
 };

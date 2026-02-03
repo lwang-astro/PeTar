@@ -1,5 +1,5 @@
 import numpy as np
-from .base import *
+from sdar.base import *
 
 def toGalevSnap(filename, particles, zmet, time=0, read_binary=False):
     """

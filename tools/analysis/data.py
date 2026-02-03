@@ -1,9 +1,11 @@
 # read snapshot and obtain multiple systems
 import collections
 from scipy import spatial as sp
-from .base import *
+from sdar.base import *
+from sdar.functions import *
+from sdar.ar import SDARInterruptBinary
 from .bse import *
-from .functions import *
+from .dsm import *
 
 G_MSUN_PC_MYR=0.00449830997959438 # Msun, pc, myr
 G_HENON=1 # Henon unit
@@ -211,7 +213,7 @@ class PeTarDataHeader():
         parameters={'galcen_distance':8.0*u.kpc, 'z_sun':15.*u.pc, 'galcen_v_sun':CartesianDifferential([10.0,235.,7.]*u.km/u.s)}
         for key in parameters.keys():
             if key in kwargs.keys():
-                parameter[key] = kwargs[key]
+                parameters[key] = kwargs[key]
 
         sky = SkyCoord(x=self.pos_offset[0]*pos_unit, 
                        y=self.pos_offset[1]*pos_unit, 
@@ -354,13 +356,15 @@ class BaseParticle(SimpleParticle):
         Members inherited from SimpleParticle: mass (1D), pos (2D,3), *pos_high (2D,3) vel (2D,3) 
             see help(petar.SimpleParticle)
         binary_state (1D): binary interruption state
-        if (keyword argument 'interrupt_mode' == 'base', 'bse', 'bseEmp', 'mobse'):
+        if (keyword argument 'interrupt_mode' == 'base', 'bse', 'bseEmp', 'mobse', 'dsm'):
             radius:        (1D): radius for merger checker
             dm:            (1D): mass loss
             time_record    (1D): last time of interruption check
             time_interrupt (1D): next interruption time
         if (keyword argument 'interrupt_mode' == 'bse', 'bseEmp', 'mobse'):
             star  (SSEStarParameter): BSE based stellar evolution parameters
+        if (keyword argument 'interrupt_mode' == 'dsm'):
+            star  (DSMStarParameter): Disk star merger parameters
     """
 
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
@@ -370,7 +374,7 @@ class BaseParticle(SimpleParticle):
         ----------
         keyword arguments:
             interrupt_mode: string (none)
-               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               PeTar interrupt mode (set in configure): base, bse, mobse, none, dsm
                This option indicates whether columns of stellar evolution exist
             use_mpfrc: bool (False)
                 if true, add three columns of pos_high indicating the high-precision parts of position
@@ -389,6 +393,8 @@ class BaseParticle(SimpleParticle):
                 keys = keys_bstat+keys_se
             elif ('bse' in kwargs['interrupt_mode']):
                 keys = keys_bstat+keys_se+[['star',SSEStarParameter]]
+            elif (kwargs['interrupt_mode']=='dsm'):
+                keys = keys_bstat+keys_se+[['star',DSMStarParameter]]
             
         SimpleParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
@@ -473,6 +479,8 @@ class Particle(HardParticle):
              Please set the keyword argument 'interrupt_mode' to determine the members of stellar evolution data
              Please set the keyword argument 'use_mpfrc' to determine whether high-precision parts of particle position are included
         acc_soft (2D,3): long-range interaction acceleration (particle-tree) x, y, z
+        if (keyword argument 'collect_sp_acc' == True'):
+            acc_sp (2D,3): superparticle acceleration (only used when superparticle is enabled) x, y, z
         pot      (1D): total potential
         pot_soft (1D): long-range interaction potential
         if (keyword argument 'external_mode' != 'none'):
@@ -494,16 +502,23 @@ class Particle(HardParticle):
                This option indicates whether the column of externa potential exist
             use_mpfrc: bool (False)
                If true, add three columns of pos_high indicating the high-precision parts of position
+            collect_sp_acc: bool (False)
+               If true, the superparticle acceleration is collected and the column acc_sp exists
             float_type: type (np.float64)
                 floating point data type
         """
         if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
         else: float_type = np.float64
 
-        keys = [['acc_soft',(float_type,3)], ['pot',float_type], ['pot_soft',float_type], ['n_nb',np.int64]]
+        keys = [['acc_soft',(float_type,3)]]
+        if ('collect_sp_acc' in kwargs.keys()):
+            if (kwargs['collect_sp_acc']):
+                keys += [['acc_sp',(float_type,3)]]
+        keys += [['pot',float_type], ['pot_soft',float_type]]
         if ('external_mode' in kwargs.keys()):
             if (kwargs['external_mode']!='none'):
-                keys = [['acc_soft',(float_type,3)], ['pot',float_type], ['pot_soft',float_type], ['pot_ext',float_type], ['n_nb',np.int64]]
+                keys += [['pot_ext',float_type]]
+        keys += [['n_nb',np.int64]]
 
         HardParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
@@ -588,6 +603,26 @@ class ParticleGroup(DictNpArrayMix):
 
         key = 'p'+str(index)
         return self.__dict__[key]
+
+class InterruptBinary(SDARInterruptBinary):
+    """ Data of stellar evolution interrupted binary in base mode
+        Inherit from sdar.ar.SDARInterruptBinary
+    """
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ Initial InterruptBinary class
+        Parameters
+        ----------
+        ----------
+        keyword arguments:
+            particle_type: type (HardParticle)
+                particle data type
+        """
+
+        if (not 'particle_type' in kwargs.keys()):
+            kwargs['particle_type'] = HardParticle
+        particle_type = kwargs['particle_type']
+
+        SDARInterruptBinary.__init__(self, _dat, _offset, _append, **kwargs)
 
 def calculateParticleCMDict(pcm, _p1, _p2):
     """ Calculate the center-of-the-mass of two particle sets

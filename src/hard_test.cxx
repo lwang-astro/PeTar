@@ -29,6 +29,7 @@ public:
     IOParams<PS::F64> r_out;
     IOParams<PS::F64> r_search_min;
     IOParams<PS::F64> dt_soft;
+    IOParams<PS::S64> n_bin;
     IOParams<PS::S64> write_style;
     IOParams<std::string> fname_inp;
     IOParams<std::string> fname_snap;
@@ -41,6 +42,7 @@ public:
                         r_out         (input_par_store, 0.1, "r",   "changeover outer boundary (r_out)"),
                         r_search_min  (input_par_store, 0, "r-search-min","search radius, if 0, use 1.5*r_out"),
                         dt_soft       (input_par_store, 0.125, "s", "soft time step (max hermite step), will be regularized to 2^-n"),
+                        n_bin         (input_par_store, 0, "b", "number of binaries"),
                         write_style   (input_par_store, 2,   "w", "Data file writing style; 0: no output; 1: write snapshots separately; 2. write snapshots in one status file"),
                         fname_inp     (input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false), 
                         fname_snap    (input_par_store, "data", "f", "Prefix of filenames for output data: [prefix].**"),
@@ -59,7 +61,7 @@ public:
         int copt;
         int option_index;
         optind = 0; // reset getopt
-        while ((copt = getopt_long(argc, argv, "-t:r:s:w:f:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "-t:b:r:s:w:f:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 switch (flag) {
@@ -90,6 +92,11 @@ public:
             case 's':
                 dt_soft.value = atof(optarg);
                 if(print_flag) dt_soft.print(std::cout);
+                opt_used += 2;
+                break;
+            case 'b':
+                n_bin.value = atoi(optarg);
+                if(print_flag) n_bin.print(std::cout);
                 opt_used += 2;
                 break;
             case 'w':
@@ -193,6 +200,58 @@ public:
 
 } profile;
 
+class HardCounts{
+public:
+    NumCounter sdar_substep_sum;
+    NumCounter sdar_tsyn_step_sum;
+    NumCounter H4_step_sum;
+    NumCounter H4_force_sum;
+    NumCounter n_neighbor_zero;
+    NumCounter sdar_n_groups;
+    NumCounter sdar_n_groups_iso;
+    NumCounter sdar_n_groups_new;
+    NumCounter sdar_n_groups_end;
+    NumCounter sdar_n_groups_arti_change;
+    const PS::S32 n_counter;
+
+    HardCounts():
+                 sdar_substep_sum  (NumCounter("AR_step_sum")),
+                 sdar_tsyn_step_sum(NumCounter("AR_tsyn_sum")),
+                 H4_step_sum       (NumCounter("H4_step_sum")),
+                 H4_force_sum      (NumCounter("H4_int_sum ")),
+                 n_neighbor_zero   (NumCounter("H4_no_NB   ")),
+                 sdar_n_groups     (NumCounter("Stab_Ngroup")),
+                 sdar_n_groups_iso (NumCounter("Iso_Ngroup ")),
+                 sdar_n_groups_new (NumCounter("Form_Ngroup")),
+                 sdar_n_groups_end (NumCounter("End_Ngroup ")),
+                 sdar_n_groups_arti_change(NumCounter("Modf_Ngroup")),
+                 n_counter(10) 
+                 {}
+
+    void dump(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 print_part=0, const PS::S32 width=PROFILE_PRINT_WIDTH) const{
+        for(PS::S32 i=0; i<n_counter; ++i) {
+            NumCounter* iptr = (NumCounter*)this+i;
+            iptr->dump(fout, n_loop, width);
+        }
+    }
+
+    void dumpName(std::ostream & fout, const PS::S32 print_part=0, const PS::S32 width=PROFILE_PRINT_WIDTH) const{
+        for(PS::S32 i=0; i<n_counter; ++i) {
+            NumCounter* iptr = (NumCounter*)this+i;
+            iptr->dumpName(fout, width);
+        }
+    }
+    
+    void clear() {
+        for(PS::S32 i=0; i<n_counter; ++i) {
+            NumCounter* iptr = (NumCounter*)this+i;
+            *iptr = 0;
+        }
+    }                     
+
+
+} n_count;
+
 int main(int argc, char** argv)
 {
 #ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL    
@@ -200,10 +259,21 @@ int main(int argc, char** argv)
 #endif
 
     // IO parameters    
+    std::vector<IOParamsContainer*> all_pars;
+        
     IOParamsHardTest main_parameters;
     IOParamsHard hard_parameters;
+    all_pars.push_back(&main_parameters.input_par_store);
+    all_pars.push_back(&hard_parameters.input_par_store);
+
+    std::vector<std::string> known_options;
+    known_options.push_back("help");
+    known_options.push_back("h");
+    FindUndefinedOptions(all_pars, argc, argv, &known_options);
+    
     main_parameters.print_flag = true;
     hard_parameters.print_flag = true;
+    opterr = 0; // do not print getopt error messages
     int opt_used = main_parameters.read(argc,argv);
     hard_parameters.read(argc,argv,false,true);
 
@@ -241,7 +311,16 @@ int main(int argc, char** argv)
     Ptcl::search_factor = 3;
 
     // initial changeover radii    
-    for (int i=0; i<N; i++) {
+    PS::S32 n_bin = main_parameters.n_bin.value;
+    for (int i=0; i<2*n_bin; i+=2) {
+        sys[i].changeover.setR(sys[i].mass*Ptcl::mean_mass_inv, r_in, r_out);
+        sys[i+1].changeover.setR(sys[i+1].mass*Ptcl::mean_mass_inv, r_in, r_out);
+        PS::F64vec vave = (sys[i].mass*sys[i].vel + sys[i+1].mass*sys[i+1].vel)/(sys[i].mass+sys[i+1].mass);
+        PS::F64 v = sqrt(vave[0]*vave[0]+vave[1]*vave[1]+vave[2]*vave[2]);
+        sys[i].r_search = std::max(r_search_min, v*dt_soft*Ptcl::search_factor + sys[i].changeover.getRout());
+        sys[i+1].r_search = std::max(r_search_min, v*dt_soft*Ptcl::search_factor + sys[i+1].changeover.getRout());
+    }
+    for (int i=2*n_bin; i<N; i++) {
         sys[i].changeover.setR(sys[i].mass*Ptcl::mean_mass_inv, r_in, r_out);
         sys[i].calcRSearch(dt_soft);
     }
@@ -255,11 +334,11 @@ int main(int argc, char** argv)
     
     // set r_group
     // dt_max/2^20 as period
-    if (hard_parameters.r_group.value==-1) {
-        PS::F64 r_group = COMM::Binary::periodToSemi(dt_soft/1024, m_average, hard_parameters.gravitational_constant.value);
-        hard_parameters.r_group.value = r_group;
-        hard_parameters.r_search_group.value = r_group*1.5;
-    }
+    //if (hard_parameters.r_group.value==-1) {
+    //    PS::F64 r_group = COMM::Binary::periodToSemi(dt_soft/1024, m_average, hard_parameters.gravitational_constant.value);
+    //    hard_parameters.r_group.value = r_group;
+    //    hard_parameters.r_search_group.value = r_group*1.5;
+    //}
 
     // system hard paramters
     HardManager hard_manager;
@@ -340,6 +419,32 @@ int main(int argc, char** argv)
         profile.integration.barrier();
         profile.integration.end();
 
+#ifdef PROFILE
+        n_count.sdar_substep_sum  += sys_hard.sdar_substep_sum;
+        n_count.sdar_tsyn_step_sum+= sys_hard.sdar_tsyn_step_sum;
+        n_count.H4_step_sum       += sys_hard.H4_step_sum;
+        n_count.H4_force_sum      += sys_hard.H4_force_sum;
+        n_count.sdar_n_groups     += sys_hard.sdar_n_groups;
+        n_count.sdar_n_groups_iso += sys_hard.sdar_n_groups_iso;
+        
+        sys_hard.sdar_substep_sum =0;
+        sys_hard.sdar_tsyn_step_sum=0;
+        sys_hard.H4_step_sum =0;
+        sys_hard.H4_force_sum=0;
+        sys_hard.sdar_n_groups=0;
+        sys_hard.sdar_n_groups_iso=0;
+#endif
+#ifdef HARD_COUNT_NO_NEIGHBOR
+        n_count.n_neighbor_zero  += sys_hard.n_neighbor_zero;
+        sys_hard.n_neighbor_zero =0;
+#endif
+        n_count.sdar_n_groups_new += sys_hard.sdar_n_groups_new;
+        n_count.sdar_n_groups_end += sys_hard.sdar_n_groups_end;
+        n_count.sdar_n_groups_arti_change += sys_hard.sdar_n_groups_arti_change;
+        sys_hard.sdar_n_groups_new =0;
+        sys_hard.sdar_n_groups_end =0;
+        sys_hard.sdar_n_groups_arti_change =0;
+
         profile.output.start();        
         sys_hard.writeBackPtclForMultiCluster(sys, mass_modify_list);
 
@@ -376,6 +481,13 @@ int main(int argc, char** argv)
         std::cout<<std::endl;
 
         profile.clear();        
+
+        n_count.dumpName(std::cout);
+        std::cout<<std::endl;
+        n_count.dump(std::cout,1);
+        std::cout<<std::endl;
+
+        n_count.clear();
     } 
 
     return 0;

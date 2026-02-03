@@ -1,40 +1,67 @@
 # analysis profile data
 
-from .base import *
+from sdar.base import *
 
 class FDPSProfile(DictNpArrayMix):
     """ FDPS time profile for tree for one tree step
     Keys: (class members)
-        collect_sam_ptcl (1D): collect sample
-        decompose_domain (1D): decompose domains
-        exchange_ptcl (1D): exchange particles
-        *set_particle_local_tree (1D): set particle in local tree
-        *set_particle_global_tree (1D): set particle in local tree
-        make_local_tree (1D): make local tree
-        make_global_tree (1D): make global tree
-        *set_root_cell (1D): set root cell
-        calc_force (1D): calculate force
-        calc_mom_loc_tree: calculate superparticle momentum in local tree
-        calc_mom_gb_tree: calcualte superparticle momentum in global tree
-        make_LET_1st: make local essential tree 1st
-        make_LET_2nd: make local essential tree 2nd
-        exchange_LET_1st: exchange local essential tree 1st
-        exchange_LET_2nd: exchange local essential tree 2nd
-        *write_back (1D): write back
-
-
-    PS: the prefix '*" indicates that these items do not exist for the old PeTar version before 984
-        Using the keyword argument 'FDPS_version=old' in the initialization for the old version.
+        if keyword_argument FPDS_VERSION >= 8.0:
+            select_sample_particle (1D): select sample particles
+            decompose_domain (1D): decompose domains
+            exchange_particle (1D): exchange particles
+            set_root_cell (1D): set root cell
+            construct_lt (1D): construct local tree
+            construct_exchange_let (1D): construct exchange local essential tree
+            construct_gt (1D): construct global tree
+            construct_ipg (1D): construct interaction particle group
+            construct_interaction_list (1D): construct interaction list
+            calculate_force (1D): calculate force
+            write_back (1D): write back
+        elif keyword_argument FPDS_VERSION >= 5.0:
+            collect_sam_ptcl (1D): collect sample
+            decompose_domain (1D): decompose domains
+            exchange_ptcl (1D): exchange particles
+            set_particle_local_tree (1D): set particle in local tree
+            set_particle_global_tree (1D): set particle in local tree
+            make_local_tree (1D): make local tree
+            make_global_tree (1D): make global tree
+            set_root_cell (1D): set root cell
+            calc_force (1D): calculate force
+            calc_mom_loc_tree: calculate superparticle momentum in local tree
+            calc_mom_gb_tree: calcualte superparticle momentum in global tree
+            make_LET_1st: make local essential tree 1st
+            make_LET_2nd: make local essential tree 2nd
+            exchange_LET_1st: exchange local essential tree 1st
+            exchange_LET_2nd: exchange local essential tree 2nd
+            write_back (1D): write back
+        else:
+            collect_sam_ptcl (1D): collect sample
+            decompose_domain (1D): decompose domains
+            exchange_ptcl (1D): exchange particles
+            make_local_tree (1D): make local tree
+            make_global_tree (1D): make global tree
+            calc_force (1D): calculate force
+            calc_mom_loc_tree: calculate superparticle momentum in local tree
+            calc_mom_gb_tree: calcualte superparticle momentum in global tree
+            make_LET_1st: make local essential tree 1st
+            make_LET_2nd: make local essential tree 2nd
+            exchange_LET_1st: exchange local essential tree 1st
+            exchange_LET_2nd: exchange local essential tree 2nd
     """
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        keys = [["collect_sam_ptcl",np.float64], ["decompose_domain",np.float64], ["exchange_ptcl",np.float64], 
-                ["set_particle_local_tree",np.float64],["set_particle_global_tree",np.float64],
-                ["make_local_tree",np.float64], ["make_global_tree",np.float64], ["set_root_cell",np.float64],
-                ["calc_force",np.float64], ["calc_mom_loc_tree",np.float64], ["calc_mom_gb_tree",np.float64],
-                ["make_LET_1st",np.float64], ["make_LET_2nd",np.float64], ["exchange_LET_1st",np.float64], ["exchange_LET_2nd",np.float64],
-                ["write_back",np.float64]]
+        keys = [["select_sample_particle",np.float64], ["decompose_domain",np.float64], ["exchange_particle",np.float64], 
+                ["set_root_cell",np.float64], ["construct_lt",np.float64], ["construct_exchange_let",np.float64],
+                ["construct_gt",np.float64], ["construct_ipg",np.float64],["construct_interaction_list",np.float64],
+                ["calculate_force",np.float64], ["write_back",np.float64]]
         if ('FDPS_version' in kwargs.keys()): 
-            if (kwargs['FDPS_version']=='old'):
+            if (kwargs['FDPS_version']<8.0):
+                keys = [["collect_sam_ptcl",np.float64], ["decompose_domain",np.float64], ["exchange_ptcl",np.float64], 
+                        ["set_particle_local_tree",np.float64],["set_particle_global_tree",np.float64],
+                        ["make_local_tree",np.float64], ["make_global_tree",np.float64], ["set_root_cell",np.float64],
+                        ["calc_force",np.float64], ["calc_mom_loc_tree",np.float64], ["calc_mom_gb_tree",np.float64],
+                        ["make_LET_1st",np.float64], ["make_LET_2nd",np.float64], ["exchange_LET_1st",np.float64], ["exchange_LET_2nd",np.float64],
+                        ["write_back",np.float64]]
+            elif (kwargs['FDPS_version']<5.0):
                 keys = [["collect_sam_ptcl",np.float64], ["decompose_domain",np.float64], ["exchange_ptcl",np.float64], 
                         ["make_local_tree",np.float64], ["make_global_tree",np.float64], 
                         ["calc_force",np.float64], ["calc_mom_loc_tree",np.float64], ["calc_mom_gb_tree",np.float64], 
@@ -99,6 +126,11 @@ class PeTarCount(DictNpArrayMix):
         AR_tsyn_step_sum: total AR steps for time synchronization
         AR_group_number: number of AR groups
         iso_group_number: number of isolated AR groups 
+        if keyword argument group_count == True:
+            AR_group_new: number of newly created AR groups in this step
+            AR_group_end: number of deleted AR groups in this step
+            AR_group_arti_change: number of AR groups with artificial particles change in this step
+            AR_group_merge: number of AR groups merged in this step
         Hermite_step_sum: total Hermite steps
         n_neighbor_zero: particles have zero neighbors in Hermite 
         Ep_Ep_interaction: number of essential (active) i and j particle interactions 
@@ -106,8 +138,17 @@ class PeTarCount(DictNpArrayMix):
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+        Keyword arguments:
+            group_count: bool (True)
+                whether to include AR group counting keys
         """
-        keys = [["hard_single",np.int64], ["hard_isolated",np.int64], ["hard_connected",np.int64], ["hard_interrupt",np.int64], ["cluster_isolated",np.int64], ["cluster_connected",np.int64], ["AR_step_sum",np.int64], ["AR_tsyn_step_sum",np.int64], ["AR_group_number",np.int64], ["iso_group_number",np.int64], ["Hermite_step_sum",np.int64], ["n_neighbor_zero",np.int64], ["Ep_Ep_interaction",np.int64], ["Ep_Sp_interaction",np.int64]]
+        keys = [["hard_single",np.int64], ["hard_isolated",np.int64], ["hard_connected",np.int64], ["hard_interrupt",np.int64], 
+                ["cluster_isolated",np.int64], ["cluster_connected",np.int64], ["AR_step_sum",np.int64], ["AR_tsyn_step_sum",np.int64], ["AR_group_number",np.int64], ["iso_group_number",np.int64]]
+        keys_group = [["AR_group_new",np.int64], ["AR_group_end",np.int64], ["AR_group_arti_change",np.int64], ["AR_group_merge",np.int64]]                
+        if ('group_count' in kwargs.keys()):
+            if (kwargs['group_count']==False):
+                keys_group = []
+        keys += keys_group + [["Hermite_step_sum",np.int64], ["n_neighbor_zero",np.int64], ["Ep_Ep_interaction",np.int64], ["Ep_Sp_interaction",np.int64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 class Profile(DictNpArrayMix):
@@ -133,8 +174,8 @@ class Profile(DictNpArrayMix):
         keyword arguments:
             use_gpu: bool (True)
                 whether cuda is used 
-            FDPS_version: string ('new')
-                when 'old' is set, use the old data format before the version 984
+            FDPS_version: float (8.0)
+                FDPS version for FDPSProfile initialization (see FDPSProfile.__init__ for details)
         """
         use_gpu=True
         if ('use_gpu' in kwargs.keys()): use_gpu=kwargs['use_gpu']

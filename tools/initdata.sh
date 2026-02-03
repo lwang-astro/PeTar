@@ -20,21 +20,31 @@ do
 	    echo '  -u     Calculate the velocity scaling factor based on the mass and radius scaling, then convert the data unit to (Msun, pc, pc/myr).';
 	    echo '          The input data should use the Henon unit (total mass=1, G=1).';
 	    echo '          The mass and radius scaling can be modified using -m and -r, respectively.';
-	    echo '  -s [S] Add stellar evolution columns: base | bse | no (default: no)';
-	    echo '  -R [S] Set the initial stellar radius for "-s base" mode (default: 0.0)';
-	    echo '          If value is given, set the given radius for all stars.';
-	    echo '          If "$[column index]" is given, read the corresponding column as the stellar radii for individual stars.';
-	    echo '             For example, "$8" indicates the 8th column is the stellar radii.';
-	    echo '  -T [I] The initial stellar type of each star when the BSE based stellar evolution is used (default: 1)';
-	    echo '          If number between 0-14 is provided, set the given stellar type to all stars.';
-	    echo '          If "$[column index]" is given, read the corresponding column as the BSE type for individual stars.';
-	    echo '             For example, "$8" indicates the 8th column is the BSE types.';
+	    echo '  -s [S] Add stellar evolution columns: base | bse | dsm | no (default: no)';
 	    echo '  -t     Add an external potential column and the position and velocity offsets to all particles in the header line.';
 	    echo '         This is required when the external potential (e.g., Galpy) is enabled (--with-external in configure).';
+		echo '  -S     Add a column to collect the superparticle acceleration from the soft part.';
 	    echo '  -c [S] Set values of position and velocity offsets [in input unit], values are separated by "," (default: 0,0,0,0,0,0).';
 	    echo '         The units will be transformed based on the scaling options (-r, -v, -u).';
 	    echo '         This is required when the external potential (e.g., Galpy) is enabled and the option "-t" is used';
-            echo '  -P     Add three columns of high-precison parts of position';
+        echo '  -P     Add three columns of high-precison parts of position';
+		echo 'Long options for setting specific columns:';
+	    echo '  --type    [I] The initial stellar type of each object when the BSE based stellar evolution or Disk star merger (DSM) mode is used (default: 1)';
+	    echo '                If the type number (for BSE between 0-14) is provided, set the given stellar type to all objects.';
+	    echo "                If '\$[column index]' is given, read the corresponding column as the type for individual objects.";
+	    echo "                   For example, --type '\$8' indicates the 8th column is the types.";
+	    echo '  --radius  [S] Set the initial stellar radius for "-s base" mode (default: 0.0)';
+	    echo '                If value is given, set the given radius for all stars.';
+	    echo "                If '\$[column index]' is given, read the corresponding column as the stellar radii for individual stars.";
+	    echo "                   For example, --radius '\$8' indicates the 8th column is the stellar radii.";
+		echo '  --time    [S] The initial time (time to start growth) of each object when the BSE(DSM) mode is used (default: 0)';
+		echo '                If value is given, use the given value';
+		echo "                if '\$[column index]' is given, read the corresponding column as the value for individual objects.";
+	    echo "                   For example, --time '\$8' indicates the 8th column is the initial times.";
+		echo '  --helium  [S] The initial helium fraction of each object when the DSM mode is used (default: 0.28)';
+		echo '                If value is given, use the given value';
+		echo "                if '\$[column index]' is given, read the corresponding column as the value for individual objects.";
+	    echo "                   For example, --helium '\$8' indicates the 8th column is the initial helium fractions.";
 	    echo 'Important notes:'
 	    echo '    1) When using stellar evolution (e.g., BSE), be cautious with the scaling factor.';
 	    echo '       It is recommended to use the unit set [Msun, pc, pc/myr] for the input data.';
@@ -52,14 +62,17 @@ do
 	-i) shift; igline=$1; shift;;
 	-P) mpflag='yes'; shift;;
 	-s) shift; seflag=$1; shift;;
-	-T) shift; setype=$1; shift;;
 	-m) shift; mscale=$1; convert=1; shift;;
 	-r) shift; rscale=$1; convert=1; shift;;
 	-v) shift; vscale=$1; convert=1; shift;;
 	-u) henon_unit=1; shift;;
-	-R) shift; radius=$1; shift;;
 	-c) shift; cm=$1; shift;;
 	-t) extflag='yes'; shift;;
+	-S) spaccflag='yes'; shift;;
+	--radius) shift; radius=$1; shift;;
+	--type) shift; setype=$1; shift;;
+	--time) shift; tinit=$1; shift;;
+	--helium) shift; helium=$1; shift;;
 	*) fname=$1;shift;;
     esac
 done
@@ -81,6 +94,9 @@ fi
 [ -z $convert ] && convert=0
 [ -z $henon_unit ] && henon_unit=0
 [ -z $cm ] && cm='none'
+[ -z $spaccflag ] && spaccflag='no'
+[ -z $tinit ] && tinit=0.0
+[ -z $helium ] && helium=0.28
 
 echo 'Transfer "'$fname'" to PeTar input data file "'$fout'"'
 echo 'Skip rows: '$igline
@@ -130,8 +146,12 @@ if [[ $mpflag == 'yes' ]]; then
 	#         m,  r,        pos_high       v,        bdata
 	base_col='$1, $2,$3,$4, 0.0, 0.0, 0.0, $5,$6,$7, 0,' 
 fi
-#         rs, id,    mbk, stat, rin, rout, acc_s, pot_t, pot_s, 
-soft_col='0,  NR-ig, 0,   0,    0,   0,    0,0,0, 0,     0,'
+#         rs, id,    mbk, stat, rin, rout, acc_s
+soft_col='0,  NR-ig, 0,   0,    0,   0,    0,0,0, '
+if [[ $spaccflag == 'yes' ]]; then
+	soft_col=$soft_col' 0,0,0,' # acc_sp
+fi
+soft_col=$soft_col' 0, 0, ' # pot_tot, pot_soft
 if [[ $extflag == 'yes' ]]; then
     echo 'Add the external potential column (pot_ext)'
     soft_col=$soft_col' 0,' # pot_ext
@@ -156,13 +176,17 @@ if [[ $seflag != 'no' ]]; then
 	echo "Stellar radius (0): " $radius
 	awk '{OFMT="%.15g"; print '"$base_col$se_col$soft_col"'}' $fout.scale__ >>$fout
     elif [[ "$seflag" == *"bse"* ]]; then
-	#       type, m0,  m,     rad, mc,  rc,  spin, epoch, time, lum
-	bse_col=$setype', $1*ms, $1*ms, 0.0, 0.0, 0.0, 0.0,0.0,0.0,  0.0,   0.0,  0.0,'
+	#       type,      m0,    m,    rad,  mc, rc, spin, epoch, time, lum
+	bse_col=$setype', $1*ms, $1*ms, 0.0, 0.0, 0.0, 0.0,0.0,0.0, 0.0, '$tinit', 0.0,'
 
 	echo 'Interrupt mode: '$seflag
 	echo 'Initial stellar type: '$setype
 	echo 'mass scale from PeTar unit (PT) to Msun (m[Msun] = m[PT]*mscale): ' $mscale
 	awk -v ms=$mscale  '{OFMT="%.15g"; print '"$base_col$se_col$bse_col$soft_col"'}' $fout.scale__ >>$fout
+	elif [[ "$seflag" == 'dsm' ]]; then
+	#         type,  ns, nbh, tinit,  tmerger, helium
+	dsm_col=$setype', 0, 0, '$tinit', 0.0, '$helium', '
+	awk -v ms=$mscale  '{OFMT="%.15g"; print '"$base_col$se_col$dsm_col$soft_col"'}' $fout.scale__ >>$fout
     else
 	echo 'Error: unknown option for stellar evolution: '$seflag
     fi

@@ -633,6 +633,7 @@ CXXNOMPI
 PROG_NAME
 PETAR_INCLUDE
 AGAMA_PATH
+SDAR_PATH
 GALPY_PATH
 MPFRCLIBS
 MPFRCFLAGS
@@ -647,6 +648,7 @@ COPTFLAGS
 OPTFLAGS
 with_orbit
 with_tidal_tensor
+with_pn
 with_external_hard
 with_external
 with_interrupt
@@ -658,7 +660,7 @@ use_omp
 use_cuda
 use_mpi
 use_quad
-use_simd_64
+use_64b
 use_simd
 with_arch
 ac_prefix_program
@@ -735,7 +737,7 @@ with_cpp_std
 enable_openmp
 with_arch
 with_simd
-enable_simd_64
+enable_64b
 enable_quad
 enable_cuda
 with_cuda_prefix
@@ -749,6 +751,7 @@ with_step_mode
 with_interrupt
 with_external
 with_external_hard
+with_pn
 with_tidal_tensor
 with_orbit
 enable_mpfrc
@@ -1389,7 +1392,7 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-omp           disable OpenMP support
-  --enable-simd-64        enable x86 SIMD 64 bits floating point support for
+  --enable-64b            enable 64 bits floating point support for
                           long-distant tree force
   --disable-quad          disable quadrupole-moment calculation for super
                           particles
@@ -1429,6 +1432,8 @@ Optional Packages:
   --with-external         External potential (galpy,agama). Default: off
   --with-external-hard    External force for hard (short-range) integration
                           (gasdrag). Default: none
+  --with-pn               Post-Newtonian correct: hermite, sdar, all: Default:
+                          none
   --with-tidal-tensor     Tidal tensor accuracy mode (2nd, 3rd). Default: 3rd
   --with-orbit            Orbit particle method for counter force (os:
                           orbit-sampling; pm: pseudoparticle multipole).
@@ -3624,14 +3629,122 @@ else
 fi
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -fsanitize=address,undefined" >&5
+$as_echo_n "checking whether C++ compiler accepts -fsanitize=address,undefined... " >&6; }
+if ${ax_cv_check_cxxflags___fsanitize_address_undefined+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  ax_check_save_flags=$CXXFLAGS
+  CXXFLAGS="$CXXFLAGS  -fsanitize=address,undefined"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  ax_cv_check_cxxflags___fsanitize_address_undefined=yes
+else
+  ax_cv_check_cxxflags___fsanitize_address_undefined=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CXXFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___fsanitize_address_undefined" >&5
+$as_echo "$ax_cv_check_cxxflags___fsanitize_address_undefined" >&6; }
+if test x"$ax_cv_check_cxxflags___fsanitize_address_undefined" = xyes; then :
+  DEBFLAGS=$DEBFLAGS" -fsanitize=address,undefined"
+else
+  :
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -fno-omit-frame-pointer" >&5
+$as_echo_n "checking whether C++ compiler accepts -fno-omit-frame-pointer... " >&6; }
+if ${ax_cv_check_cxxflags___fno_omit_frame_pointer+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  ax_check_save_flags=$CXXFLAGS
+  CXXFLAGS="$CXXFLAGS  -fno-omit-frame-pointer"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  ax_cv_check_cxxflags___fno_omit_frame_pointer=yes
+else
+  ax_cv_check_cxxflags___fno_omit_frame_pointer=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CXXFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___fno_omit_frame_pointer" >&5
+$as_echo "$ax_cv_check_cxxflags___fno_omit_frame_pointer" >&6; }
+if test x"$ax_cv_check_cxxflags___fno_omit_frame_pointer" = xyes; then :
+  DEBFLAGS=$DEBFLAGS" -fno-omit-frame-pointer"
+else
+  :
+fi
+
+
 if test x"$with_debug" == xg; then :
   PROG_SUFFIX=".g"
        OPTFLAGS=$DEBFLAGS
 else
   if test x"$with_debug" != xno; then :
   PROG_SUFFIX=".d"
+              OPTFLAGS=' -g'
+              { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -O2" >&5
+$as_echo_n "checking whether C++ compiler accepts -O2... " >&6; }
+if ${ax_cv_check_cxxflags___O2+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  ax_check_save_flags=$CXXFLAGS
+  CXXFLAGS="$CXXFLAGS  -O2"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  ax_cv_check_cxxflags___O2=yes
+else
+  ax_cv_check_cxxflags___O2=no
 fi
-       { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -O3" >&5
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CXXFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___O2" >&5
+$as_echo "$ax_cv_check_cxxflags___O2" >&6; }
+if test x"$ax_cv_check_cxxflags___O2" = xyes; then :
+  OPTFLAGS=$OPTFLAGS" -O2"
+else
+  :
+fi
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -O3" >&5
 $as_echo_n "checking whether C++ compiler accepts -O3... " >&6; }
 if ${ax_cv_check_cxxflags___O3+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -3666,6 +3779,7 @@ else
   :
 fi
 
+fi
 fi
 
 
@@ -4127,12 +4241,12 @@ fi
        PROG_NAME=$PROG_NAME".fugaku"
 fi
 
-# Check whether --enable-simd-64 was given.
-if test "${enable_simd_64+set}" = set; then :
-  enableval=$enable_simd_64; PROG_NAME=$PROG_NAME".64b"
-               use_simd_64=yes
+# Check whether --enable-64b was given.
+if test "${enable_64b+set}" = set; then :
+  enableval=$enable_64b; PROG_NAME=$PROG_NAME".64b"
+               use_64b=yes
 else
-  use_simd_64=no
+  use_64b=no
 fi
 
 
@@ -4662,6 +4776,7 @@ eval ac_res=\$$as_ac_File
 $as_echo "$ac_res" >&6; }
 if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
   PETAR_INCLUDE=$PETAR_INCLUDE" -I$sdar_prefix/src"
+             SDAR_PATH=$sdar_prefix
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
@@ -5953,6 +6068,13 @@ eval ac_res=\$$as_ac_File
 $as_echo "$ac_res" >&6; }
 if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
   GALPY_VERSION=`head -1 $galpy_prefix/__init__.py|cut -d'"' -f2 `
+                                   version_check=`echo -e "$GALPY_VERSION\n1.10.2" | sort -V | head -1`
+                                   if test "$version_check" != "$GALPY_VERSION"; then :
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "Galpy version $GALPY_VERSION is not supported. Please use Galpy <= 1.10.2
+See \`config.log' for more details" "$LINENO" 5; }
+fi
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
@@ -6217,6 +6339,17 @@ if test "${with_external_hard+set}" = set; then :
              PROG_NAME=$PROG_NAME'.'$with_external_hard
 else
   with_external_hard=none
+fi
+
+
+# pn force
+
+# Check whether --with-pn was given.
+if test "${with_pn+set}" = set; then :
+  withval=$with_pn; with_pn=$withval
+             PROG_NAME=$PROG_NAME'.'pn$with_pn
+else
+  with_pn=none
 fi
 
 
@@ -7122,6 +7255,8 @@ VERSION=$petar_version'_'$sdar_version
 
 
 
+
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: ----------------------Configure Summary--------------------" >&5
 $as_echo "$as_me: ----------------------Configure Summary--------------------" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Features:" >&5
@@ -7136,14 +7271,11 @@ $as_echo "$as_me:      Using MPI:         $use_mpi" >&6;}
 $as_echo "$as_me:      Using GPU:         $use_cuda" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      Using arch:        $with_arch" >&5
 $as_echo "$as_me:      Using arch:        $with_arch" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      Using 64b:         $use_64b" >&5
+$as_echo "$as_me:      Using 64b:         $use_64b" >&6;}
 if test "x$use_simd" != xno; then :
-  if test "x$use_simd_64" != xno; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}:      SIMD type:         $SIMD_TYPE 64 bits" >&5
-$as_echo "$as_me:      SIMD type:         $SIMD_TYPE 64 bits" >&6;}
-else
   { $as_echo "$as_me:${as_lineno-$LINENO}:      SIMD type:         $SIMD_TYPE " >&5
 $as_echo "$as_me:      SIMD type:         $SIMD_TYPE " >&6;}
-fi
        if test "x$with_simd" == xauto; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}:   Notice: this is auto-detected based on the host CPU architecture" >&5
 $as_echo "$as_me:   Notice: this is auto-detected based on the host CPU architecture" >&6;}
@@ -7167,6 +7299,8 @@ $as_echo "$as_me:      Galpy version:     $GALPY_VERSION" >&6;}
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}:      external hard mode:$with_external_hard" >&5
 $as_echo "$as_me:      external hard mode:$with_external_hard" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      pn mode:           $with_pn" >&5
+$as_echo "$as_me:      pn mode:           $with_pn" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      tidal tensor mode: $with_tidal_tensor" >&5
 $as_echo "$as_me:      tidal tensor mode: $with_tidal_tensor" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      orbit mode:        $with_orbit" >&5
