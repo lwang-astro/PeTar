@@ -1460,9 +1460,10 @@ public:
     }
 
     //! get Chi (dimensionless spin) from ospin
-    std::array<double, 3> getCompactChi(StarParameter& _star) {
+    std::array<double, 3> getCompactChiRandom(StarParameter& _star) {
         assert(_star.kw>=10);    
-        return compactOspinToChi(_star.ospin, _star.mt, _star.r);
+        std::array<double, 3> ospin = gw_kick.randomVectorWithMagnitude(_star.ospin[0]);
+        return compactOspinToChi(ospin.data(), _star.mt, _star.r);
     }
 
     //! get Chi (dimensionless spin) of the first compact objects (WD/NS/BH)
@@ -1591,25 +1592,22 @@ public:
     int evolveStar(StarParameter& _star, StarParameterOut& _out, const double _dt, bool _unit_in_myr=false) {
         double tphysf = _dt*tscale + _star.tphys;
         if (_unit_in_myr) tphysf = _dt + _star.tphys;
-        double dtp=tphysf*100.0+1000.0;
+        double dtp = tphysf*100.0+1000.0;
         _out.dm = _star.mt;
         _out.kw0 = _star.kw;
         int kw = _star.kw;
         double chi[3] = {0.0, 0.0, 0.0};
 
-        if (kw == 14 ) {
+        if (kw == 13 || kw == 14 ) {
             for (int k=0; k<3; k++) chi[k] = _star.ospin[k];
         }
         evolv1_(&kw, &_star.m0, &_star.mt, &_star.r, 
                 &_star.lum, &_star.mc, &_star.rc, &_out.menv, &_out.renv, 
                 &_star.ospin[0], &_star.epoch, 
                 &_out.tm, &_star.tphys, &tphysf, &dtp, &z, zpars, _out.vkick);
-        if (_star.kw == 14 ) {
+        // if previously a compact object with 3D chi, restore the chi
+        if ((_star.kw == 13 || _star.kw == 14) && (chi[1]!=0.0 || chi[2]!=0.0)) {
             for (int k=0; k<3; k++) _star.ospin[k] = chi[k];
-        }
-        if (_star.kw !=14 && kw==14) {
-            std::array<double, 3> chi_array = compactOspinToChi(_star.ospin, _star.mt, _star.r);
-            for(int k=0;k<3;k++) _star.ospin[k] = chi_array[k];
         }
         _star.kw = kw;
         _out.dm = _star.mt - _out.dm;
@@ -1729,7 +1727,8 @@ public:
         _star1.r  = r[0];
         _star1.mc = mc[0];
         _star1.rc = rc[0];
-        if (kw[0]==14) {
+        // if it is a compact object with 3D chi, restore the chi, otherwise use ospin from evolv2
+        if (kw[0]==13 || kw[0]==14) {
             if (chi1[1]==0 && chi1[2]==0) {
                 _star1.ospin[0] = ospin[0];
             }
@@ -1752,7 +1751,9 @@ public:
         _star2.r  = r[1];
         _star2.mc = mc[1];
         _star2.rc = rc[1];
-        if (kw[1]==14) {
+
+        // if it is a compact object with 3D chi, restore the chi, otherwise use ospin from evolv2
+        if (kw[1]==13 || kw[1]==14) {
             if (chi2[1]==0 && chi2[2]==0) {
                 _star2.ospin[0] = ospin[1];
             }
@@ -1813,26 +1814,33 @@ public:
                 double q, m1_pre, m2_pre;
                 std::array<double,3> chi1_pre, chi2_pre;    
                 if (merger_event_index==0) {
-                    std::cout <<"merger_event_index==0"<<std::endl;
+                    //std::cout <<"merger_event_index==0"<<std::endl;
                     m1_pre = getMass(_star1,false);
                     m2_pre = getMass(_star2,false);
-                    chi1_pre[0] = chi1[0];
-                    chi1_pre[1] = chi1[1];
-                    chi1_pre[2] = chi1[2];
-                    chi2_pre[0] = chi2[0];
-                    chi2_pre[1] = chi2[1];
-                    chi2_pre[2] = chi2[2];
-                    q = m1_pre/m2_pre;
-                    if (q>1) {
-                        q = 1/q;
-                        chi1_pre.swap(chi2_pre);
-                        std::swap(m1_pre, m2_pre);
-                    }   
+                    // if 3D chi not given, assign random chi
+                    if (chi1[2] == 0 && chi1[1] == 0) {
+                        chi1_pre = getCompactChiRandom(_star1);
+                    }
+                    else {
+                        chi1_pre[0] = chi1[0];
+                        chi1_pre[1] = chi1[1];
+                        chi1_pre[2] = chi1[2];
+                    }
+                    // if 3D chi not given, assign random chi
+                    if (chi2[2] == 0 && chi2[1] == 0) {
+                        chi2_pre = getCompactChiRandom(_star2); 
+                    }
+                    else {
+                        chi2_pre[0] = chi2[0];
+                        chi2_pre[1] = chi2[1];
+                        chi2_pre[2] = chi2[2];
+                    }
                 }
                 else {
                     m1_pre = _bse_event.getMass1(merger_event_index-1);
                     m2_pre = _bse_event.getMass2(merger_event_index-1);
                     //ASSERT(m1_pre>0 && m2_pre>0);
+                    // if 3D chi not given, assign random chi
                     if (chi1[2] == 0 && chi1[1] == 0) {
                         chi1_pre = getCompactChi1Random(_bse_event, merger_event_index-1);
                     }
@@ -1841,7 +1849,7 @@ public:
                         chi1_pre[1] = chi1[1];
                         chi1_pre[2] = chi1[2];
                     }
-
+                    // if 3D chi not given, assign random chi
                     if (chi2[2] == 0 && chi2[1] == 0) {
                         chi2_pre = getCompactChi2Random(_bse_event, merger_event_index-1); 
                     }
@@ -1850,9 +1858,14 @@ public:
                         chi2_pre[1] = chi2[1];
                         chi2_pre[2] = chi2[2];
                     }
-                    q = _bse_event.getMassRatio(merger_event_index-1);
-  
                 }
+                // ensure mass ratio < 1, swap if necessary
+                q = m1_pre/m2_pre;
+                if (q>1) {
+                    q = 1/q;
+                    chi1_pre.swap(chi2_pre);
+                    std::swap(m1_pre, m2_pre);
+                }   
             
                 // calculate kick properties                    
                 gw_kick.calcKickVel(vkick_gw, chi1_pre.data(), chi2_pre.data(), _am, pos_red, q);
