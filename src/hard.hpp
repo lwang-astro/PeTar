@@ -2820,7 +2820,8 @@ public:
 
 #ifdef STELLAR_EVOLUTION
             //// record mass change for later energy correction
-            sys[adr].dm = sys[adr].mass - mass_bk;
+            PS::F64 mass_new = sys[adr].group_data.artificial.isMember()? sys[adr].group_data.artificial.getMassBackup(): sys[adr].mass;
+            sys[adr].dm = mass_new - mass_bk;
             if (sys[adr].dm!=0.0) _mass_modify_list.push_back(adr);
 #endif
             assert(!std::isinf(sys[adr].pos[0]));
@@ -2864,7 +2865,8 @@ public:
 
 #ifdef STELLAR_EVOLUTION
                 // record mass change for later energy correction
-                sys[adr].dm = sys[adr].mass - mass_bk;
+                PS::F64 mass_new = sys[adr].group_data.artificial.isMember()? sys[adr].group_data.artificial.getMassBackup(): sys[adr].mass;
+                sys[adr].dm = mass_new - mass_bk;
                 if (sys[adr].dm!=0.0) mass_modify_list_thx[ith].push_back(adr);
 #endif
                 assert(!std::isinf(sys[adr].pos[0]));
