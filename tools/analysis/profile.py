@@ -75,15 +75,19 @@ class PeTarProfile(DictNpArrayMix):
         hard_single (1D): short-range integration of clusters with only one particle (pure drift)
         hard_isolated (1D): short-range integration of clusters with multiple particles in local MPI process (Hermite + SDAR)
         hard_connected (1D): short-range integration of clusters with multiple particles crossing multiple MPI processes (Hermite + SDAR; MPI communication)
-        hard_interrupt (1D): short-range integration of interrupted clusters
+        if keyword argument old_version == True (default False):
+            hard_interrupt (1D): short-range integration of interrupted clusters
         tree_neighbor (1D): particle-tree construction of n_real and neighbor searching
         tree_force    (1D): particle-tree construction of n_all and tree forace calculattion
         force_correct (1D): force correction for changeover function
         kick (1D): kick particle velocity
         search_cluster (1D): find clusters for short-range interactions
         create_group (1D):  find particle groups and create artificial particles
-        domain_decomp (1D): domain decomposition
-        exchange_ptcl (1D): exchange particles between MPI processes
+        if keyword argument old_version == True:
+            domain_decomp (1D): domain decomposition
+            exchange_ptcl (1D): exchange particles between MPI processes
+        else:
+            mpi_comm (1D): MPI communication time for domain decomposition and particle exchange
         output (1D): output snapshot and data
         status (1D): calculate status of system
         other (1D): other cost
@@ -91,7 +95,10 @@ class PeTarProfile(DictNpArrayMix):
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [["total",np.float64], ["hard_single",np.float64], ["hard_isolated",np.float64], ["hard_connected",np.float64], ["hard_interrupt",np.float64], ["tree_neighbor",np.float64], ["tree_force",np.float64], ["force_correct",np.float64], ["kick",np.float64], ["search_cluster",np.float64], ["create_group",np.float64], ["domain_decomp",np.float64], ["exchange_ptcl",np.float64], ["output",np.float64], ["status",np.float64],["other",np.float64]]
+        if kwargs.get('old_version', False):
+            keys = [["total",np.float64], ["hard_single",np.float64], ["hard_isolated",np.float64], ["hard_connected",np.float64], ["hard_interrupt",np.float64], ["tree_neighbor",np.float64], ["tree_force",np.float64], ["force_correct",np.float64], ["kick",np.float64], ["search_cluster",np.float64], ["create_group",np.float64], ["domain_decomp",np.float64], ["exchange_ptcl",np.float64], ["output",np.float64], ["status",np.float64],["other",np.float64]]
+        else:
+            keys = [["total",np.float64], ["hard_single",np.float64], ["hard_isolated",np.float64], ["hard_connected",np.float64], ["tree_neighbor",np.float64], ["tree_force",np.float64], ["force_correct",np.float64], ["kick",np.float64], ["search_cluster",np.float64], ["create_group",np.float64], ["MPI_comm",np.float64], ["output",np.float64], ["status",np.float64],["other",np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 class GPUProfile(DictNpArrayMix):
@@ -119,7 +126,8 @@ class PeTarCount(DictNpArrayMix):
         hard_single: number of particles in single clusters
         hard_isolated:  number of particles in isolated clusters
         hard_connected:  number of particles in connected clusters
-        hard_interrupt: number of clusters suffering interruptions
+        if keyword argument old_version == True (default False):
+            hard_interrupt: number of clusters suffering interruptions
         cluster_isolated: number of clusters with multiple particles in local MPI process
         cluster_connected: number of clusters with multiple particles crosing multiple MPI processes
         AR_step_sum: total AR steps
@@ -142,8 +150,10 @@ class PeTarCount(DictNpArrayMix):
             group_count: bool (True)
                 whether to include AR group counting keys
         """
-        keys = [["hard_single",np.int64], ["hard_isolated",np.int64], ["hard_connected",np.int64], ["hard_interrupt",np.int64], 
-                ["cluster_isolated",np.int64], ["cluster_connected",np.int64], ["AR_step_sum",np.int64], ["AR_tsyn_step_sum",np.int64], ["AR_group_number",np.int64], ["iso_group_number",np.int64]]
+        keys = [["hard_single",np.int64], ["hard_isolated",np.int64], ["hard_connected",np.int64]]
+        if (kwargs.get('old_version', False)):
+            keys += [["hard_interrupt",np.int64]]
+        keys += [["cluster_isolated",np.int64], ["cluster_connected",np.int64], ["AR_step_sum",np.int64], ["AR_tsyn_step_sum",np.int64], ["AR_group_number",np.int64], ["iso_group_number",np.int64]]
         keys_group = [["AR_group_new",np.int64], ["AR_group_end",np.int64], ["AR_group_arti_change",np.int64], ["AR_group_merge",np.int64]]                
         if ('group_count' in kwargs.keys()):
             if (kwargs['group_count']==False):

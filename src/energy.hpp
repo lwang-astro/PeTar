@@ -49,7 +49,7 @@ public:
     /*! print titles and values in one lines
       @param[out] _fout: std::ostream output object
     */
-    void print(std::ostream & _fout=std::cout, const PS::S32 _width=16) {
+    void print(std::ostream & _fout=std::cout, const PS::S32 _width=14) {
         _fout<<"Energy:  "
              <<std::setw(_width)<<"Error/Total"
              <<std::setw(_width)<<"Error"

@@ -1638,7 +1638,7 @@ public:
     void domainDecompose(const bool _enforce=false) {
 #ifdef PROFILE
         // > 6. Domain decomposition
-        profile.domain.start();
+        profile.mpi_comm.start();
 #endif
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
@@ -1649,9 +1649,9 @@ public:
         }
 #endif
 #ifdef PROFILE
-        profile.domain.barrier();
+        profile.mpi_comm.barrier();
         PS::Comm::barrier();
-        profile.domain.end();
+        profile.mpi_comm.end();
 #endif
     }
 
@@ -2052,7 +2052,7 @@ public:
             }
                 
             std::cout<<"**** Number of members in clusters (global):\n";
-            n_count_sum.printHist(std::cout, dn_loop, 14);
+            n_count_sum.printHist(std::cout, dn_loop, 12);
         }
 
         if(input_parameters.write_style.value>0) {
@@ -2276,7 +2276,7 @@ public:
         assert(n_interrupt_glb==0);
 
 #ifdef PROFILE
-        profile.exchange.start();
+        profile.mpi_comm.start();
 #endif
         system_soft.exchangeParticle(dinfo);
 
@@ -2295,9 +2295,9 @@ public:
 #endif
         
 #ifdef PROFILE
-        profile.exchange.barrier();
+        profile.mpi_comm.barrier();
         PS::Comm::barrier();
-        profile.exchange.end();
+        profile.mpi_comm.end();
 #endif
     }
 

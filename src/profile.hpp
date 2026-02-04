@@ -6,7 +6,7 @@
 #include<map>
 #include<iterator>
 
-#define PROFILE_PRINT_WIDTH 13
+#define PROFILE_PRINT_WIDTH 12
 
 /*
 template<class Tdinfo, class Tsystem, class Ttree>
@@ -348,15 +348,13 @@ public:
 	Tprofile hard_single;	   
 	Tprofile hard_isolated;
 	Tprofile hard_connected;
-    Tprofile hard_interrupt;
 	Tprofile tree_nb;
     Tprofile tree_soft;
     Tprofile force_correct;
     Tprofile kick;
 	Tprofile search_cluster;
     Tprofile create_group;
-    Tprofile domain;
-    Tprofile exchange;
+    Tprofile mpi_comm;
     Tprofile output;
     Tprofile status;
     Tprofile other;
@@ -366,19 +364,17 @@ public:
                   hard_single   (Tprofile("PP_single  ")),
                   hard_isolated (Tprofile("PP_cluster ")),
                   hard_connected(Tprofile("PP_cross   ")),
-                  hard_interrupt(Tprofile("PP_intrpt* ")),
                   tree_nb       (Tprofile("Tree_NB    ")),
                   tree_soft     (Tprofile("Tree_Force ")),
                   force_correct (Tprofile("Force_corr ")),
                   kick          (Tprofile("Kick       ")),
                   search_cluster(Tprofile("FindCluster")),
                   create_group  (Tprofile("CreateGroup")),
-                  domain        (Tprofile("Domain_deco")),
-                  exchange      (Tprofile("Ex_Ptcl    ")),
+                  mpi_comm      (Tprofile("MPI_comm   ")),
                   output        (Tprofile("Output     ")),
                   status        (Tprofile("Status     ")),
                   other         (Tprofile("Other      ")),
-                  n_profile(16) {}
+                  n_profile(14) {}
 
 	void print(std::ostream & fout, const PS::F64 time_sys, const PS::S64 n_loop=1){
         fout<<"Time: "<<time_sys<<std::endl;
@@ -452,7 +448,6 @@ public:
     NumCounter hard_single;
     NumCounter hard_isolated;
     NumCounter hard_connected;
-    NumCounter hard_interrupt;
     NumCounter cluster_isolated;
     NumCounter cluster_connected;
     NumCounter sdar_substep_sum;
@@ -474,7 +469,6 @@ public:
     SysCounts(): hard_single      (NumCounter("PP_single  ")),
                  hard_isolated    (NumCounter("PP_cluster ")),
                  hard_connected   (NumCounter("PP_cross   ")),
-                 hard_interrupt   (NumCounter("PP_intrpt* ")),
                  cluster_isolated (NumCounter("Cluster    ")),
                  cluster_connected(NumCounter("Cross      ")),
                  sdar_substep_sum  (NumCounter("AR_step_sum")),
