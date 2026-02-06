@@ -117,7 +117,7 @@ public:
                     r_group          (input_par_store,-1.0,  "r-group", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.); = -1: auto-determine by 0.8*r_in; = 0: switch off SDAR; > 0: custom criterion value"),
                     r_search_group   (input_par_store,-1.0,  "r-search-group", "The radial criterion for detecting multiple group candidates; = -1: auto-determine by 1.0*r_in; = 0: switch off SDAR; > 0: custom criterion value"),
                     r_acc_offset     (input_par_store, 0.0,  "hermite-r-acc0", "radius for computing acceleration offset in time step calculation to avoid too small step when weak acceleration exist; = 0: use r_out; > 0: custom offset value"),
-                    n_step_per_orbit (input_par_store, 8,    "tt-nstep", "Number of steps per slow-down binary orbits (period/dt_soft) for isolated binaries; also the maximum criterion for activating tidal tensor method"),
+                    n_step_per_orbit (input_par_store, 4,    "tt-nstep", "Number of steps per slow-down binary orbits (period/dt_soft) for isolated binaries; also the maximum criterion for activating tidal tensor method"),
                     tidal_tensor_switcher(input_par_store, 1,"tt-switch", "Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0: off, 1: on"),
 #ifdef ORBIT_SAMPLING
                     n_split          (input_par_store, 4,    "os-nsplit", "Number of binary sample points for tree perturbation force using orbit-sampling method"),
@@ -1375,32 +1375,34 @@ public:
 #endif
 
 #ifdef SOFT_PERT                
-                    // find corresponding tidal tensor if exist
-                    PS::S32 first_member_index = getParticleIndexFromGroupMember(groupi, 0);
-                    ASSERT(first_member_index>=0&&first_member_index<h4_int.particles.getSize());
+                    if (tidal_tensor_index.size()>0) {
+                        // find corresponding tidal tensor if exist
+                        PS::S32 first_member_index = getParticleIndexFromGroupMember(groupi, 0);
+                        ASSERT(first_member_index>=0&&first_member_index<h4_int.particles.getSize());
 
-                    PS::S32 tt_index = tidal_tensor_index[first_member_index];
-                    ASSERT(tt_index>=-1&&tt_index<n_tt);
+                        PS::S32 tt_index = tidal_tensor_index[first_member_index];
+                        ASSERT(tt_index>=-1&&tt_index<n_tt);
 
-                    if (tt_index>=0&&tt_index<n_tt) {
-                        PS::S32 n_members = groupi.particles.getSize();
-                        TidalTensor* tidal_tensor_i = &tidal_tensor[tt_index];
+                        if (tt_index>=0&&tt_index<n_tt) {
+                            PS::S32 n_members = groupi.particles.getSize();
+                            TidalTensor* tidal_tensor_i = &tidal_tensor[tt_index];
 
-                        // check whether n member is consistent
-                        if (int(tidal_tensor_i->group_id) == n_members) {
-                            // check member group_data to find whether all member has the same tidal tensor id
-                            bool tt_consistent = true;
-                            for (PS::S32 k=1; k<n_members; k++) {
-                                PS::S32 member_index = getParticleIndexFromGroupMember(groupi, k);
-                                ASSERT(member_index>=0&&member_index<h4_int.particles.getSize());
-                                if (tt_index != tidal_tensor_index[member_index]) {
-                                    tt_consistent = false;
-                                    break;
+                            // check whether n member is consistent
+                            if (int(tidal_tensor_i->group_id) == n_members) {
+                                // check member group_data to find whether all member has the same tidal tensor id
+                                bool tt_consistent = true;
+                                for (PS::S32 k=1; k<n_members; k++) {
+                                    PS::S32 member_index = getParticleIndexFromGroupMember(groupi, k);
+                                    ASSERT(member_index>=0&&member_index<h4_int.particles.getSize());
+                                    if (tt_index != tidal_tensor_index[member_index]) {
+                                        tt_consistent = false;
+                                        break;
+                                    }
                                 }
-                            }
 
-                            // if all match, set group tidal tensor 
-                            if (tt_consistent) groupi.perturber.soft_pert = tidal_tensor_i;
+                                // if all match, set group tidal tensor 
+                                if (tt_consistent) groupi.perturber.soft_pert = tidal_tensor_i;
+                            }
                         }
                     }
 
