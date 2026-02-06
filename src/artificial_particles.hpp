@@ -283,8 +283,9 @@ public:
         PS::S32 n_artificial = getArtificialParticleN();
         for (int i=0; i<n_artificial-1; i++) {
             Tptcl* pi = &_ptcl_artificial[i];
-            Tptcl* binary_member_i = _bin.getMember(i%2);
-            pi->id = id_offset + abs(binary_member_i->id)*n_artificial +i;
+            //Tptcl* binary_member_i = _bin.getMember(i%2);
+            //pi->id = id_offset + abs(binary_member_i->id)*n_artificial +i;
+            pi->id = id_offset + abs(_bin.id)*n_artificial +i;
             auto& pi_artificial = pi->group_data.artificial;
             pi_artificial.setParticleTypeToArtificial(PS::F64(i+1));
 #ifdef ARTIFICIAL_PARTICLE_DEBUG

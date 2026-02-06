@@ -783,14 +783,18 @@ public:
                                                          tag_max,
                                                          system_soft,
                                                          dinfo,
-                                                         n_walk_limit);
+                                                         n_walk_limit,
+                                                         true, //clear force
+                                                         mklist_mode);
 #else // no multi-walk index
         tree_soft.calcForceAllAndWriteBackMultiWalk(CalcForceWithLinearCutoffCUDA(my_rank, eps2, rout2, G),
                                                     RetrieveForceCUDA,
                                                     tag_max,
                                                     system_soft,
                                                     dinfo,
-                                                    n_walk_limit);
+                                                    n_walk_limit,
+                                                    true, //clear force,
+                                                    mklist_mode);
 #endif // multi-walk index
 
 #elif USE_FUGAKU

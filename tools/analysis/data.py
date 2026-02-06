@@ -112,8 +112,8 @@ class PeTarDataHeader():
                 self.file_id = fp['file_id'][0]
                 self.n = fp['n_glb'][0]
                 self.time = fp['time'][0]
-                self.pos_offset = [fp['x'][0], fp['y'][0], fp['z'][0]]
-                self.vel_offset = [fp['vx'][0], fp['vy'][0], fp['vz'][0]]
+                self.pos_offset = np.array([fp['x'][0], fp['y'][0], fp['z'][0]])
+                self.vel_offset = np.array([fp['vx'][0], fp['vy'][0], fp['vz'][0]])
             else:
                 fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',float_type)]),count=1)
                 self.file_id = fp['file_id'][0]

@@ -784,6 +784,7 @@ public:
 
     AR::InterruptBinary<PtclHard> sym_interrupt_binary; // interrupt binary information list
     PS::ReallocatableArray<TidalTensor> tidal_tensor; ///> tidal tensor array
+    PS::ReallocatableArray<PS::S64> tidal_tensor_index; ///> tidal tensor index array for each particle in ptcl_origin
     PS::F64 time_origin;  ///> origin physical time
     PtclH4* ptcl_origin;  ///> original particle array
 
@@ -819,7 +820,7 @@ public:
 #endif
 
     //! initializer
-    HardIntegrator(): h4_int(), sym_int(), manager(NULL), tidal_tensor(), time_origin(-1.0), ptcl_origin(NULL), 
+    HardIntegrator(): h4_int(), sym_int(), manager(NULL), tidal_tensor(), tidal_tensor_index(),time_origin(-1.0), ptcl_origin(NULL), 
 #ifdef HARD_DEBUG_PRINT
                       n_group_sub_init(), n_group_sub_tot_init(0),
 #endif
@@ -912,6 +913,9 @@ public:
         
         auto& ap_manager = manager->ap_manager;
         if (_ptcl_artificial!=NULL) {
+            tidal_tensor_index.resizeNoInitialize(_n_ptcl);
+            for(int i=0; i<_n_ptcl; i++) tidal_tensor_index[i] = -1;
+
             for(int i=0; i<_n_group; i++) {
                 adr_first_ptcl[i] = i*ap_manager.getArtificialParticleN();
                 auto* pi = &(_ptcl_artificial[adr_first_ptcl[i]]);
@@ -1132,8 +1136,8 @@ public:
                         auto* apcm = ap_manager.getCMParticles(api);
                         auto* aptt = ap_manager.getTidalTensorParticles(api);
 
-                        // correct pos for t.t. cm
-                        apcm->pos -= h4_int.particles.cm.pos;
+                        // correct pos for t.t. cm (cannot correct, need to keep original frame for reusing tree list mode)
+                        //apcm->pos -= h4_int.particles.cm.pos;
 
                         // fit tidal tensor
                         tidal_tensor[i].fit(aptt, *apcm, ap_manager.r_tidal_tensor);
@@ -1147,8 +1151,7 @@ public:
 
                         // same tidal_tensor id to member particle group_data for identification later
                         for (PS::S32 k=0; k<groupi.particles.getSize(); k++) {
-                            groupi.particles[k].setTidalTensorID(i+1);
-                            ptcl_origin[n_group_offset[i]+k].setTidalTensorID(i+1);
+                            tidal_tensor_index[n_group_offset[i]+k] = i;
                         }
                     }
 #endif
@@ -1373,20 +1376,24 @@ public:
 
 #ifdef SOFT_PERT                
                     // find corresponding tidal tensor if exist
-                    PS::S32 tt_id_member = groupi.particles[0].getTidalTensorID();
-#ifdef HARD_DEBUG
-                    ASSERT(tt_id_member>=0&&tt_id_member<n_tt);
-#endif
-                    if (tt_id_member>0&&tt_id_member<n_tt) {
+                    PS::S32 first_member_index = getParticleIndexFromGroupMember(groupi, 0);
+                    ASSERT(first_member_index>=0&&first_member_index<h4_int.particles.getSize());
+
+                    PS::S32 tt_index = tidal_tensor_index[first_member_index];
+                    ASSERT(tt_index>=-1&&tt_index<n_tt);
+
+                    if (tt_index>=0&&tt_index<n_tt) {
                         PS::S32 n_members = groupi.particles.getSize();
-                        TidalTensor* tidal_tensor_i = &tidal_tensor[tt_id_member-1];
+                        TidalTensor* tidal_tensor_i = &tidal_tensor[tt_index];
 
                         // check whether n member is consistent
                         if (int(tidal_tensor_i->group_id) == n_members) {
                             // check member group_data to find whether all member has the same tidal tensor id
                             bool tt_consistent = true;
                             for (PS::S32 k=1; k<n_members; k++) {
-                                if (tt_id_member != groupi.particles[k].getTidalTensorID()) {
+                                PS::S32 member_index = getParticleIndexFromGroupMember(groupi, k);
+                                ASSERT(member_index>=0&&member_index<h4_int.particles.getSize());
+                                if (tt_index != tidal_tensor_index[member_index]) {
                                     tt_consistent = false;
                                     break;
                                 }
@@ -1769,7 +1776,9 @@ public:
                     if (groupk.perturber.soft_pert != NULL) {
 
                         // check whether group match artifical particles
-                        PS::S32 index_arti = groupk.particles[0].getTidalTensorID()-1;
+                        PS::S32 first_member_index = getParticleIndexFromGroupMember(groupk, 0);
+                        ASSERT(first_member_index>=0&&first_member_index<h4_int.particles.getSize());
+                        PS::S32 index_arti = tidal_tensor_index[first_member_index];
                         PS::S32 adr_arti = index_arti*ap_manager.getArtificialParticleN();
                         PS::S32 n_member_from_arti = ap_manager.getMemberN(&_ptcl_artificial[adr_arti]);
                         PS::S32 n_member_from_group = groupk.particles.getSize();
@@ -1782,7 +1791,10 @@ public:
                         // check member tidal tensor id match
                         bool unmatch_flag = false;
                         for (int i=0; i<n_member_from_group; i++) {
-                            if (groupk.particles[i].getTidalTensorID()-1 != index_arti) {
+                            PS::S32 member_index = getParticleIndexFromGroupMember(groupk, i);
+                            ASSERT(member_index>=0&&member_index<h4_int.particles.getSize());
+                            PS::S32 tt_index = tidal_tensor_index[member_index];
+                            if (tt_index != index_arti) {
                                 unmatch_flag = true;
                                 break;
                             }
@@ -1988,6 +2000,17 @@ public:
             }
         }
     }
+
+    //! Get particle index from a group member address
+    /*!
+        @param[in] member_addr: address of the group member particle
+        @return particle index in the original particle array
+        */
+    template <class Tgroup>
+    PS::S32 getParticleIndexFromGroupMember(const Tgroup& group, const PS::S32 index) {
+        return static_cast<PS::S32>((PtclH4*)group.particles.getMemberOriginAddress(index) - ptcl_origin);
+    }
+    
 
     //! clear function
     void clear() {

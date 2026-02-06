@@ -40,17 +40,6 @@ public:
         return *this;
     }
 
-    void setTidalTensorID(const PS::S32 _id) {
-#ifdef HARD_DEBUG
-        assert(_id>0);
-#endif
-        group_data.artificial.setStatus(PS::F64(-_id));
-    }
-
-    PS::S32 getTidalTensorID() const {
-        return PS::S32(- group_data.artificial.getStatus());
-    }
-
     //! Get group candidate distance criterion
     PS::F64 getRGroupCandidate() const {
         return changeover.getRin()*r_search_group_over_in;
