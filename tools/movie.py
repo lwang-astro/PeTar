@@ -38,7 +38,7 @@ class PlotXY:
         self.framescale = 1
         self.nlayer_cross = 5
         self.nlayer_point = 10
-        self.alpha_amplifier = 2.5
+        self.alpha_amplifier = 1.0
         self.marker_scale = 1.0
         self.mass_power = 1.0
         self.size_mode = 'mass'
@@ -61,9 +61,9 @@ class PlotXY:
 
         nlayer = self.nlayer_cross + self.nlayer_point
         self.nlayer = nlayer
-        alphascale = np.linspace(1,nlayer,nlayer)*2.0/(nlayer*(nlayer+1))*self.alpha_amplifier
+        alphascale = np.linspace(1,nlayer+1,nlayer)*2.0/(nlayer*(nlayer+1))*self.alpha_amplifier
         #print('Alpha layer sequence:',alphascale,' sum:',alphascale.sum())
-        self.sizescale = np.logspace(0,3,nlayer)[::-1]
+        self.sizescale = np.logspace(1,nlayer+1,nlayer)[::-1]/nlayer
         #print('Size layer sequence:',self.sizescale)
 
         axe.set_xlim(self.x_min, self.x_max)
@@ -1046,7 +1046,7 @@ if __name__ == '__main__':
         print("          For example, path'./'; prefix'data'; reading file'./data.[0-9*'.")
         print("          The number of snapshots should be the same for all models.")
         print("  -i [S]  Interrupt mode used in petar: no, base, bse, mobse: ", data.interrupt_mode)
-        print("  -t [S]  External mode used in petar: no, galpy: ", data.external_mode)
+        print("  -t [S]  External mode used in petar: no, galpy, agama: ", data.external_mode)
         print("  -c [S]  Color type for particles: loglum, logtemp, ekin, pot, etot, white: ", data.color_mode)
         print("              loglum: log(luminosity).")
         print("              logtemp: log(temperature).")
@@ -1105,7 +1105,7 @@ if __name__ == '__main__':
         print("  --cm-boxsize  [F]  Boxsize to search the coordinate center for the x-y plot: 5.0 times plotting size (-R)")
         print("  --n-layer-cross [I] Number of layers of crosses for particles in the x-y plot: 5")
         print("  --n-layer-point [I] Number of layers of points for particles in the x-y plot: 10")
-        print("  --layer-alpha   [F] Transparency factor of layers in the x-y plot: 2.5")
+        print("  --layer-alpha   [F] Transparency factor of layers in the x-y plot: 1.0")
         print("  --marker-scale  [F] Amplify the size of markers in x-y plot: 1.0")
         print("  --mass-power    [F] The power index of mass to obtain sizes of markers: 1.0")
         print("  --size-mode     [S] Point size mode: mass, loglum: ", pxy.size_mode)
@@ -1121,7 +1121,7 @@ if __name__ == '__main__':
         print("Important notes")
         print("  1) Ensure correct options are set for '-i', '-t', and '-G' to read snapshots accurately and calculate Kepler orbital parameters correctly.")
         print("     When using the compiled SSE/BSE stellar evolution package, use '-i bse'. Note that even if SSE/BSE is compiled but switched off during petar usage, '-i bse' is still required.")
-        print("     Similarly, when the Galpy external potential support is compiled, use '-i galpy' regardless of whether external potential is set in petar options during simulation.")
+        print("     Similarly, when the Galpy/Agama external potential support is compiled, use '-i galpy' or '-i agama' regardless of whether external potential is set in petar options during simulation.")
         print("     Make sure to set the correct value for '-G' based on the units used during petar usage.")
         print("  2) Each panel of plots can be added multiple times (the order is recorded)")
 
