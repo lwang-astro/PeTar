@@ -1,9 +1,36 @@
+# Overview
 
-# Disclaimer 
+This repository contains a custom, updated version of the **PeTar** code, originally forked from the main repository:  
+https://github.com/lwang-astro/PeTar
 
-This is a custom updated version of the main PeTar code forked from the main repostiory: https://github.com/lwang-astro/PeTar 
+The original state of the code used as a baseline for the developments presented here is preserved in the branch  
+`original_forked`, available at:  
+https://gitlab.com/sara_rastello_astro/petarsara/-/tree/original_forked?ref_type=heads
 
 
+## Updates
+
+This version of the code includes a new implementation for the treatment of **micro–tidal disruption events (micro-TDEs)** involving stars and compact objects (black holes or neutron stars), occurring both in **wide and close orbital configurations**.
+
+In addition, the code features an **updated treatment of stellar collisions**, consistently integrated within the PeTar framework.
+
+A detailed description of all the implemented updates, physical assumptions, and numerical methods can be found in the accompanying paper:  
+https://ui.adsabs.harvard.edu/abs/2025arXiv250907067R/abstract
+
+
+## Disclaimer
+
+This version of the code is provided **without any warranty**.  
+The only formal documentation currently available is the description of the updates presented in the paper cited above.
+
+You are welcome to use this version of the code for your research. If you are interested in doing so, we strongly encourage you to contact us: 
+
+    - Sara Rastello:  sara.rastello@fqa.ub.edu
+    - Giuliano Iorio: giuliano.iorio.astro@gmail.com
+
+we will be happy to provide additional information, clarifications, or guidance when possible.
+
+---
 
 
 ```
