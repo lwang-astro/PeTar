@@ -30,6 +30,10 @@ You are welcome to use this version of the code for your research. If you are in
 
 we will be happy to provide additional information, clarifications, or guidance when possible.
 
+## Original documentation
+
+The rest of this README contains the original documentation of the code as at the time of the fork.  
+
 ---
 
 
