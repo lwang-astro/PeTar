@@ -10,7 +10,7 @@ https://gitlab.com/sara_rastello_astro/petarsara/-/tree/original_forked?ref_type
 
 ## Updates
 
-This version of the code includes a new implementation for the treatment of **micro–tidal disruption events (micro-TDEs)** involving stars and compact objects (black holes or neutron stars), occurring both in **wide and close orbital configurations**.
+This version of the code includes a new implementation for the treatment of **micro–tidal disruption events (micro-TDEs)** involving stars and compact objects (black holes or neutron stars), occurring both in open and close orbits.
 
 In addition, the code features an **updated treatment of stellar collisions**, consistently integrated within the PeTar framework.
 
