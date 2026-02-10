@@ -1,3 +1,11 @@
+
+# Disclaimer 
+
+This is a custom updated version of the main PeTar code forked from the main repostiory: https://github.com/lwang-astro/PeTar 
+
+
+
+
 ```
     ██████╗ ███████╗████████╗ █████╗ ██████╗ 
     ██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔══██╗
