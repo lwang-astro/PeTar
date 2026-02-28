@@ -15,3 +15,5 @@ from .external import *
 from .tide import *
 from .galev import *
 from .dsm import *
+from .galpy import *
+from . import agamaMWPot as agama
