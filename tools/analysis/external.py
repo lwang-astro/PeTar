@@ -123,3 +123,131 @@ class Tidal(DictNpArrayMix):
     
         return r_tid
 
+HEADER_EXTERNAL_POT_MAP_OFFSET = 16
+
+class ExternalPotMapConfig(DictNpArrayMix):
+    """ External potential measurement parameter file
+    keys: 
+        time0, initial time
+        dt: time step
+        nstep: total evolution steps
+        dt_out: output interval
+        xmin, xmax, nx: x-axis mesh range and number of points
+        ymin, ymax, ny: y-axis mesh range and number of points
+        zmin, zmax, nz: z-axis mesh range and number of points
+    """
+    def __init__(self, fpar):
+        fp = open(fpar, 'r')
+        header = fp.readline()
+        fp.close()
+        t0, dt, nstep, dt_out, xmin, xmax, nx, ymin, ymax, ny, zmin, zmax, nz = header.split()
+        self.t0 = float(t0)
+        self.dt = float(dt)
+        self.nstep = int(nstep)
+        self.dt_out = float(dt_out)
+        self.xmin = float(xmin)
+        self.xmax = float(xmax)
+        self.nx = int(nx)
+        self.ymin = float(ymin)
+        self.ymax = float(ymax)
+        self.ny = int(ny)
+        self.zmin = float(zmin)
+        self.zmax = float(zmax)
+        self.nz = int(nz)
+
+class ExternalPotMapHeader():
+    """ External potential map header information
+    keys:
+        time: snapshot time
+        nx: number of x-axis points
+        ny: number of y-axis points
+    """
+    def read(self, filename, snapshot_format='ascii'):
+        dtype_header = np.dtype([('time', np.float64), ('nx', np.int32), ('ny', np.int32)])
+        if snapshot_format == 'ascii':
+            with open(filename, 'r') as f:
+                header = f.readline()
+                t0, nx, ny = header.split()
+                self.time = float(t0)
+                self.nx = int(nx)
+                self.ny = int(ny)
+        else:
+            with open(filename, 'rb') as f:
+                header_data = np.fromfile(f, dtype=dtype_header, count=1)
+            self.time = header_data['time'][0]
+            self.nx = header_data['nx'][0]
+            self.ny = header_data['ny'][0]
+
+    def __init__(self, filename=None, snapshot_format='ascii'):
+        if filename is not None:
+            self.read(filename, snapshot_format)
+        else:
+            self.time = 0.0
+            self.nx = 0
+            self.ny = 0
+
+class ExternalPotMap(DictNpArrayMix):
+    """ External potential measure point
+    keys: (class members)
+        mass (1D): mass
+        pos (2D,3): postion x, y, z
+        vel (2D,3): velocity vx, vy, vz
+        acc (2D,3): acceleration ax, ay, az
+        pot (1D): potential
+        den (1D): density
+    """
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+        """
+        keys = [['mass', np.float64], ['pos', (np.float64, 3)], 
+                ['vel', (np.float64, 3)], ['acc',(np.float64, 3)], 
+                ['pot',np.float64], ['den',np.float64]]
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+    
+    def plot(self, axes, header, plot_keys=['x','y'], log_flag=False, with_contour=False, **kwargs):
+        """ 
+        Plot the external potential map using pcolormesh and contour
+        Parameters:
+        -------------
+        axes: matplotlib.axes.Axes
+            the axes to plot on
+        header: ExternalPotMapHeader
+            the header information of the potential map, used to reshape the data
+        plot_keys: list of str (default: ['x','y'])
+            the keys for x and y axis
+        log_flag: bool (default: False)
+            whether to plot log(-pot) or -pot
+        with_contour: bool (default: False)
+            whether to add contour lines on top of the pcolormesh
+        kwargs: dict
+            pcolormesh and contour keyword arguments, such as vmin, vmax, cmap, etc.
+
+        Return:
+        -------------
+        im: matplotlib.collections.QuadMesh
+            the pcolormesh object
+        cset: matplotlib.contour.QuadContourSet (if with_contour is True)
+            the contour set object
+        """
+
+        nx = header.nx
+        ny = header.ny
+        key_map = {'x': 0, 'y': 1, 'z': 2}
+        x_grid = self.pos[:, key_map[plot_keys[0]]].reshape((nx, ny))
+        y_grid = self.pos[:, key_map[plot_keys[1]]].reshape((nx, ny))
+        pot = self['pot'].reshape((nx, ny))
+
+        count = np.log10(-pot) if log_flag else -pot        
+
+        im = axes.pcolormesh(x_grid, y_grid, count, shading='auto', **kwargs)
+        axes.set_aspect('equal', adjustable='box')
+        axes.set_xlabel(plot_keys[0])
+        axes.set_ylabel(plot_keys[1])
+
+        if (with_contour):
+            cset = axes.contour(x_grid, y_grid, count, linewidths=2, **kwargs)
+            #axes[i].clabel(cset,inline=True,fmt='%1.1f',fontsize=10)
+            return im, cset
+        else:
+            return im
+
