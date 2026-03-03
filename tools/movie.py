@@ -40,7 +40,7 @@ class PlotXY:
         self.nlayer_point = 10
         self.alpha_amplifier = 1.0
         self.marker_scale = 1.0
-        self.mass_power = 1.0
+        self.mass_power = 0.5
         self.size_mode = 'mass'
         self.ptcls=[]
 
@@ -61,9 +61,10 @@ class PlotXY:
 
         nlayer = self.nlayer_cross + self.nlayer_point
         self.nlayer = nlayer
-        alphascale = np.linspace(1,nlayer+1,nlayer)*2.0/(nlayer*(nlayer+1))*self.alpha_amplifier
+        alphascale = np.logspace(np.log10(1/nlayer),0,nlayer)*self.alpha_amplifier
+        linewidths = np.linspace(1/self.nlayer_cross,1, self.nlayer_cross)/self.nlayer_cross
         #print('Alpha layer sequence:',alphascale,' sum:',alphascale.sum())
-        self.sizescale = np.logspace(1,nlayer+1,nlayer)[::-1]/nlayer
+        self.sizescale = np.logspace(0,2,nlayer)[::-1]
         #print('Size layer sequence:',self.sizescale)
 
         axe.set_xlim(self.x_min, self.x_max)
@@ -109,7 +110,7 @@ class PlotXY:
         self.xy_labels=labels
 
         for i in range(self.nlayer_cross):
-            pt =axe.scatter([],[],marker='+',alpha=alphascale[i])
+            pt =axe.scatter([],[],marker='+', linewidth = linewidths[i], alpha=alphascale[i])
             self.ptcls.append(pt)
         for i in range(self.nlayer_point):
             pt =axe.scatter([],[],alpha=alphascale[i],linewidth=0)
@@ -420,10 +421,10 @@ class PlotXY:
         ycm_text.set_text(cm_text[1]+('%f' % xycm[1]))
 
         mass = data.data.mass
-        lum = data.lum
         colors=data.getColor()
         for i in range(self.nlayer):
             if (self.size_mode == 'loglum'):
+                lum = data.lum
                 sizes = (np.log10(lum)-np.log10(self.lum_min))
             else:
                 sizes = (mass**self.mass_power)*self.sizescale[i]*self.framescale*self.marker_scale
@@ -468,7 +469,7 @@ class PlotSemiEcc:
         self.semi_max = 0.1
         self.ecc_min = 0.0
         self.ecc_max = 1.0
-        self.mass_power = 1.0
+        self.mass_power = 0.5
         self.marker_scale = 1.0
         self.cm_mode = 'core'
         self.bin_color = 'white'
@@ -1029,7 +1030,7 @@ if __name__ == '__main__':
         print("  -H      Add one panel of HR diagram.")
         print("  -b      Add one panel of semi-ecc diagram for binaries.")
         print("          Colors indicate the distance of binaries to the center, normalized by --r-max.")
-        print("          Sizes indicate the mass based on scaling options --markser-scale and --mass-power.")
+        print("          Sizes indicate the mass based on scaling options --marker-scale and --mass-power.")
         print("  -L [S]  Add one panel of Lagrangian radii evolution, argument is the filename of Lagrangian data", lagr_file)
         print("          Here the filename is not used in the comparison mode.")
         print("  -G [F]  Gravitational constant for calculating binary orbit: ", data.G)
@@ -1107,7 +1108,7 @@ if __name__ == '__main__':
         print("  --n-layer-point [I] Number of layers of points for particles in the x-y plot: 10")
         print("  --layer-alpha   [F] Transparency factor of layers in the x-y plot: 1.0")
         print("  --marker-scale  [F] Amplify the size of markers in x-y plot: 1.0")
-        print("  --mass-power    [F] The power index of mass to obtain sizes of markers: 1.0")
+        print("  --mass-power    [F] The power index of mass to obtain sizes of markers: 0.5")
         print("  --size-mode     [S] Point size mode: mass, loglum: ", pxy.size_mode)
         print("                         mass: scale with mass with --mass-power")
         print("                         loglum: scale with loglum")
