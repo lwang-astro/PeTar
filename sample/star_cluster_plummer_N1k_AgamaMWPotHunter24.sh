@@ -39,7 +39,10 @@ petar.data.process -t agama --r-escape tidal -G 0.00449830997959438 data.snap.ls
 # use petar.movie to make a movie of the simulation (movie.mp4).
 # The option '-i no' indicate no stellar evolution.
 # The option '-t agama' indicate Agama potential is used
-# The option '-m x-y' is used to specify the projection of the movie, which is in the x-y plane in this case.
-# The option '-R 10' is used to set the radius of the plot to 10 pc, which can be adjusted according to the size of the cluster and the desired field-of-view.
+# The option '-m x-y,x-y' is used to specify the projection of the movie, which is in the x-y plane in this case with two panels.
+# The option '-R 50,10000' is used to set the radius of the plot to 50 and 10000 pc for each panel, which can be adjusted according to the size of the cluster and the desired field-of-view.
+# The option '--marker-scale 1,0.1' is used to set the marker scale for the particles in the movie, which can be adjusted according to the desired visibility of the particles in the movie.
+# The option '--cm-mode core,none' is used to specify the center of mass mode for the movie, which can be set to 'core' to use the core as the center of mass or 'none' to not use any center of mass. 
+# In this case, the first panel uses the core as the center of mass, while the second panel does not use any center of mass.
 # The option '--dpi 300' is used to set the resolution of the movie, which can be adjusted according to the desired quality and file size of the movie.
-petar.movie -i no -t agama -m x-y -R 10 --dpi 300 data.snap.lst
+petar.movie -i no -t agama -m x-y,x-y -R 50,10000 --marker-scale 1,0.1 --cm-mode core,none --dpi 300 data.snap.lst

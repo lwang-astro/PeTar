@@ -42,6 +42,7 @@ class PlotXY:
         self.marker_scale = 1.0
         self.mass_power = 0.5
         self.size_mode = 'mass'
+        self.color_mode = 'white'
         self.ptcls=[]
 
     def init(self, axe, **kwargs):
@@ -58,14 +59,6 @@ class PlotXY:
         #if ('alpha_amplifier' in kwargs.keys()): alpha_amplifier = kwargs['alpha_amplifier']
         if (not 'cm_boxsize' in kwargs.keys()):
             self.cm_boxsize = self.boxsize
-
-        nlayer = self.nlayer_cross + self.nlayer_point
-        self.nlayer = nlayer
-        alphascale = np.logspace(np.log10(1/nlayer),0,nlayer)*self.alpha_amplifier
-        linewidths = np.linspace(1/self.nlayer_cross,1, self.nlayer_cross)/self.nlayer_cross
-        #print('Alpha layer sequence:',alphascale,' sum:',alphascale.sum())
-        self.sizescale = np.logspace(0,2,nlayer)[::-1]
-        #print('Size layer sequence:',self.sizescale)
 
         axe.set_xlim(self.x_min, self.x_max)
         axe.set_ylim(self.y_min, self.y_max)
@@ -109,9 +102,18 @@ class PlotXY:
         axe.set_ylabel(labels[1])
         self.xy_labels=labels
 
-        for i in range(self.nlayer_cross):
-            pt =axe.scatter([],[],marker='+', linewidth = linewidths[i], alpha=alphascale[i])
-            self.ptcls.append(pt)
+        nlayer = self.nlayer_cross + self.nlayer_point
+        self.nlayer = nlayer
+        alphascale = np.logspace(np.log10(1/nlayer),0,nlayer)*self.alpha_amplifier
+        #print('Alpha layer sequence:',alphascale,' sum:',alphascale.sum())
+        self.sizescale = np.logspace(0,2,nlayer)[::-1]
+        #print('Size layer sequence:',self.sizescale)
+
+        if self.nlayer_cross>0:
+            linewidths = np.linspace(1/self.nlayer_cross, 1, self.nlayer_cross)/self.nlayer_cross
+            for i in range(self.nlayer_cross):
+                pt =axe.scatter([],[],marker='+', linewidth = linewidths[i], alpha=alphascale[i])
+                self.ptcls.append(pt)
         for i in range(self.nlayer_point):
             pt =axe.scatter([],[],alpha=alphascale[i],linewidth=0)
             self.ptcls.append(pt)
@@ -180,10 +182,8 @@ class PlotXY:
     def plot(self, data, xcm_text, ycm_text):
 
         plot_mode = self.plot_mode
-        core_correct = (self.cm_mode=='core') & (data.generate_binary != 2) 
-        cm_is_core = (data.generate_binary == 2)
-        read_core = cm_is_core | core_correct
-        origin_mode = (self.cm_mode=='none')
+        cm_is_core = (data.snapshot_type == 'post')
+        read_core = ('core' in data.keys())
         axes_name = plot_mode.split('-')
         if (len(axes_name)!=2):
             raise ValueError('Plot mode %s is not supported, the format should be [x-axis name]-[y-axis name], check petar.movie -h for the options of -m' % plot_mode)
@@ -210,10 +210,10 @@ class PlotXY:
                         xyc = data.core.pos[0,xyz_index[name]]
                 if (cm_is_core):
                     xycm[i] = xyc
-                if (core_correct):
+                if (self.cm_mode == 'core'):
                     xy[i] = x + xycm[i] - xyc
                     xycm[i] = xyc
-                elif (origin_mode):
+                elif (self.cm_mode == 'none'):
                     xy[i] = x + xycm[i]
                 else:
                     xy[i] = x
@@ -247,10 +247,10 @@ class PlotXY:
                     rxcm = rxc
                     rycm = ryc
                     xycm[i] = np.sqrt(rxc*rxc + ryc*ryc)
-                if (core_correct):
+                if (self.cm_mode == 'core'):
                     xy[i] = np.sqrt((rx + rxcm - rxc)**2 + (ry + rycm - ryc)**2)
                     xycm[i] = np.sqrt(rxc*rxc + ryc*ryc)
-                elif (origin_mode):
+                elif (self.cm_mode == 'none'):
                     xy[i] = np.sqrt((rx + rxcm)**2 + (ry + rycm)**2)
                 else:
                     xy[i] = np.sqrt(rx*rx + ry*ry)
@@ -292,10 +292,10 @@ class PlotXY:
                     rycm = ryc
                     rzcm = rzc 
                     xycm[i] = np.sqrt(rxc*rxc + ryc*ryc + rzc*rzc)
-                if (core_correct):
+                if (self.cm_mode == 'core'):
                     xy[i] = np.sqrt((rx + rxcm - rxc)**2 + (ry + rycm - ryc)**2 + (rz + rzcm - rzc)**2)
                     xycm[i] = np.sqrt(rxc*rxc + ryc*ryc + rzc*rzc)
-                elif (origin_mode):
+                elif (self.cm_mode == 'none'):
                     xy[i] = np.sqrt((rx + rxcm)**2 + (ry + rycm)**2 + (rz + rzcm)**2)
                 else:
                     xy[i] = np.sqrt(rx*rx + ry*ry + rz*rz)
@@ -342,7 +342,7 @@ class PlotXY:
                     rcm = np.sqrt(rxcm*rxcm + rycm*rycm + rzcm*rzcm)                
                     drdvcm = rxcm*vxcm + rycm*vycm + rzcm*vzcm
                     xycm[i] = drdvcm/rcm
-                if (core_correct):
+                if (self.cm_mode == 'core'):
                     rxf = rx + rxcm - rxc
                     ryf = ry + rycm - ryc
                     rzf = rz + rzcm - rzc
@@ -355,7 +355,7 @@ class PlotXY:
                     r = np.sqrt(rxf*rxf + ryf*ryf + rzf*rzf)
                     drdv = rxf*vxf + ryf*vyf + rzf*vzf
                     xy[i] = drdv/r
-                elif (origin_mode):
+                elif (self.cm_mode == 'none'):
                     rxf = rx + rxcm
                     ryf = ry + rycm
                     rzf = rz + rzcm
@@ -421,7 +421,7 @@ class PlotXY:
         ycm_text.set_text(cm_text[1]+('%f' % xycm[1]))
 
         mass = data.data.mass
-        colors=data.getColor()
+        colors=data.getColor(self.color_mode)
         for i in range(self.nlayer):
             if (self.size_mode == 'loglum'):
                 lum = data.lum
@@ -469,8 +469,8 @@ class PlotSemiEcc:
         self.semi_max = 0.1
         self.ecc_min = 0.0
         self.ecc_max = 1.0
-        self.mass_power = 0.5
-        self.marker_scale = 1.0
+        self.bin_mass_power = 0.5
+        self.bin_marker_scale = 1.0
         self.cm_mode = 'core'
         self.bin_color = 'white'
         self.bin_rmax = 2.0
@@ -495,9 +495,9 @@ class PlotSemiEcc:
     def plot(self, data):
         if data.binary.size>0: 
             #colors = cm.rainbow(types/13.0)
-            sizes = data.binary.mass**self.mass_power*self.marker_scale
-            core_correct = (self.cm_mode=='core') & (data.generate_binary != 2)
-            origin_mode = (self.cm_mode=='none')
+            sizes = data.binary.mass**self.bin_mass_power*self.bin_marker_scale
+            core_correct = (data.cm_mode=='core') & (data.generate_binary != 2)
+            origin_mode = (data.cm_mode=='none')
             xcm = data.header.pos_offset[0]
             ycm = data.header.pos_offset[1]
             zcm = data.header.pos_offset[2]
@@ -510,7 +510,7 @@ class PlotSemiEcc:
                 zc = data.core.pos[0,2]
                 x += xcm - xc
                 y += ycm - yc
-                z += zcm - xc
+                z += zcm - zc
                 xcm = xc
                 ycm = yc
                 zcm = zc
@@ -576,12 +576,11 @@ class PlotLagr:
 class Data:
     def __init__(self, **kwargs):
         self.skiprows = 0
-        self.generate_binary=2
+        self.snapshot_type = 'post'
         self.interrupt_mode = 'bse'
         self.external_mode = 'none'
         self.G = 0.00449830997959438 # pc^3/(Msun*Myr^2)
         self.semi_max = 0.1
-        self.cm_mode = 'core'
         self.snapshot_format = 'ascii'
         self.lum_min = 1e-5
         self.lum_max = 1e6
@@ -594,7 +593,6 @@ class Data:
         self.etot_min = -100
         self.etot_max = 100
         self.get_skycoord=False
-        self.color_mode = 'white'
         self.galev_filter = ['Johnson', 'SDSS', 'HST', 'CSST', 'Gaia']
         self.galev_mode = 'abs_mag'
         self.galev_color = ['HST.F555W','HST.F814W']
@@ -609,7 +607,7 @@ class Data:
     def keys(self):
         return self.__dict__.keys()
 
-    def read(self, file_path, core):
+    def read(self, file_path, core, get_galev):
         data=self.__dict__
         skiprows = self.skiprows
 
@@ -619,11 +617,11 @@ class Data:
 
         data['header'] = header
         data['t'] = header.time
-        if (self.cm_mode=='core') | (self.generate_binary==2):
+        if (self.snapshot_type=='post') & (core.size != 0):
             tsel=(core.time==data['t'])
             data['core']=core[tsel]
 
-        if (self.generate_binary == 2):
+        if (self.snapshot_type == 'post'):
             single = petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
             p1 = petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
             p2 = petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
@@ -637,7 +635,7 @@ class Data:
                     single.load(file_path+'.single.npy')
                 else:
                     raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % self.snapshot_format)
-                if (self.color_mode == 'galev'):
+                if (get_galev):
                     mag = petar.GalevMag(filter = self.galev_filter, mode = self.galev_mode)
                     fpath = file_path+'.single.galev.mag'
                     if os.path.exists(fpath):
@@ -663,7 +661,7 @@ class Data:
                     binary.load(file_path+'.binary.npy')
                 else:
                     raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % self.snapshot_format)
-                if (self.color_mode == 'galev'):
+                if (get_galev):
                     mag = petar.GalevMag(filter = self.galev_filter, mode = self.galev_mode)
                     fpath = file_path+'.binary.galev.mag'
                     if os.path.exists(fpath):
@@ -717,7 +715,7 @@ class Data:
                 data['lum_cm'] = np.append(single.star.lum, binary.p1.star.lum+binary.p2.star.lum)
                 data['temp_cm']= np.append(temp_single,temp_binary)
                 data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
-            if (self.color_mode == 'galev'):
+            if (get_galev):
                 mag_list = []
                 mag_cm_list = []
                 for key in self.galev_color:
@@ -731,7 +729,7 @@ class Data:
                 particles.loadtxt(file_path, skiprows=1)
             else: 
                 particles.fromfile(file_path, offset=header_offset)
-            if (self.color_mode == 'galev'):
+            if (get_galev):
                 mag = petar.GalevMag(filter = self.galev_filter, mode = self.galev_mode)
                 fpath = file_path+'.galev.mag'
                 if os.path.exists(fpath):
@@ -758,13 +756,13 @@ class Data:
                 data['type']= particles.star.type
                 data['temp']= 5778*(data['lum']/(data['rad']*data['rad']))**0.25
 
-            if (self.color_mode == 'galev'):
+            if (get_galev):
                 mag_list = []
                 for key in self.galev_color:
                     mag_list.append(np.concatenate((single.galev[key], binary.p1.galev[key], binary.p2.galev[key])))
                 data['galev_mag'] = np.array(mag_list)
 
-            if (self.generate_binary>0):
+            if (self.snapshot_type=='generate_binary'):
                 kdtree,single,binary = petar.findPair(particles, self.G, self.semi_max*2.0, True)
                 data['binary'] = binary
                 if ('bse' in self.interrupt_mode):
@@ -776,7 +774,7 @@ class Data:
                     data['temp_cm']= np.append(temp_single,temp_binary)
                     data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
                     
-                if (self.color_mode == 'galev'):
+                if (get_galev):
                     binary.p1.galev.convertToFlux()
                     binary.p2.galev.convertToFlux()
                     bmag = binary.p1.galev + binary.p2.galev
@@ -788,21 +786,21 @@ class Data:
                     data['galev_mag_cm'] = np.array(mag_cm_list)
             
 
-    def getColor(self):
+    def getColor(self, color_mode):
         colors='w'
-        if (self.color_mode=='logtemp'):
+        if (color_mode=='logtemp'):
             log_temp=(np.log10(self.temp)-np.log10(self.temp_min))/(np.log10(self.temp_max)-np.log10(self.temp_min))
             colors=cm.rainbow(1.0-log_temp)
-        elif (self.color_mode=='loglum'):
+        elif (color_mode=='loglum'):
             log_lum=(np.log10(self.lum)-np.log10(self.lum_min))/(np.log10(self.lum_max)-np.log10(self.lum_min))
             colors=cm.rainbow(1.0-log_lum)
-        elif (self.color_mode=='ekin'):
+        elif (color_mode=='ekin'):
             colors=cm.hot((self.ekin - self.ekin_min)/(self.ekin_max-self.ekin_min))
-        elif (self.color_mode=='pot'):
+        elif (color_mode=='pot'):
             colors=cm.hot((self.pot - self.pot_min)/(self.pot_max-self.pot_min))
-        elif (self.color_mode=='etot'):
+        elif (color_mode=='etot'):
             colors=cm.hot((self.etot - self.etot_min)/(self.etot_max-self.etot_min))
-        elif (self.color_mode=='galev'):
+        elif (color_mode=='galev'):
             mag_min = self.galev_mag_range[0]
             mag_max = self.galev_mag_range[1]
 
@@ -815,7 +813,11 @@ class Data:
 
 def plotOne(file_path, axe, plots, core, lagr, **kwargs):
     data = Data(**kwargs)
-    data.read(file_path, core)
+    if 'color_mode' in kwargs.keys():
+        get_galev = ('galev' in kwargs['color_mode'])
+    else:
+        get_galev = False
+    data.read(file_path, core, get_galev)
 
     if ('format_time' in kwargs.keys()):
         axe[0].set_title('T = '+kwargs['format_time'] % data['t'])
@@ -864,10 +866,16 @@ def initPlot(axe, model_title, plot_item, lagr, **kwargs):
             plots['plot'][iaxe]=PlotXY()
             kwargs_sub=dict()
             kwargs_sub['plot_mode'] = pi[1]
-            for key in ['boxsize','x_min','x_max','y_min','y_max']:
-                if (key+'_list' in kwargs.keys()):
-                    kwargs_sub[key] = kwargs[key+'_list'][imain]
-            plots['plot'][iaxe].init(axe[iaxe], **kwargs_sub , **kwargs)
+            for key in kwargs.keys():
+                if (key in ['boxsize','x_min','x_max','y_min','y_max','cm_mode','color_mode','size_mode','marker_scale']):
+                    key_list = kwargs[key].split(',')
+                    if (key != 'cm_mode') and (key != 'color_mode') and (key != 'size_mode'):
+                        kwargs_sub[key] = float(key_list[imain])
+                    else:
+                        kwargs_sub[key] = key_list[imain]
+                else:
+                    kwargs_sub[key] = kwargs[key]
+            plots['plot'][iaxe].init(axe[iaxe], **kwargs_sub)
             plots['xcm'][iaxe] = axe[iaxe].text(.05, 0.95, '', transform = axe[iaxe].transAxes, color='white')
             plots['ycm'][iaxe] = axe[iaxe].text(.05, 0.9, '', transform = axe[iaxe].transAxes, color='white')
             imain += 1
@@ -1024,12 +1032,12 @@ if __name__ == '__main__':
         print("              pmlat: proper motion of Latitude in the Galactocentric frame.")
         print("          For ra, dec, lon, lat, and proper motion, the snapshot data must use astronomical units (pc, pc/Myr).")
         print("          The mode can be combined by ','. For example, '-m x-y,y-z' provides two plots: x-y and y-z.")
-        print("          In this case, -R or --x-min/max, --y-min/max should also set the range for each plot,")
-        print("          such as -R 10,10, --x-min -10,-10.")
+        print("          In this case, options including -R, --x-min/max, --y-min/max, --cm-mode, --marker-scale should also set the range for each plot,")
+        print("          such as -R 10,10000, --cm-mode core,none, --marker-scale 1,0.1 ...")
         print("  -R [F]  x- and y-axis length of -m; suppressed when --x-min/max, --y-min/max are used: ", pxy.boxsize)
         print("  -H      Add one panel of HR diagram.")
         print("  -b      Add one panel of semi-ecc diagram for binaries.")
-        print("          Colors indicate the distance of binaries to the center, normalized by --r-max.")
+        print("          Colors is determined by option --bin-color.")
         print("          Sizes indicate the mass based on scaling options --marker-scale and --mass-power.")
         print("  -L [S]  Add one panel of Lagrangian radii evolution, argument is the filename of Lagrangian data", lagr_file)
         print("          Here the filename is not used in the comparison mode.")
@@ -1056,7 +1064,10 @@ if __name__ == '__main__':
         print("              etot: total energy.")
         print("              white: pure white color.")
         print("  --compare-in-column      In comparison mode, models are compared in columns instead of rows.")
-        print("  --generate-binary   [I]  0: no binary, 1: detect binary by using KDtree (slow), 2: read single and binary data generated by petar.data.process: ", data.generate_binary)
+        print("  --snapshot-type [s]  snapshot reading types: ", data.snapshot_type)
+        print("             origin: read PeTar original snapshot.")
+        print("             post: read single and binary snapshots generated by petar.data.process.")
+        print("             generate_binary: read PeTar original snapshot and generate binary data by finding pairs of particles with distance smaller than --semi-max*2.0.")
         print("  --n-cpu       [I]  Number of CPU processors to use: all CPU cores")
         print("  --x-min       [F]  Minimum of the main plot x-axis range", pxy.x_min)
         print("  --x-max       [F]  Maximum of the main plot x-axis range", pxy.x_max)
@@ -1073,9 +1084,16 @@ if __name__ == '__main__':
         print("  --bin-rmax    [F]: Maximum distance for color scaling in semi-ecc plot: ",pse.bin_rmax)
         print("  --bin-rmin    [F]: Minimum distance for color scaling in semi-ecc plot: ",pse.bin_rmin)
         print("  --bin-color   [I]: Color mode for binary (semi-ecc) plot: distance, white: ",pse.bin_color)
-        print("                         distance: scale with the log(distance) of binaries to the center, normalized by --bin-rmin and --bin-rmax")
-        print("                                   color map 'hot_r' is used, redder color represent binaries more distant to the center")
-        print("                         white: pure white")
+        print("                       distance: scale with the log(distance) of binaries to the center, normalized by --bin-rmin and --bin-rmax")
+        print("                                 color map 'hot_r' is used, redder color represent binaries more distant to the center")
+        print("                       white: pure white")
+        print("  --bin-marker-scale [F]: Amplify the size of markers in semi-ecc plot: ",pse.bin_marker_scale)
+        print("  --bin-mass-power   [F]: The power index of mass to obtain sizes of markers in semi-ecc plot: ",pse.bin_mass_power)
+        print("  --bin-cm-mode [S]: Coordinate center mode for calculating binary orbital parameters: density, average, core, none: ", pse.bin_cm_mode)
+        print("                       density: density center;")
+        print("                       average: average of x, y;")
+        print("                       core: use core data file generated from petar.data.process;")
+        print("                       none: use origin of snapshots.")
         print("  --time-min    [F]  Minimum time in evolution plot (x-axis): auto-determined from Lagrangian data")
         print("  --time-max    [F]  Maximum time in evolution plot (x-axis): auto-determined from Lagrangian data")
         print("  --ekin-min    [F]  Minimum kinetic energy: ", data.ekin_min)
@@ -1097,7 +1115,7 @@ if __name__ == '__main__':
         print("  --plot-ncols  [I]  Column number of panels: same as panels")
         print("  --plot-xsize  [F]  X size of panel: ", frame_xsize)
         print("  --plot-ysize  [F]  Y size of panel: ", frame_ysize)
-        print("  --cm-mode     [S]  Plot origin position determination: density, average, core, none: ", data.cm_mode)
+        print("  --cm-mode     [S]  Plot origin position determination: density, average, core, none: ", pxy.cm_mode)
         print("                       density: density center;")
         print("                       average: average of x, y;")
         print("                       core: use core data file generated from petar.data.process;")
@@ -1160,10 +1178,7 @@ if __name__ == '__main__':
                     if (xname in sky_modes) | (yname in sky_modes):
                         kwargs['get_skycoord'] = True
             elif opt in ('-R'):
-                boxsize_str = arg
-                kwargs['boxsize_list'] = []
-                for i in boxsize_str.split(','):
-                    kwargs['boxsize_list'].append(float(i))
+                kwargs['boxsize'] = arg
             elif opt in ('-H'):
                 plot_item.append(['plot_HRdiagram'])
             elif opt in ('-b'):
@@ -1191,25 +1206,13 @@ if __name__ == '__main__':
             elif opt in ('--n-cpu'):
                 n_cpu = int(arg)
             elif opt in ('--x-min'):
-                x_min_str = arg
-                kwargs['x_min_list'] = []
-                for i in x_min_str.split(','):
-                    kwargs['x_min_list'].append(float(i))
+                kwargs['x_min'] = arg
             elif opt in ('--x-max'):
-                x_max_str = arg
-                kwargs['x_max_list'] = []
-                for i in x_max_str.split(','):
-                    kwargs['x_max_list'].append(float(i))
+                kwargs['x_max'] = arg
             elif opt in ('--y-min'):
-                y_min_str = arg
-                kwargs['y_min_list'] = []
-                for i in y_min_str.split(','):
-                    kwargs['y_min_list'].append(float(i))
+                kwargs['y_min'] = arg
             elif opt in ('--y-max'):
-                y_max_str = arg
-                kwargs['y_max_list'] = []
-                for i in y_max_str.split(','):
-                    kwargs['y_max_list'].append(float(i))
+                kwargs['y_max'] = arg
             elif opt in ('--lum-min'):
                 kwargs['lum_min'] = float(arg)
             elif opt in ('--lum-max'):
@@ -1261,7 +1264,7 @@ if __name__ == '__main__':
             elif opt in ('--lagr-mfrac'):
                 kwargs['mass_fraction'] = np.array([float(x) for x in arg.split(',')])
             elif opt in ('--cm-mode'):
-                kwargs['cm_mode']= arg
+                kwargs['cm_mode'] = arg
             elif opt in ('--cm-boxsize'):
                 kwargs['cm_boxsize'] = float(arg)
             elif opt in ('--core-file'):
@@ -1274,8 +1277,8 @@ if __name__ == '__main__':
                 kwargs['format_time'] = arg
             elif opt in ('--skiprows'):
                 kwargs['skiprows'] = int(arg)
-            elif opt in ('--generate-binary'):
-                kwargs['generate_binary']=int(arg)
+            elif opt in ('--snapshot-type'):
+                kwargs['snapshot_type'] = arg
             elif opt in ('--plot-ncols'):
                 ncol = int(arg)
             elif opt in ('--plot-xsize'):
@@ -1289,7 +1292,7 @@ if __name__ == '__main__':
             elif opt in ('--layer-alpha'):
                 kwargs['alpha_amplifier'] = float(arg)
             elif opt in ('--marker-scale'):
-                kwargs['marker_scale'] = float(arg)
+                kwargs['marker_scale'] = arg
             elif opt in ('--mass-power'):
                 kwargs['mass_power'] = float(arg)
             elif opt in ('--size-mode'):
@@ -1330,11 +1333,14 @@ if __name__ == '__main__':
 
     core=dict()
     read_core=False
-    if ('cm_mode' in kwargs.keys()):
-        if (kwargs['cm_mode']=='core'): read_core=True
-    if (not 'generate_binary' in kwargs.keys()): 
-        read_core = True
-    elif (kwargs['generate_binary']==2): read_core=True
+    snapshot_type = data.snapshot_type
+    if 'snapshot_type' in kwargs.keys():
+        snapshot_type = kwargs['snapshot_type']
+    core_in_cm_mode = (pxy.cm_mode == 'core') | ('cm_mode' in kwargs.keys() and 'core' in kwargs['cm_mode']) | ('bin_cm_mode' in kwargs.keys() and 'core' in kwargs['bin_cm_mode'])
+    none_in_cm_mode = (pxy.cm_mode == 'none') | ('cm_mode' in kwargs.keys() and 'none' in kwargs['cm_mode']) | ('bin_cm_mode' in kwargs.keys() and 'none' in kwargs['bin_cm_mode'])
+
+    if (snapshot_type == 'post') & (none_in_cm_mode | core_in_cm_mode): read_core=True
+    if (snapshot_type != 'post') & (core_in_cm_mode): read_core=True
 
     lagr=dict()
 
