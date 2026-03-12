@@ -40,7 +40,7 @@ class PlotXY:
         self.nlayer_point = 10
         self.alpha_amplifier = 1.0
         self.marker_scale = 1.0
-        self.mass_power = 0.5
+        self.mass_power = 0.3
         self.size_mode = 'mass'
         self.color_mode = 'white'
         self.ptcls=[]
@@ -183,7 +183,7 @@ class PlotXY:
 
         plot_mode = self.plot_mode
         cm_is_core = (data.snapshot_type == 'post')
-        read_core = ('core' in data.keys())
+        read_core = (hasattr(data, 'core'))
         axes_name = plot_mode.split('-')
         if (len(axes_name)!=2):
             raise ValueError('Plot mode %s is not supported, the format should be [x-axis name]-[y-axis name], check petar.movie -h for the options of -m' % plot_mode)
@@ -469,9 +469,9 @@ class PlotSemiEcc:
         self.semi_max = 0.1
         self.ecc_min = 0.0
         self.ecc_max = 1.0
-        self.bin_mass_power = 0.5
+        self.bin_mass_power = 0.3
         self.bin_marker_scale = 1.0
-        self.cm_mode = 'core'
+        self.bin_cm_mode = 'core'
         self.bin_color = 'white'
         self.bin_rmax = 2.0
         self.bin_rmin = 1e-5
@@ -496,7 +496,7 @@ class PlotSemiEcc:
         if data.binary.size>0: 
             #colors = cm.rainbow(types/13.0)
             sizes = data.binary.mass**self.bin_mass_power*self.bin_marker_scale
-            core_correct = (data.cm_mode=='core') & (data.generate_binary != 2)
+            core_correct = (data.cm_mode=='core')
             origin_mode = (data.cm_mode=='none')
             xcm = data.header.pos_offset[0]
             ycm = data.header.pos_offset[1]
@@ -617,7 +617,7 @@ class Data:
 
         data['header'] = header
         data['t'] = header.time
-        if (self.snapshot_type=='post') & (core.size != 0):
+        if (core.size != 0):
             tsel=(core.time==data['t'])
             data['core']=core[tsel]
 
@@ -833,7 +833,7 @@ def plotOne(file_path, axe, plots, core, lagr, **kwargs):
             ptcls += [plots['xcm'][iaxe], plots['ycm'][iaxe]]
 
         if pi[0] == 'plot_HRdiagram':
-            if ('lum_cm' in data.keys()):
+            if (hasattr(data,'lum_cm') and hasattr(data,'temp_cm') and hasattr(data,'type_cm')):
                 ptcls = ptcls + plots['plot'][iaxe].plot(data.lum_cm, data.temp_cm, data.type_cm)
             else:
                 ptcls = ptcls + plots['plot'][iaxe].plot(data.lum, data.temp, data.type)
@@ -1056,7 +1056,7 @@ if __name__ == '__main__':
         print("          The number of snapshots should be the same for all models.")
         print("  -i [S]  Interrupt mode used in petar: no, base, bse, mobse: ", data.interrupt_mode)
         print("  -t [S]  External mode used in petar: no, galpy, agama: ", data.external_mode)
-        print("  -c [S]  Color type for particles: loglum, logtemp, ekin, pot, etot, white: ", data.color_mode)
+        print("  -c [S]  Color type for particles: loglum, logtemp, ekin, pot, etot, white: ", pxy.color_mode)
         print("              loglum: log(luminosity).")
         print("              logtemp: log(temperature).")
         print("              ekin: kinetic energy.")
@@ -1147,13 +1147,13 @@ if __name__ == '__main__':
     try:
         shortargs = 'm:s:f:R:z:o:c:G:l:L:i:t:psHbh'
         longargs = ['help','n-cpu=','lum-min=','lum-max=','temp-min=','temp-max=',
-                    'semi-min=','semi-max=','ecc-min=','ecc-max=','bin-rmax=','bin-rmin=','bin-color=',
+                    'semi-min=','semi-max=','ecc-min=','ecc-max=','bin-rmax=','bin-rmin=','bin-color=', 'bin-marker-scale=','bin-mass-power=','bin-cm-mode=',
                     'ekin-min=','ekin-max=','pot-min=','pot-max=','etot-min=','etot-max=',
                     'rlagr-min=','rlagr-max=','rlagr-scale=',
                     'lagr-energy','lagr-type=','lagr-mfrac=',
                     'time-min=','time-max=','x-min=','x-max=','y-min=','y-max=',
                     'unit-length=','unit-vel=','format-time=',
-                    'skiprows=','generate-binary=',
+                    'skiprows=','snapshot-type=',
                     'plot-ncols=','plot-xsize=','plot-ysize=',
                     'suppress-images','format-file=','cm-mode=','core-file=',
                     'n-layer-cross=','n-layer-point=','layer-alpha=','marker-scale=','mass-power=','size-mode=',
