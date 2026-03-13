@@ -1,0 +1,210 @@
+     //==================================\\
+     ||                                  ||
+     || ::::::: ::::::. ::::::. .::::::. ||
+     || ::      ::    : ::    : ::       ||
+     || ::::::  ::    : ::::::'  `:::::. ||
+     || ::      ::::::' ::      `......' ||
+     ||     Framework for Developing     ||
+     ||        Particle Simulator        ||
+     ||     Version 8.0 (2025/09)       ||
+     \\==================================//
+
+       Home   : https://github.com/fdps/fdps 
+       E-mail : fdps-support@mail.jmlab.jp
+       Licence: MIT (see, https://github.com/FDPS/FDPS/blob/master/LICENSE)
+       Note   : Please cite the following papers.
+                - Iwasawa et al. (2016, Publications of the Astronomical Society of Japan, 68, 54)
+                - Namekata et al. (2018, Publications of the Astronomical Society of Japan, 70, 70)
+                - Iwasawa et al. (2020, Publications of the Astronomical Society of Japan, 72, 13)
+
+       Copyright (C) 2015 
+         Masaki Iwasawa, Ataru Tanikawa, Natsuki Hosono,
+         Keigo Nitadori, Takayuki Muranushi, Daisuke Namekata,
+         Kentaro Nomura, Junichiro Makino and many others
+******** FDPS has successfully begun. ********
+
+ ******************************************
+  ██████╗ ███████╗████████╗ █████╗ ██████╗
+  ██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔══██╗
+  ██████╔╝█████╗     ██║   ███████║██████╔╝
+  ██╔═══╝ ██╔══╝     ██║   ██╔══██║██╔══██╗
+  ██║     ███████╗   ██║   ██║  ██║██║  ██║
+  ╚═╝     ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝
+ ******************************************
+Version: 1607e_393e
+============== PeTar ================
+ Online document: (preparing)
+ GitHub page: https://github.com/lwang-astro/PeTar
+ License: MIT
+ Please cite the following papers when you use PeTar for any publications
+    FDPS: see above FPDS Logo message
+    SDAR: Wang L., Nitadori K., Makino J., 2020, MNRAS, 493, 3398
+    PeTar: Wang L., Iwasawa M., Nitadori K., Makino J., 2020, MNRAS, 497, 536
+    Agama: Vasiliev E., 2019, MNRAS, 482, 1525
+ Copyright (C) 2017
+    Long Wang, Masaki Iwasawa, Keigo Nitadori, Junichiro Makino and many others
+=====================================
+Use quadrupole moment in tree force calculation
+Use 3rd order tidal tensor method
+Use Pseudoparticle multipole method
+Use external potential: Agama
+Use orbit-dependent neighbor criterion
+Check energy of short-range (hard) integration
+Count isolated particles in hard clusters
+Use SIMD
+Calculate profile
+Use AR TTL method
+Use slowdown Tree method
+Use slowdown timescale criterion
+Print adjust group information
+=====================================
+Usage: petar [option] filename
+       filename: initial or restart data (snapshot) filename
+       Data file content:
+            First line: 
+             1. File_ID: 0 for initialization, else for restarting
+             2. N_particle 
+             3. Time
+             4-6: offset of system centeral position (assuming galactic center is the coordiante origin in the case of Galpy)
+             7-9: offset of system centeral velocity
+            Following lines:
+             1. mass: mass of particle
+             2-4. pos.[x/y/z]: 3D position of particle
+             5-7. vel.[x/y/z]: 3D velocity of particle
+             8. bin_stat: binary status storing pair id and status [formatted] (0.0)
+             9. r_search: neighbor searching radius (0.0)
+             10. id: identification of particle, should be a positive unique value (>0)
+             11. mass_bk: artificial particle parameter 1 [formatted] (0.0)
+             12. status: artificial particle parameter 2 [formatted] (0.0)
+             13. r_in: inner changeover radius (0.0)
+             14. r_out: outer changeover radius (0.0)
+             15-17. acc_soft.[x/y/z]: 3D soft (long-range) acceleration (0.0)
+             18. pot_tot: total potential (0.0)
+             19. pot_soft: soft potential (0.0)
+             20. pot_ext: external potential (0.0)
+             21. n_b: number of neighbors (0)
+** PS: (*) show initialization values which should be used together with FILE_ID = 0
+       [formatted] indicates that the value is only for save, cannot be directly read
+----- Main Options: -----
+  -h(--help):  print help
+** Default values are shown after ':'
+** The char in [] indicates argument type: I: 64bit integer; F: 64bit floating; S: string
+  -G  [F] Gravitational constant, if -u 1, G = 0.00449830997959438 pc^3/(Msun*Myr^2): 1
+  -T  [F] Particle-tree opening angle theta: 0.3
+  -a  [I] Data file output mode: 1
+         0: overwrite files except object dump files, include header lines
+         1: append files except snapshots, no header line
+  -b  [I] Number of primordial binaries (n_bin) for initialization (assuming the binaries' IDs are 1,2*n_bin): 0
+  -f  [S] Prefix of filenames for output data: [prefix].**: data
+  -i  [I] Data file reading and writing format: 1
+         0: read and write in BINARY
+         1: read and write in ASCII
+         2: read in ASCII, write in BINARY
+         3: read in BINARY, write in ASCII
+  -n  [I] Total number of particles, used only when the input data filename is __Plummer: 100000
+  -o  [F] Output time interval for particle dataset snapshots: 1
+  -p  [S] Input parameter file (this option should be used first before any other options): input.par
+  -r  [F] Outer changeover radius (r_out): 0
+         > 0: custom r_out value and check '-s dt_soft'
+              dt_soft = 0: calculate dt_soft and then adjust r_out by dt_soft
+              dt_soft > 0: use custom r_out directly
+         = 0 (default): check '--dt-soft-sigma-factor alpha':
+              alpha > 0: r_out = alpha*dt_soft*sigma_3D/r-ratio
+                  sigma_3D: global 3D velocity dispersion
+                  r-ratio: defined by --r-ratio
+              alpha = 0 (default): r_out = a(r_in)/r-ratio
+                  a(r_in): the binary semi-major axis with the period of nstep*dt_soft
+                  nstep: defined by --dt-soft-kepler-nstep
+  -s  [F] Tree timestep (dt_soft): 0
+         > 0: custom dt_soft value, regularized to 0.5^n, where n is an integer
+         = 0: check '-r r_out':
+              r_out = 0 (default): dt_soft = 2.6E-4*GM/sigma_3D^3, and is regularized to 0.5^n
+                  sigma_3D: global 3D velocity dispersion
+              r_out > 0: check '--dt-soft-sigma-factor alpha':
+                  alpha > 0: dt_soft = alpha*r_in/(sqrt(3)*sigma)
+                      r_in: determined by --r-ratio and r_out
+                  alpha = 0 (default): dt_soft = P(r_in)/nstep
+                      P(r_in): the binary period with the semi-major axis of r_in
+                      nstep: defined by --dt-soft-kepler-nstep
+  -t  [F] End time of simulation: 10
+  -u  [I] Input data unit: 0
+         0: based on the value of G
+         1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr, modify G to fit this unit set
+  -w  [I] Data file writing style: 1
+         0: no output
+         1: write all files separately
+         2. write snapshots in status files in one line per step (no MPI support)
+         3. write files except snapshots
+  --domain-nstep           [I] Number of steps between domain decompositions: 16
+  --domain-weight-mode     [I] Domain decomposition weight mode for MPI parallel: 0
+                                 0: equal weight for each MPI processor
+                                 1: use force calculation time as weight to obtain better load balance with losing simulation reproducibility
+  --dt-soft-kepler-nstep   [F] Factor 'nstep' to determine dt_soft by P(r_in)/nstep, see option '-s' and '-r': 64
+  --dt-soft-sigma-factor   [F] Factor 'alpha' to determine dt_soft by alpha*r_in/sigma_3D, see option '-s' and '-r': 0
+                                 = 0: not used, apply --dt-soft-kepler-nstep
+                                 > 0: use this option instead of '--dt-soft-kepler-nstep'
+  --n-sample-average       [I] Average target number of sample particles per process: 100
+  --r-escape               [F] Object escape radius criterion: 2.12676e+37
+                                 < 0: remove objects when r>-r_escape
+                                 >= 0: remove objects when r>r_escape and energy>0
+  --r-ratio                [F] Ratio between inner (r_in) and outer (r_out) changeover radii: 0.1
+  --r-search-min           [F] Minimum neighbor search radius for hard clusters: 0
+                                 = 0: auto-determine by max(search-vel-factor*sigma_1D*dt_soft + rout, 1.2 r_out)
+                                 > 0: custom search radius value
+  --r-search-peri-factor   [F] Neighbor search coefficient for periapsis check: 1.5
+  --r-search-vel-factor    [F] Neighbor search coefficient for velocity check (v*dt): 3
+  --tree-ngroup-limit      [I] Particle-tree group number limit: 1024
+                                 Optimal value for x86-AVX512 is 1024
+  --tree-nleaf-limit       [I] Particle-tree leaf number limit: 20
+                                 Optimal value should be slightly >= artificial particle number (tidal tensor 8 + anti-force sample 3) + 2 (binary member) + 1 (binary c.m.)
+  --tree-nstep-mklist      [I] Particle-tree make-list interval in number of soft-step: 2
+  --disable-print-info:        Do not print information
+----- Short-range (hard) integrator options: -----
+  --ar-ds-scale            [F] Scale factor for SDAR step size calculation: 1
+  --ar-max-error           [F] Maximum energy error allowed for the SDAR integrator: 1e-08
+  --ar-max-nstep           [I] Maximum step allowed for the SDAR sym integrator: 1000000
+  --ar-slowdown-factor     [F] Slowdown perturbation criterion: 0.0001
+  --ar-sym-order           [I] Order of the symplectic integrator for SDAR, should be even number: -6
+                                 -6,-8: Yoshida 2nd symplectic method
+                                 4,6,8,...: Yoshida 1st symplectic method
+  --energy-err-hard        [F] Maximum energy error allowed for the hard integrator: 0.0001
+  --hermite-de-crit        [F] Ekin change rate criterion for reinitializing hermite time step: 0.0001
+  --hermite-dm-crit        [F] Mass change rate criterion for reinitializing hermite time step: 0.0001
+  --hermite-dt-max         [F] Maximum hermite timestep: dt_soft
+  --hermite-dt-min-index   [I] Power index n for the smallest timestep (0.5^n) allowed in the Hermite integrator: 40
+  --hermite-eta            [F] Hermite timestep coefficient eta: 0.1
+  --hermite-eta-init       [F] Hermite timestep coefficient eta for initial step in 2nd order: 0.001
+  --hermite-n-neighbor-max [I] Maximum number of group neighbors to be stored: 300
+  --hermite-r-acc0         [F] radius for computing acceleration offset in time step calculation to avoid too small step when weak acceleration exist: 0
+                                 = 0: use r_out
+                                 > 0: custom offset value
+  --id-offset              [I] Starting ID for artificial particles, total number of real particles must always be smaller than this: n_glb+1
+  --kdtree-n-particles-min [I] Minimum number of particles + groups for building kdtree to speed up neighbor search in Hermite-only neighbor force calculation: 32
+  --r-group                [F] Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.): -1
+                                 = -1: auto-determine by 0.8*r_in
+                                 = 0: switch off SDAR
+                                 > 0: custom criterion value
+  --r-search-group         [F] The radial criterion for detecting multiple group candidates: -1
+                                 = -1: auto-determine by 1.0*r_in
+                                 = 0: switch off SDAR
+                                 > 0: custom criterion value
+  --record-id-end-one      [I] Ending of the first id range for hard dump: 0
+                                 notice that the ending id is not included in hard dump
+  --record-id-end-two      [I] Ending of the 2nd id range for hard dump: 0
+                                 notice that the ending id is not included in hard dump
+  --record-id-start-one    [I] Starting of the first id range for hard dump recording every tree step, save into files object_[id]: 0
+  --record-id-start-two    [I] Starting of the 2nd id range for hard dump recording every tree step: 0
+  --soft-eps               [F] Softening epsilon: 0
+  --tt-nstep               [I] Number of steps per slow-down binary orbits (period/dt_soft) for isolated binaries: 4
+                                 also the maximum criterion for activating tidal tensor method
+  --tt-switch              [I] Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0: off, 1: on: 1
+  --write-group-info       [I] Write information of new and end groups: 1
+                                 0: no output
+                                 1: output to file with name of [data filename prefix].group.[MPI rank]
+----- Agama options: -----
+  --agama-conf-file        [S] A configure file of agama potential: __NONE__
+  --agama-rscale           [F] Radius scale factor from unit of the input particle data (IN) to Agama distance unit: 1
+  --agama-vscale           [F] Velocity scale factor from unit of the input particle data (IN) to Agama velocity unit: 1
+
+MemoryPool::finalize() is completed!
+******** FDPS has successfully finished. ********

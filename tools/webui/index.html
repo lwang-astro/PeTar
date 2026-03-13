@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PeTar Option Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="bg-shape bg-shape-a" aria-hidden="true"></div>
+  <div class="bg-shape bg-shape-b" aria-hidden="true"></div>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">PeTar Frontend Builder</p>
+      <h1>PeTar Option Studio</h1>
+      <p class="subtitle">Parse <code>petar -h</code>, edit options in a structured UI, and generate a ready-to-run command line.</p>
+    </header>
+
+    <section class="panel controls">
+      <div class="control-row">
+        <label for="input-file">Input snapshot filename</label>
+        <input id="input-file" type="text" value="input.dat" placeholder="filename passed as final positional argument">
+      </div>
+      <div class="control-row">
+        <label for="search">Filter options</label>
+        <input id="search" type="search" placeholder="Try: r-search, agama, hermite, dt-soft...">
+      </div>
+      <div class="button-row">
+        <button id="reload-help" type="button">Reload from petar-help.txt</button>
+        <button id="apply-help" type="button">Parse text below</button>
+        <button id="reset-all" type="button">Reset selections</button>
+      </div>
+      <label for="help-source" class="textarea-label">Help text source (<code>petar -h</code>)</label>
+      <textarea id="help-source" rows="8" spellcheck="false" placeholder="If automatic load fails, paste the full output of: petar -h"></textarea>
+      <p id="parse-status" class="status"></p>
+    </section>
+
+    <section class="panel command-panel">
+      <div class="command-head">
+        <h2>Generated command</h2>
+        <div class="button-row compact">
+          <button id="copy-command" type="button">Copy</button>
+        </div>
+      </div>
+      <pre id="command-preview" class="command-preview"></pre>
+    </section>
+
+    <section class="panel options-panel">
+      <div id="summary" class="summary"></div>
+      <div id="sections" class="sections"></div>
+    </section>
+  </main>
+
+  <template id="option-template">
+    <article class="option-row">
+      <label class="toggle-wrap">
+        <input class="opt-enabled" type="checkbox">
+        <span class="flag"></span>
+      </label>
+      <div class="opt-body">
+        <p class="opt-desc"></p>
+        <div class="opt-meta"></div>
+      </div>
+      <div class="opt-input-wrap"></div>
+    </article>
+  </template>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
