@@ -12,6 +12,7 @@ import getopt
 import petar
 import imageio
 import os
+import re
 #from pygifsicle import optimize
 
 plt.style.use('dark_background')
@@ -43,9 +44,22 @@ class PlotXY:
         self.mass_power = 0.3
         self.size_mode = 'mass'
         self.color_mode = 'white'
+        self.external_pot = False
+        self.external_pot_dir = '.'
+        self.external_pot_format = 'binary'
+        self.external_pot_log = False
+        self.external_pot_vmin = None
+        self.external_pot_vmax = None
+        self.external_pot_alpha = 0.5
+        self.external_pot_with_contour = False
+        self.external_pot_xy_prefix = 'xy'
+        self.external_pot_xz_prefix = 'xz'
+        self.external_pot_mesh = None
+        self.external_pot_contours = []
         self.ptcls=[]
 
     def init(self, axe, **kwargs):
+        self.axe = axe
         for key in self.__dict__.keys():
             if (key in kwargs.keys()): self.__dict__[key] = kwargs[key]
         if ('boxsize' in kwargs.keys()):
@@ -420,6 +434,8 @@ class PlotXY:
         xcm_text.set_text(cm_text[0]+('%f' % xycm[0]))
         ycm_text.set_text(cm_text[1]+('%f' % xycm[1]))
 
+        ptcls_ext = self.plotExternalPotential(data)
+
         mass = data.data.mass
         colors=data.getColor(self.color_mode)
         for i in range(self.nlayer):
@@ -433,7 +449,110 @@ class PlotXY:
             self.ptcls[i].set_offsets(np.array([xy[0],xy[1]]).transpose())
             self.ptcls[i].set_sizes(sizes)
             self.ptcls[i].set_color(colors)
-        return self.ptcls
+        return self.ptcls + ptcls_ext
+
+    def _getPotentialPlane(self):
+        axes_name = self.plot_mode.split('-')
+        if (len(axes_name) != 2):
+            return None
+        xname = axes_name[0]
+        yname = axes_name[1]
+        if (set([xname, yname]) == set(['x', 'y'])):
+            return 'xy', xname, yname
+        if (set([xname, yname]) == set(['x', 'z'])):
+            return 'xz', xname, yname
+        return None
+
+    def _readExternalPotential(self, data):
+        if (not self.external_pot):
+            return None
+        plane_data = self._getPotentialPlane()
+        if (plane_data is None):
+            return None
+        if (not hasattr(data, 'snapshot_index')):
+            return None
+        if (data.snapshot_index is None):
+            return None
+
+        plane, xname, yname = plane_data
+        if (plane == 'xy'):
+            fname = os.path.join(self.external_pot_dir, self.external_pot_xy_prefix + str(data.snapshot_index))
+        else:
+            fname = os.path.join(self.external_pot_dir, self.external_pot_xz_prefix + str(data.snapshot_index))
+
+        if (not os.path.exists(fname)):
+            return None
+
+        if (self.external_pot_format == 'binary'):
+            dtype_data=np.dtype([('mass',np.float64),
+                                ('x',np.float64), ('y',np.float64), ('z',np.float64),
+                                ('vx',np.float64), ('vy',np.float64), ('vz',np.float64),
+                                ('ax',np.float64), ('ay',np.float64), ('az',np.float64),
+                                ('pot',np.float64),('den',np.float64)])
+            dtype_header = np.dtype([('time', np.float64), ('nx', np.int32), ('ny', np.int32)])
+            offset_header=8+4*2
+            header = np.fromfile(fname, dtype=dtype_header, count=1)
+            nx = int(header['nx'][0])
+            ny = int(header['ny'][0])
+            data_grid = np.fromfile(fname, dtype=dtype_data, offset=offset_header, count=nx*ny)
+            if (data_grid.size != nx*ny):
+                return None
+            data_grid = data_grid.reshape(nx, ny)
+            x_grid = data_grid[xname]
+            y_grid = data_grid[yname]
+            pot = data_grid['pot']
+        else:
+            fp = open(fname, 'r')
+            header = fp.readline()
+            fp.close()
+            _, nx, ny = header.split()
+            nx = int(nx)
+            ny = int(ny)
+            x, y, z, pot = np.loadtxt(fname, unpack=True, usecols=(1,2,3,10),skiprows=1)
+            x_grid = x.reshape(nx, ny)
+            y_grid = y.reshape(nx, ny)
+            z_grid = z.reshape(nx, ny)
+            axis_data = {'x': x_grid, 'y': y_grid, 'z': z_grid}
+            x_grid = axis_data[xname]
+            y_grid = axis_data[yname]
+            pot = pot.reshape(nx, ny)
+
+        count = -pot
+        if (self.external_pot_log):
+            with np.errstate(divide='ignore', invalid='ignore'):
+                count = np.log10(np.where(count>0, count, np.nan))
+        return x_grid, y_grid, count
+
+    def plotExternalPotential(self, data):
+        if (self.external_pot_mesh is not None):
+            self.external_pot_mesh.remove()
+            self.external_pot_mesh = None
+        if (len(self.external_pot_contours) > 0):
+            for cl in self.external_pot_contours:
+                cl.remove()
+            self.external_pot_contours = []
+
+        pot_data = self._readExternalPotential(data)
+        if (pot_data is None):
+            return []
+
+        x_grid, y_grid, count = pot_data
+
+        if (self.external_pot_vmin is None):
+            self.external_pot_vmin = np.nanmin(count)
+        if (self.external_pot_vmax is None):
+            self.external_pot_vmax = np.nanmax(count)
+
+        if (self.external_pot_with_contour):
+            cset = self.axe.contour(x_grid, y_grid, count, linewidths=0.8, colors='white', alpha=np.minimum(self.external_pot_alpha+0.2,1.0),
+                                    vmin=self.external_pot_vmin, vmax=self.external_pot_vmax)
+            self.external_pot_contours = cset.collections
+
+        self.external_pot_mesh = self.axe.pcolormesh(x_grid, y_grid, count, cmap=cm.RdBu,
+                                                     shading='auto', alpha=self.external_pot_alpha,
+                                                     vmin=self.external_pot_vmin, vmax=self.external_pot_vmax)
+        self.external_pot_mesh.set_zorder(-10)
+        return [self.external_pot_mesh] + self.external_pot_contours
 
 class PlotHR:
     def __init__(self):
@@ -610,6 +729,9 @@ class Data:
     def read(self, file_path, core, get_galev):
         data=self.__dict__
         skiprows = self.skiprows
+        snapshot_name = os.path.basename(file_path)
+        idx_match = re.search(r'(\d+)$', snapshot_name)
+        data['snapshot_index'] = int(idx_match.group(1)) if (idx_match is not None) else None
 
         header=petar.PeTarDataHeader(file_path, snapshot_format=self.snapshot_format, external_mode=self.external_mode)
         header_offset = petar.HEADER_OFFSET
@@ -1130,6 +1252,17 @@ if __name__ == '__main__':
         print("  --size-mode     [S] Point size mode: mass, loglum: ", pxy.size_mode)
         print("                         mass: scale with mass with --mass-power")
         print("                         loglum: scale with loglum")
+        print("  --external-pot      Overlay external potential map as background (supports x-y and x-z main plots)")
+        print("  --external-pot-dir [S] Directory path of external potential snapshots: ", pxy.external_pot_dir)
+        print("  --external-pot-format[S] Snapshot format of external potential map: ascii, binary: ", pxy.external_pot_format)
+        print("  --external-pot-log  Use log10(-pot) for external potential color map")
+        print("  --external-pot-vmin[F] Fixed minimum value of external potential color map: auto from first valid frame")
+        print("  --external-pot-vmax[F] Fixed maximum value of external potential color map: auto from first valid frame")
+        print("  --external-pot-alpha[F] Alpha transparency for external potential map: ", pxy.external_pot_alpha)
+        print("  --external-pot-with-contour Add contour lines for external potential map")
+        print("  --external-pot-with-countour Same as --external-pot-with-contour (compatible old spelling)")
+        print("  --external-pot-xy-prefix[S] File prefix of x-y potential snapshots: ", pxy.external_pot_xy_prefix)
+        print("  --external-pot-xz-prefix[S] File prefix of x-z potential snapshots: ", pxy.external_pot_xz_prefix)
         print("  --galev-filter  [S] Filter list, seperate by comma:", ','.join(data.galev_filter))
         print("  --galev-mode    [S] Galev mode of values with choices: abs_mag, app_mag, abs_flux, abs_flux", data.galev_mode)
         print("  --galev-color   [S] Two filters for mapping rainbow colors:", ','.join(data.galev_color))
@@ -1157,6 +1290,9 @@ if __name__ == '__main__':
                     'plot-ncols=','plot-xsize=','plot-ysize=',
                     'suppress-images','format-file=','cm-mode=','core-file=',
                     'n-layer-cross=','n-layer-point=','layer-alpha=','marker-scale=','mass-power=','size-mode=',
+                    'external-pot','external-pot-dir=','external-pot-format=','external-pot-log',
+                    'external-pot-vmin=','external-pot-vmax=','external-pot-alpha=','external-pot-with-contour','external-pot-with-countour',
+                    'external-pot-xy-prefix=','external-pot-xz-prefix=',
                     'galev-filter=','galev-mode=','galev-color=','galev-mag-range=',
                     'cm-boxsize=','compare-in-column','dpi=']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
@@ -1297,6 +1433,28 @@ if __name__ == '__main__':
                 kwargs['mass_power'] = float(arg)
             elif opt in ('--size-mode'):
                 kwargs['size_mode'] = arg
+            elif opt in ('--external-pot'):
+                kwargs['external_pot'] = True
+            elif opt in ('--external-pot-dir'):
+                kwargs['external_pot_dir'] = arg
+            elif opt in ('--external-pot-format'):
+                kwargs['external_pot_format'] = arg
+            elif opt in ('--external-pot-log'):
+                kwargs['external_pot_log'] = True
+            elif opt in ('--external-pot-vmin'):
+                kwargs['external_pot_vmin'] = float(arg)
+            elif opt in ('--external-pot-vmax'):
+                kwargs['external_pot_vmax'] = float(arg)
+            elif opt in ('--external-pot-alpha'):
+                kwargs['external_pot_alpha'] = float(arg)
+            elif opt in ('--external-pot-with-contour'):
+                kwargs['external_pot_with_contour'] = True
+            elif opt in ('--external-pot-with-countour'):
+                kwargs['external_pot_with_contour'] = True
+            elif opt in ('--external-pot-xy-prefix'):
+                kwargs['external_pot_xy_prefix'] = arg
+            elif opt in ('--external-pot-xz-prefix'):
+                kwargs['external_pot_xz_prefix'] = arg
             elif opt in ('--galev-filter'):
                 kwargs['galev_filter'] =  [x for x in arg.split(',')]
             elif opt in ('--galev-color'):

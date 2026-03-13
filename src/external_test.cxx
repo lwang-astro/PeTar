@@ -143,6 +143,7 @@ int main(int argc, char** argv){
                      <<"            each line: mass x y z vx vy vz ax ay az pot den\n"
                      <<"            Time-dependent potential is also supported.\n"
                      <<"    -A    : output in ASCII format when -m mode is used (default: BINARY)\n"
+                     <<"    -p    : the filename prefix for input parameters of external potential, e.g. input.par (default: not used)\n"
                      <<"    -h    : help\n";
             help_flag=true;
             break;
