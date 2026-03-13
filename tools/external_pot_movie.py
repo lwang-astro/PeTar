@@ -9,6 +9,7 @@ import getopt
 import imageio
 import os
 import pylab as pb
+import petar
 
 def create_movie(filenames, fps, output_file):
     with imageio.get_writer(output_file, fps=fps) as writer:
@@ -16,16 +17,13 @@ def create_movie(filenames, fps, output_file):
             writer.append_data(imageio.imread(filename))
     writer.close()
 
-def createImage(index_list, xyscale, plot_format, log_flag, dtype_data, dtype_header, offset_header, with_countour, only_xy, **kwargs):
+def createImage(index_list, xyscale, plot_format, log_flag, with_contour, only_xy, **kwargs):
     """
     index_list: file index list
     xyscale: plot x, y scale
     plot_format: plot format
     log_flag: if true, color is in logscale
-    dtype_data: data types for reading binary files
-    dtype_header: data types for reading header of binary files
-    offset_header: offset for reading binary files
-    with_countour: if true, add contour plot
+    with_contour: if true, add contour plot
     only_xy: if true, only plot xy plane
     kwargs: vmin, vmax
     """
@@ -39,51 +37,32 @@ def createImage(index_list, xyscale, plot_format, log_flag, dtype_data, dtype_he
     for k in index_list:    
         print('process index ',k)
 
-        data=dict()
         if (only_xy):
             labels=['xy']
         else:
             labels=['xy','xz']
-        xylabels=[['X','Y'],['X','Z']]
 
-        for i in range(len(labels)):
+        for i,label in enumerate(labels):
             axes[i].clear()
-            key=labels[i]
-            data[key]=dict()
-            fname = key+str(k)
+            fname = label+str(k)
 
             if (read_binary):
-                header = np.fromfile(fname, dtype=dtype_header, count=1)
-                time = header['time'][0]
-                nx = int(header['nx'][0])
-                ny = int(header['ny'][0])
-                data[key] = np.fromfile(fname, dtype=dtype_data, offset=offset_header, count=nx*ny)
-                data[key] = data[key].reshape(nx, ny)
+                header = petar.ExternalPotMapHeader(fname, snapshot_format='binary')
+                data= petar.ExternalPotMap()
+                data.fromfile(fname, offset=petar.HEADER_EXTERNAL_POT_MAP_OFFSET)
             else:
-                fp = open(fname, 'r')
-                header = fp.readline()
-                fp.close()
-                time, nx, ny = header.split()
-                x, y, z, ax, ay, az, pot = np.loadtxt(fname, unpack=True, usecols=(1,2,3,7,8,9,10),skiprows=1)
-                nx=int(nx)
-                ny=int(ny)
-                data[key]['x']=x.reshape(nx,ny)
-                data[key]['y']=y.reshape(nx,ny)
-                data[key]['z']=z.reshape(nx,ny)
-                data[key]['pot']=pot.reshape(nx,ny)
-            x_grid, y_grid = data[key][key[0]], data[key][key[1]]
-            count = np.log10(-data[key]['pot']) if log_flag else -data[key]['pot']
-            if (with_countour):
-                cset = axes[i].contour(x_grid, y_grid, count, linewidths=2, **kwargs)
-                #axes[i].clabel(cset,inline=True,fmt='%1.1f',fontsize=10)
-            axes[i].set_xlabel(xylabels[i][0])
-            axes[i].set_ylabel(xylabels[i][1])            
+                header = petar.ExternalPotMapHeader(fname, snapshot_format='ascii')
+                data = petar.ExternalPotMap()
+                data.loadtxt(fname, skiprows=1)
 
-            im = axes[i].pcolormesh(x_grid, y_grid, count, cmap=pb.cm.RdBu,
-                                    shading='auto', **kwargs)
-            axes[i].set_aspect('equal', adjustable='box')
+            pdata = data.plot(axes[i], header=header, plot_keys=list(label), with_contour=with_contour, log_flag=log_flag, **kwargs)
+        
+        if (with_contour):
+            im = pdata[0]
+        else:
+            im = pdata
 
-        axes[0].set_title('Time = %s' % time)
+        axes[0].set_title('Time = %s' % header.time)
         if (only_xy):
             cbar = plt.colorbar(im, cax = axes[1]) 
         else:
@@ -101,7 +80,7 @@ if __name__ == '__main__':
     n_cpu = 0
     log_flag = False
     read_binary = True
-    with_countour = False
+    with_contour = False
     only_xy = False
     kwargs=dict()
 
@@ -114,7 +93,7 @@ if __name__ == '__main__':
         print("  -f [F]: output frame FPS: ",fps)
         print("  -o [S]: output movie filename: ",output_file)
         print("  -A    : read snapshot in ASCII format, default is BINARY format")
-        print("  --with-countour: add contour plot, default is pure imshow")
+        print("  --with-contour: add contour plot, default is pure imshow")
         print("  --only-xy: only plot xy plane, default is both xy and xz planes")
         print("  --vmin [F]: (positive) potential minimum for color map, if not provided, use first snapshot for reference")
         print("  --vmax [F]: (positive) potential maximum for color map")
@@ -123,7 +102,7 @@ if __name__ == '__main__':
         print("  --format  [S]: video format, require imageio installed, for some formats (e.g. avi, mp4) may require ffmpeg and imageio-ffmpeg installed: ", plot_format)
     try:
         shortargs = 'f:o:hA'
-        longargs = ['help','vmax=','vmin=','format=','n-cpu=','only-xy','with-countour','log']
+        longargs = ['help','vmax=','vmin=','format=','n-cpu=','only-xy','with-contour','log']
         opts, remainder = getopt.getopt(sys.argv[1:], shortargs, longargs)
 
         for opt,arg in opts:
@@ -142,8 +121,8 @@ if __name__ == '__main__':
                 kwargs['vmax'] = float(arg)
             elif opt in ('--format'):
                 plot_format = arg
-            elif opt in ('--with-countour'):
-                with_countour = True
+            elif opt in ('--with-contour'):
+                with_contour = True
             elif opt in ('--only-xy'):
                 only_xy = True
             elif opt in ('--n-cpu'):
@@ -176,22 +155,16 @@ if __name__ == '__main__':
     
     xyscale=[[xmin,xmax,ymin,ymax],[xmin,xmax,zmin,zmax]]
 
-    dtype_data=np.dtype([('mass',np.float64),
-                        ('x',np.float64), ('y',np.float64), ('z',np.float64),
-                        ('vx',np.float64), ('vy',np.float64), ('vz',np.float64),
-                        ('ax',np.float64), ('ay',np.float64), ('az',np.float64),
-                        ('pot',np.float64),('den',np.float64)])
-    dtype_header = np.dtype([('time', np.float64), ('nx', np.int32), ('ny', np.int32)])
-    offset_header=8+4*2 # 8 bytes for time, 4 bytes for nx, 4 bytes for ny
-
     if (not 'vmin' in kwargs.keys()) | (not 'vmax' in kwargs.keys()) :
         if (read_binary):
-            data = np.fromfile('xy0', dtype=dtype_data, offset=offset_header)
-            pot = data['pot']
+            data = petar.ExternalPotMap()
+            data.fromfile('xy0', offset=petar.HEADER_EXTERNAL_POT_MAP_OFFSET)
+            pot = data.pot
             pot_min = pot.min()
             pot_max = pot.max()
-            data = np.fromfile('xz0', dtype=dtype_data, offset=offset_header)
-            pot = data['pot']
+            data = petar.ExternalPotMap()
+            data.fromfile('xz0', offset=petar.HEADER_EXTERNAL_POT_MAP_OFFSET)
+            pot = data.pot
             pot_min = np.minimum(pot_min, pot.min())
             pot_max = np.maximum(pot_max, pot.max())
         else:
@@ -199,10 +172,14 @@ if __name__ == '__main__':
             # the first snapshot is xy0, the second is xz0
             # the potential is in the 10th column
             # the first row is the header
-            pot = np.loadtxt('xy0', unpack=True, usecols=(10),skiprows=1)
+            data = petar.ExternalPotMap()
+            data.loadtxt('xy0', skiprows=1)
+            pot = data.pot
             pot_min = pot.min()
             pot_max = pot.max()
-            pot = np.loadtxt('xz0', unpack=True, usecols=(10),skiprows=1)
+            data = petar.ExternalPotMap()
+            data.loadtxt('xz0', skiprows=1)
+            pot = data.pot
             pot_min = np.minimum(pot_min, pot.min())
             pot_max = np.maximum(pot_max, pot.max())
         if (not 'vmin' in kwargs.keys()):
@@ -227,10 +204,10 @@ if __name__ == '__main__':
     file_part = [file_list[n_offset[i]:n_offset[i+1]] for i in range(n_cpu)]
     results=[None]*n_cpu
     if (n_cpu==1):
-        createImage(file_part[0], xyscale, plot_format, log_flag, dtype_data, dtype_header, offset_header, with_countour, only_xy, **kwargs)
+        createImage(file_part[0], xyscale, plot_format, log_flag, with_contour, only_xy, **kwargs)
     else:
         for rank in range(n_cpu):
-            results[rank]=pool.apply_async(createImage, (file_part[rank], xyscale, plot_format, log_flag, dtype_data, dtype_header, offset_header, with_countour, only_xy), kwargs)
+            results[rank]=pool.apply_async(createImage, (file_part[rank], xyscale, plot_format, log_flag, with_contour, only_xy), kwargs)
 
     # Step 3: Don't forget to close
     pool.close()

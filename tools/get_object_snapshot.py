@@ -11,8 +11,8 @@ if __name__ == '__main__':
     filename_prefix='object'
     snap_type='origin'
     mode='type'
-    snapshot_format='ascii'
-    output_format='ascii'
+    snapshot_format='binary'
+    output_format='binary'
     interrupt_mode='bse'
     external_mode='none'
     use_mpfrc=False

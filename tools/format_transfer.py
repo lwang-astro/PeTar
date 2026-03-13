@@ -10,8 +10,8 @@ if __name__ == '__main__':
 
     data_type = 'single,binary'
     replace_flag = False
-    snapshot_format = 'ascii'
-    output_format = 'npy'
+    snapshot_format = 'binary'
+    output_format = 'ascii'
 
     def usage():
         print("A tool to convert the file format of post-processed snapshots generated from petar.data.process.")
@@ -32,8 +32,8 @@ if __name__ == '__main__':
         print("  -t(--external-mode)   [S] External mode used in petar; choices: galpy, no (default: no).")
         print("  -B(--full-binary)         If petar.data.process uses the -B option to obtain full (physical) binary orbital parameters, ")
         print("                            this option is needed to correctly read (physical) binary snapshots.")
-        print("  -s(--snapshot-format) [S] Input snapshot file format: ascii, binary, or npy (default: ascii).")
-        print("  -o(--output-format)   [S] Output snapshot file format: ascii, binary, or npy (default: npy).")
+        print(f"  -s(--snapshot-format) [S] Input snapshot file format: ascii, binary, or npy (default: {snapshot_format}).")
+        print(f"  -o(--output-format)   [S] Output snapshot file format: ascii, binary, or npy (default: {output_format}).")
         print("  -d(--data-type)       [S] Data type of snapshots. Multiple types can be combined by ',' without empty spaces (default: single,binary).")
         print("                            Supported type list:")
         print("                               single: Single snapshots from petar.data.process.")
