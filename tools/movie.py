@@ -24,6 +24,153 @@ def create_movie(filenames, fps, output_file):
     writer.close()
 
 
+class ExternalPotential:
+    def __init__(self):
+        self.external_pot = False
+        self.external_pot_dir = '.'
+        self.external_pot_format = 'binary'
+        self.external_pot_log = False
+        self.external_pot_vmin = None
+        self.external_pot_vmax = None
+        self.external_pot_alpha = 0.5
+        self.external_pot_with_contour = False
+        self.external_pot_xy_prefix = 'xy'
+        self.external_pot_xz_prefix = 'xz'
+
+        self._plot_planes = set()
+        self._snapshot_index = None
+        self._snapshot_cache = {}
+        self._vmin_plane = {}
+        self._vmax_plane = {}
+        self._artists = {}
+
+    @staticmethod
+    def _getPotentialPlaneFromMode(plot_mode):
+        axes_name = plot_mode.split('-')
+        if (len(axes_name) != 2):
+            return None
+        xname = axes_name[0]
+        yname = axes_name[1]
+        if (set([xname, yname]) == set(['x', 'y'])):
+            return 'xy'
+        if (set([xname, yname]) == set(['x', 'z'])):
+            return 'xz'
+        return None
+
+    def init(self, plot_item, **kwargs):
+        for key in self.__dict__.keys():
+            if (key in kwargs.keys()):
+                self.__dict__[key] = kwargs[key]
+
+        planes = set()
+        for item in plot_item:
+            if (item[0] != 'main'):
+                continue
+            plane = self._getPotentialPlaneFromMode(item[1])
+            if (plane is not None):
+                planes.add(plane)
+        self._plot_planes = planes
+
+    def isEnabled(self):
+        return self.external_pot and (len(self._plot_planes) > 0)
+
+    def _removeArtists(self, axe):
+        if (axe not in self._artists.keys()):
+            return
+        mesh = self._artists[axe]['mesh']
+        contours = self._artists[axe]['contours']
+        if (mesh is not None):
+            mesh.remove()
+        for cl in contours:
+            if hasattr(cl, 'remove'):
+                cl.remove()
+        self._artists[axe] = {'mesh': None, 'contours': []}
+
+    def _readExternalPotential(self, plane, snapshot_index):
+        if (plane == 'xy'):
+            fname = os.path.join(self.external_pot_dir, self.external_pot_xy_prefix + str(snapshot_index))
+        else:
+            fname = os.path.join(self.external_pot_dir, self.external_pot_xz_prefix + str(snapshot_index))
+
+        if (not os.path.exists(fname)):
+            return None, None
+
+        if (self.external_pot_format == 'binary'):
+            header_pot = petar.ExternalPotMapHeader(fname, snapshot_format='binary')
+            data_pot = petar.ExternalPotMap()
+            data_pot.fromfile(fname, offset=petar.HEADER_EXTERNAL_POT_MAP_OFFSET)
+        else:
+            header_pot = petar.ExternalPotMapHeader(fname, snapshot_format='ascii')
+            data_pot = petar.ExternalPotMap()
+            data_pot.loadtxt(fname, skiprows=1)
+
+        return data_pot, header_pot
+
+    def _getPotentialData(self, plane, data):
+        if (not self.isEnabled()):
+            return None, None
+        if (plane is None):
+            return None, None
+        if (plane not in self._plot_planes):
+            return None, None
+        if (not hasattr(data, 'snapshot_index')):
+            return None, None
+        if (data.snapshot_index is None):
+            return None, None
+
+        if (self._snapshot_index != data.snapshot_index):
+            self._snapshot_index = data.snapshot_index
+            self._snapshot_cache = {}
+
+        if (plane not in self._snapshot_cache.keys()):
+            self._snapshot_cache[plane] = self._readExternalPotential(plane, data.snapshot_index)
+
+        return self._snapshot_cache[plane]
+
+    def _getVlim(self, plane, data_pot):
+        vmin = self.external_pot_vmin
+        vmax = self.external_pot_vmax
+
+        if (vmin is None):
+            if (plane not in self._vmin_plane.keys()):
+                if (self.external_pot_log):
+                    self._vmin_plane[plane] = np.nanmin(np.log10(-data_pot.pot[data_pot.pot<0]))
+                else:
+                    self._vmin_plane[plane] = np.nanmin(-data_pot.pot)
+            vmin = self._vmin_plane[plane]
+
+        if (vmax is None):
+            if (plane not in self._vmax_plane.keys()):
+                if (self.external_pot_log):
+                    self._vmax_plane[plane] = np.nanmax(np.log10(-data_pot.pot[data_pot.pot<0]))
+                else:
+                    self._vmax_plane[plane] = np.nanmax(-data_pot.pot)
+            vmax = self._vmax_plane[plane]
+
+        return vmin, vmax
+
+    def plot(self, axe, plot_mode, data):
+        self._removeArtists(axe)
+
+        plane = self._getPotentialPlaneFromMode(plot_mode)
+        data_pot, header_pot = self._getPotentialData(plane, data)
+        if (data_pot is None):
+            return []
+
+        vmin, vmax = self._getVlim(plane, data_pot)
+        mesh, cset = data_pot.plot(axe, header=header_pot, log_flag=self.external_pot_log,
+                                   with_contour=self.external_pot_with_contour,
+                                   alpha=self.external_pot_alpha, cmap=cm.RdBu,
+                                   vmin=vmin, vmax=vmax)
+        contours = []
+        if (self.external_pot_with_contour and cset is not None):
+            contours = [cset]
+
+        mesh.set_zorder(-10)
+        self._artists[axe] = {'mesh': mesh, 'contours': contours}
+        return [mesh] + contours
+
+
 class PlotXY:
     def __init__(self):
         self.plot_mode = 'x-y'
@@ -44,18 +191,6 @@ class PlotXY:
         self.mass_power = 0.3
         self.size_mode = 'mass'
         self.color_mode = 'white'
-        self.external_pot = False
-        self.external_pot_dir = '.'
-        self.external_pot_format = 'binary'
-        self.external_pot_log = False
-        self.external_pot_vmin = None
-        self.external_pot_vmax = None
-        self.external_pot_alpha = 0.5
-        self.external_pot_with_contour = False
-        self.external_pot_xy_prefix = 'xy'
-        self.external_pot_xz_prefix = 'xz'
-        self.external_pot_mesh = None
-        self.external_pot_contours = []
         self.ptcls=[]
 
     def init(self, axe, **kwargs):
@@ -193,7 +328,7 @@ class PlotXY:
             ycm += ycm2
         return xcm, ycm
 
-    def plot(self, data, xcm_text, ycm_text):
+    def plot(self, data, xcm_text, ycm_text, external_potential=None):
 
         plot_mode = self.plot_mode
         cm_is_core = (data.snapshot_type == 'post')
@@ -434,7 +569,9 @@ class PlotXY:
         xcm_text.set_text(cm_text[0]+('%f' % xycm[0]))
         ycm_text.set_text(cm_text[1]+('%f' % xycm[1]))
 
-        ptcls_ext = self.plotExternalPotential(data)
+        ptcls_ext = []
+        if (external_potential is not None):
+            ptcls_ext = external_potential.plot(self.axe, self.plot_mode, data)
 
         mass = data.data.mass
         colors=data.getColor(self.color_mode)
@@ -450,85 +587,6 @@ class PlotXY:
             self.ptcls[i].set_sizes(sizes)
             self.ptcls[i].set_color(colors)
         return self.ptcls + ptcls_ext
-
-    def _getPotentialPlane(self):
-        axes_name = self.plot_mode.split('-')
-        if (len(axes_name) != 2):
-            return None
-        xname = axes_name[0]
-        yname = axes_name[1]
-        if (set([xname, yname]) == set(['x', 'y'])):
-            return 'xy', xname, yname
-        if (set([xname, yname]) == set(['x', 'z'])):
-            return 'xz', xname, yname
-        return None
-
-    def _readExternalPotential(self, data):
-        if (not self.external_pot):
-            return None, None
-        plane_data = self._getPotentialPlane()
-        if (plane_data is None):
-            return None, None
-        if (not hasattr(data, 'snapshot_index')):
-            return None, None
-        if (data.snapshot_index is None):
-            return None, None
-
-        plane, xname, yname = plane_data
-        if (plane == 'xy'):
-            fname = os.path.join(self.external_pot_dir, self.external_pot_xy_prefix + str(data.snapshot_index))
-        else:
-            fname = os.path.join(self.external_pot_dir, self.external_pot_xz_prefix + str(data.snapshot_index))
-
-        if (not os.path.exists(fname)):
-            return None, None
-
-        if (self.external_pot_format == 'binary'):
-            header_pot = petar.ExternalPotMapHeader(fname, snapshot_format='binary')
-            data_pot= petar.ExternalPotMap()
-            data_pot.fromfile(fname, offset=petar.HEADER_EXTERNAL_POT_MAP_OFFSET)
-        else:
-            header_pot = petar.ExternalPotMapHeader(fname, snapshot_format='ascii')
-            data_pot = petar.ExternalPotMap()
-            data_pot.loadtxt(fname, skiprows=1)
-
-        return data_pot, header_pot
-
-    def plotExternalPotential(self, data):
-        if (self.external_pot_mesh is not None):
-            self.external_pot_mesh.remove()
-            self.external_pot_mesh = None
-        if (len(self.external_pot_contours) > 0):
-            for cl in self.external_pot_contours:
-                if hasattr(cl, 'remove'):
-                    cl.remove()
-            self.external_pot_contours = []
-
-        data_pot, header_pot = self._readExternalPotential(data)
-        if (data_pot is None):
-            return []
-        
-        if (self.external_pot_vmin is None):
-            if (self.external_pot_log):
-                self.external_pot_vmin = np.nanmin(np.log10(-data_pot.pot[data_pot.pot<0]))
-            else:
-                self.external_pot_vmin = np.nanmin(-data_pot.pot)
-        if (self.external_pot_vmax is None):
-            if (self.external_pot_log):
-                self.external_pot_vmax = np.nanmax(np.log10(-data_pot.pot[data_pot.pot<0]))
-            else:
-                self.external_pot_vmax = np.nanmax(-data_pot.pot)
-
-        self.external_pot_mesh, cset = data_pot.plot(self.axe, header=header_pot, log_flag=self.external_pot_log, 
-                                                     with_contour=self.external_pot_with_contour, 
-                                                     alpha=self.external_pot_alpha, cmap=cm.RdBu,
-                                                     vmin=self.external_pot_vmin, vmax=self.external_pot_vmax)
-        if (self.external_pot_with_contour and cset is not None):
-            # Keep ContourSet directly; avoid deprecated access to `collections`.
-            self.external_pot_contours = [cset]
-
-        self.external_pot_mesh.set_zorder(-10)
-        return [self.external_pot_mesh] + self.external_pot_contours
 
 class PlotHR:
     def __init__(self):
@@ -924,10 +982,11 @@ def plotOne(file_path, axe, plots, core, lagr, **kwargs):
     
     ptcls=[]
     plot_item = plots['label']
+    external_potential = plots['external_potential']
     iaxe=0
     for pi in plot_item:
         if pi[0] == 'main':
-            ptcls += plots['plot'][iaxe].plot(data, plots['xcm'][iaxe], plots['ycm'][iaxe])
+            ptcls += plots['plot'][iaxe].plot(data, plots['xcm'][iaxe], plots['ycm'][iaxe], external_potential)
             ptcls += [plots['xcm'][iaxe], plots['ycm'][iaxe]]
 
         if pi[0] == 'plot_HRdiagram':
@@ -956,6 +1015,12 @@ def initPlot(axe, model_title, plot_item, lagr, **kwargs):
     plots['xcm'] = dict()
     plots['ycm'] = dict()
     plots['label'] = plot_item
+    plots['external_potential'] = None
+
+    external_potential = ExternalPotential()
+    external_potential.init(plot_item, **kwargs)
+    if (external_potential.isEnabled()):
+        plots['external_potential'] = external_potential
 
     iaxe=0
     imain=0
@@ -1089,6 +1154,7 @@ if __name__ == '__main__':
     format_time = '%g'
 
     pxy = PlotXY()
+    pext = ExternalPotential()
     phr = PlotHR()
     pse = PlotSemiEcc()
     plagr=PlotLagr()
@@ -1234,14 +1300,14 @@ if __name__ == '__main__':
         print("  --galev-mag-range[S] Magnitude range (min,max) to normalize colores:", ','.join([str(x) for x in data.galev_mag_range]))
         print("  --ext-pot            Overlay external potential map as background (supports x-y and x-z main plots)")
         print("  --ext-pot-log        Use log10(-pot) for external potential color map")
-        print("  --ext-pot-format [S] Snapshot format of external potential map: ascii, binary: ", pxy.external_pot_format)
-        print("  --ext-pot-dir    [S] Directory path of external potential snapshots: ", pxy.external_pot_dir)
+        print("  --ext-pot-format [S] Snapshot format of external potential map: ascii, binary: ", pext.external_pot_format)
+        print("  --ext-pot-dir    [S] Directory path of external potential snapshots: ", pext.external_pot_dir)
         print("  --ext-pot-vmin   [F] Fixed minimum value of external potential color map: auto from first valid frame")
         print("  --ext-pot-vmax   [F] Fixed maximum value of external potential color map: auto from first valid frame")
-        print("  --ext-pot-alpha  [F] Alpha transparency for external potential map: ", pxy.external_pot_alpha)
+        print("  --ext-pot-alpha  [F] Alpha transparency for external potential map: ", pext.external_pot_alpha)
         print("  --ext-pot-with-contour Add contour lines for external potential map")
-        print("  --ext-pot-xy-prefix [S] File prefix of x-y potential snapshots: ", pxy.external_pot_xy_prefix)
-        print("  --ext-pot-xz-prefix [S] File prefix of x-z potential snapshots: ", pxy.external_pot_xz_prefix)
+        print("  --ext-pot-xy-prefix [S] File prefix of x-y potential snapshots: ", pext.external_pot_xy_prefix)
+        print("  --ext-pot-xz-prefix [S] File prefix of x-z potential snapshots: ", pext.external_pot_xz_prefix)
         print("  --suppress-images   Do not plot snapshot images (PNG files) and use matplotlib.animation instead of imageio; this cannot use multiprocessing, much slower")
         print("  --format-file   [S] Video format, requires imageio installed; for some formats (e.g., AVI, MP4) may require FFmpeg and imageio-FFmpeg installed: ", plot_format)
         print("  --dpi           [F] DPI of image: ", dpi)

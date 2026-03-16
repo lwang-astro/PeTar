@@ -11,11 +11,9 @@ if __name__ == '__main__':
 
     filename_prefix='data'
     average_mode='sphere'
-    read_flag=False
     ftid_file_flag=False
     n_cpu=0
     write_option='w'
-    snapshot_format='binary'
     esc_snapshot_format='binary'
     output_format='binary'
 
@@ -164,8 +162,8 @@ if __name__ == '__main__':
                 kwargs['use_mpfrc'] = True
             elif opt in ('-s','--snapshot-format'):
                 kwargs['snapshot_format'] = arg
-                snapshot_format = arg
                 if (not 'esc_snapshot_format' in kwargs.keys()):
+                    kwargs['esc_snapshot_format'] = arg
                     esc_snapshot_format = arg
             elif opt in ('--esc-snapshot-format'):
                 kwargs['esc_snapshot_format'] = arg
@@ -174,7 +172,7 @@ if __name__ == '__main__':
                 kwargs['output_format'] = arg
                 output_format = arg
             elif opt in ('-r','--read-data'):
-                read_flag = True
+                kwargs['read_flag'] = True
             elif opt in ('-c','--calc-multi-rc'):
                 kwargs['calc_multi_rc']=True
             elif opt in ('--r-escape'):
@@ -216,9 +214,9 @@ if __name__ == '__main__':
     result=dict()
     time_profile=dict()
     if (n_cpu==1):
-        result,time_profile = petar.dataProcessList(path_list, read_flag, **kwargs)
+        result,time_profile = petar.dataProcessList(path_list, **kwargs)
     else:
-        result,time_profile = petar.parallelDataProcessList(path_list, n_cpu, read_flag, **kwargs)
+        result,time_profile = petar.parallelDataProcessList(path_list, n_cpu, **kwargs)
 
     fout_list=['lagr','core','bse_status']
     if (ftid_file_flag): fout_list.append('tidal')
@@ -248,7 +246,7 @@ if __name__ == '__main__':
                     elif (esc_snapshot_format=='npy'):
                         data_read.load(key_filename)
                     else:
-                        raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % snapshot_format)                                            
+                        raise ValueError('Escape snapshot format %s unknown, should be ascii, binary or npy.' % esc_snapshot_format)                                            
                     result_mix = petar.join(data_read,result[key])
                     result_mix.removeDuplicate()
                 

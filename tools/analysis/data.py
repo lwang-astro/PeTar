@@ -42,7 +42,7 @@ class PeTarDataHeader():
             Keyword arguments:
             float_type: type (np.float64)
                 floating point data type
-            snapshot_format: string (ascii)
+            snapshot_format: string (binary)
                 Data format of snapshot files: binary or ascii
             external_mode: string (none)
                 PeTar external mode (set in configure): galpy, agama, none 
@@ -68,13 +68,13 @@ class PeTarDataHeader():
             Keyword arguments:
             float_type: type (np.float64)
                 floating point data type
-            snapshot_format: string (ascii)
+            snapshot_format: string (binary)
                 Data format of snapshot files: binary or ascii
             external_mode: string (none)
                 PeTar external mode (set in configure): galpy, agama, none 
                 If not none, this option indicates the pos_offset and vel_offset exists 
         """
-        snapshot_format='ascii'
+        snapshot_format='binary'
         if ('snapshot_format' in kwargs.keys()): snapshot_format=kwargs['snapshot_format']
         if ('external_mode' in kwargs.keys()):
             if (kwargs['external_mode']!='none'): self.offset_flag=True

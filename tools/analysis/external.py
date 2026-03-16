@@ -43,12 +43,12 @@ def estimateGalaxyMass(pot_ext, r_gal, G):
         raise ValueError('External potential is positive! ', pot_ext)
     return M_galaxy
 
-def calcRCutIsolate(rh):
-    """ For isolated star clusters, set rcut to 20 * half-mass radius
+def calcREscapeIsolate(rh):
+    """ For isolated star clusters, set r_escape to 20 * half-mass radius
 
     Return
     ----------
-    rcut: float 
+    r_escape: float 
         escaper distance criterion
     """
     return 20*rh
