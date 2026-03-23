@@ -1189,7 +1189,9 @@ if __name__ == '__main__':
     filename='dat.lst'
     model_path=''
     core_file='data.core'
+    core_format = None
     lagr_file='data.lagr'
+    lagr_format = None
     read_lagr_data = False
     fps = 30
     dpi = None
@@ -1322,6 +1324,7 @@ if __name__ == '__main__':
         print("  --lagr-energy      Option calc_energy for reading Lagrangian data")
         print("  --lagr-type   [S]  Option add_star_type for reading Lagrangian data")
         print("  --lagr-mfrac  [S]  Option for mass fraction for reading Lagrangian data")
+        print("  --lagr-format [S]  Format of Lagrangian data file: ascii, binary, npy: follow snapshot format '-s'")
         print("  --unit-length [S]  Set label of length unit for x, y, z, and semi: no print")
         print("  --unit-vel    [S]  Set label of velocity unit: no print")
         print("  --format-time [S]  Set print format of time: ", format_time)
@@ -1335,6 +1338,7 @@ if __name__ == '__main__':
         print("                       core: use core data file generated from petar.data.process;")
         print("                       none: use origin of snapshots.")
         print("  --core-file   [S]  Core data file name, not used in the comparison mode: ", core_file)
+        print("  --core-format [S]  Core data file format: ascii, binary, npy: follow snapshot format '-s'")
         print("  --cm-boxsize  [F]  Boxsize to search the coordinate center for the x-y plot: 5.0 times plotting size (-R)")
         print("  --n-layer-cross [I] Number of layers of crosses for particles in the x-y plot: 5")
         print("  --n-layer-point [I] Number of layers of points for particles in the x-y plot: 10")
@@ -1374,12 +1378,12 @@ if __name__ == '__main__':
                     'semi-min=','semi-max=','ecc-min=','ecc-max=','bin-rmax=','bin-rmin=','bin-color=', 'bin-marker-scale=','bin-mass-power=','bin-cm-mode=',
                     'ekin-min=','ekin-max=','pot-min=','pot-max=','etot-min=','etot-max=',
                     'rlagr-min=','rlagr-max=','rlagr-scale=',
-                    'lagr-energy','lagr-type=','lagr-mfrac=',
+                    'lagr-energy','lagr-type=','lagr-mfrac=','lagr-format=',
                     'time-min=','time-max=','x-min=','x-max=','y-min=','y-max=',
                     'unit-length=','unit-vel=','format-time=',
                     'skiprows=','snapshot-type=',
                     'plot-ncols=','plot-xsize=','plot-ysize=',
-                    'suppress-images','format-file=','cm-mode=','core-file=',
+                    'suppress-images','format-file=','cm-mode=','core-file=', 'core-format=',
                     'n-layer-cross=','n-layer-point=','layer-alpha=','marker-scale=','mass-power=','size-mode=',
                     'ext-pot','ext-pot-dir=','ext-pot-format=','ext-pot-log',
                     'ext-pot-vmin=','ext-pot-vmax=','ext-pot-alpha=','ext-pot-with-contour','ext-pot-with-countour',
@@ -1490,12 +1494,16 @@ if __name__ == '__main__':
                 kwargs['add_star_type'] = [x for x in arg.split(',')]
             elif opt in ('--lagr-mfrac'):
                 kwargs['mass_fraction'] = np.array([float(x) for x in arg.split(',')])
+            elif opt in ('--lagr-format'):
+                lagr_format = arg
             elif opt in ('--cm-mode'):
                 kwargs['cm_mode'] = arg
             elif opt in ('--cm-boxsize'):
                 kwargs['cm_boxsize'] = float(arg)
             elif opt in ('--core-file'):
                 core_file = arg
+            elif opt in ('--core-format'):
+                core_format = arg
             elif opt in ('--unit-length'):
                 kwargs['unit_length'] = arg
             elif opt in ('--unit-vel'):
@@ -1578,6 +1586,14 @@ if __name__ == '__main__':
     path_list = file_list.splitlines()
     fl.close()
 
+    snapshot_format = data.snapshot_format
+    if 'snapshot_format' in kwargs.keys():
+        snapshot_format = kwargs['snapshot_format']
+    if (core_format == None):
+        core_format = snapshot_format
+    if (lagr_format == None):
+        lagr_format = snapshot_format
+
     core=dict()
     read_core=False
     snapshot_type = data.snapshot_type
@@ -1601,18 +1617,46 @@ if __name__ == '__main__':
         for i in range(len(model_list)):
             core[i] = petar.Core()
             if (read_core):
-                core[i].loadtxt(model_list[i][0]+'/'+model_list[i][1]+'.core')
+                if (core_format == 'binary'):
+                    core[i].fromfile(model_list[i][0]+'/'+model_list[i][1]+'.core')
+                elif (core_format == 'npy'):
+                    core[i].load(model_list[i][0]+'/'+model_list[i][1]+'.core.npy')
+                elif (core_format == 'ascii' ):
+                    core[i].loadtxt(model_list[i][0]+'/'+model_list[i][1]+'.core')
+                else:
+                    raise ValueError('Unsupported core format: %s' % core_format)
 
             lagr[i] = petar.LagrangianMultiple(**kwargs)
             if (read_lagr_data):
-                lagr[i].loadtxt(model_list[i][0]+'/'+model_list[i][1]+'.lagr')
+                if (lagr_format == 'binary'):
+                    lagr[i].fromfile(model_list[i][0]+'/'+model_list[i][1]+'.lagr')
+                elif (lagr_format == 'npy'):
+                    lagr[i].load(model_list[i][0]+'/'+model_list[i][1]+'.lagr.npy')
+                elif (lagr_format == 'ascii'):
+                    lagr[i].loadtxt(model_list[i][0]+'/'+model_list[i][1]+'.lagr')
+                else:
+                    raise ValueError('Unsupported lagr format: %s' % lagr_format)
     else:
         core[0] = petar.Core()
         if (read_core):
-            core[0].loadtxt(core_file)
+            if (core_format == 'binary'):
+                core[0].fromfile(core_file)
+            elif (core_format == 'npy'):
+                core[0].load(core_file+'.npy')
+            elif (core_format == 'ascii'):
+                core[0].loadtxt(core_file)
+            else:
+                raise ValueError('Unsupported core format: %s' % core_format)
         lagr[0] = petar.LagrangianMultiple(**kwargs)
         if (read_lagr_data):
-            lagr[0].loadtxt(lagr_file)
+            if (lagr_format == 'binary'):
+                lagr[0].fromfile(lagr_file)
+            elif (lagr_format == 'npy'):
+                lagr[0].load(lagr_file+'.npy')
+            elif (lagr_format == 'ascii'):
+                lagr[0].loadtxt(lagr_file)
+            else:
+                raise ValueError('Unsupported lagr format: %s' % lagr_format)
 
     if (len(plot_item)==0): plot_item=[['main','x-y']]
 
