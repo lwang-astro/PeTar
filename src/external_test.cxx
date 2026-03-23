@@ -226,12 +226,10 @@ int main(int argc, char** argv){
                     fxy<<time<<" "<<nx<<" "<<ny<<std::endl;
                     fxz<<time<<" "<<nx<<" "<<nz<<std::endl;
                 }
-                Particle particle_xy[nx][ny];
-                Particle particle_xz[nx][nz];
                 for (int j=0; j<nx; j++) {
                     double x = xmin + (xmax-xmin)/(nx-1)*j;
                     for (int k=0; k<ny; k++) {
-                        auto& pjk = particle_xy[j][k];
+                        Particle pjk;
                         pjk.mass = 0;
                         pjk.pos[0] = x;
                         pjk.pos[1] = ymin + (ymax-ymin)/(ny-1)*k;
@@ -241,8 +239,8 @@ int main(int argc, char** argv){
                         pjk.den = 0.0;
 #ifdef GALPY                        
                         galpy_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos); 
-                        for (int k=0; k<nset; k++) {
-                            pjk.den += galpy_manager.calcSetDensity(k, time, pjk.pos, pjk.pos);
+                        for (int iset=0; iset<nset; iset++) {
+                            pjk.den += galpy_manager.calcSetDensity(iset, time, pjk.pos, pjk.pos);
                         }
 #elif AGAMA
                         agama_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos); 
@@ -257,7 +255,7 @@ int main(int argc, char** argv){
                     }
                 
                     for (int k=0; k<nz; k++) {
-                        auto& pjk = particle_xz[j][k];
+                        Particle pjk;
                         pjk.mass = 0;
                         pjk.pos[0] = x;
                         pjk.pos[1] = 0;
@@ -267,8 +265,8 @@ int main(int argc, char** argv){
                         pjk.den = 0.0;
 #ifdef GALPY                        
                         galpy_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos);  
-                        for (int k=0; k<nset; k++) {
-                            pjk.den += galpy_manager.calcSetDensity(k, time, pjk.pos, pjk.pos);
+                        for (int iset=0; iset<nset; iset++) {
+                            pjk.den += galpy_manager.calcSetDensity(iset, time, pjk.pos, pjk.pos);
                         }
 #elif AGAMA
                         agama_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos); 
