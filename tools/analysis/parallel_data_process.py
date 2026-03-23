@@ -11,6 +11,43 @@ import time
 import os
 
 
+def _saveRealtimeData(data, filename, output_format):
+    """Save updated analysis data immediately after one snapshot is processed."""
+    if (data.size == 0):
+        return
+
+    if (output_format == 'ascii'):
+        with open(filename, 'a') as f:
+            data[data.size-1:data.size].savetxt(f)
+    elif (output_format == 'binary'):
+        with open(filename, 'ab') as f:
+            data[data.size-1:data.size].tofile(f)
+    elif (output_format == 'npy'):
+        with open(filename, 'wb') as f:
+            data.save(f)
+    else:
+        raise ValueError('Output format %s is not supported, should be ascii, binary or npy' % output_format)
+
+
+def _prepareRealtimeSaveFiles(filename_prefix, save_keys, output_format, write_mode):
+    """Prepare output files for real-time saving."""
+    if (write_mode == 'a'):
+        return
+
+    file_mode = 'w'
+    if (output_format in ['binary', 'npy']):
+        file_mode = 'wb'
+
+    for key in save_keys:
+        with open(filename_prefix + '.' + key, file_mode):
+            pass
+
+
+def _getParallelRealtimePrefix(filename_prefix, rank):
+    """Generate per-worker prefix for parallel real-time saving."""
+    return filename_prefix + '.parallel.' + str(rank)
+
+
 def dataProcessOne(file_path, result, time_profile, 
                    read_flag=False, r_max_binary=0.1, 
                    average_mode='sphere', simple_binary=True, 
@@ -165,7 +202,7 @@ def dataProcessOne(file_path, result, time_profile,
         start_time = time.time()
         
         if (find_multiple): 
-            single_t, binary_t, triple_t, quadruple_t = findMultiple(single,binary,G,r_bin,simple_binary)
+            single_t, binary_t, triple_t, quadruple_t = findMultiple(single,binary,G,r_max_binary,simple_binary)
             if (output_format=='ascii'):
                 single_t.savetxt(file_path+'.single')
                 binary_t.savetxt(file_path+'.binary')
@@ -322,6 +359,11 @@ def dataProcessList(file_list, read_flag=False, **kwargs):
     result['esc_binary']=BinaryEscaper(**kwargs)
     result['tidal']=Tidal(**kwargs)
 
+    realtime_save = kwargs.get('realtime_save', True) & ('filename_prefix' in kwargs.keys())
+    realtime_save_mode = kwargs.get('realtime_save_mode', 'w')
+    output_format = kwargs.get('output_format', 'binary')
+    realtime_save_prefix = kwargs.get('realtime_save_prefix', kwargs.get('filename_prefix', None))
+
     time_profile=dict()
     for key in ['read','find_pair','density','center_core','save_data','calc_pot','lagr','escaper','bse']:
         time_profile[key] = 0.0
@@ -347,8 +389,29 @@ def dataProcessList(file_list, read_flag=False, **kwargs):
         read_m_ext=kwargs['read_m_ext'] # filename of m_ext, (time, m)
         result['m_ext'] = np.loadtxt(read_m_ext)
 
+    realtime_save_keys = ['lagr', 'core']
+    if ('bse_status' in result.keys()):
+        realtime_save_keys.append('bse_status')
+    if (kwargs.get('r_escape', None) == 'tidal'):
+        realtime_save_keys.append('tidal')
+
+    if (realtime_save):
+        _prepareRealtimeSaveFiles(realtime_save_prefix, realtime_save_keys, output_format, realtime_save_mode)
+
     for path in file_list:
+        size_prev = dict()
+        if (realtime_save):
+            for key in realtime_save_keys:
+                size_prev[key] = result[key].size
+
         dataProcessOne(path, result, time_profile, read_flag=read_flag, **kwargs)
+
+        if (realtime_save):
+            start_time = time.time()
+            for key in realtime_save_keys:
+                if (result[key].size > size_prev[key]):
+                    _saveRealtimeData(result[key], realtime_save_prefix+'.'+key, output_format)
+            time_profile['save_data'] += time.time() - start_time
 
     if (len(file_list)>0):
         for key, item in time_profile.items():
@@ -384,7 +447,14 @@ def parallelDataProcessList(file_list, n_cpu=int(0), **kwargs):
 
     result=[None]*n_cpu
     for rank in range(n_cpu):
-        result[rank] = pool.apply_async(dataProcessList, (file_part[rank],), kwargs)
+        kwargs_worker = kwargs.copy()
+        if ('filename_prefix' in kwargs_worker.keys()):
+            kwargs_worker['realtime_save'] = True
+            kwargs_worker['realtime_save_mode'] = 'w'
+            kwargs_worker['realtime_save_prefix'] = _getParallelRealtimePrefix(kwargs_worker['filename_prefix'], rank)
+        else:
+            kwargs_worker['realtime_save'] = False
+        result[rank] = pool.apply_async(dataProcessList, (file_part[rank],), kwargs_worker)
 
     # Step 3: Don't forget to close
     pool.close()

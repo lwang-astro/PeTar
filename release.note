@@ -55,6 +55,7 @@
 53. Add GW kick for BBH mergers, change spin parameter for SSE/BSE stellar evolution to 3D spin in data structure, update corresponding data analysis tools.
 54. Add support to plot external potential in movie tool
 55. Switch all default output in BINARY format instead of Ascii.
+56. Add auto-resume function for petar.data.process.
 **Some existing issues include**
 
 2. In cases where a high-eccentric binary system transitions from a binary to a hyperbolic orbit temporarily due to significant perturbations at a large separation, the BSE code may incorrectly identify it as an immediate merger, even though the binary system does not actually merge. It is essential to establish a more precise criterion for invoking binary evolution codes in such scenarios.

@@ -4,8 +4,186 @@ import numpy as np
 import multiprocessing as mp
 import sys
 import os
+import glob
 import petar
 import getopt
+
+
+def getParallelRealtimePrefix(filename_prefix, rank):
+    return filename_prefix + '.parallel.' + str(rank)
+
+
+def clearParallelRealtimeFiles(filename_prefix, save_keys):
+    for key in save_keys:
+        flist = glob.glob(filename_prefix + '.parallel.*.' + key)
+        for fname in flist:
+            if os.path.exists(fname):
+                os.remove(fname)
+
+
+def readMixDataByKey(key, filename, output_format, kwargs):
+    if (key == 'lagr'):
+        data = petar.LagrangianMultiple(**kwargs)
+    elif (key == 'core'):
+        data = petar.Core()
+    elif (key == 'bse_status'):
+        data = petar.BSEStatus()
+    elif (key == 'tidal'):
+        data = petar.Tidal(**kwargs)
+    else:
+        raise ValueError('Unknown key for reading mix data: %s' % key)
+
+    if (output_format == 'ascii'):
+        data.loadtxt(filename)
+    elif (output_format == 'binary'):
+        data.fromfile(filename)
+    elif (output_format == 'npy'):
+        data.load(filename)
+    else:
+        raise ValueError('Output format %s is unknown, should be ascii, binary or npy.' % output_format)
+    return data
+
+
+def writeMixData(data, filename, output_format):
+    if (output_format == 'ascii'):
+        with open(filename, 'w') as f:
+            data.savetxt(f)
+    elif (output_format == 'binary'):
+        with open(filename, 'wb') as f:
+            data.tofile(f)
+    elif (output_format == 'npy'):
+        with open(filename, 'wb') as f:
+            data.save(f)
+    else:
+        raise ValueError('Output format %s is unknown, should be ascii, binary or npy.' % output_format)
+
+
+def deduplicateByTime(data):
+    if (data.size == 0):
+        return data
+    if (not hasattr(data, 'time')):
+        return data
+
+    order = np.argsort(data.time, kind='stable')
+    data_sort = data[order]
+
+    # keep the last entry for duplicated time (the most recently recovered one)
+    _, ridx = np.unique(data_sort.time[::-1], return_index=True)
+    keep_idx = data_sort.size - 1 - ridx
+    keep_idx.sort()
+    return data_sort[keep_idx]
+
+
+def recoverParallelRealtimeFiles(filename_prefix, save_keys, output_format, kwargs, append_mode=False):
+    recovered_keys = []
+    for key in save_keys:
+        flist = glob.glob(filename_prefix + '.parallel.*.' + key)
+        if (len(flist) == 0):
+            continue
+
+        def get_rank(fname):
+            fs = fname.split('.')
+            if (len(fs) < 3):
+                return -1
+            try:
+                return int(fs[-2])
+            except ValueError:
+                return -1
+
+        flist.sort(key=get_rank)
+
+        data_temp = []
+        for fname in flist:
+            if os.path.getsize(fname) > 0:
+                data_temp.append(readMixDataByKey(key, fname, output_format, kwargs))
+
+        if (len(data_temp) == 0):
+            continue
+
+        data_merge = data_temp[0]
+        if (len(data_temp) > 1):
+            data_merge = petar.join(*data_temp)
+
+        key_filename = filename_prefix + '.' + key
+        if append_mode and os.path.exists(key_filename) and os.path.getsize(key_filename) > 0:
+            data_old = readMixDataByKey(key, key_filename, output_format, kwargs)
+            data_merge = petar.join(data_old, data_merge)
+
+        data_merge = deduplicateByTime(data_merge)
+
+        writeMixData(data_merge, key_filename, output_format)
+        recovered_keys.append(key)
+
+    if (len(recovered_keys) > 0):
+        clearParallelRealtimeFiles(filename_prefix, save_keys)
+
+    return recovered_keys
+
+
+def getProcessedTimeSet(filename_prefix, output_format, kwargs):
+    required_keys = ['lagr', 'core']
+    if ('interrupt_mode' in kwargs.keys()):
+        if ('bse' in kwargs['interrupt_mode']):
+            required_keys.append('bse_status')
+    if (kwargs.get('r_escape', None) == 'tidal'):
+        required_keys.append('tidal')
+
+    processed_time = None
+    for key in required_keys:
+        key_filename = filename_prefix + '.' + key
+        if (not os.path.exists(key_filename)):
+            return set()
+        if (os.path.getsize(key_filename) == 0):
+            return set()
+
+        data = readMixDataByKey(key, key_filename, output_format, kwargs)
+        if (data.size == 0):
+            return set()
+
+        time_set = set(np.round(data.time, 12))
+        if (processed_time is None):
+            processed_time = time_set
+        else:
+            processed_time = processed_time & time_set
+
+        if (len(processed_time) == 0):
+            return set()
+
+    return processed_time
+
+
+def filterUnprocessedSnapshots(path_list, filename_prefix, output_format, kwargs):
+    processed_time = getProcessedTimeSet(filename_prefix, output_format, kwargs)
+    if (len(processed_time) == 0):
+        return path_list, 0
+
+    snapshot_format = kwargs.get('snapshot_format', 'binary')
+    path_rest = []
+    n_skip = 0
+    for path in path_list:
+        header = petar.PeTarDataHeader(path, snapshot_format=snapshot_format, **kwargs)
+        tkey = np.round(header.time, 12)
+        if (tkey in processed_time):
+            n_skip += 1
+        else:
+            path_rest.append(path)
+    return path_rest, n_skip
+
+
+def filterSnapshotsFromTime(path_list, time_min, kwargs):
+    if (time_min is None):
+        return path_list, 0
+
+    snapshot_format = kwargs.get('snapshot_format', 'binary')
+    path_rest = []
+    n_skip = 0
+    for path in path_list:
+        header = petar.PeTarDataHeader(path, snapshot_format=snapshot_format, **kwargs)
+        if (header.time >= time_min):
+            path_rest.append(path)
+        else:
+            n_skip += 1
+    return path_rest, n_skip
 
 if __name__ == '__main__':
 
@@ -16,6 +194,9 @@ if __name__ == '__main__':
     write_option='w'
     esc_snapshot_format='binary'
     output_format='binary'
+    recover_parallel_only=False
+    auto_resume=True
+    resume_from_time=None
 
     def usage():
         print("A tool for post-data processing of a list of snapshot files from petar.")
@@ -56,7 +237,10 @@ if __name__ == '__main__':
         print("     --esc-snapshot-format [S] Set escaper snapshot data format for reading: binary, ascii, npy (follows -s).")
         print("                               These files (*.esc_single, *.esc_binary) are generated by the previous petar.data.process.")
         print("                               This option is used when the option '--append' is switched on.")
-        print(f"  -o(--output-format)   [S] Output data format for single, binary, and multiple snapshots: ascii, binary, npy (default: {output_format}).")
+        print(f"  -o(--output-format)  [S] Output data format for single, binary, and multiple snapshots: ascii, binary, npy (default: {output_format}).")
+        print("     --recover-parallel-only   Only recover and merge unfinished parallel temporary files, then exit.")
+        print("     --no-auto-resume          Disable automatic interruption detection/recovery and resume from remaining snapshots (enabled by default).")
+        print("     --resume-from-time    [F] Force processing snapshots from this time and later (used as an additional filter on top of auto-resume).")
         print("  -e(--calc-energy)         Enable the calculation of potential energy and virial ratio -(2*ekin/epot) of different Lagrangian radii.")
         print("  -c(--calc-multi-rc)       Enable the calculation of individual core radius for each group chosen for Lagrangian properties (e.g., single, binary, and star type);")
         print("                            The centers are also recalculated for individual groups (time-consuming computation).")
@@ -84,7 +268,7 @@ if __name__ == '__main__':
         print("            For example, if '--add-star-type BH,MS' is used in petar.data.process, petar.LagrangianMultiple should include the keyword argument 'add_star_type=['BH','MS']'.")
         print("            The corresponding class member names are 'BH' and 'MS'.")
         print("          - The SSE star type names are shown below:")
-        print("              LMS: deeply or fully convective low mass MS star [0]")
+        print("              LMS:  Deeply or fully convective low mass MS star [0]")
         print("              MS:   Main Sequence star [1]")
         print("              HG:   Hertzsprung Gap [2]")
         print("              GB:   First Giant Branch [3]")
@@ -126,7 +310,7 @@ if __name__ == '__main__':
         print("  3) '--add-star-type' functionality is only available when SSE/BSE is used.")
     try:
         shortargs = 'p:m:G:b:MBAea:rt:i:Ps:o:cn:h'
-        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','use-mpfrc','snapshot-format=','output-format=','m-ext=','add-star-type=','add-mass-range=','calc-multi-rc','n-cpu=','help']
+        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','use-mpfrc','snapshot-format=','output-format=','m-ext=','add-star-type=','add-mass-range=','calc-multi-rc','n-cpu=','recover-parallel-only','no-auto-resume','resume-from-time=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -188,6 +372,12 @@ if __name__ == '__main__':
                 kwargs['add_star_type'] = [x for x in arg.split(',')]
             elif opt in ('--add-mass-range'):
                 kwargs['add_mass_range'] = [x for x in arg.split(',')]
+            elif opt == '--recover-parallel-only':
+                recover_parallel_only = True
+            elif opt == '--no-auto-resume':
+                auto_resume = False
+            elif opt == '--resume-from-time':
+                resume_from_time = float(arg)
             else:
                 assert False, "unhandeld option"
 
@@ -202,14 +392,56 @@ if __name__ == '__main__':
         if ('interrupt_mode' in kwargs.keys()):
             if ('bse' in kwargs['interrupt_mode']): kwargs['G'] = 0.00449830997959438 # pc^3/(Msun*Myr^2)
 
-    kwargs['filename_prefix'] = filename_prefix
-
-    for key, item in kwargs.items(): print(key,':',item)
-
     fl = open(filename,'r')
     file_list = fl.read()
     path_list = file_list.splitlines()
     fl.close()
+
+    kwargs['filename_prefix'] = filename_prefix
+    kwargs['realtime_save'] = (n_cpu == 1)
+    kwargs['realtime_save_mode'] = write_option
+
+    recover_keys=['lagr','core','bse_status']
+    if (ftid_file_flag): recover_keys.append('tidal')
+
+    if (auto_resume or recover_parallel_only):
+        recovered = recoverParallelRealtimeFiles(filename_prefix, recover_keys, output_format, kwargs, append_mode=True)
+        if (len(recovered) > 0):
+            print('Recovered parallel temporary files for keys:', ','.join(recovered))
+        else:
+            print('No parallel temporary files found to recover.')
+
+    if (auto_resume):
+        path_list, n_skip = filterUnprocessedSnapshots(path_list, filename_prefix, output_format, kwargs)
+        if (n_skip > 0):
+            write_option = 'a'
+            kwargs['realtime_save_mode'] = write_option
+            print('Auto-resume: detected %d processed snapshots, continue with %d remaining snapshots.' % (n_skip, len(path_list)))
+            if (len(path_list) > 0):
+                snapshot_format = kwargs.get('snapshot_format', 'binary')
+                header_next = petar.PeTarDataHeader(path_list[0], snapshot_format=snapshot_format, **kwargs)
+                print('Auto-resume start from snapshot:', path_list[0], 'time:', header_next.time)
+
+    if (resume_from_time is not None):
+        path_list, n_skip_time = filterSnapshotsFromTime(path_list, resume_from_time, kwargs)
+        if (n_skip_time > 0):
+            write_option = 'a'
+            kwargs['realtime_save_mode'] = write_option
+        print('Resume-from-time: %.12g, skipped %d snapshots, remaining %d snapshots.' % (resume_from_time, n_skip_time, len(path_list)))
+        if (len(path_list) > 0):
+            snapshot_format = kwargs.get('snapshot_format', 'binary')
+            header_next = petar.PeTarDataHeader(path_list[0], snapshot_format=snapshot_format, **kwargs)
+            print('Resume-from-time start snapshot:', path_list[0], 'time:', header_next.time)
+
+    if (recover_parallel_only):
+        print('Recover-only mode enabled, stop without new snapshot processing.')
+        sys.exit(0)
+
+    if (len(path_list) == 0):
+        print('No snapshot needs processing, stop.')
+        sys.exit(0)
+
+    for key, item in kwargs.items(): print(key,':',item)
 
     result=dict()
     time_profile=dict()
@@ -221,10 +453,29 @@ if __name__ == '__main__':
     fout_list=['lagr','core','bse_status']
     if (ftid_file_flag): fout_list.append('tidal')
 
+    realtime_saved_keys = set()
+    if (kwargs.get('realtime_save', False)):
+        realtime_saved_keys.update(fout_list)
+
     for key in fout_list:
         if key in result.keys():
             key_filename  = filename_prefix + '.' + key
-            with open(key_filename, write_option) as f:
+            if (key in realtime_saved_keys) and (result[key].size > 0):
+                print (key,"data is updated during processing in file:",key_filename)
+                continue
+            if (output_format == 'npy') and (write_option == 'a'):
+                result_mix = result[key]
+                if os.path.exists(key_filename) and (os.path.getsize(key_filename) > 0):
+                    data_old = readMixDataByKey(key, key_filename, output_format, kwargs)
+                    result_mix = petar.join(data_old, result[key])
+                    result_mix = deduplicateByTime(result_mix)
+                writeMixData(result_mix, key_filename, output_format)
+                print (key,"data is saved in file:",key_filename)
+                continue
+            write_mode = write_option
+            if (output_format in ['binary','npy']):
+                write_mode += 'b'
+            with open(key_filename, write_mode) as f:
                 if (output_format=='ascii'):
                     result[key].savetxt(f)
                 elif (output_format=='binary'):
@@ -269,6 +520,9 @@ if __name__ == '__main__':
             else:
                 raise ValueError('Output format %s is unknown, should be ascii, binary or npy.' % output_format)
             print ("%s data is saved in file: %s" % (key,key_filename))
+
+    if (n_cpu>1):
+        clearParallelRealtimeFiles(filename_prefix, fout_list)
 
     print ('CPU time profile:')
     for key, item in time_profile.items():
