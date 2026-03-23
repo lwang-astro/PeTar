@@ -13,6 +13,7 @@ import petar
 import imageio
 import os
 import re
+import traceback
 #from pygifsicle import optimize
 
 plt.style.use('dark_background')
@@ -40,8 +41,9 @@ class ExternalPotential:
         self._plot_planes = set()
         self._snapshot_index = None
         self._snapshot_cache = {}
-        self._vmin_plane = {}
-        self._vmax_plane = {}
+        self._vmin = None
+        self._vmax = None
+        self._vlim_initialized = False
         self._artists = {}
 
     @staticmethod
@@ -70,6 +72,12 @@ class ExternalPotential:
             if (plane is not None):
                 planes.add(plane)
         self._plot_planes = planes
+        self._snapshot_index = None
+        self._snapshot_cache = {}
+        self._vmin = self.external_pot_vmin
+        self._vmax = self.external_pot_vmax
+        self._vlim_initialized = (self._vmin is not None) and (self._vmax is not None)
+        self._artists = {}
 
     def isEnabled(self):
         return self.external_pot and (len(self._plot_planes) > 0)
@@ -127,29 +135,60 @@ class ExternalPotential:
 
         return self._snapshot_cache[plane]
 
-    def _getVlim(self, plane, data_pot):
+    def _calcDataRange(self, data_pot):
+        if (self.external_pot_log):
+            pot_data = np.log10(-data_pot.pot[data_pot.pot<0])
+        else:
+            pot_data = -data_pot.pot
+        if (pot_data.size == 0):
+            return None, None
+        return np.nanmin(pot_data), np.nanmax(pot_data)
+
+    def _initializeVlim(self, data):
+        if (self._vlim_initialized):
+            return
+
         vmin = self.external_pot_vmin
         vmax = self.external_pot_vmax
 
-        if (vmin is None):
-            if (plane not in self._vmin_plane.keys()):
-                if (self.external_pot_log):
-                    self._vmin_plane[plane] = np.nanmin(np.log10(-data_pot.pot[data_pot.pot<0]))
-                else:
-                    self._vmin_plane[plane] = np.nanmin(-data_pot.pot)
-            vmin = self._vmin_plane[plane]
+        if ((vmin is None) or (vmax is None)):
+            vmin_list = []
+            vmax_list = []
+            for plane in sorted(self._plot_planes):
+                data_pot, _ = self._getPotentialData(plane, data)
+                if (data_pot is None):
+                    continue
+                plane_vmin, plane_vmax = self._calcDataRange(data_pot)
+                if (plane_vmin is None) or (plane_vmax is None):
+                    continue
+                vmin_list.append(plane_vmin)
+                vmax_list.append(plane_vmax)
 
-        if (vmax is None):
-            if (plane not in self._vmax_plane.keys()):
-                if (self.external_pot_log):
-                    self._vmax_plane[plane] = np.nanmax(np.log10(-data_pot.pot[data_pot.pot<0]))
-                else:
-                    self._vmax_plane[plane] = np.nanmax(-data_pot.pot)
-            vmax = self._vmax_plane[plane]
+            if (vmin is None) and (len(vmin_list) > 0):
+                vmin = np.min(vmin_list)
+            if (vmax is None) and (len(vmax_list) > 0):
+                vmax = np.max(vmax_list)
 
-        return vmin, vmax
+        if (vmin is not None) and (vmax is not None):
+            self._vmin = vmin
+            self._vmax = vmax
+            self._vlim_initialized = True
 
-    def plot(self, axe, plot_mode, data):
+    def _getVlim(self, data, data_pot):
+        self._initializeVlim(data)
+        if (self._vlim_initialized):
+            return self._vmin, self._vmax
+
+        vmin, vmax = self._calcDataRange(data_pot)
+        if (vmin is not None) and (vmax is not None):
+            self._vmin = vmin
+            self._vmax = vmax
+            self._vlim_initialized = True
+            return self._vmin, self._vmax
+
+        return None, None
+
+    def plot(self, axe, plot_mode, data, center_offset=None):
         self._removeArtists(axe)
 
         plane = self._getPotentialPlaneFromMode(plot_mode)
@@ -157,11 +196,11 @@ class ExternalPotential:
         if (data_pot is None):
             return []
 
-        vmin, vmax = self._getVlim(plane, data_pot)
+        vmin, vmax = self._getVlim(data, data_pot)
         mesh, cset = data_pot.plot(axe, header=header_pot, log_flag=self.external_pot_log,
                                    with_contour=self.external_pot_with_contour,
-                                   alpha=self.external_pot_alpha, cmap=cm.RdBu,
-                                   vmin=vmin, vmax=vmax)
+                                   alpha=self.external_pot_alpha, center_offset=center_offset, 
+                                   cmap=cm.RdBu, vmin=vmin, vmax=vmax)
         contours = []
         if (self.external_pot_with_contour and cset is not None):
             contours = [cset]
@@ -571,7 +610,11 @@ class PlotXY:
 
         ptcls_ext = []
         if (external_potential is not None):
-            ptcls_ext = external_potential.plot(self.axe, self.plot_mode, data)
+            if (self.cm_mode != 'none'):
+                center_offset = xycm
+            else:
+                center_offset = None
+            ptcls_ext = external_potential.plot(self.axe, self.plot_mode, data, center_offset)
 
         mass = data.data.mass
         colors=data.getColor(self.color_mode)
@@ -1032,6 +1075,8 @@ def initPlot(axe, model_title, plot_item, lagr, **kwargs):
             for key in kwargs.keys():
                 if (key in ['boxsize','x_min','x_max','y_min','y_max','cm_mode','color_mode','size_mode','marker_scale']):
                     key_list = kwargs[key].split(',')
+                    if (imain>=len(key_list)):
+                        raise ValueError(f'The number of values for {key} should be no less than the number of main plot, which is {imain+1}. Please check the input options related to {key}.')
                     if (key != 'cm_mode') and (key != 'color_mode') and (key != 'size_mode'):
                         kwargs_sub[key] = float(key_list[imain])
                     else:
@@ -1101,38 +1146,43 @@ def initFig(model_list, frame_xsize, frame_ysize, ncol, nplots, compare_in_colum
 
 
 def createImage(_path_list, model_list, frame_xsize, frame_ysize, ncol, plot_item, core, lagr, dpi, **kwargs):
-    n_frame = len(_path_list)
-    use_previous = False
-    if ('use_previous' in kwargs.keys()): use_previous = kwargs['use_previous']
+    try:
+        n_frame = len(_path_list)
+        use_previous = False
+        if ('use_previous' in kwargs.keys()): use_previous = kwargs['use_previous']
 
-    if (n_frame>0):
-        nplots = len(plot_item)
+        if (n_frame>0):
+            nplots = len(plot_item)
 
-        if (len(model_list)>1): ncol = nplots
-        compare_in_column = False
-        if ('compare_in_column' in kwargs.keys()): compare_in_column = kwargs['compare_in_column']
+            if (len(model_list)>1): ncol = nplots
+            compare_in_column = False
+            if ('compare_in_column' in kwargs.keys()): compare_in_column = kwargs['compare_in_column']
 
-        fig, axe = initFig(model_list, frame_xsize, frame_ysize, ncol, nplots, compare_in_column)
+            fig, axe = initFig(model_list, frame_xsize, frame_ysize, ncol, nplots, compare_in_column)
 
-        plots=dict()
-        for i in range(len(model_list)):
-            plots[i] = initPlot(axe[i], model_list[i][2],plot_item, lagr[i], **kwargs)
-
-        for k in range(n_frame):
-            file_path = _path_list[k]
-            if (use_previous):
-                if (os.path.exists(file_path+'.png')):
-                    print('find existing %s' % file_path)
-                    continue
-
+            plots=dict()
             for i in range(len(model_list)):
-                mi = model_list[i][0]
-                prefix = model_list[i][1]+'.' if model_list[i][1] != '' else ''
-                plotOne(mi+'/'+prefix+file_path, axe[i], plots[i], core[i], lagr[i], **kwargs)
-            print('processing ',file_path)
-            fig.savefig(file_path+'.png',bbox_inches = "tight", dpi=dpi)
+                plots[i] = initPlot(axe[i], model_list[i][2],plot_item, lagr[i], **kwargs)
 
-    return n_frame
+            for k in range(n_frame):
+                file_path = _path_list[k]
+                if (use_previous):
+                    if (os.path.exists(file_path+'.png')):
+                        print('find existing %s' % file_path)
+                        continue
+
+                for i in range(len(model_list)):
+                    mi = model_list[i][0]
+                    prefix = model_list[i][1]+'.' if model_list[i][1] != '' else ''
+                    plotOne(mi+'/'+prefix+file_path, axe[i], plots[i], core[i], lagr[i], **kwargs)
+                print('processing ',file_path)
+                fig.savefig(file_path+'.png',bbox_inches = "tight", dpi=dpi)
+
+        return n_frame
+    except Exception as err:
+        print('createImage failed in PID %d, n_frame=%d' % (os.getpid(), len(_path_list)))
+        traceback.print_exc()
+        raise err
 
 if __name__ == '__main__':
 
@@ -1302,8 +1352,8 @@ if __name__ == '__main__':
         print("  --ext-pot-log        Use log10(-pot) for external potential color map")
         print("  --ext-pot-format [S] Snapshot format of external potential map: ascii, binary: ", pext.external_pot_format)
         print("  --ext-pot-dir    [S] Directory path of external potential snapshots: ", pext.external_pot_dir)
-        print("  --ext-pot-vmin   [F] Fixed minimum value of external potential color map: auto from first valid frame")
-        print("  --ext-pot-vmax   [F] Fixed maximum value of external potential color map: auto from first valid frame")
+        print("  --ext-pot-vmin   [F] Fixed minimum value of external potential color map: auto from initial snapshot and shared by all ext-pot panels")
+        print("  --ext-pot-vmax   [F] Fixed maximum value of external potential color map: auto from initial snapshot and shared by all ext-pot panels")
         print("  --ext-pot-alpha  [F] Alpha transparency for external potential map: ", pext.external_pot_alpha)
         print("  --ext-pot-with-contour Add contour lines for external potential map")
         print("  --ext-pot-xy-prefix [S] File prefix of x-y potential snapshots: ", pext.external_pot_xy_prefix)
@@ -1588,6 +1638,14 @@ if __name__ == '__main__':
         # Step 3: Don't forget to close
         pool.close()
         pool.join()
+        for rank in range(n_cpu):
+            if (results[rank] is not None):
+                try:
+                    results[rank].get()
+                except Exception as err:
+                    print('Error from worker rank %d, n_files=%d' % (rank, len(file_part[rank])))
+                    print(err)
+                    raise err
 
         png_list = [path_list[i]+'.png' for i in range(n_files)]
         create_movie(png_list, fps, output_file+'.'+plot_format)

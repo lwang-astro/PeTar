@@ -204,7 +204,7 @@ class ExternalPotMap(DictNpArrayMix):
                 ['pot',np.float64], ['den',np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
     
-    def plot(self, axes, header, plot_keys=['x','y'], log_flag=False, with_contour=False, **kwargs):
+    def plot(self, axes, header, plot_keys=['x','y'], log_flag=False, with_contour=False, center_offset=None, **kwargs):
         """ 
         Plot the external potential map using pcolormesh and contour
         Parameters:
@@ -219,6 +219,8 @@ class ExternalPotMap(DictNpArrayMix):
             whether to plot log(-pot) or -pot
         with_contour: bool (default: False)
             whether to add contour lines on top of the pcolormesh
+        center_offset: list or tuple of float (default: None)
+            if not None, the offset to apply to the positions for plotting, used to center the data around a specific point (e.g., the center of mass of the particle system)
         kwargs: dict
             pcolormesh and contour keyword arguments, such as vmin, vmax, cmap, etc.
 
@@ -237,17 +239,23 @@ class ExternalPotMap(DictNpArrayMix):
         y_grid = self.pos[:, key_map[plot_keys[1]]].reshape((nx, ny))
         pot = self['pot'].reshape((nx, ny))
 
+        if center_offset is not None:
+            x_plot = x_grid - center_offset[0]
+            y_plot = y_grid - center_offset[1]
+        else:
+            x_plot = x_grid
+            y_plot = y_grid
+
         count = np.log10(-pot) if log_flag else -pot        
 
-        im = axes.pcolormesh(x_grid, y_grid, count, shading='auto', **kwargs)
+        im = axes.pcolormesh(x_plot, y_plot, count, shading='auto', **kwargs)
         axes.set_aspect('equal', adjustable='box')
         axes.set_xlabel(plot_keys[0])
         axes.set_ylabel(plot_keys[1])
 
+        cset = None
         if (with_contour):
-            cset = axes.contour(x_grid, y_grid, count, linewidths=2, **kwargs)
+            cset = axes.contour(x_plot, y_plot, count, linewidths=2, **kwargs)
             #axes[i].clabel(cset,inline=True,fmt='%1.1f',fontsize=10)
-            return im, cset
-        else:
-            return im
 
+        return im, cset
