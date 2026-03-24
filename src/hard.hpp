@@ -144,7 +144,7 @@ public:
 #endif // END BSE_BASE
 #endif // END STELLAR_EVOLUTION
 #ifdef ADJUST_GROUP_PRINT
-                    adjust_group_write_option(input_par_store, 1, "write-group-info", "Write information of new and end groups; 0: no output; 1: output to file with name of [data filename prefix].group.[MPI rank]"),
+                    adjust_group_write_option(input_par_store, 1, "write-group-info", "Write information of new and end groups; 0: no output; 1: ascii output; 2: binary output, files are [data filename prefix].group.[MPI rank].n[N_member]"),
 #endif
                     record_id_start_one(input_par_store, 0, "record-id-start-one", "Starting of the first id range for hard dump recording every tree step, save into files object_[id]"),
                     record_id_end_one  (input_par_store, 0, "record-id-end-one", "Ending of the first id range for hard dump; notice that the ending id is not included in hard dump"),
@@ -631,10 +631,10 @@ public:
 
 #ifdef ADJUST_GROUP_PRINT
         // group information
-        if (_write_style && _input.adjust_group_write_option.value==1) 
-            h4_manager.adjust_group_write_flag=true;
-        else 
-            h4_manager.adjust_group_write_flag=false;
+        if (_write_style && _input.adjust_group_write_option.value>0)
+            h4_manager.group_info_output.setWriteEnabled(true);
+        else
+            h4_manager.group_info_output.setWriteEnabled(false);
 #endif
 
 #ifdef HERMITE_PN
@@ -1055,9 +1055,9 @@ public:
             bool pre_exit_flag = sym_int.info.checkAndSetBinaryPairIDIter(sym_int.info.getBinaryTreeRoot(),false);
 
 #ifdef ADJUST_GROUP_PRINT
-            if (manager->h4_manager.adjust_group_write_flag && !pre_exit_flag) {
+            if (manager->h4_manager.group_info_output.isWriteEnabled() && !pre_exit_flag) {
                 // print new group information
-                sym_int.printGroupInfo(0, manager->h4_manager.fgroup, WRITE_WIDTH, &pcm);
+                sym_int.printGroupInfo(0, manager->h4_manager.group_info_output, WRITE_WIDTH, &pcm);
             }
 #endif
 
@@ -1314,9 +1314,9 @@ public:
             if (reset_flag) sdar_n_groups_end ++;
 
 #ifdef ADJUST_GROUP_PRINT
-            if (manager->h4_manager.adjust_group_write_flag && reset_flag) {
+            if (manager->h4_manager.group_info_output.isWriteEnabled() && reset_flag) {
                 // print break group information
-                sym_int.printGroupInfo(1, manager->h4_manager.fgroup, WRITE_WIDTH, &pcm);
+                sym_int.printGroupInfo(1, manager->h4_manager.group_info_output, WRITE_WIDTH, &pcm);
             }
 #endif
 

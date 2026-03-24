@@ -2718,13 +2718,11 @@ public:
 
 #ifdef ADJUST_GROUP_PRINT
             // open file for new/end group information
-            if (hard_parameters.adjust_group_write_option.value==1) {
+            if (hard_parameters.adjust_group_write_option.value>0) {
                 std::string fgroup_name = fname_snp + ".group." + my_rank_str;
-                if(input_parameters.append_switcher.value==1) 
-                    hard_manager.h4_manager.fgroup.open(fgroup_name.c_str(), std::ofstream::out|std::ofstream::app);
-                else 
-                    hard_manager.h4_manager.fgroup.open(fgroup_name.c_str(), std::ofstream::out);
-                hard_manager.h4_manager.fgroup<<std::setprecision(WRITE_PRECISION);
+                const bool append_flag = (input_parameters.append_switcher.value==1);
+                const bool binary_flag = (hard_parameters.adjust_group_write_option.value==2);
+                hard_manager.h4_manager.group_info_output.setup(fgroup_name, append_flag, binary_flag, WRITE_PRECISION);
             }
 #endif
         }
@@ -3438,13 +3436,6 @@ public:
         hard_manager.initial(hard_parameters, disk_star_merger_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
 #else
         hard_manager.initial(hard_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
-#endif
-#ifdef ADJUST_GROUP_PRINT
-        // group information
-        if (write_style&&hard_parameters.adjust_group_write_option.value==1) 
-            hard_manager.h4_manager.adjust_group_write_flag=true;
-        else 
-            hard_manager.h4_manager.adjust_group_write_flag=false;
 #endif
 
 #ifdef EXTERNAL_HARD
@@ -4162,7 +4153,7 @@ public:
 #endif
 #endif
 #ifdef ADJUST_GROUP_PRINT
-        if (hard_manager.h4_manager.fgroup.is_open()) hard_manager.h4_manager.fgroup.close();
+        hard_manager.h4_manager.group_info_output.close();
 #endif
         if (pos_domain) {
             delete[] pos_domain;

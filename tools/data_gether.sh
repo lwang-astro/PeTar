@@ -13,7 +13,9 @@ do
 	    echo 'Functionality:';
 	    echo '    1) Combine separated output data from multiple MPI processes with filename suffixes: '$suffixes' group';
 	    echo '    2) Split SSE/BSE output files into different files with suffixes "type_change", "sn_kick", "gw_kick" and "dynamic_merge".';
-	    echo '    3) If the option "-g" is used, split group information files into different files based on the number of members with suffixes "n2", "n3", and so on.';
+	    echo '    3) If the option "-g" is used, combine group files from mutliple MPI processes:';
+	    echo '         [prefix].group.[rank].n[N] -> [output].group.n[N]';
+	    echo '       (works for both ASCII and BINARY group files)';
 	    echo 'Usage: petar.data.gether [options] [data filename prefix]';
 	    echo '       The data filename prefix is defined by "petar -f"; the default case is "data".';
             echo 'Options (default arguments shown in parentheses at the end):';
@@ -21,13 +23,13 @@ do
 	    echo '  -n [I] Number of MPI processes (default: auto-detect)';
 	    echo '  -i     Ask before removing existing combined files (default: no ask)';
 	    echo '  -l     Only generate a list of snapshot data files';
-	    echo '  -g     Combine and split group files; a slow process';
+	    echo '  -g     Combine group files (can be slow if file sizes are large and there are many MPI processes)';
 	    exit;;
 	-f) shift; fout=$1; shift;;
 	-n) shift; nmpi=$1; shift;;
 	-i) rmi=1; shift;;
 	-l) onlylist=1; shift;;
-	-g) groupflag=1; suffixes=$suffixes' group'; shift;;
+	-g) groupflag=1; shift;;
 	*) fname=$1;shift;;
     esac
 done
@@ -74,6 +76,37 @@ do
     fi
 done
 
+if [ ! -z $groupflag ]; then
+	# New-format group files: [prefix].group.[rank].n[N]
+	nlist=`ls | egrep '^'$fname'.group.[0-9]+.n[0-9]+$' | sed 's/.*\.n/n/' | sort -u`
+	for ns in $nlist
+	do
+		out_group=$fout.group.$ns
+		if [ -e $out_group ]; then
+			if [ -z $rmi ]; then
+				rm -f $out_group
+			else
+				rm -i $out_group
+			fi
+		fi
+
+		echo 'gether '$fname'.group.*.'$ns' to '$out_group
+		if [ ! -z $nmpi ]; then
+			nend=`expr $nmpi - 1`
+			lst=`seq 0 $nend`
+			for i in $lst
+			do
+				in_group=$fname.group.$i.$ns
+				[ -e $in_group ] && cat $in_group >>$out_group
+			done
+		else
+			flist=`ls | egrep '^'$fname'.group.[0-9]+\.'$ns'$'`
+			[ ! -z "$flist" ] && cat $flist >$out_group
+		fi
+	done
+
+fi
+
 sse_opt='.sse .mosse .sseEmp'
 for s in $sse_opt
 do
@@ -98,16 +131,3 @@ do
 	egrep -v '^(Dynamic_merge|SN_kick|Tide|GW_kick)' $fout$s |awk '{for (i=2;i<=NF;i++) printf("%s ", $i); printf("\n")}' >$fout$s.type_change
     fi
 done
-
-[ -z $groupflag ] && exit
-
-if [ -e $fout.group ]; then
-    nmax=`awk '{print $2'} $fout.group|sort |tail -1`
-    if [[ x$nmax != x ]]; then
-	for ((i=2;i<=$nmax;i=i+1))
-	do
-	    echo 'get n_member= '$i' in '$fout.group' to '$fout.group.n$i
-	    awk -v n=$i '{if ($2==n) print $LINE}' $fout.group >$fout.group.n$i
-	done	    
-    fi
-fi

@@ -323,11 +323,6 @@ int main(int argc, char **argv){
   hard_manager.readBinary(fpar_in);
   fclose(fpar_in);
 
-#ifdef ADJUST_GROUP_PRINT
-  // Reinitialize fgroup after binary read to fix vptr corruption
-  new (&hard_manager.h4_manager.fgroup) std::ofstream();
-#endif
-
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
   if (stellar_evolution_option>=0) {
@@ -399,9 +394,8 @@ int main(int argc, char **argv){
 
 
 #ifdef ADJUST_GROUP_PRINT
-  if (hard_manager.h4_manager.adjust_group_write_flag) {
-      hard_manager.h4_manager.fgroup.open((filename+".group").c_str(), std::ofstream::out);
-      hard_manager.h4_manager.fgroup<<std::setprecision(WRITE_PRECISION);
+    if (hard_manager.h4_manager.group_info_output.isWriteEnabled()) {
+            hard_manager.h4_manager.group_info_output.setup(filename+".group", false, false, WRITE_PRECISION);
   }
 #endif
 
