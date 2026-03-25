@@ -935,6 +935,7 @@ public:
             n_group_offset[i+1] = n_group_offset[i] + _n_member_in_group[i];
         
         auto& ap_manager = manager->ap_manager;
+        tidal_tensor_index.resizeNoInitialize(0);
         if (_ptcl_artificial!=NULL) {
             tidal_tensor_index.resizeNoInitialize(_n_ptcl);
             for(int i=0; i<_n_ptcl; i++) tidal_tensor_index[i] = -1;
@@ -2043,6 +2044,7 @@ public:
         h4_int.clear();
         manager = NULL;
         tidal_tensor.resizeNoInitialize(0);
+        tidal_tensor_index.resizeNoInitialize(0);
         time_origin = 0;
         ptcl_origin = NULL;
         is_initialized = false;
