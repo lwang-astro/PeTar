@@ -84,6 +84,19 @@ public:
     void writeBinary(FILE* fp) const{
         fwrite(this, sizeof(FileHeader), 1, fp);
     }
+
+    int readBinaryStream(std::istream& _fin){
+        _fin.read(reinterpret_cast<char*>(this), sizeof(FileHeader));
+        if(!_fin) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1 bytes.\n";
+            abort();
+        }
+        return n_body;
+    }
+
+    void writeBinaryStream(std::ostream& _fout) const{
+        _fout.write(reinterpret_cast<const char*>(this), sizeof(FileHeader));
+    }
 };
 
 

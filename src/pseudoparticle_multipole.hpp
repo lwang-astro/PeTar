@@ -62,7 +62,10 @@ public:
     //! write class data to file with binary format
     /*! @param[in] _fp: FILE type file for output
      */
-    void writeBinary(FILE *_fp) {
+    void writeBinary(FILE *_fp) const {
+    }
+
+    void writeBinary(std::ostream& _fout) const {
     }
 
     //! read class data to file with binary format
@@ -70,6 +73,9 @@ public:
      */
     void readBinary(FILE *_fin) {
     }    
+
+    void readBinary(std::istream& _fin) {
+    }
 
     //! print parameters
     void print(std::ostream & _fout) const{

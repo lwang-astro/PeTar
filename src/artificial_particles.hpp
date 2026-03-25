@@ -197,6 +197,10 @@ public:
         fwrite(this, sizeof(ArtificialParticleInformation), 1, _fin);
     }
 
+    void writeBinary(std::ostream& _fout) const{
+        _fout.write(reinterpret_cast<const char*>(this), sizeof(ArtificialParticleInformation));
+    }
+
     //! read class data with ASCII format
     /*! @param[in] _fin: file IO for read
      */
@@ -216,6 +220,14 @@ public:
         size_t rcount = fread(this, sizeof(ArtificialParticleInformation), 1, _fin);
         if (rcount<1) {
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
+
+    void readBinary(std::istream& _fin) {
+        _fin.read(reinterpret_cast<char*>(this), sizeof(ArtificialParticleInformation));
+        if (!_fin) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1.\n";
             abort();
         }
     }
@@ -510,12 +522,19 @@ public:
     //! write class data to file with binary format
     /*! @param[in] _fp: FILE type file for output
      */
-    void writeBinary(FILE *_fp) {
+    void writeBinary(FILE *_fp) const {
         fwrite(&r_tidal_tensor, sizeof(PS::F64), 1, _fp);
         fwrite(&id_offset,      sizeof(PS::S64), 1, _fp);
         fwrite(&gravitational_constant, sizeof(PS::F64), 1, _fp);
         orbit_manager.writeBinary(_fp);
     }    
+
+    void writeBinary(std::ostream& _fout) const {
+        _fout.write(reinterpret_cast<const char*>(&r_tidal_tensor), sizeof(PS::F64));
+        _fout.write(reinterpret_cast<const char*>(&id_offset), sizeof(PS::S64));
+        _fout.write(reinterpret_cast<const char*>(&gravitational_constant), sizeof(PS::F64));
+        orbit_manager.writeBinary(_fout);
+    }
 
     //! read class data to file with binary format
     /*! @param[in] _fp: FILE type file for reading
@@ -531,6 +550,17 @@ public:
         }
         orbit_manager.readBinary(_fin);
     }    
+
+    void readBinary(std::istream& _fin) {
+        _fin.read(reinterpret_cast<char*>(&r_tidal_tensor), sizeof(PS::F64));
+        _fin.read(reinterpret_cast<char*>(&id_offset), sizeof(PS::S64));
+        _fin.read(reinterpret_cast<char*>(&gravitational_constant), sizeof(PS::F64));
+        if (!_fin) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 2.\n";
+            abort();
+        }
+        orbit_manager.readBinary(_fin);
+    }
 
     //! print parameters
     void print(std::ostream & _fout) const{

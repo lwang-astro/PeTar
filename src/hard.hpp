@@ -144,7 +144,7 @@ public:
 #endif // END BSE_BASE
 #endif // END STELLAR_EVOLUTION
 #ifdef ADJUST_GROUP_PRINT
-                    adjust_group_write_option(input_par_store, 1, "write-group-info", "Write information of new and end groups; 0: no output; 1: ascii output; 2: binary output, files are [data filename prefix].group.[MPI rank].n[N_member]"),
+                    adjust_group_write_option(input_par_store, 2, "write-group-info", "Write information of new and end groups; 0: no output; 1: ascii output; 2: binary output, files are [data filename prefix].group.[MPI rank].n[N_member]"),
 #endif
                     record_id_start_one(input_par_store, 0, "record-id-start-one", "Starting of the first id range for hard dump recording every tree step, save into files object_[id]"),
                     record_id_end_one  (input_par_store, 0, "record-id-end-one", "Ending of the first id range for hard dump; notice that the ending id is not included in hard dump"),
@@ -706,6 +706,14 @@ public:
         ar_manager.writeBinary(_fp);
     }
 
+    void writeBinary(std::ostream& _fout) const {
+        size_t size = sizeof(*this) - sizeof(ap_manager) - sizeof(h4_manager) - sizeof(ar_manager);
+        _fout.write(reinterpret_cast<const char*>(this), size);
+        ap_manager.writeBinary(_fout);
+        h4_manager.writeBinary(_fout);
+        ar_manager.writeBinary(_fout);
+    }
+
     //! read class data to file with binary format
     /*! @param[in] _fp: FILE type file for reading
      */
@@ -714,6 +722,21 @@ public:
         size_t rcount = fread(this, size, 1, _fin);
         if (rcount<1) {
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+        ap_manager.readBinary(_fin);
+        h4_manager.readBinary(_fin);
+        ar_manager.readBinary(_fin);
+#ifdef EXTERNAL_HARD
+        ar_manager.interaction.ext_force = &h4_manager.interaction.ext_force;
+#endif
+    }
+
+    void readBinary(std::istream& _fin) {
+        size_t size = sizeof(*this) - sizeof(ap_manager) - sizeof(h4_manager) - sizeof(ar_manager);
+        _fin.read(reinterpret_cast<char*>(this), size);
+        if (!_fin) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1.\n";
             abort();
         }
         ap_manager.readBinary(_fin);

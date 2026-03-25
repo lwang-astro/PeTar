@@ -133,6 +133,15 @@ public:
 #endif
     }
 
+    void writeBinaryStream(std::ostream& _fout) const{
+        Ptcl::writeBinary(_fout);
+#ifdef EXTERNAL_POT_IN_PTCL
+        _fout.write(reinterpret_cast<const char*>(&(this->acc)), sizeof(PS::F64)*7);
+#else
+        _fout.write(reinterpret_cast<const char*>(&(this->acc)), sizeof(PS::F64)*6);
+#endif
+    }
+
     void readAscii(FILE* fp) {
         Ptcl::readAscii(fp);
         PS::S64 rcount=fscanf(fp, "%lf %lf %lf ",
@@ -186,6 +195,25 @@ public:
         size_t rcount = fread(&(this->acc), sizeof(PS::F64), 6, fp);
         if (rcount<6) {
             std::cerr<<"Error: Data reading fails! requiring data number is 6, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
+            abort();
+        }
+#endif
+    }
+
+    void readBinaryStream(std::istream& _fin) {
+        Ptcl::readBinary(_fin);
+#ifdef EXTERNAL_POT_IN_PTCL
+        _fin.read(reinterpret_cast<char*>(&(this->acc)), sizeof(PS::F64)*7);
+        if (!_fin) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 7.\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
+            abort();
+        }
+#else
+        _fin.read(reinterpret_cast<char*>(&(this->acc)), sizeof(PS::F64)*6);
+        if (!_fin) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 6.\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }

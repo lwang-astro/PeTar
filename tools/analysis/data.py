@@ -4,6 +4,7 @@ from scipy import spatial as sp
 from sdar.base import *
 from sdar.functions import *
 from sdar.ar import SDARInterruptBinary
+import sdar.group as hermite_group
 from .bse import *
 from .dsm import *
 
@@ -1220,3 +1221,41 @@ def findMultiple(_single, _binary, _G, _rmax, simple_binary=True):
 
     return single, binary, triple, quadruple
 
+class GroupInfo(hermite_group.GroupInfo):
+    """ Group information output from PeTar
+    Keys: (class members)
+        type (1D): group type, 0: new group; 1: end group
+        n    (1D): number of members in group (should be consistent with keyword argument N
+        time (1D): current time
+        pos  (2D,3): position of the group c.m. in the framework of the global system (without shift of global system c.m. if external_mode is on)
+        vel  (2D,3): velocity of the group c.m. in the framework of the global system (without shift of global system c.m.)
+        bin[X] (BinaryTreeSDAR): members of the group in a hierarchical binary tree
+               Here X indicates the order. 0 represents the root (outer most) binary; 1,2,3 ... are inner binaries
+               For a triple, bin0 is outer binary, bin1 is inner binary.
+               p2 of bin0 is the c.m. of bin1, the id of p2 is the minimum id from the two components in bin1.
+    """
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ GroupInfo class for petar, inherit from hermite_group.GroupInfo
+
+            Parameters
+            ----------
+            keyword arguments:
+                member_particle_type: type (HardParticle)
+                    Type of component particle, do not change this!
+                interrupt_mode: string (none)
+                    PeTar interrupt mode (set in configure): base, bse, mobse, none
+                    This option indicates whether columns of stellar evolution exist
+                external_mode: string (none)
+                    PeTar external mode (set in configure): galpy, agama, none 
+                    This option indicates whether the column of external potential exist
+                use_mpfrc: bool (False)
+                    If true, add three columns of pos_high indicating the high-precision parts of position
+                float_type: type (np.float64)
+                    floating point data type
+                N: int (2)
+                    Number of members of one group
+        """
+        kwargs_local = dict(kwargs)
+        kwargs_local['member_particle_type'] = HardParticle
+        super().__init__(_dat, _offset, _append, **kwargs_local)
+    

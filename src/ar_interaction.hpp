@@ -1647,6 +1647,23 @@ public:
 #endif
     }
 
+    void writeBinary(std::ostream& _fout) const {
+        _fout.write(reinterpret_cast<const char*>(&eps_sq), sizeof(Float));
+        _fout.write(reinterpret_cast<const char*>(&gravitational_constant), sizeof(Float));
+        _fout.write(reinterpret_cast<const char*>(&interrupt_detection_option), sizeof(int));
+#ifdef STELLAR_EVOLUTION
+        _fout.write(reinterpret_cast<const char*>(&time_interrupt_max), sizeof(Float));
+#ifdef BSE_BASE
+        _fout.write(reinterpret_cast<const char*>(&stellar_evolution_option), sizeof(int));
+        _fout.write(reinterpret_cast<const char*>(&stellar_evolution_write_flag), sizeof(bool));
+        _fout.write(reinterpret_cast<const char*>(&tide), sizeof(TwoBodyTide));
+#endif
+#endif
+#ifdef SDAR_PN
+        pn.writeBinary(_fout);
+#endif
+    }
+
     //! read class data to file with binary format
     /*! @param[in] _fp: FILE type file for reading
      */
@@ -1694,5 +1711,50 @@ public:
         pn.readBinary(_fin);
 #endif
     }    
+
+    void readBinary(std::istream& _fin) {
+        _fin.read(reinterpret_cast<char*>(&eps_sq), sizeof(Float));
+        if (!_fin) {
+            std::cerr<<"Error: ARInteraction:readBinary: get eps_sq fails!\n";
+            abort();
+        }
+        _fin.read(reinterpret_cast<char*>(&gravitational_constant), sizeof(Float));
+        if (!_fin) {
+            std::cerr<<"Error: ARInteraction:readBinary: get gravitational_constant fails!\n";
+            abort();
+        }
+        _fin.read(reinterpret_cast<char*>(&interrupt_detection_option), sizeof(int));
+        if (!_fin) {
+            std::cerr<<"Error: ARInteraction:readBinary: get interrupt_detection_option fails!\n";
+            abort();
+        }
+#ifdef STELLAR_EVOLUTION
+        _fin.read(reinterpret_cast<char*>(&time_interrupt_max), sizeof(Float));
+        if (!_fin) {
+            std::cerr<<"Error: ARInteraction:readBinary: get time_interrupt_max fails!\n";
+            abort();
+        }
+#ifdef BSE_BASE
+        _fin.read(reinterpret_cast<char*>(&stellar_evolution_option), sizeof(int));
+        if (!_fin) {
+            std::cerr<<"Error: ARInteraction:readBinary: get stellar_evolution_option fails!\n";
+            abort();
+        }
+        _fin.read(reinterpret_cast<char*>(&stellar_evolution_write_flag), sizeof(bool));
+        if (!_fin) {
+            std::cerr<<"Error: ARInteraction:readBinary: get stellar_evolution_write_flag fails!\n";
+            abort();
+        }
+        _fin.read(reinterpret_cast<char*>(&tide), sizeof(TwoBodyTide));
+        if (!_fin) {
+            std::cerr<<"Error: ARInteraction:readBinary: get tide fails!\n";
+            abort();
+        }
+#endif
+#endif
+#ifdef SDAR_PN
+        pn.readBinary(_fin);
+#endif
+    }
 };
 

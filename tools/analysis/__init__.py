@@ -3,7 +3,7 @@ from sdar.base import *
 from sdar.functions import *
 import sdar.hermite as hermite
 import sdar.ar as ar
-import sdar.group as group
+import sdar.group as hermite_group
 from .profile import *
 from .data import *
 from .status import *

@@ -192,6 +192,10 @@ public:
         fwrite(&ekin, sizeof(EnergyAndMomentum), 1, _fout);
     }
 
+    void writeBinary(std::ostream& _fout) const {
+        _fout.write(reinterpret_cast<const char*>(&ekin), sizeof(EnergyAndMomentum));
+    }
+
     //! calculate the system kinetic and potential energy of particles
     /*! 
       @param[in] _particles: particle array

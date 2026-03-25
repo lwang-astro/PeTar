@@ -163,6 +163,11 @@ public:
         fwrite(&gravitational_constant, sizeof(PS::F64), 1, _fp);
     }
 
+    void writeBinary(std::ostream& _fout) const {
+        _fout.write(reinterpret_cast<const char*>(&n_split_), sizeof(PS::S32));
+        _fout.write(reinterpret_cast<const char*>(&gravitational_constant), sizeof(PS::F64));
+    }
+
     //! read class data to file with binary format
     /*! @param[in] _fp: FILE type file for reading
      */
@@ -176,6 +181,17 @@ public:
         }
         setParticleSplitN(n_split);
     }    
+
+    void readBinary(std::istream& _fin) {
+        PS::S32 n_split;
+        _fin.read(reinterpret_cast<char*>(&n_split), sizeof(PS::S32));
+        _fin.read(reinterpret_cast<char*>(&gravitational_constant), sizeof(PS::F64));
+        if (!_fin) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 2.\n";
+            abort();
+        }
+        setParticleSplitN(n_split);
+    }
 
     //! destructor 
     ~OrbitalSamplingManager() {

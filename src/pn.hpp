@@ -755,6 +755,10 @@ public:
         fwrite(this, sizeof(*this),1,_fp);
     }
 
+    void writeBinary(std::ostream& _fout) const {
+        _fout.write(reinterpret_cast<const char*>(this), sizeof(*this));
+    }
+
     //! read class data to file with binary format
     /*! @param[in] _fp: FILE type file for reading
      */
@@ -765,6 +769,14 @@ public:
             abort();
         }
     }    
+
+    void readBinary(std::istream& _fin) {
+        _fin.read(reinterpret_cast<char*>(this), sizeof(*this));
+        if (!_fin) {
+            std::cerr<<"Error: pn:readBinary fail!\n";
+            abort();
+        }
+    }
 
 };
 

@@ -161,6 +161,12 @@ public:
         changeover.writeBinary(_fout);
     }
 
+    void writeBinary(std::ostream& _fout) const{
+        ParticleBase::writeBinary(_fout);
+        _fout.write(reinterpret_cast<const char*>(&(this->r_search)), sizeof(PS::F64)*4);
+        changeover.writeBinary(_fout);
+    }
+
     //! read class data with ASCII format
     /*! @param[in] _fin: file IO for read
      */
@@ -199,6 +205,17 @@ public:
             abort();
         }
         //group_data.artificial.readBinary(_fin);
+        changeover.readBinary(_fin);
+    }
+
+    void readBinary(std::istream& _fin) {
+        ParticleBase::readBinary(_fin);
+        _fin.read(reinterpret_cast<char*>(&(this->r_search)), sizeof(PS::F64)*4);
+        if (!_fin) {
+            std::cerr<<"Error: Ptcl data reading fails! requiring data number is 4.\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
+            abort();
+        }
         changeover.readBinary(_fin);
     }
 

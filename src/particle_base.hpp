@@ -274,6 +274,9 @@ public:
         fwrite(&(this->mass), sizeof(ParticleBase), 1, fp);
     }
 
+    void writeBinary(std::ostream& _fout) const {
+        _fout.write(reinterpret_cast<const char*>(&(this->mass)), sizeof(ParticleBase));
+    }
 
     //! read class data with BINARY format
     /*! @param[in] _fin: file IO for read
@@ -282,6 +285,15 @@ public:
         size_t rcount=fread(&(this->mass), sizeof(ParticleBase), 1, fp);
         if(rcount<1) {
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
+            abort();
+        }
+    }
+
+    void readBinary(std::istream& _fin) {
+        _fin.read(reinterpret_cast<char*>(&(this->mass)), sizeof(ParticleBase));
+        if(!_fin) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1.\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
