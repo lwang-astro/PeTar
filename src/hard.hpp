@@ -2650,6 +2650,10 @@ public:
         return interrupt_list_.size();
     }
 
+    auto& getInterruptBinary(const std::size_t i) const {
+        return interrupt_list_[i];
+    }
+
     PS::S32* getClusterNumberOfMemberList(const std::size_t i=0) const{
         return n_ptcl_in_cluster_.getPointer(i);
     }
