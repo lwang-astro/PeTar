@@ -14,6 +14,7 @@ PROG_NAME="petar"
 build_linux=no 
 build_windows=no
 build_mac=no
+build_wsl=no
 host_os=`uname`
 
 # Detect the target system
@@ -21,6 +22,11 @@ AC_MSG_CHECKING([system type])
 case "${host_os}" in
     Linux*)
         build_linux=yes
+            kernel_release=`uname -r`
+            AS_CASE([$kernel_release],
+                        [*icrosoft*|*icrosoft-standard-WSL*|*WSL*],
+                        [build_wsl=yes],
+                        [build_wsl=no])
         ;;
     Cygwin*|Mingw*)
         build_windows=yes
@@ -77,7 +83,26 @@ AC_ARG_WITH([debug],
             [],
             [with_debug=no])
 
+AC_ARG_WITH([sanitize],
+          [AS_HELP_STRING([--with-sanitize],
+                      [Sanitizer mode for debug build (auto, asan, asan-ubsan, no). Default: auto; auto disables sanitizers on WSL and prefers ASan-only on native Linux])],
+          [],
+          [with_sanitize=auto])
+
+sanitize_mode_requested=$with_sanitize
 DEBFLAGS=' -g'
+use_asan=no
+use_asan_ubsan=no
+sanitize_mode=none
+
+AS_IF([test x"$with_sanitize" == xauto],
+      [AS_IF([test x"$build_wsl" == xyes],
+             [with_sanitize=no
+              sanitize_mode=auto-no-wsl],
+             [AS_IF([test x"$build_linux" == xyes],
+                    [with_sanitize=asan],
+                    [with_sanitize=no
+                     sanitize_mode=auto-no-nonlinux])])])
 
 AX_CHECK_COMPILE_FLAG([-O0],
                       [DEBFLAGS=$DEBFLAGS" -O0"])
@@ -85,11 +110,51 @@ AX_CHECK_COMPILE_FLAG([-O0],
 AX_CHECK_COMPILE_FLAG([-fbounds-check],
                       [DEBFLAGS=$DEBFLAGS" -fbounds-check"])
 
-AX_CHECK_COMPILE_FLAG([-fsanitize=address,undefined],
-                      [DEBFLAGS=$DEBFLAGS" -fsanitize=address,undefined"])
+AS_CASE([$with_sanitize],
+      [auto],
+      [AX_CHECK_COMPILE_FLAG([-fsanitize=address],
+                         [DEBFLAGS=$DEBFLAGS" -fsanitize=address"
+                        use_asan=yes
+                        sanitize_mode=asan],
+                         [AX_CHECK_COMPILE_FLAG([-fsanitize=address,undefined],
+                                          [DEBFLAGS=$DEBFLAGS" -fsanitize=address,undefined"
+                                           use_asan=yes
+                                           use_asan_ubsan=yes
+                                           sanitize_mode=asan-ubsan])])],
+      [asan],
+      [AX_CHECK_COMPILE_FLAG([-fsanitize=address],
+                         [DEBFLAGS=$DEBFLAGS" -fsanitize=address"
+                        use_asan=yes
+                        sanitize_mode=asan],
+                         [AC_MSG_FAILURE([--with-sanitize=asan is requested, but -fsanitize=address is not supported by the compiler])])],
+      [asan-ubsan],
+      [AX_CHECK_COMPILE_FLAG([-fsanitize=address,undefined],
+                         [DEBFLAGS=$DEBFLAGS" -fsanitize=address,undefined"
+                        use_asan=yes
+                        use_asan_ubsan=yes
+                        sanitize_mode=asan-ubsan],
+                         [AC_MSG_FAILURE([--with-sanitize=asan-ubsan is requested, but -fsanitize=address,undefined is not supported by the compiler])])],
+      [no],
+      [AS_IF([test x"$sanitize_mode" == xnone],
+             [sanitize_mode=no])],
+      [AC_MSG_FAILURE([Unknown sanitizer mode '$with_sanitize'; supported values are auto, asan, asan-ubsan, no])])
 
 AX_CHECK_COMPILE_FLAG([-fno-omit-frame-pointer],
                       [DEBFLAGS=$DEBFLAGS" -fno-omit-frame-pointer"])
+
+AS_IF([test x"$build_linux" == xyes && test x"$use_asan" == xyes],
+      [AX_CHECK_COMPILE_FLAG([-fno-pie],
+                             [DEBFLAGS=$DEBFLAGS" -fno-pie"])
+       AC_MSG_CHECKING([whether $CXX supports -no-pie for linking])
+       CXXFLAGS_BK_NO_PIE=$CXXFLAGS
+       CXXFLAGS="$CXXFLAGS -no-pie"
+       AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])],
+                      [use_no_pie_link=yes],
+                      [use_no_pie_link=no])
+       CXXFLAGS=$CXXFLAGS_BK_NO_PIE
+       AC_MSG_RESULT([$use_no_pie_link])
+       AS_IF([test x"$use_no_pie_link" == xyes],
+             [DEBFLAGS=$DEBFLAGS" -no-pie"])])
 
 AS_IF([test x"$with_debug" == xg],
       [PROG_SUFFIX=".g"
@@ -560,6 +625,7 @@ AC_SUBST([use_fdps_comm])
 AC_SUBST([FCLIBS])
 AC_SUBST([FLIBS])
 AC_SUBST([GALPY_VERSION])
+AC_SUBST([build_wsl])
 
 AC_MSG_NOTICE([----------------------Configure Summary--------------------])
 AC_MSG_NOTICE([--Features:])
@@ -575,7 +641,10 @@ AS_IF([test "x$use_simd" != xno],
              [AC_MSG_NOTICE([  Notice: this is auto-detected based on the host CPU architecture])
               AC_MSG_NOTICE([          If different CPU is used for running, check whether $SIMD_TYPE is also supported])])])
 AC_MSG_NOTICE([     Using OpenMP:      $use_omp])
+AC_MSG_NOTICE([     Using WSL:         $build_wsl])
 AC_MSG_NOTICE([     Debug mode:        $with_debug])
+AC_MSG_NOTICE([     Sanitizer request: $sanitize_mode_requested])
+AC_MSG_NOTICE([     Sanitizer mode:    $sanitize_mode])
 AC_MSG_NOTICE([     Step mode:         $with_step_mode])
 AC_MSG_NOTICE([     interrupt mode:    $with_interrupt])
 AC_MSG_NOTICE([     external mode:     $with_external])
