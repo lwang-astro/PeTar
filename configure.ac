@@ -330,9 +330,9 @@ AC_ARG_WITH([agama-prefix],
 # Leap frog step method
 AC_ARG_WITH([step-mode],
             [AS_HELP_STRING([--with-step-mode],
-                            [Tree step mode (kdk: K[0.5]-D[1.0]-K[0.5]; kdkdk: K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6]; kdkdk4: Chin-4th). Default: kdk])],
+                            [Tree step mode (kdk: K[0.5]-D[1.0]-K[0.5]; kdkdk: K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6]; kdkdk4: Chin-4th). Default: kdkdk4])],
             [PROG_NAME=$PROG_NAME'.'$with_step_mode],
-            [with_step_mode=kdk])
+            [with_step_mode=kdkdk4])
 
 # interruption options
 FCFLAGS_BK=$FCFLAGS

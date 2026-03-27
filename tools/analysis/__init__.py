@@ -1,4 +1,6 @@
 # PeTar data analysis tools
+import importlib.util
+
 from sdar.base import *
 from sdar.functions import *
 import sdar.hermite as hermite
@@ -15,4 +17,5 @@ from .external import *
 from .tide import *
 from .galev import *
 from .dsm import *
-from . import agamaMWPot as agama
+if importlib.util.find_spec("agama") is not None:
+	from . import agamaMWPot as agama

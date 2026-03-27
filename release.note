@@ -57,6 +57,7 @@
 55. Switch all default output in BINARY format instead of Ascii.
 56. Add auto-resume function for petar.data.process.
 57. Add support to output binary format of group info with individual files for different member number.
+58. Make KDKDK 4th order as default method.
 **Some existing issues include**
 
 2. In cases where a high-eccentric binary system transitions from a binary to a hyperbolic orbit temporarily due to significant perturbations at a large separation, the BSE code may incorrectly identify it as an immediate merger, even though the binary system does not actually merge. It is essential to establish a more precise criterion for invoking binary evolution codes in such scenarios.
