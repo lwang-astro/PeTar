@@ -20,6 +20,8 @@ Prefer these examples and docs as the source of truth:
 - `README.md` sections for OpenMP, MPI, GPU, restart, and options.
 - `assets/option-matrix.md` (generated from installed binary help)
 - `assets/script-tools.md` (installed script-tool inventory from Makefile.in)
+- `HANDOFF-2026-03-27.md` (cross-machine continuation notes)
+- `assets/prompt-starters.md` (chat prompt templates for resuming work)
 
 ## Installed Script Tools (Current Host)
 
