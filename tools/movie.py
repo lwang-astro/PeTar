@@ -307,256 +307,101 @@ class PlotXY:
             self.ptcls.append(pt)
         return self.ptcls
 
-    def correctCM(self, x, y):
-        xcm = 0
-        ycm = 0
-        boxsize = self.cm_boxsize
-        if (self.cm_mode=='density'):
-            nbins=1000
-            xmid = np.average(np.abs(x))
-            ymid = np.average(np.abs(y))
-            #print(xmid,ymid)
-            xmin = -5*xmid
-            xmax =  5*xmid
-            ymin = -5*ymid
-            ymax =  5*ymid
-            xbins=np.linspace(xmin,xmax,nbins)
-            ybins=np.linspace(ymin,ymax,nbins)
-            lbin=[xbins,ybins]
-            counts, _, _ = np.histogram2d(x, y, bins=lbin)
-            xp,yp=np.where(counts>0.2*counts.max())
-            m = counts[xp,yp]
-            mtot = m.sum()
-            xcm=((xp*m).sum()/mtot+0.5)*(xmax-xmin)/nbins+xmin
-            ycm=((yp*m).sum()/mtot+0.5)*(ymax-ymin)/nbins+ymin
-            x = x - xcm
-            y = y - ycm
-     
-            nbins=500
-            xmid = np.average(np.abs(x))
-            ymid = np.average(np.abs(y))
-            xmin = -boxsize
-            xmax =  boxsize
-            ymin = -boxsize
-            ymax =  boxsize
-            xbins=np.linspace(xmin,xmax,nbins)
-            ybins=np.linspace(ymin,ymax,nbins)
-            lbin=[xbins,ybins]
-            counts, _, _ = np.histogram2d(x,y, bins=lbin)
-            xp,yp=np.where(counts>0.2*counts.max())
-            m = counts[xp,yp]
-            mtot = m.sum()
-            xcm2=((xp*m).sum()/mtot+0.5)*(xmax-xmin)/nbins+xmin
-            ycm2=((yp*m).sum()/mtot+0.5)*(ymax-ymin)/nbins+ymin
-            x = x - xcm2
-            y = y - ycm2
-            xcm += xcm2
-            ycm += ycm2
-        elif (self.cm_mode=='average'):
-            xcm = x.sum()/x.size
-            ycm = y.sum()/y.size
-            x = x - xcm
-            y = y - ycm
-            sel=(x>-boxsize) & (x<boxsize) & (y>-boxsize) & (y<boxsize)
-            nsel=sel.sum()
-            xcm2 = (x[sel]).sum()/float(nsel)
-            ycm2 = (y[sel]).sum()/float(nsel)
-            x = x - xcm2 
-            y = y - ycm2
-            xcm += xcm2
-            ycm += ycm2
-        return xcm, ycm
 
     def plot(self, data, xcm_text, ycm_text, external_potential=None):
 
         plot_mode = self.plot_mode
-        cm_is_core = (data.snapshot_type == 'post')
-        read_core = (hasattr(data, 'core'))
         axes_name = plot_mode.split('-')
         if (len(axes_name)!=2):
             raise ValueError('Plot mode %s is not supported, the format should be [x-axis name]-[y-axis name], check petar.movie -h for the options of -m' % plot_mode)
+        dep = {
+            'rxy': ['x', 'y'],
+            'r'  : ['x', 'y', 'z'],
+            'vxy': ['vx', 'vy'],
+            'v'  : ['vx', 'vy', 'vz'],
+            'vr' : ['x', 'y', 'z', 'vx', 'vy', 'vz'],
+        }
+        base = []
+        for a in axes_name:
+            if a in ['x','y','z','vx','vy','vz']:
+                base.append(a)
+            elif a in dep:
+                base.extend(dep[a])
+        base = sorted(set(base))
+        d, dcm = data.dataWithCorrectedCM(base, self.cm_mode, self.cm_boxsize)
+
         labels=[None,None]
         cm_text=[None,None]
-        xy = [[],[]]
-        xycm = [0,0]
-        xyz_index={'x':0,'y':1,'z':2}
+        xy = [None,None]
+        xycm = [None,None]
         for i in range(2):
             name = axes_name[i]
             if name in ['x','y','z','vx','vy','vz']:
-                v_flag = (name[0]=='v')
-                if v_flag:
-                    x = data.data.vel[:,xyz_index[name[1]]]
-                    xycm[i] = data.header.vel_offset[xyz_index[name[1]]]
-                else:
-                    x = data.data.pos[:,xyz_index[name]]
-                    xycm[i] = data.header.pos_offset[xyz_index[name]]
-                xyc = 0
-                if (read_core):
-                    if v_flag:
-                        xyc = data.core.vel[0,xyz_index[name[1]]]
-                    else:
-                        xyc = data.core.pos[0,xyz_index[name]]
-                if (cm_is_core):
-                    xycm[i] = xyc
-                if (self.cm_mode == 'core'):
-                    xy[i] = x + xycm[i] - xyc
-                    xycm[i] = xyc
-                elif (self.cm_mode == 'none'):
-                    xy[i] = x + xycm[i]
-                else:
-                    xy[i] = x
-                if v_flag: 
+                xy[i] = d[name]
+                xycm[i] = dcm[name]
+                if (name[0]=='v'):
                     cm_text[i] = r'$v_{%s,cm}=$' % name[1:]
                 else:
                     cm_text[i] = r'$%s_{cm}=$' % name
             elif name in ['rxy','vxy']:
-                v_flag = (name[0]=='v')
-                if v_flag:
-                    rx = data.data.vel[:,0]
-                    ry = data.data.vel[:,1]
-                    rxcm = data.header.vel_offset[0]
-                    rycm = data.header.vel_offset[1]
-                else:
-                    rx = data.data.pos[:,0]
-                    ry = data.data.pos[:,1]
-                    rxcm = data.header.pos_offset[0]
-                    rycm = data.header.pos_offset[1]
-                rxycm = np.sqrt(rxcm*rxcm + rycm*rycm)
-                rxc = 0
-                ryc = 0
-                if (read_core):
-                    if v_flag:
-                        rxc = data.core.vel[0,0]
-                        ryc = data.core.vel[0,1]
-                    else:
-                        rxc = data.core.pos[0,0]
-                        ryc = data.core.pos[0,1]
-                if (cm_is_core):
-                    rxcm = rxc
-                    rycm = ryc
-                    xycm[i] = np.sqrt(rxc*rxc + ryc*ryc)
-                if (self.cm_mode == 'core'):
-                    xy[i] = np.sqrt((rx + rxcm - rxc)**2 + (ry + rycm - ryc)**2)
-                    xycm[i] = np.sqrt(rxc*rxc + ryc*ryc)
-                elif (self.cm_mode == 'none'):
-                    xy[i] = np.sqrt((rx + rxcm)**2 + (ry + rycm)**2)
-                else:
-                    xy[i] = np.sqrt(rx*rx + ry*ry)
-                if v_flag:
+                if (name[0]=='v'):
+                    x = d['vx']
+                    y = d['vy']
+                    xcm = dcm['vx']
+                    ycm = dcm['vy']
                     cm_text[i] = r'$v_{xy,cm}=$'
                 else:
+                    x = d['x']
+                    y = d['y']
+                    xcm = dcm['x']
+                    ycm = dcm['y']
                     cm_text[i] = r'$r_{xy,cm}=$'
+                xy[i] = np.sqrt(x*x + y*y)
+                xycm[i] = np.sqrt(xcm*xcm + ycm*ycm)
             elif name in ['r','v']:
-                v_flag = (name=='v')
-                if v_flag: 
-                    rx = data.data.vel[:,0]
-                    ry = data.data.vel[:,1]
-                    rz = data.data.vel[:,2]
-                    rxcm = data.header.vel_offset[0]
-                    rycm = data.header.vel_offset[1]
-                    rzcm = data.header.vel_offset[2]
-                else:
-                    rx = data.data.pos[:,0]
-                    ry = data.data.pos[:,1]
-                    rz = data.data.pos[:,2]
-                    rxcm = data.header.pos_offset[0]
-                    rycm = data.header.pos_offset[1]
-                    rzcm = data.header.pos_offset[2]
-                xycm[i] = np.sqrt(rxcm*rxcm + rycm*rycm + rzcm*rzcm)
-                rxc = 0
-                ryc = 0
-                rzc = 0
-                if (read_core):
-                    if v_flag:
-                        rxc = data.core.vel[0,0]
-                        ryc = data.core.vel[0,1]
-                        rzc = data.core.vel[0,2]
-                    else:
-                        rxc = data.core.pos[0,0]
-                        ryc = data.core.pos[0,1]
-                        rzc = data.core.pos[0,2]
-                if (cm_is_core):
-                    rxcm = rxc
-                    rycm = ryc
-                    rzcm = rzc 
-                    xycm[i] = np.sqrt(rxc*rxc + ryc*ryc + rzc*rzc)
-                if (self.cm_mode == 'core'):
-                    xy[i] = np.sqrt((rx + rxcm - rxc)**2 + (ry + rycm - ryc)**2 + (rz + rzcm - rzc)**2)
-                    xycm[i] = np.sqrt(rxc*rxc + ryc*ryc + rzc*rzc)
-                elif (self.cm_mode == 'none'):
-                    xy[i] = np.sqrt((rx + rxcm)**2 + (ry + rycm)**2 + (rz + rzcm)**2)
-                else:
-                    xy[i] = np.sqrt(rx*rx + ry*ry + rz*rz)
-                if v_flag:
+                if (name=='v'):
+                    x = d['vx']
+                    y = d['vy']
+                    z = d['vz']
+                    xcm = dcm['vx']
+                    ycm = dcm['vy']
+                    zcm = dcm['vz']
                     cm_text[i] = r'$v_{cm}=$' 
                 else:
+                    x = d['x']
+                    y = d['y']
+                    z = d['z']
+                    xcm = dcm['x']
+                    ycm = dcm['y']
+                    zcm = dcm['z']
                     cm_text[i] = r'$r_{cm}=$' 
+                xy[i] = np.sqrt(x*x + y*y + z*z)
+                xycm[i] = np.sqrt(xcm*xcm + ycm*ycm + zcm*zcm)
             elif name == 'vr':
-                vx = data.data.vel[:,0]
-                vy = data.data.vel[:,1]
-                vz = data.data.vel[:,2]
-                vxcm = data.header.vel_offset[0]
-                vycm = data.header.vel_offset[1]
-                vzcm = data.header.vel_offset[2]
-                rx = data.data.pos[:,0]
-                ry = data.data.pos[:,1]
-                rz = data.data.pos[:,2]
-                rxcm = data.header.pos_offset[0]
-                rycm = data.header.pos_offset[1]
-                rzcm = data.header.pos_offset[2]
-                rxc = 0
-                ryc = 0
-                rzc = 0
-                vxc = 0
-                vyc = 0
-                vzc = 0
+                vx = d['vx']
+                vy = d['vy']
+                vz = d['vz']
+                vxcm = dcm['vx']
+                vycm = dcm['vy']
+                vzcm = dcm['vz']
+                rx = d['x']
+                ry = d['y']
+                rz = d['z']
+                rxcm = dcm['x']
+                rycm = dcm['y']
+                rzcm = dcm['z']
+                r = np.sqrt(rx*rx + ry*ry + rz*rz)
                 rcm = np.sqrt(rxcm*rxcm + rycm*rycm + rzcm*rzcm)                
+                drdv = rx*vx + ry*vy + rz*vz
                 drdvcm = rxcm*vxcm + rycm*vycm + rzcm*vzcm
-                xycm[i] = drdvcm/rcm
-                if (read_core):
-                    vxc = data.core.vel[0,0]
-                    vyc = data.core.vel[0,1]
-                    vzc = data.core.vel[0,2]
-                    rxc = data.core.pos[0,0]
-                    ryc = data.core.pos[0,1]
-                    rzc = data.core.pos[0,2]
-                if (cm_is_core):
-                    rxcm = rxc
-                    rycm = ryc
-                    rzcm = rzc 
-                    vxcm = vxc
-                    vycm = vyc
-                    vzcm = vzc 
-                    rcm = np.sqrt(rxcm*rxcm + rycm*rycm + rzcm*rzcm)                
-                    drdvcm = rxcm*vxcm + rycm*vycm + rzcm*vzcm
-                    xycm[i] = drdvcm/rcm
-                if (self.cm_mode == 'core'):
-                    rxf = rx + rxcm - rxc
-                    ryf = ry + rycm - ryc
-                    rzf = rz + rzcm - rzc
-                    vxf = vx + vxcm - vxc
-                    vyf = vy + vycm - vyc
-                    vzf = vz + vzcm - vzc
-                    rcm = np.sqrt(rxc*rxc + ryc*ryc + rzc*rzc)                
-                    drdvcm = rxc*vxc + ryc*vyc + rzc*vzc
-                    xycm[i] = drdvcm/rcm
-                    r = np.sqrt(rxf*rxf + ryf*ryf + rzf*rzf)
-                    drdv = rxf*vxf + ryf*vyf + rzf*vzf
-                    xy[i] = drdv/r
-                elif (self.cm_mode == 'none'):
-                    rxf = rx + rxcm
-                    ryf = ry + rycm
-                    rzf = rz + rzcm
-                    vxf = vx + vxcm
-                    vyf = vy + vycm
-                    vzf = vz + vzcm
-                    r = np.sqrt(rxf*rxf + ryf*ryf + rzf*rzf)
-                    drdv = rxf*vxf + ryf*vyf + rzf*vzf
+                if (r>0):
                     xy[i] = drdv/r
                 else:
-                    r = np.sqrt(rx*rx + ry*ry + rz*rz)
-                    drdv = rx*vx + ry*vy + rz*vz
-                    xy[i] = drdv/r
+                    xy[i] = 0
+                if (rcm>0):
+                    xycm[i] = drdvcm/rcm
+                else:
+                    xycm[i] = 0
                 cm_text[i] = r'$v_{r}=$'
             elif name == 'ra':
                 xycm[i] = data.skycm.icrs.ra.value
@@ -601,10 +446,6 @@ class PlotXY:
             else:
                 raise ValueError('Plot mode axis name %s is not supported, check petar.movie -h for the options of -m' % name)
         
-        # not for cm_mode=core
-        dxcm, dycm = self.correctCM(xy[0], xy[1])
-        xycm[0] += dxcm
-        xycm[1] += dycm
         xcm_text.set_text(cm_text[0]+('%f' % xycm[0]))
         ycm_text.set_text(cm_text[1]+('%f' % xycm[1]))
 
@@ -665,9 +506,10 @@ class PlotSemiEcc:
         self.semi_max = 0.1
         self.ecc_min = 0.0
         self.ecc_max = 1.0
-        self.bin_mass_power = 0.3
-        self.bin_marker_scale = 1.0
+        self.bin_mass_power = 0.5
+        self.bin_marker_scale = 3.0
         self.bin_cm_mode = 'core'
+        self.bin_cm_boxsize = 2
         self.bin_color = 'white'
         self.bin_rmax = 2.0
         self.bin_rmin = 1e-5
@@ -692,28 +534,10 @@ class PlotSemiEcc:
         if data.binary.size>0: 
             #colors = cm.rainbow(types/13.0)
             sizes = data.binary.mass**self.bin_mass_power*self.bin_marker_scale
-            core_correct = (data.cm_mode=='core')
-            origin_mode = (data.cm_mode=='none')
-            xcm = data.header.pos_offset[0]
-            ycm = data.header.pos_offset[1]
-            zcm = data.header.pos_offset[2]
-            x = data.binary.pos[:,0]
-            y = data.binary.pos[:,1]
-            z = data.binary.pos[:,2]
-            if (core_correct):
-                xc = data.core.pos[0,0]
-                yc = data.core.pos[0,1]
-                zc = data.core.pos[0,2]
-                x += xcm - xc
-                y += ycm - yc
-                z += zcm - zc
-                xcm = xc
-                ycm = yc
-                zcm = zc
-            elif (origin_mode):
-                x += xcm
-                y += ycm
-                z += zcm
+            d, dcm = data.dataWithCorrectedCM(['x','y','z'], self.bin_cm_mode, self.bin_cm_boxsize)
+            x = d['x']
+            y = d['y']
+            z = d['z']
             r = np.sqrt(x*x+y*y+z*z)
             self.ptcls[0].set_offsets(np.array([data.binary.semi, data.binary.ecc]).transpose())
             if (self.bin_color == 'white'):
@@ -984,6 +808,100 @@ class Data:
                         mag_cm_list.append(np.concatenate((single.galev[key], bmag[key])))
                     data['galev_mag_cm'] = np.array(mag_cm_list)
             
+    def dataWithCorrectedCM(self, axes_name, cm_mode, cm_boxsize=None):
+        if (len(axes_name)==0):
+            return {}, {}
+
+        cm_is_core = (self.snapshot_type == 'post')
+        read_core = (hasattr(self, 'core'))
+        d = [None]*len(axes_name)
+        dcm = [0]*len(axes_name)
+        dc = [0]*len(axes_name)
+        xyz_index={'x':0,'y':1,'z':2}
+        for i in range(len(axes_name)):
+            name = axes_name[i]
+            if name in ['x','y','z','vx','vy','vz']:
+                v_flag = (name[0]=='v')
+                if v_flag:
+                    d[i] = self.data.vel[:,xyz_index[name[1]]]
+                    dcm[i] = self.header.vel_offset[xyz_index[name[1]]]
+                else:
+                    d[i] = self.data.pos[:,xyz_index[name]]
+                    dcm[i] = self.header.pos_offset[xyz_index[name]]
+                dc[i] = 0
+                if (read_core):
+                    if v_flag:
+                        dc[i] = self.core.vel[0,xyz_index[name[1]]]
+                    else:
+                        dc[i] = self.core.pos[0,xyz_index[name]]
+                if (cm_is_core):
+                    dcm[i] = dc[i]
+                # cm_mode correction                    
+                if (cm_mode == 'core'):
+                    d[i] = d[i] + dcm[i] - dc[i]
+                    dcm[i] = dc[i]
+                elif (cm_mode == 'none'):
+                    d[i] = d[i] + dcm[i]
+                    dcm[i] = 0
+
+        if (d[0].size == 0):
+            return dict(zip(axes_name, d)), dict(zip(axes_name, dcm))
+        
+        # other cm_mode with adaptive correction, data size must > 0
+        dcorr = [0]*len(axes_name)
+        if (cm_mode=='density'):
+            nbins=1000
+            dm = 0
+            lbin = []
+            for i in range(len(axes_name)):
+                dm = np.average(np.abs(d[i]))
+                dmin = -5*dm
+                dmax =  5*dm
+                dbins=np.linspace(dmin,dmax,nbins)
+                lbin.append(dbins)
+
+            counts, _ = np.histogramdd(d, bins=lbin)
+            dp=np.where(counts>0.2*counts.max())
+            m = counts[dp]
+            mtot = m.sum()
+            nbins=500
+            for i in range(len(axes_name)):
+                dcorr[i] = (dp[i]*m).sum()/mtot*5*dm/nbins-5*dm/2.0
+                d[i] = d[i] - dcorr[i]
+                dcm[i] = dcm[i] + dcorr[i]
+     
+                dm = np.average(np.abs(d[i]))
+                dmin = dm-cm_boxsize
+                dmax = dm+cm_boxsize
+                dbins=np.linspace(dmin,dmax,nbins)
+                lbin[i] = dbins
+
+            counts, _ = np.histogramdd(d, bins=lbin)
+            dp = np.where(counts>0.2*counts.max())
+            m = counts[dp]
+            mtot = m.sum()
+            for i in range(len(axes_name)):
+                dcorr[i] = ((dp[i]*m).sum()/mtot+0.5)*(dmax-dmin)/nbins+dmin
+                d[i] = d[i] - dcorr[i]
+                dcm[i] = dcm[i] + dcorr[i]
+        elif (cm_mode=='average'):
+            for i in range(len(axes_name)):
+                dcorr[i] = d[i].sum()/d[i].size
+                d[i] = d[i] - dcorr[i]
+                dcm[i] = dcm[i] + dcorr[i]
+            sel = np.ones_like(d[0], dtype=bool)
+            for i in range(len(axes_name)):
+                sel = sel & (d[i]>-cm_boxsize) & (d[i]<cm_boxsize)
+            nsel=sel.sum()
+            if (nsel>0):
+                for i in range(len(axes_name)):
+                    dcorr[i] = (d[i][sel]).sum()/float(nsel)
+                    d[i] = d[i] - dcorr[i]
+                    dcm[i] = dcm[i] + dcorr[i]
+        
+        ddict = dict(zip(axes_name, d))
+        dcmdict = dict(zip(axes_name, dcm))
+        return ddict, dcmdict
 
     def getColor(self, color_mode):
         colors='w'
@@ -1270,8 +1188,8 @@ if __name__ == '__main__':
         print("          When reading data, the path and the prefix will be added in front of the filenames.")
         print("          For example, path'./'; prefix'data'; reading file'./data.[0-9*'.")
         print("          The number of snapshots should be the same for all models.")
-        print("  -i [S]  Interrupt mode used in petar: no, base, bse, mobse: ", data.interrupt_mode)
-        print("  -t [S]  External mode used in petar: no, galpy, agama: ", data.external_mode)
+        print("  -i [S]  Interrupt mode used in petar: none, base, bse, mobse: ", data.interrupt_mode)
+        print("  -t [S]  External mode used in petar: none, galpy, agama: ", data.external_mode)
         print("  -c [S]  Color type for particles: loglum, logtemp, ekin, pot, etot, white: ", pxy.color_mode)
         print("              loglum: log(luminosity).")
         print("              logtemp: log(temperature).")
@@ -1310,6 +1228,7 @@ if __name__ == '__main__':
         print("                       average: average of x, y;")
         print("                       core: use core data file generated from petar.data.process;")
         print("                       none: use origin of snapshots.")
+        print("  --bin-cm-boxsize  [F]  Boxsize to search the coordinate center for calculating binary orbital parameters: ", pse.bin_cm_boxsize)
         print("  --time-min    [F]  Minimum time in evolution plot (x-axis): auto-determined from Lagrangian data")
         print("  --time-max    [F]  Maximum time in evolution plot (x-axis): auto-determined from Lagrangian data")
         print("  --ekin-min    [F]  Minimum kinetic energy: ", data.ekin_min)
@@ -1375,7 +1294,7 @@ if __name__ == '__main__':
     try:
         shortargs = 'm:s:f:R:z:o:c:G:l:L:i:t:psHbh'
         longargs = ['help','n-cpu=','lum-min=','lum-max=','temp-min=','temp-max=',
-                    'semi-min=','semi-max=','ecc-min=','ecc-max=','bin-rmax=','bin-rmin=','bin-color=', 'bin-marker-scale=','bin-mass-power=','bin-cm-mode=',
+                    'semi-min=','semi-max=','ecc-min=','ecc-max=','bin-rmax=','bin-rmin=','bin-color=', 'bin-marker-scale=','bin-mass-power=','bin-cm-mode=','bin-cm-boxsize=',
                     'ekin-min=','ekin-max=','pot-min=','pot-max=','etot-min=','etot-max=',
                     'rlagr-min=','rlagr-max=','rlagr-scale=',
                     'lagr-energy','lagr-type=','lagr-mfrac=','lagr-format=',
@@ -1390,7 +1309,7 @@ if __name__ == '__main__':
                     'ext-pot-xy-prefix=','ext-pot-xz-prefix=',
                     'galev-filter=','galev-mode=','galev-color=','galev-mag-range=',
                     'cm-boxsize=','compare-in-column','dpi=']
-        opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
+        opts,remainder= getopt.gnu_getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
         sky_modes=['ra','dec','pmracosdec','pmdec','lon','lat','pmlon','pmlat']
@@ -1466,6 +1385,10 @@ if __name__ == '__main__':
                 kwargs['bin_rmin'] = float(arg)
             elif opt in ('--bin-color'):
                 kwargs['bin_color'] = arg
+            elif opt in ('--bin-cm-mode'):
+                kwargs['bin_cm_mode'] = arg
+            elif opt in ('--bin-cm-boxsize'):
+                kwargs['bin_cm_boxsize'] = float(arg)
             elif opt in ('--ekin-min'):
                 kwargs['ekin_min'] = float(arg)
             elif opt in ('--ekin-max'):
@@ -1578,6 +1501,11 @@ if __name__ == '__main__':
 
     for key in kwargs.keys():
         print(key,kwargs[key])
+
+    if (len(remainder) == 0):
+        print('Snapshot path list filename is missing.')
+        usage()
+        sys.exit(2)
 
     filename = remainder[0]
 
