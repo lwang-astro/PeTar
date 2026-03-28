@@ -67,6 +67,17 @@ public:
                  <<std::setw(_width)<<vel.z;
         }
 
+        //! write data of class members using the same order as printColumn in binary format
+        void writeBinaryColumn(std::ostream& _fout) const {
+            _fout.write(reinterpret_cast<const char*>(&mass), sizeof(mass));
+            _fout.write(reinterpret_cast<const char*>(&pos.x), sizeof(pos.x));
+            _fout.write(reinterpret_cast<const char*>(&pos.y), sizeof(pos.y));
+            _fout.write(reinterpret_cast<const char*>(&pos.z), sizeof(pos.z));
+            _fout.write(reinterpret_cast<const char*>(&vel.x), sizeof(vel.x));
+            _fout.write(reinterpret_cast<const char*>(&vel.y), sizeof(vel.y));
+            _fout.write(reinterpret_cast<const char*>(&vel.z), sizeof(vel.z));
+        }
+
         //! print title and values in one lines
         /*! print titles and values in one lines
           @param[out] _fout: std::ostream output object
@@ -463,6 +474,24 @@ public:
              <<std::setw(_width)<<n_escape_glb;
         energy.printColumn(_fout, _width);
         pcm.printColumn(_fout, _width);
+    }
+
+    //! write data of class members using the same order as printColumn in binary format
+    /*! Notice no record separator is written at the end.
+      @param[out] _fout: std::ostream output object
+     */
+    void writeBinaryColumn(std::ostream& _fout) const {
+        const PS::S64 n_remove_glb64 = n_remove_glb;
+        const PS::S64 n_escape_glb64 = n_escape_glb;
+        _fout.write(reinterpret_cast<const char*>(&time), sizeof(time));
+        _fout.write(reinterpret_cast<const char*>(&n_real_loc), sizeof(n_real_loc));
+        _fout.write(reinterpret_cast<const char*>(&n_real_glb), sizeof(n_real_glb));
+        _fout.write(reinterpret_cast<const char*>(&n_all_loc), sizeof(n_all_loc));
+        _fout.write(reinterpret_cast<const char*>(&n_all_glb), sizeof(n_all_glb));
+        _fout.write(reinterpret_cast<const char*>(&n_remove_glb64), sizeof(n_remove_glb64));
+        _fout.write(reinterpret_cast<const char*>(&n_escape_glb64), sizeof(n_escape_glb64));
+        energy.writeBinaryColumn(_fout);
+        pcm.writeBinaryColumn(_fout);
     }
 
     //! print title and values in one lines

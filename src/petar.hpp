@@ -162,7 +162,7 @@ public:
                      r_search_min     (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters; = 0: auto-determine by max(search-vel-factor*sigma_1D*dt_soft + rout, 1.2 r_out); > 0: custom search radius value"),
                      r_escape         (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Object escape radius criterion; < 0: remove objects when r>-r_escape; >= 0: remove objects when r>r_escape and energy>0"),
                      dt_snap          (input_par_store, 1.0,  "o", "Output time interval for particle dataset snapshots"),
-                     data_format      (input_par_store, 2,    "i", "Data file reading and writing format; 0: read and write in BINARY; 1: read and write in ASCII; 2: read in ASCII, write in BINARY; 3: read in BINARY, write in ASCII"),
+                     data_format      (input_par_store, 2,    "i", "Data file reading and writing format; snapshots, status and escaper outputs follow the write mode selected here; 0: read and write in BINARY; 1: read and write in ASCII; 2: read in ASCII, write in BINARY; 3: read in BINARY, write in ASCII"),
                      write_style      (input_par_store, 1,    "w", "Data file writing style; 0: no output; 1: write all files separately; 2. write snapshots in status files in one line per step (no MPI support); 3. write files except snapshots"),
                      append_switcher  (input_par_store, 1,    "a", "Data file output mode; 0: overwrite files except object dump files, include header lines; 1: append files except snapshots, no header line"),
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
@@ -596,6 +596,10 @@ public:
 
     // FPDS flag
     static bool initial_fdps_flag;
+
+    bool isOutputBinary() const {
+        return (input_parameters.data_format.value==0 || input_parameters.data_format.value==2);
+    }
 
     //! initialization
     PeTar(): 
@@ -1798,6 +1802,7 @@ public:
             std::cout<<std::endl;
             stat.print(std::cout);
         }
+        const bool output_binary_flag = isOutputBinary();
 #ifdef GALPY
         if (print_flag) galpy_manager.printData(std::cout);
 #endif
@@ -1826,8 +1831,13 @@ public:
 
             if(my_rank==0) {
                 // status output
-                stat.printColumn(fstatus, WRITE_WIDTH);
-                fstatus<<std::endl;
+                if (output_binary_flag) {
+                    stat.writeBinaryColumn(fstatus);
+                }
+                else {
+                    stat.printColumn(fstatus, WRITE_WIDTH);
+                    fstatus<<std::endl;
+                }
 
 #ifdef GALPY
                 // for External potential
@@ -1842,20 +1852,43 @@ public:
         // write all information in to fstatus
         else if(write_style==2&&my_rank==0) {
             // write snapshot with one line
-            stat.printColumn(fstatus, WRITE_WIDTH);
+            if (output_binary_flag) {
+                stat.writeBinaryColumn(fstatus);
+            }
+            else {
+                stat.printColumn(fstatus, WRITE_WIDTH);
+            }
             for (int i=0; i<stat.n_real_loc; i++) {
 #ifdef RECORD_CM_IN_HEADER
-                system_soft[i].printColumnWithOffset(stat.pcm, fstatus, WRITE_WIDTH);
+                if (output_binary_flag) {
+                    FPSoft pi = system_soft[i];
+                    pi.pos += stat.pcm.pos;
+                    pi.vel += stat.pcm.vel;
+                    pi.writeBinaryStream(fstatus);
+                }
+                else {
+                    system_soft[i].printColumnWithOffset(stat.pcm, fstatus, WRITE_WIDTH);
+                }
 #else
-                system_soft[i].printColumn(fstatus, WRITE_WIDTH);
+                if (output_binary_flag) {
+                    system_soft[i].writeBinaryStream(fstatus);
+                }
+                else {
+                    system_soft[i].printColumn(fstatus, WRITE_WIDTH);
+                }
 #endif
             }
-            fstatus<<std::endl;
+            if (!output_binary_flag) fstatus<<std::endl;
         }
         // write status only
         else if(write_style==3&&my_rank==0) {
-            stat.printColumn(fstatus, WRITE_WIDTH);
-            fstatus<<std::endl;
+            if (output_binary_flag) {
+                stat.writeBinaryColumn(fstatus);
+            }
+            else {
+                stat.printColumn(fstatus, WRITE_WIDTH);
+                fstatus<<std::endl;
+            }
         }
 
         // save current error
@@ -2218,9 +2251,16 @@ public:
                 remove_id_record.push_back(system_soft[index].id);
                 if (system_soft[index].mass>0) {
                     if (input_parameters.write_style.value>0) {
-                        fesc<<std::setw(WRITE_WIDTH)<<stat.time;
-                        system_soft[index].printColumn(fesc,WRITE_WIDTH);
-                        fesc<<std::endl;
+                        if (isOutputBinary()) {
+                            const PS::F64 time_out = stat.time;
+                            fesc.write(reinterpret_cast<const char*>(&time_out), sizeof(time_out));
+                            system_soft[index].writeBinaryStream(fesc);
+                        }
+                        else {
+                            fesc<<std::setw(WRITE_WIDTH)<<stat.time;
+                            system_soft[index].printColumn(fesc,WRITE_WIDTH);
+                            fesc<<std::endl;
+                        }
                     }
                     n_esc++;
                 }
@@ -2661,16 +2701,17 @@ public:
         // status information output
         std::string& fname_snp = input_parameters.fname_snp.value;
         if(write_style>0&&my_rank==0) {
+            const std::ofstream::openmode status_mode = isOutputBinary() ? std::ofstream::binary : std::ofstream::openmode(0);
             if(input_parameters.append_switcher.value==1) 
-                fstatus.open((fname_snp+".status").c_str(),std::ofstream::out|std::ofstream::app);
+                fstatus.open((fname_snp+".status").c_str(),std::ofstream::out|std::ofstream::app|status_mode);
             else {
-                fstatus.open((fname_snp+".status").c_str(),std::ofstream::out);
+                fstatus.open((fname_snp+".status").c_str(),std::ofstream::out|status_mode);
                 // write titles of columns
-                stat.printColumnTitle(fstatus,WRITE_WIDTH);
-                if (write_style==2) {
-                    for (int i=0; i<stat.n_real_loc; i++) system_soft[0].printColumnTitle(fstatus, WRITE_WIDTH);
-                }
-                fstatus<<std::endl;
+                //stat.printColumnTitle(fstatus,WRITE_WIDTH);
+                //if (write_style==2) {
+                //    for (int i=0; i<stat.n_real_loc; i++) system_soft[0].printColumnTitle(fstatus, WRITE_WIDTH);
+                //}
+                //fstatus<<std::endl;
             }
             fstatus<<std::setprecision(WRITE_PRECISION);
         }
@@ -2679,10 +2720,11 @@ public:
             // open escaper file
             std::string my_rank_str = std::to_string(my_rank);
             std::string fname_esc = fname_snp + ".esc." + my_rank_str;
+            const std::ofstream::openmode esc_mode = isOutputBinary() ? std::ofstream::binary : std::ofstream::openmode(0);
             if(input_parameters.append_switcher.value==1) 
-                fesc.open(fname_esc.c_str(), std::ofstream::out|std::ofstream::app);
+                fesc.open(fname_esc.c_str(), std::ofstream::out|std::ofstream::app|esc_mode);
             else {
-                fesc.open(fname_esc.c_str(), std::ofstream::out);
+                fesc.open(fname_esc.c_str(), std::ofstream::out|esc_mode);
                 // write titles of columns, will cause issue when gether different MPI ranks
                 // fesc<<std::setw(WRITE_WIDTH)<<"Time";
                 // FPSoft::printColumnTitle(fesc,WRITE_WIDTH);

@@ -171,6 +171,49 @@ public:
              <<std::setw(_width)<<Lt;
     }
 
+    //! write data of class members using the same order as printColumn in binary format
+    /*! Notice no record separator is written at the end.
+      @param[out] _fout: std::ostream output object
+     */
+    void writeBinaryColumn(std::ostream& _fout) const {
+        const PS::F64 error = getEnergyError() - error_cum_pre;
+        const PS::F64 error_cum = getEnergyError();
+        const PS::F64 etot = ekin + epot;
+        _fout.write(reinterpret_cast<const char*>(&error), sizeof(error));
+        _fout.write(reinterpret_cast<const char*>(&error_cum), sizeof(error_cum));
+        _fout.write(reinterpret_cast<const char*>(&ekin), sizeof(ekin));
+        _fout.write(reinterpret_cast<const char*>(&epot), sizeof(epot));
+        _fout.write(reinterpret_cast<const char*>(&etot), sizeof(etot));
+#ifdef HARD_CHECK_ENERGY
+        const PS::F64 error_hard = error_hard_cum - error_hard_cum_pre;
+        const PS::F64 error_sd = getEnergyErrorSlowDown() - error_sd_cum_pre;
+        const PS::F64 error_sd_cum = getEnergyErrorSlowDown();
+        const PS::F64 etot_sd = ekin_sd + epot_sd;
+        const PS::F64 error_hard_sd = error_hard_sd_cum - error_hard_sd_cum_pre;
+        _fout.write(reinterpret_cast<const char*>(&de_change_cum), sizeof(de_change_cum));
+        _fout.write(reinterpret_cast<const char*>(&de_change_binary_interrupt), sizeof(de_change_binary_interrupt));
+        _fout.write(reinterpret_cast<const char*>(&error_hard), sizeof(error_hard));
+        _fout.write(reinterpret_cast<const char*>(&error_hard_cum), sizeof(error_hard_cum));
+        _fout.write(reinterpret_cast<const char*>(&error_sd), sizeof(error_sd));
+        _fout.write(reinterpret_cast<const char*>(&error_sd_cum), sizeof(error_sd_cum));
+        _fout.write(reinterpret_cast<const char*>(&ekin_sd), sizeof(ekin_sd));
+        _fout.write(reinterpret_cast<const char*>(&epot_sd), sizeof(epot_sd));
+        _fout.write(reinterpret_cast<const char*>(&etot_sd), sizeof(etot_sd));
+        _fout.write(reinterpret_cast<const char*>(&de_sd_change_cum), sizeof(de_sd_change_cum));
+        _fout.write(reinterpret_cast<const char*>(&de_sd_change_binary_interrupt), sizeof(de_sd_change_binary_interrupt));
+        _fout.write(reinterpret_cast<const char*>(&error_hard_sd), sizeof(error_hard_sd));
+        _fout.write(reinterpret_cast<const char*>(&error_hard_sd_cum), sizeof(error_hard_sd_cum));
+#endif
+        const PS::F64 L_error = getMomentumError() - error_Lt_cum_pre;
+        const PS::F64 L_error_cum = getMomentumError();
+        _fout.write(reinterpret_cast<const char*>(&L_error), sizeof(L_error));
+        _fout.write(reinterpret_cast<const char*>(&L_error_cum), sizeof(L_error_cum));
+        _fout.write(reinterpret_cast<const char*>(&L.x), sizeof(L.x));
+        _fout.write(reinterpret_cast<const char*>(&L.y), sizeof(L.y));
+        _fout.write(reinterpret_cast<const char*>(&L.z), sizeof(L.z));
+        _fout.write(reinterpret_cast<const char*>(&Lt), sizeof(Lt));
+    }
+
 #ifdef HARD_CHECK_ENERGY
     void writeAscii(FILE* _fout) {
         fprintf(_fout, "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
