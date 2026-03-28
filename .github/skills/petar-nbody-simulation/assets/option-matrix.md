@@ -1,74 +1,819 @@
-# PeTar AVX512 Option Matrix (Auto-generated)
+# PeTar Option Matrix (Auto-generated)
 
-This file is generated from <binary> -h option extraction.
+This file is generated from commands discovered in PATH via <binary> -h option extraction.
+
+Discovery rule:
+- scan PATH for executable names starting with 'petar'
+- classify helper tools by suffix (*.hard.debug, *.format.transfer)
+- classify solver binaries by required core options (-u, -t, -o)
 
 ## Solver Binaries Included
 
-- petar.mpi.omp.avx512.agama (58 options)
-- petar.mpi.omp.avx512.bse.agama (90 options)
-- petar.mpi.omp.avx512.bse.galpy (92 options)
-- petar.mpi.omp.avx512.bse (87 options)
-- petar.mpi.omp.avx512.galpy (60 options)
-- petar.mpi.omp.avx512 (55 options)
+- petar.avx2.agama.g (56 options)
+  - path: /home/lwang/bin/petar.avx2.agama.g
+- petar.avx2.bse.g (85 options)
+  - path: /home/lwang/bin/petar.avx2.bse.g
+- petar.avx2.bse.galpy (75 options)
+  - path: /home/lwang/bin/petar.avx2.bse.galpy
+- petar.avx2.bse.gasdrag.g (88 options)
+  - path: /home/lwang/bin/petar.avx2.bse.gasdrag.g
+- petar.avx2.bse.pnall.g (88 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnall.g
+- petar.avx2.bse.pnall (88 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnall
+- petar.avx2.bse.pnhermite.g (87 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnhermite.g
+- petar.avx2.bse.pnhermite (87 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnhermite
+- petar.avx2.bse.pnpnall (85 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnpnall
+- petar.avx2.bse.pnpnhermite (85 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnpnhermite
+- petar.avx2.bseEmp.galpy.g (91 options)
+  - path: /home/lwang/bin/petar.avx2.bseEmp.galpy.g
+- petar.avx2.g (47 options)
+  - path: /home/lwang/bin/petar.avx2.g
+- petar.avx2.pnall.g (56 options)
+  - path: /home/lwang/bin/petar.avx2.pnall.g
+- petar.avx2.pnall (56 options)
+  - path: /home/lwang/bin/petar.avx2.pnall
+- petar.bseEmp.galpy.g (91 options)
+  - path: /home/lwang/bin/petar.bseEmp.galpy.g
+- petar.mpi.avx2.64b.bse.disk.g (80 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.64b.bse.disk.g
+- petar.mpi.avx2.base.g (36 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.base.g
+- petar.mpi.avx2.bse.disk.d (78 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.bse.disk.d
+- petar.mpi.avx2.bse.disk.g (80 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.bse.disk.g
+- petar.mpi.avx2.bse.disk.hermite.g (82 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.bse.disk.hermite.g
+- petar.mpi.avx2.bse.g (88 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.bse.g
+- petar.mpi.avx2.bse.galpy.g (80 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.bse.galpy.g
+- petar.mpi.avx2.bse.galpy.gasdrag.g (84 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.bse.galpy.gasdrag.g
+- petar.mpi.avx2.bse.galpy.mp.g (77 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.bse.galpy.mp.g
+- petar.mpi.avx2.bse.galpy (74 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.bse.galpy
+- petar.mpi.avx2.g (55 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.g
+- petar.mpi.avx2.galpy.g (47 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.galpy.g
+- petar.mpi.avx2.galpy.gasdrag.g (47 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.galpy.gasdrag.g
+- petar.mpi.avx2.galpy.mp.g (44 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.galpy.mp.g
+- petar.mpi.avx2.gasdrag.g (44 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.gasdrag.g
+- petar.mpi.avx2.gasdrag (42 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.gasdrag
+- petar.mpi.avx2.hermite.d (39 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.hermite.d
+- petar.mpi.avx2.hermite.g (39 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.hermite.g
+- petar.mpi.avx2.hermite (39 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.hermite
+- petar.mpi.avx2.mobse.g (66 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.mobse.g
+- petar.mpi.avx2 (55 options)
+  - path: /home/lwang/bin/petar.mpi.avx2
+- petar.mpi.avx2.pnall.g (58 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.pnall.g
+- petar.mpi.avx2.pnall (58 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.pnall
+- petar.mpi.bse.disk.g (80 options)
+  - path: /home/lwang/bin/petar.mpi.bse.disk.g
+- petar.mpi.omp.64b (48 options)
+  - path: /home/lwang/bin/petar.mpi.omp.64b
+- petar.mpi.omp.avx2.64b.dsm.gasdrag (65 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.64b.dsm.gasdrag
+- petar.mpi.omp.avx2.64b.galpy (47 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.64b.galpy
+- petar.mpi.omp.avx2.64b (48 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.64b
+- petar.mpi.omp.avx2.agama (58 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.agama
+- petar.mpi.omp.avx2.base.galpy.gasdrag (52 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.base.galpy.gasdrag
+- petar.mpi.omp.avx2.base (38 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.base
+- petar.mpi.omp.avx2.base.v1 (38 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.base.v1
+- petar.mpi.omp.avx2.bse.agama (90 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.agama
+- petar.mpi.omp.avx2.bse.disk (78 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.disk
+- petar.mpi.omp.avx2.bse.g (69 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.g
+- petar.mpi.omp.avx2.bse.galpy.d (75 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.d
+- petar.mpi.omp.avx2.bse.galpy.g (80 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.g
+- petar.mpi.omp.avx2.bse.galpy.gasdrag.g (87 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag.g
+- petar.mpi.omp.avx2.bse.galpy.gasdrag (84 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag
+- petar.mpi.omp.avx2.bse.galpy.master (73 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.master
+- petar.mpi.omp.avx2.bse.galpy.mp (77 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.mp
+- petar.mpi.omp.avx2.bse.galpy (92 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy
+- petar.mpi.omp.avx2.bse.galpy.test (77 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.test
+- petar.mpi.omp.avx2.bse.galpy.v1b (76 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.v1b
+- petar.mpi.omp.avx2.bse.gasdrag.d (90 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.gasdrag.d
+- petar.mpi.omp.avx2.bse (87 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse
+- petar.mpi.omp.avx2.bse.v1 (68 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.v1
+- petar.mpi.omp.avx2.bseEmp.galpy.g (73 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy.g
+- petar.mpi.omp.avx2.bseEmp.galpy (93 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy
+- petar.mpi.omp.avx2.bseEmp (74 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp
+- petar.mpi.omp.avx2.d (50 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.d
+- petar.mpi.omp.avx2.disk.hermite (50 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.disk.hermite
+- petar.mpi.omp.avx2.disk (47 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.disk
+- petar.mpi.omp.avx2.fdps7.1 (48 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.fdps7.1
+- petar.mpi.omp.avx2.g (52 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.g
+- petar.mpi.omp.avx2.galpy.g (41 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.g
+- petar.mpi.omp.avx2.galpy.gasdrag.g (47 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.gasdrag.g
+- petar.mpi.omp.avx2.galpy.gasdrag (47 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.gasdrag
+- petar.mpi.omp.avx2.galpy.mp.g (44 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.mp.g
+- petar.mpi.omp.avx2.galpy (60 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy
+- petar.mpi.omp.avx2.gasdrag.d (58 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gasdrag.d
+- petar.mpi.omp.avx2.gasdrag.g (42 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gasdrag.g
+- petar.mpi.omp.avx2.gasdrag.old (37 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gasdrag.old
+- petar.mpi.omp.avx2.gasdrag (58 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gasdrag
+- petar.mpi.omp.avx2.gpu.bse.galpy (74 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy
+- petar.mpi.omp.avx2.gpu.bse (75 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse
+- petar.mpi.omp.avx2.gpu.bseEmp.galpy (74 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bseEmp.galpy
+- petar.mpi.omp.avx2.gpu.bseEmp (76 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bseEmp
+- petar.mpi.omp.avx2.gpu.galpy.gasdrag (47 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.galpy.gasdrag
+- petar.mpi.omp.avx2.gpu.galpy (42 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.galpy
+- petar.mpi.omp.avx2.gpu (48 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu
+- petar.mpi.omp.avx2.hermite.g (39 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.hermite.g
+- petar.mpi.omp.avx2.hermite (39 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.hermite
+- petar.mpi.omp.avx2.merge.galpy.gasdrag (52 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.merge.galpy.gasdrag
+- petar.mpi.omp.avx2.mobse (67 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.mobse
+- petar.mpi.omp.avx2.mp (39 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.mp
+- petar.mpi.omp.avx2.nomklist (48 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.nomklist
+- petar.mpi.omp.avx2 (55 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2
+- petar.mpi.omp.avx2.pnall (58 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.pnall
+- petar.mpi.omp.avx2.pnhermite (54 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.pnhermite
+- petar.mpi.omp.avx2.pnsdar (54 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.pnsdar
+- petar.mpi.omp.avx2.yes (37 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.yes
+- petar.mpi.omp.mono (48 options)
+  - path: /home/lwang/bin/petar.mpi.omp.mono
+- petar.mpi.omp (48 options)
+  - path: /home/lwang/bin/petar.mpi.omp
+- petar.omp.avx2.64b (48 options)
+  - path: /home/lwang/bin/petar.omp.avx2.64b
+- petar.omp.avx2.agama (56 options)
+  - path: /home/lwang/bin/petar.omp.avx2.agama
+- petar.omp.avx2.bse (79 options)
+  - path: /home/lwang/bin/petar.omp.avx2.bse
+- petar.omp.avx2.bse.pnhermite (87 options)
+  - path: /home/lwang/bin/petar.omp.avx2.bse.pnhermite
+- petar.omp.avx2.bseEmp.galpy (91 options)
+  - path: /home/lwang/bin/petar.omp.avx2.bseEmp.galpy
+- petar.omp.avx2.bseEmp (86 options)
+  - path: /home/lwang/bin/petar.omp.avx2.bseEmp
+- petar.omp.avx2.kdtree (49 options)
+  - path: /home/lwang/bin/petar.omp.avx2.kdtree
+- petar.omp.avx2 (50 options)
+  - path: /home/lwang/bin/petar.omp.avx2
+- petar.omp.avx2.pnhermite (55 options)
+  - path: /home/lwang/bin/petar.omp.avx2.pnhermite
+
+## Requirement-Driven Solver Filters
+
+No fixed priority across physics scenarios. Select filters by user requirements first, then choose by performance.
+
+Configure mapping:
+- --with-interrupt -> suffix tokens: base | bse | mobse | bseEmp
+- --with-external -> suffix tokens: galpy | agama
+- --with-external-hard -> suffix token: gasdrag
+- --with-pn -> suffix tokens: pn*
+
+### Interrupt Module (--with-interrupt)
+
+- petar.mpi.omp.avx2.gpu.bseEmp
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 76
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bseEmp
+- petar.mpi.omp.avx2.gpu.bse
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 75
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse
+- petar.mpi.omp.avx2.gpu.bseEmp.galpy
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 74
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bseEmp.galpy
+- petar.mpi.omp.avx2.gpu.bse.galpy
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 74
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy
+- petar.mpi.omp.avx2.bseEmp.galpy
+  - perf-tags: avx2,omp,mpi
+  - options: 93
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy
+- petar.mpi.omp.avx2.bse.galpy
+  - perf-tags: avx2,omp,mpi
+  - options: 92
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy
+- petar.mpi.omp.avx2.bse.gasdrag.d
+  - perf-tags: avx2,omp,mpi
+  - options: 90
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.gasdrag.d
+- petar.mpi.omp.avx2.bse.agama
+  - perf-tags: avx2,omp,mpi
+  - options: 90
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.agama
+
+### Stellar Evolution (bse/mobse/bseEmp)
+
+- petar.mpi.omp.avx2.gpu.bseEmp
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 76
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bseEmp
+- petar.mpi.omp.avx2.gpu.bse
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 75
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse
+- petar.mpi.omp.avx2.gpu.bseEmp.galpy
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 74
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bseEmp.galpy
+- petar.mpi.omp.avx2.gpu.bse.galpy
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 74
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy
+- petar.mpi.omp.avx2.bseEmp.galpy
+  - perf-tags: avx2,omp,mpi
+  - options: 93
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy
+- petar.mpi.omp.avx2.bse.galpy
+  - perf-tags: avx2,omp,mpi
+  - options: 92
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy
+- petar.mpi.omp.avx2.bse.gasdrag.d
+  - perf-tags: avx2,omp,mpi
+  - options: 90
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.gasdrag.d
+- petar.mpi.omp.avx2.bse.agama
+  - perf-tags: avx2,omp,mpi
+  - options: 90
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.agama
+
+### Long-timescale External: Galpy (--with-external=galpy)
+
+- petar.mpi.omp.avx2.gpu.bseEmp.galpy
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 74
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bseEmp.galpy
+- petar.mpi.omp.avx2.gpu.bse.galpy
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 74
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy
+- petar.mpi.omp.avx2.gpu.galpy.gasdrag
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 47
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.galpy.gasdrag
+- petar.mpi.omp.avx2.gpu.galpy
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 42
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.galpy
+- petar.mpi.omp.avx2.bseEmp.galpy
+  - perf-tags: avx2,omp,mpi
+  - options: 93
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy
+- petar.mpi.omp.avx2.bse.galpy
+  - perf-tags: avx2,omp,mpi
+  - options: 92
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy
+- petar.mpi.omp.avx2.bse.galpy.gasdrag.g
+  - perf-tags: avx2,omp,mpi
+  - options: 87
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag.g
+- petar.mpi.omp.avx2.bse.galpy.gasdrag
+  - perf-tags: avx2,omp,mpi
+  - options: 84
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag
+
+### Long-timescale External: Agama (--with-external=agama)
+
+- petar.mpi.omp.avx2.bse.agama
+  - perf-tags: avx2,omp,mpi
+  - options: 90
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.agama
+- petar.mpi.omp.avx2.agama
+  - perf-tags: avx2,omp,mpi
+  - options: 58
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.agama
+- petar.omp.avx2.agama
+  - perf-tags: avx2,omp
+  - options: 56
+  - path: /home/lwang/bin/petar.omp.avx2.agama
+- petar.avx2.agama.g
+  - perf-tags: avx2
+  - options: 56
+  - path: /home/lwang/bin/petar.avx2.agama.g
+
+### Short-timescale External Hard: Gas Drag (--with-external-hard=gasdrag)
+
+- petar.mpi.omp.avx2.gpu.galpy.gasdrag
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 47
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.galpy.gasdrag
+- petar.mpi.omp.avx2.bse.gasdrag.d
+  - perf-tags: avx2,omp,mpi
+  - options: 90
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.gasdrag.d
+- petar.mpi.omp.avx2.bse.galpy.gasdrag.g
+  - perf-tags: avx2,omp,mpi
+  - options: 87
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag.g
+- petar.mpi.omp.avx2.bse.galpy.gasdrag
+  - perf-tags: avx2,omp,mpi
+  - options: 84
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag
+- petar.mpi.omp.avx2.64b.dsm.gasdrag
+  - perf-tags: avx2,omp,mpi
+  - options: 65
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.64b.dsm.gasdrag
+- petar.mpi.omp.avx2.gasdrag.d
+  - perf-tags: avx2,omp,mpi
+  - options: 58
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gasdrag.d
+- petar.mpi.omp.avx2.gasdrag
+  - perf-tags: avx2,omp,mpi
+  - options: 58
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gasdrag
+- petar.mpi.omp.avx2.merge.galpy.gasdrag
+  - perf-tags: avx2,omp,mpi
+  - options: 52
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.merge.galpy.gasdrag
+
+### Post-Newtonian Relativity (--with-pn)
+
+- petar.mpi.omp.avx2.pnall
+  - perf-tags: avx2,omp,mpi
+  - options: 58
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.pnall
+- petar.mpi.omp.avx2.pnsdar
+  - perf-tags: avx2,omp,mpi
+  - options: 54
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.pnsdar
+- petar.mpi.omp.avx2.pnhermite
+  - perf-tags: avx2,omp,mpi
+  - options: 54
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.pnhermite
+- petar.omp.avx2.bse.pnhermite
+  - perf-tags: avx2,omp
+  - options: 87
+  - path: /home/lwang/bin/petar.omp.avx2.bse.pnhermite
+- petar.omp.avx2.pnhermite
+  - perf-tags: avx2,omp
+  - options: 55
+  - path: /home/lwang/bin/petar.omp.avx2.pnhermite
+- petar.mpi.avx2.pnall.g
+  - perf-tags: avx2,mpi
+  - options: 58
+  - path: /home/lwang/bin/petar.mpi.avx2.pnall.g
+- petar.mpi.avx2.pnall
+  - perf-tags: avx2,mpi
+  - options: 58
+  - path: /home/lwang/bin/petar.mpi.avx2.pnall
+- petar.avx2.bse.pnall.g
+  - perf-tags: avx2
+  - options: 88
+  - path: /home/lwang/bin/petar.avx2.bse.pnall.g
+
+### Special-purpose Features (Non-default Recommendations)
+
+These are for special user requests and should not be selected by default.
+
+### High-precision Tree Force (--enable-64b)
+
+- petar.mpi.omp.avx2.64b.dsm.gasdrag
+  - perf-tags: avx2,omp,mpi
+  - options: 65
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.64b.dsm.gasdrag
+- petar.mpi.omp.avx2.64b
+  - perf-tags: avx2,omp,mpi
+  - options: 48
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.64b
+- petar.mpi.omp.avx2.64b.galpy
+  - perf-tags: avx2,omp,mpi
+  - options: 47
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.64b.galpy
+- petar.omp.avx2.64b
+  - perf-tags: avx2,omp
+  - options: 48
+  - path: /home/lwang/bin/petar.omp.avx2.64b
+- petar.mpi.avx2.64b.bse.disk.g
+  - perf-tags: avx2,mpi
+  - options: 80
+  - path: /home/lwang/bin/petar.mpi.avx2.64b.bse.disk.g
+- petar.mpi.omp.64b
+  - perf-tags: omp,mpi
+  - options: 48
+  - path: /home/lwang/bin/petar.mpi.omp.64b
+
+### High-precision Position Representation (--enable-mpfrc)
+
+- petar.mpi.omp.avx2.bse.galpy.mp
+  - perf-tags: avx2,omp,mpi
+  - options: 77
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.mp
+- petar.mpi.omp.avx2.galpy.mp.g
+  - perf-tags: avx2,omp,mpi
+  - options: 44
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.mp.g
+- petar.mpi.omp.avx2.mp
+  - perf-tags: avx2,omp,mpi
+  - options: 39
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.mp
+- petar.mpi.avx2.bse.galpy.mp.g
+  - perf-tags: avx2,mpi
+  - options: 77
+  - path: /home/lwang/bin/petar.mpi.avx2.bse.galpy.mp.g
+- petar.mpi.avx2.galpy.mp.g
+  - perf-tags: avx2,mpi
+  - options: 44
+  - path: /home/lwang/bin/petar.mpi.avx2.galpy.mp.g
+
+### Debug Build: g (--with-debug=g)
+
+- petar.mpi.omp.avx2.bse.galpy.gasdrag.g
+  - perf-tags: avx2,omp,mpi
+  - options: 87
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag.g
+- petar.mpi.omp.avx2.bse.galpy.g
+  - perf-tags: avx2,omp,mpi
+  - options: 80
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.g
+- petar.mpi.omp.avx2.bseEmp.galpy.g
+  - perf-tags: avx2,omp,mpi
+  - options: 73
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy.g
+- petar.mpi.omp.avx2.bse.g
+  - perf-tags: avx2,omp,mpi
+  - options: 69
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.g
+- petar.mpi.omp.avx2.g
+  - perf-tags: avx2,omp,mpi
+  - options: 52
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.g
+- petar.mpi.omp.avx2.galpy.gasdrag.g
+  - perf-tags: avx2,omp,mpi
+  - options: 47
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.gasdrag.g
+
+### Debug Build: assert (--with-debug=assert)
+
+- petar.mpi.omp.avx2.bse.gasdrag.d
+  - perf-tags: avx2,omp,mpi
+  - options: 90
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.gasdrag.d
+- petar.mpi.omp.avx2.bse.galpy.d
+  - perf-tags: avx2,omp,mpi
+  - options: 75
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.d
+- petar.mpi.omp.avx2.gasdrag.d
+  - perf-tags: avx2,omp,mpi
+  - options: 58
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gasdrag.d
+- petar.mpi.omp.avx2.d
+  - perf-tags: avx2,omp,mpi
+  - options: 50
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.d
+- petar.mpi.avx2.bse.disk.d
+  - perf-tags: avx2,mpi
+  - options: 78
+  - path: /home/lwang/bin/petar.mpi.avx2.bse.disk.d
+- petar.mpi.avx2.hermite.d
+  - perf-tags: avx2,mpi
+  - options: 39
+  - path: /home/lwang/bin/petar.mpi.avx2.hermite.d
+
+
+## Recommended Solver Candidates (Performance-first)
+
+Priority order: gpu > avx512 > avx2 > omp > mpi
+Apply this ordering after choosing a requirement-driven filter.
+- #1 petar.mpi.omp.avx2.gpu.bseEmp
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 76
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bseEmp
+- #2 petar.mpi.omp.avx2.gpu.bse
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 75
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse
+- #3 petar.mpi.omp.avx2.gpu.bseEmp.galpy
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 74
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bseEmp.galpy
+- #4 petar.mpi.omp.avx2.gpu.bse.galpy
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 74
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy
+- #5 petar.mpi.omp.avx2.gpu
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 48
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu
+- #6 petar.mpi.omp.avx2.gpu.galpy.gasdrag
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 47
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.galpy.gasdrag
+- #7 petar.mpi.omp.avx2.gpu.galpy
+  - perf-tags: gpu,avx2,omp,mpi
+  - options: 42
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.galpy
+- #8 petar.mpi.omp.avx2.bseEmp.galpy
+  - perf-tags: avx2,omp,mpi
+  - options: 93
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy
+- #9 petar.mpi.omp.avx2.bse.galpy
+  - perf-tags: avx2,omp,mpi
+  - options: 92
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy
+- #10 petar.mpi.omp.avx2.bse.gasdrag.d
+  - perf-tags: avx2,omp,mpi
+  - options: 90
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.gasdrag.d
+- #11 petar.mpi.omp.avx2.bse.agama
+  - perf-tags: avx2,omp,mpi
+  - options: 90
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.agama
+- #12 petar.mpi.omp.avx2.bse.galpy.gasdrag.g
+  - perf-tags: avx2,omp,mpi
+  - options: 87
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag.g
 
 ## Helper Tool Binaries Excluded From Simulation Commands
 
-- petar.mpi.omp.avx512.agama.format.transfer (0 options)
-- petar.mpi.omp.avx512.agama.hard.debug (21 options)
-- petar.mpi.omp.avx512.bse.agama.format.transfer (0 options)
-- petar.mpi.omp.avx512.bse.agama.hard.debug (24 options)
-- petar.mpi.omp.avx512.bse.format.transfer (0 options)
-- petar.mpi.omp.avx512.bse.galpy.format.transfer (0 options)
-- petar.mpi.omp.avx512.bse.galpy.hard.debug (24 options)
-- petar.mpi.omp.avx512.bse.hard.debug (24 options)
-- petar.mpi.omp.avx512.format.transfer (0 options)
-- petar.mpi.omp.avx512.galpy.format.transfer (0 options)
-- petar.mpi.omp.avx512.galpy.hard.debug (21 options)
-- petar.mpi.omp.avx512.hard.debug (21 options)
+- petar.avx2.agama.g.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.avx2.agama.g.format.transfer
+- petar.avx2.agama.g.hard.debug (21 options)
+  - path: /home/lwang/bin/petar.avx2.agama.g.hard.debug
+- petar.avx2.bse.g.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.avx2.bse.g.format.transfer
+- petar.avx2.bse.g.hard.debug (24 options)
+  - path: /home/lwang/bin/petar.avx2.bse.g.hard.debug
+- petar.avx2.bse.pnall.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnall.format.transfer
+- petar.avx2.bse.pnall.g.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnall.g.format.transfer
+- petar.avx2.bse.pnall.g.hard.debug (26 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnall.g.hard.debug
+- petar.avx2.bse.pnall.hard.debug (26 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnall.hard.debug
+- petar.avx2.bse.pnhermite.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnhermite.format.transfer
+- petar.avx2.bse.pnhermite.g.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnhermite.g.format.transfer
+- petar.avx2.bse.pnhermite.g.hard.debug (25 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnhermite.g.hard.debug
+- petar.avx2.bse.pnhermite.hard.debug (25 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnhermite.hard.debug
+- petar.avx2.bse.pnpnall.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnpnall.format.transfer
+- petar.avx2.bse.pnpnall.hard.debug (24 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnpnall.hard.debug
+- petar.avx2.bse.pnpnhermite.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnpnhermite.format.transfer
+- petar.avx2.bse.pnpnhermite.hard.debug (24 options)
+  - path: /home/lwang/bin/petar.avx2.bse.pnpnhermite.hard.debug
+- petar.avx2.bseEmp.galpy.g.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.avx2.bseEmp.galpy.g.format.transfer
+- petar.avx2.bseEmp.galpy.g.hard.debug (24 options)
+  - path: /home/lwang/bin/petar.avx2.bseEmp.galpy.g.hard.debug
+- petar.avx2.pnall.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.avx2.pnall.format.transfer
+- petar.avx2.pnall.hard.debug (23 options)
+  - path: /home/lwang/bin/petar.avx2.pnall.hard.debug
+- petar.bseEmp.galpy.g.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.bseEmp.galpy.g.format.transfer
+- petar.bseEmp.galpy.g.hard.debug (24 options)
+  - path: /home/lwang/bin/petar.bseEmp.galpy.g.hard.debug
+- petar.hard.debug.kdtree (20 options)
+  - path: /home/lwang/bin/petar.hard.debug.kdtree
+- petar.mpi.avx2.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.format.transfer
+- petar.mpi.avx2.g.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.g.format.transfer
+- petar.mpi.avx2.g.hard.debug (21 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.g.hard.debug
+- petar.mpi.avx2.hard.debug (21 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.hard.debug
+- petar.mpi.omp.avx2.agama.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.agama.format.transfer
+- petar.mpi.omp.avx2.agama.hard.debug (21 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.agama.hard.debug
+- petar.mpi.omp.avx2.bse.agama.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.agama.format.transfer
+- petar.mpi.omp.avx2.bse.agama.hard.debug (24 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.agama.hard.debug
+- petar.mpi.omp.avx2.bse.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.format.transfer
+- petar.mpi.omp.avx2.bse.galpy.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.format.transfer
+- petar.mpi.omp.avx2.bse.galpy.hard.debug (24 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.hard.debug
+- petar.mpi.omp.avx2.bse.hard.debug (24 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.hard.debug
+- petar.mpi.omp.avx2.bseEmp.galpy.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy.format.transfer
+- petar.mpi.omp.avx2.bseEmp.galpy.hard.debug (24 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy.hard.debug
+- petar.mpi.omp.avx2.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.format.transfer
+- petar.mpi.omp.avx2.galpy.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.format.transfer
+- petar.mpi.omp.avx2.galpy.hard.debug (21 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.hard.debug
+- petar.mpi.omp.avx2.hard.debug (21 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.hard.debug
+- petar.omp.avx2.agama.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.omp.avx2.agama.format.transfer
+- petar.omp.avx2.agama.hard.debug (21 options)
+  - path: /home/lwang/bin/petar.omp.avx2.agama.hard.debug
+- petar.omp.avx2.bseEmp.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.omp.avx2.bseEmp.format.transfer
+- petar.omp.avx2.bseEmp.galpy.format.transfer (7 options)
+  - path: /home/lwang/bin/petar.omp.avx2.bseEmp.galpy.format.transfer
+- petar.omp.avx2.bseEmp.galpy.hard.debug (24 options)
+  - path: /home/lwang/bin/petar.omp.avx2.bseEmp.galpy.hard.debug
+- petar.omp.avx2.bseEmp.hard.debug (24 options)
+  - path: /home/lwang/bin/petar.omp.avx2.bseEmp.hard.debug
+
+## Script Tools (Non-solver Workflow Commands)
+
+- petar.data.clear (3 options)
+  - path: /home/lwang/bin/petar.data.clear
+- petar.data.gether (5 options)
+  - path: /home/lwang/bin/petar.data.gether
+- petar.data.process (9 options)
+  - path: /home/lwang/bin/petar.data.process
+- petar.external.pot.movie (7 options)
+  - path: /home/lwang/bin/petar.external.pot.movie
+- petar.find.dt (13 options)
+  - path: /home/lwang/bin/petar.find.dt
+- petar.format.transfer.post (1 options)
+  - path: /home/lwang/bin/petar.format.transfer.post
+- petar.galev.process (0 options)
+  - path: /home/lwang/bin/petar.galev.process
+- petar.galpy.pot.movie (6 options)
+  - path: /home/lwang/bin/petar.galpy.pot.movie
+- petar.get.init.binary (0 options)
+  - path: /home/lwang/bin/petar.get.init.binary
+- petar.get.object.snap (1 options)
+  - path: /home/lwang/bin/petar.get.object.snap
+- petar.init (15 options)
+  - path: /home/lwang/bin/petar.init
+- petar.movie (84 options)
+  - path: /home/lwang/bin/petar.movie
+- petar.update.par (9 options)
+  - path: /home/lwang/bin/petar.update.par
+
+## Other Petar Commands In PATH
+
+- petar.bse (44 options)
+  - path: /home/lwang/bin/petar.bse
+- petar.bseEmp (45 options)
+  - path: /home/lwang/bin/petar.bseEmp
+- petar.external (7 options)
+  - path: /home/lwang/bin/petar.external
+- petar.external.test (6 options)
+  - path: /home/lwang/bin/petar.external.test
+- petar.galpy.help (4 options)
+  - path: /home/lwang/bin/petar.galpy.help
+- petar.galpy (7 options)
+  - path: /home/lwang/bin/petar.galpy
+- petar.hard.test (34 options)
+  - path: /home/lwang/bin/petar.hard.test
+- petar.mobse (42 options)
+  - path: /home/lwang/bin/petar.mobse
+- petar.mpi.avx2.bse.gasdrag.g (0 options)
+  - path: /home/lwang/bin/petar.mpi.avx2.bse.gasdrag.g
+- petar.pn.test (0 options)
+  - path: /home/lwang/bin/petar.pn.test
+
+## Detected Configure-Feature Suffix Tokens
+
+- .64b
+  - group: architecture
+  - binaries: 6
+- .agama
+  - group: external-potential
+  - binaries: 4
+- .avx2
+  - group: architecture
+  - binaries: 103
+- .base
+  - group: interrupt-mode
+  - binaries: 4
+- .bse
+  - group: interrupt-mode
+  - binaries: 38
+- .bseEmp
+  - group: interrupt-mode
+  - binaries: 9
+- .d
+  - group: debug
+  - binaries: 6
+- .g
+  - group: debug
+  - binaries: 36
+- .galpy
+  - group: external-potential
+  - binaries: 34
+- .gasdrag
+  - group: external-hard
+  - binaries: 18
+- .gpu
+  - group: parallel-runtime
+  - binaries: 7
+- .mobse
+  - group: interrupt-mode
+  - binaries: 2
+- .mp
+  - group: mpfrc
+  - binaries: 5
+- .mpi
+  - group: parallel-runtime
+  - binaries: 84
+- .omp
+  - group: parallel-runtime
+  - binaries: 69
+- .pnall
+  - group: post-newtonian
+  - binaries: 7
+- .pnhermite
+  - group: post-newtonian
+  - binaries: 5
+- .pnpnall
+  - group: post-newtonian
+  - binaries: 1
+- .pnpnhermite
+  - group: post-newtonian
+  - binaries: 1
+- .pnsdar
+  - group: post-newtonian
+  - binaries: 1
 
 ## Common Core Options
 
-- --ar-ds-scale
-- --ar-max-error
-- --ar-max-nstep
-- --ar-slowdown-factor
-- --ar-sym-order
-- --domain-nstep
-- --domain-weight-mode
-- --dt-soft-kepler-nstep
-- --dt-soft-sigma-factor
 - --energy-err-hard
-- --hermite-de-crit
-- --hermite-dm-crit
-- --hermite-dt-max
-- --hermite-dt-min-index
 - --hermite-eta
-- --hermite-eta-init
-- --hermite-n-neighbor-max
-- --hermite-r-acc0
 - --id-offset
-- --kdtree-n-particles-min
-- --n-sample-average
 - --r-escape
-- --r-group
 - --r-ratio
-- --r-search-group
 - --r-search-min
-- --r-search-peri-factor
-- --r-search-vel-factor
-- --record-id-end-one
-- --record-id-end-two
-- --record-id-start-one
-- --record-id-start-two
 - --soft-eps
-- --tree-ngroup-limit
-- --tree-nleaf-limit
-- --tree-nstep-mklist
-- --tt-nstep
-- --tt-switch
 - --write-group-info
-- -1
-- -6
 - -G
 - -T
 - -a
@@ -86,17 +831,50 @@ This file is generated from <binary> -h option extraction.
 
 ## Feature-specific Options By Binary
 
-### petar.mpi.omp.avx512.agama
+### petar.avx2.agama.g
 
 - --agama-conf-file
 - --agama-rscale
 - --agama-vscale
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
 
-### petar.mpi.omp.avx512.bse.agama
+### petar.avx2.bse.g
 
-- --agama-conf-file
-- --agama-rscale
-- --agama-vscale
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
 - --bse-alpha
 - --bse-beta
 - --bse-bhflag
@@ -126,12 +904,1148 @@ This file is generated from <binary> -h option extraction.
 - --bse-wdflag
 - --bse-xi
 - --detect-interrupt
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
 - --rand-seed
 - --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
 - --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
 
-### petar.mpi.omp.avx512.bse.galpy
+### petar.avx2.bse.galpy
 
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-idum
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --galpy-conf-file
+- --galpy-fscale
+- --galpy-pscale
+- --galpy-rscale
+- --galpy-set
+- --galpy-tscale
+- --galpy-type-arg
+- --galpy-vscale
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.avx2.bse.gasdrag.g
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --ext-K
+- --ext-coulomb-log
+- --ext-decay-time
+- --ext-gamma
+- --ext-gas-density
+- --ext-hard-mode
+- --ext-sound-speed
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.avx2.bse.pnall.g
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --pn-c
+- --pn-crit-ar
+- --pn-crit-h4
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.avx2.bse.pnall
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --pn-c
+- --pn-crit-ar
+- --pn-crit-h4
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.avx2.bse.pnhermite.g
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --pn-c
+- --pn-crit-h4
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.avx2.bse.pnhermite
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --pn-c
+- --pn-crit-h4
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.avx2.bse.pnpnall
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.avx2.bse.pnpnhermite
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.avx2.bseEmp.galpy.g
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-trackmode
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.avx2.g
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-r-acc0
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.avx2.pnall.g
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --pn-c
+- --pn-crit-ar
+- --pn-crit-h4
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.avx2.pnall
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --pn-c
+- --pn-crit-ar
+- --pn-crit-h4
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.bseEmp.galpy.g
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-trackmode
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.mpi.avx2.64b.bse.disk.g
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --disk-G
+- --disk-R0
+- --disk-ain
+- --disk-aout
+- --disk-center-id
+- --disk-epsilon
+- --disk-imc-mass
+- --disk-option
+- --disk-order
+- --disk-tau-dep
+- --disk-zk
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --rand-seed
+- --rand-seedfile
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.avx2.base.g
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.avx2.bse.disk.d
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-idum
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --disk-G
+- --disk-R0
+- --disk-ain
+- --disk-aout
+- --disk-center-id
+- --disk-epsilon
+- --disk-imc-mass
+- --disk-option
+- --disk-order
+- --disk-tau-dep
+- --disk-zk
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.avx2.bse.disk.g
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --disk-G
+- --disk-R0
+- --disk-ain
+- --disk-aout
+- --disk-center-id
+- --disk-epsilon
+- --disk-imc-mass
+- --disk-option
+- --disk-order
+- --disk-tau-dep
+- --disk-zk
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --rand-seed
+- --rand-seedfile
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.avx2.bse.disk.hermite.g
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --disk-G
+- --disk-R0
+- --disk-ain
+- --disk-aout
+- --disk-center-id
+- --disk-epsilon
+- --disk-imc-mass
+- --disk-option
+- --disk-order
+- --disk-tau-dep
+- --disk-zk
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --pn-c
+- --pn-p
+- --r-bin
+- --rand-seed
+- --rand-seedfile
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.avx2.bse.g
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-pbmfdistmin
+- --bse-pbspdistmin
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-pulsar-bmin
+- --bse-pulsar-ep
+- --bse-pulsar-kappa
+- --bse-pulsar-mf-dist
+- --bse-pulsar-mf-max
+- --bse-pulsar-mf-min
+- --bse-pulsar-spin-dist
+- --bse-pulsar-spin-max
+- --bse-pulsar-spin-min
+- --bse-pulsar-tau
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-r-acc0
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --stellar-evolution
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.avx2.bse.galpy.g
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
 - --bse-alpha
 - --bse-beta
 - --bse-bhflag
@@ -166,11 +2080,29 @@ This file is generated from <binary> -h option extraction.
 - --galpy-set
 - --galpy-type-arg
 - --galpy-vscale
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
 - --rand-seed
 - --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
 - --stellar-evolution
+- --tt-nstep
+- --tt-switch
+- -1
 
-### petar.mpi.omp.avx512.bse
+### petar.mpi.avx2.bse.galpy.gasdrag.g
 
 - --bse-alpha
 - --bse-beta
@@ -201,19 +2133,3479 @@ This file is generated from <binary> -h option extraction.
 - --bse-wdflag
 - --bse-xi
 - --detect-interrupt
-- --rand-seed
-- --rand-seedfile
-- --stellar-evolution
-
-### petar.mpi.omp.avx512.galpy
-
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --ext-K
+- --ext-coulomb-log
+- --ext-gamma
+- --ext-gaspot-index
+- --ext-hard-mode
+- --ext-scale-density
+- --ext-sound-speed
 - --galpy-conf-file
 - --galpy-rscale
 - --galpy-set
 - --galpy-type-arg
 - --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
 
-### petar.mpi.omp.avx512
+### petar.mpi.avx2.bse.galpy.mp.g
 
-- (no extra options beyond core)
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.avx2.bse.galpy
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --rand-seed
+- --rand-seedfile
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.avx2.g
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.mpi.avx2.galpy.g
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --tt-nstep
+- --tt-switch
+
+### petar.mpi.avx2.galpy.gasdrag.g
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --ext-coulomb-log
+- --ext-gaspot-index
+- --ext-hard-mode
+- --ext-scale-density
+- --ext-sound-speed
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.avx2.galpy.mp.g
+
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.avx2.gasdrag.g
+
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --ext-coulomb-log
+- --ext-decay-time
+- --ext-gas-density
+- --ext-hard-mode
+- --ext-sound-speed
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.avx2.gasdrag
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --ext-coulomb-log
+- --ext-decay-time
+- --ext-gas-density
+- --ext-hard-mode
+- --ext-sound-speed
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.avx2.hermite.d
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --pn-c
+- --pn-p
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.avx2.hermite.g
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --pn-c
+- --pn-p
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.avx2.hermite
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --pn-c
+- --pn-p
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.avx2.mobse.g
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --mobse-alpha
+- --mobse-beta
+- --mobse-bhflag
+- --mobse-bwacc
+- --mobse-cflag
+- --mobse-eddfac
+- --mobse-epsnov
+- --mobse-gamma
+- --mobse-hewind
+- --mobse-idum
+- --mobse-lambda
+- --mobse-metallicity
+- --mobse-msclae
+- --mobse-neta
+- --mobse-nsflag
+- --mobse-piflag
+- --mobse-pts1
+- --mobse-pts2
+- --mobse-pts3
+- --mobse-rscale
+- --mobse-sigma1
+- --mobse-sigma2
+- --mobse-tflag
+- --mobse-tscale
+- --mobse-vsclae
+- --mobse-wdflag
+- --mobse-wind
+- --mobse-xi
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.avx2
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.mpi.avx2.pnall.g
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --pn-c
+- --pn-crit-ar
+- --pn-crit-h4
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.mpi.avx2.pnall
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --pn-c
+- --pn-crit-ar
+- --pn-crit-h4
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.mpi.bse.disk.g
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --disk-G
+- --disk-R0
+- --disk-ain
+- --disk-aout
+- --disk-center-id
+- --disk-epsilon
+- --disk-imc-mass
+- --disk-option
+- --disk-order
+- --disk-tau-dep
+- --disk-zk
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --rand-seed
+- --rand-seedfile
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.omp.64b
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-r-acc0
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.64b.dsm.gasdrag
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --detect-interrupt
+- --epsilon-bh
+- --epsilon-helium
+- --ext-K
+- --ext-center-id
+- --ext-coulomb-log
+- --ext-decay-time
+- --ext-gamma
+- --ext-gas-density
+- --ext-hard-mode
+- --ext-sound-speed
+- --helium-fraction-disk
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-r-acc0
+- --lambda0
+- --merger-mass-loss-rate
+- --merger-time-delay
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --redistribute-star-mode
+- --salpeter-timescale
+- --search-peri-factor
+- --search-vel-factor
+- --speed-of-light
+- --stellar-radius-power
+- --stellar-radius-scale
+- --stellar-seed-mass
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.64b.galpy
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --tt-nstep
+- --tt-switch
+
+### petar.mpi.omp.avx2.64b
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-r-acc0
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.agama
+
+- --agama-conf-file
+- --agama-rscale
+- --agama-vscale
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.mpi.omp.avx2.base.galpy.gasdrag
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --ext-K
+- --ext-coulomb-log
+- --ext-gamma
+- --ext-gaspot-index
+- --ext-hard-mode
+- --ext-scale-density
+- --ext-sound-speed
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.base
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.base.v1
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.bse.agama
+
+- --agama-conf-file
+- --agama-rscale
+- --agama-vscale
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.mpi.omp.avx2.bse.disk
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-idum
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --disk-G
+- --disk-R0
+- --disk-ain
+- --disk-aout
+- --disk-center-id
+- --disk-epsilon
+- --disk-imc-mass
+- --disk-option
+- --disk-order
+- --disk-tau-dep
+- --disk-zk
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.omp.avx2.bse.g
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --rand-seed
+- --rand-seedfile
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.omp.avx2.bse.galpy.d
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-idum
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --galpy-conf-file
+- --galpy-fscale
+- --galpy-pscale
+- --galpy-rscale
+- --galpy-set
+- --galpy-tscale
+- --galpy-type-arg
+- --galpy-vscale
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.omp.avx2.bse.galpy.g
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --stellar-evolution
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.bse.galpy.gasdrag.g
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --ext-K
+- --ext-coulomb-log
+- --ext-gamma
+- --ext-gaspot-index
+- --ext-hard-mode
+- --ext-scale-density
+- --ext-sound-speed
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-bin
+- --r-search-bin
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --stellar-evolution
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.bse.galpy.gasdrag
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --ext-K
+- --ext-coulomb-log
+- --ext-gamma
+- --ext-gaspot-index
+- --ext-hard-mode
+- --ext-scale-density
+- --ext-sound-speed
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.omp.avx2.bse.galpy.master
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-idum
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.omp.avx2.bse.galpy.mp
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.omp.avx2.bse.galpy
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.mpi.omp.avx2.bse.galpy.test
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.omp.avx2.bse.galpy.v1b
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-idum
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --galpy-conf-file
+- --galpy-fscale
+- --galpy-pscale
+- --galpy-rscale
+- --galpy-set
+- --galpy-tscale
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.omp.avx2.bse.gasdrag.d
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --ext-K
+- --ext-coulomb-log
+- --ext-decay-time
+- --ext-gamma
+- --ext-gas-density
+- --ext-hard-mode
+- --ext-sound-speed
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.bse
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.mpi.omp.avx2.bse.v1
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-idum
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.omp.avx2.bseEmp.galpy.g
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-idum
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.omp.avx2.bseEmp.galpy
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-trackmode
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.mpi.omp.avx2.bseEmp
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-trackmode
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- --use-tidal-tensor
+- -1
+
+### petar.mpi.omp.avx2.d
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-r-acc0
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.disk.hermite
+
+- --detect-interrupt
+- --disk-G
+- --disk-R0
+- --disk-ain
+- --disk-aout
+- --disk-center-id
+- --disk-epsilon
+- --disk-imc-mass
+- --disk-option
+- --disk-order
+- --disk-tau-dep
+- --disk-zk
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --pn-c
+- --pn-p
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.disk
+
+- --detect-interrupt
+- --disk-G
+- --disk-R0
+- --disk-ain
+- --disk-aout
+- --disk-center-id
+- --disk-epsilon
+- --disk-imc-mass
+- --disk-option
+- --disk-order
+- --disk-tau-dep
+- --disk-zk
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.fdps7.1
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-r-acc0
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.g
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.galpy.g
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.galpy.gasdrag.g
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --ext-coulomb-log
+- --ext-gaspot-index
+- --ext-hard-mode
+- --ext-scale-density
+- --ext-sound-speed
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.galpy.gasdrag
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --ext-coulomb-log
+- --ext-gaspot-index
+- --ext-hard-mode
+- --ext-scale-density
+- --ext-sound-speed
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.galpy.mp.g
+
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.galpy
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.mpi.omp.avx2.gasdrag.d
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --ext-K
+- --ext-coulomb-log
+- --ext-decay-time
+- --ext-gamma
+- --ext-gas-density
+- --ext-hard-mode
+- --ext-sound-speed
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.gasdrag.g
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --ext-coulomb-log
+- --ext-decay-time
+- --ext-gas-density
+- --ext-hard-mode
+- --ext-sound-speed
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.gasdrag.old
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.gasdrag
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --ext-K
+- --ext-coulomb-log
+- --ext-decay-time
+- --ext-gamma
+- --ext-gas-density
+- --ext-hard-mode
+- --ext-sound-speed
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.gpu.bse.galpy
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --rand-seed
+- --rand-seedfile
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.omp.avx2.gpu.bse
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --stellar-evolution
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.gpu.bseEmp.galpy
+
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-idum
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-trackmode
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.omp.avx2.gpu.bseEmp
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-trackmode
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --stellar-evolution
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.gpu.galpy.gasdrag
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --ext-coulomb-log
+- --ext-gaspot-index
+- --ext-hard-mode
+- --ext-scale-density
+- --ext-sound-speed
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.gpu.galpy
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.gpu
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-r-acc0
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.hermite.g
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --pn-c
+- --pn-p
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.hermite
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --pn-c
+- --pn-p
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.merge.galpy.gasdrag
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --ext-K
+- --ext-coulomb-log
+- --ext-gamma
+- --ext-gaspot-index
+- --ext-hard-mode
+- --ext-scale-density
+- --ext-sound-speed
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.mobse
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --mobse-alpha
+- --mobse-beta
+- --mobse-bhflag
+- --mobse-bwacc
+- --mobse-cflag
+- --mobse-eddfac
+- --mobse-epsnov
+- --mobse-gamma
+- --mobse-hewind
+- --mobse-idum
+- --mobse-lambda
+- --mobse-metallicity
+- --mobse-msclae
+- --mobse-neta
+- --mobse-nsflag
+- --mobse-piflag
+- --mobse-pts1
+- --mobse-pts2
+- --mobse-pts3
+- --mobse-rscale
+- --mobse-sigma1
+- --mobse-sigma2
+- --mobse-tflag
+- --mobse-tscale
+- --mobse-vsclae
+- --mobse-wdflag
+- --mobse-wind
+- --mobse-xi
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --stellar-evolution
+- --step-limit-ar
+- -1
+
+### petar.mpi.omp.avx2.mp
+
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.avx2.nomklist
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-r-acc0
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.mpi.omp.avx2.pnall
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --pn-c
+- --pn-crit-ar
+- --pn-crit-h4
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.mpi.omp.avx2.pnhermite
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --pn-c
+- --pn-p-h4
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.pnsdar
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --domain-nstep
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --pn-c
+- --pn-p-ar
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp.avx2.yes
+
+- --detect-interrupt
+- --dt-max-factor
+- --dt-min-hermite
+- --energy-err-ar
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-interrupt-limit
+- --number-leaf-limit
+- --number-sample-average
+- --number-step-tt
+- --r-bin
+- --search-peri-factor
+- --search-vel-factor
+- --slowdown-factor
+- --step-limit-ar
+
+### petar.mpi.omp.mono
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-r-acc0
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.mpi.omp
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --domain-weight-mode
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-r-acc0
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.omp.avx2.64b
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-r-acc0
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.omp.avx2.agama
+
+- --agama-conf-file
+- --agama-rscale
+- --agama-vscale
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.omp.avx2.bse
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-r-acc0
+- --nstep-dt-soft-kepler
+- --number-group-limit
+- --number-leaf-limit
+- --number-sample-average
+- --r-group
+- --r-search-group
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --search-peri-factor
+- --search-vel-factor
+- --sigma-dt-soft-factor
+- --stellar-evolution
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.omp.avx2.bse.pnhermite
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --pn-c
+- --pn-crit-h4
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.omp.avx2.bseEmp.galpy
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-trackmode
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.omp.avx2.bseEmp
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-trackmode
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --rand-seed
+- --rand-seedfile
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --stellar-evolution
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
+
+### petar.omp.avx2.kdtree
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.omp.avx2
+
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+
+### petar.omp.avx2.pnhermite
+
+- --ar-ds-scale
+- --ar-max-error
+- --ar-max-nstep
+- --ar-slowdown-factor
+- --ar-sym-order
+- --dt-soft-kepler-nstep
+- --dt-soft-sigma-factor
+- --hermite-de-crit
+- --hermite-dm-crit
+- --hermite-dt-max
+- --hermite-dt-min-index
+- --hermite-eta-init
+- --hermite-n-neighbor-max
+- --hermite-r-acc0
+- --kdtree-n-particles-min
+- --n-sample-average
+- --pn-c
+- --pn-crit-h4
+- --r-group
+- --r-search-group
+- --r-search-peri-factor
+- --r-search-vel-factor
+- --record-id-end-one
+- --record-id-end-two
+- --record-id-start-one
+- --record-id-start-two
+- --tree-ngroup-limit
+- --tree-nleaf-limit
+- --tree-nstep-mklist
+- --tt-nstep
+- --tt-switch
+- -1
+- -6
 

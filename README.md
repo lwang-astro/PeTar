@@ -1171,6 +1171,25 @@ The basic usage of `petar.movie` is as follows:
 petar.movie [options] [snapshot path list filename]
 ```
 
+For the `sample/*.sh` workflows, the following command patterns are used:
+
+```shell
+# Isolated (no binaries): x-y (R=10) + Lagrangian panel (r=0..5)
+petar.movie -i none -t none -m x-y -R 10 -L data.lagr --rlagr-min 0 --rlagr-max 5 data.snap.lst
+
+# Binaries (no external potential): add semi-ecc panel
+petar.movie -i none -t none -m x-y -R 10 -b -L data.lagr --rlagr-min 0 --rlagr-max 5 data.snap.lst
+
+# BSE binaries (no external potential): same panels, use -i bse and log-temperature color
+petar.movie -i bse -t none -m x-y -R 10 -c logtemp -b -L data.lagr --rlagr-min 0 --rlagr-max 5 data.snap.lst
+
+# Galpy (no binaries): add one Galactic-scale x-y panel (R=10000)
+petar.movie -i none -t galpy -m x-y,x-y -R 10,10000 --cm-mode core,none --marker-scale 1,0.1 -L data.lagr --rlagr-min 0 --rlagr-max 5 data.snap.lst
+
+# BSE + Galpy + binaries: include both x-y scales, semi-ecc panel, and log-temperature color
+petar.movie -i bse -t galpy -m x-y,x-y -R 10,10000 --cm-mode core,none --marker-scale 1,0.1 -c logtemp -b -L data.lagr --rlagr-min 0 --rlagr-max 5 data.snap.lst
+```
+
 For plotting binary information, it is recommended to first utilize `petar.data.process` to detect binaries using multiple CPU cores. This preprocessing step eliminates the need for the movie generator to employ the expensive KDTree function for binary detection (use the option '--generate-binary 2').
 
 This tool utilizes either the `imageio` or `matplotlib.animation` Python modules to create movies. Installing `imageio` is advised for faster movie generation using multiple CPU cores, as `matplotlib.animation` can only utilize a single CPU core. Additionally, it is recommended to install the `ffmpeg` library to support various commonly used movie formats such as mp4 and avi. Please note that `ffmpeg` is a standalone library and not a Python module. Users should install it in the operating system (e.g., via the `apt` tool in Ubuntu).

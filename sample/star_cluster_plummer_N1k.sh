@@ -15,8 +15,8 @@ petar.init -v kms2pcmyr -f input test.dat.10
 # Use '-t 100.0' to run the simulation for 100 Myr.
 # Use '-o 1.0' to generate output snapshots every 1 Myr.
 # Use '-u 1' to set the units to astronomical units (Msun, pc, pc/Myr).
-# By default, OpenMP utilizes all CPU threads. For small N<=1000, one CPU is sufficient, 
-# use 'OMP_NUM_THREADS=[number of threads]' to limit the number of threads.
+# Parallel hint: this is a non-binaries N~10^3 sample, where one thread is usually efficient.
+# If needed, set 'OMP_NUM_THREADS=[number of threads]' and benchmark on your machine.
 # set 'OMP_STACKSIZE' to ensure sufficient stack memory for each thread, otherwise segmentation faults may occur.
 OMP_NUM_THREADS=1 OMP_STACKSIZE=128M petar -u 1 -t 100.0 -o 1.0 input &>output
 
@@ -24,3 +24,8 @@ OMP_NUM_THREADS=1 OMP_STACKSIZE=128M petar -u 1 -t 100.0 -o 1.0 input &>output
 # To maintain consistent units during post-processing, use '-G 0.00449830997959438' to set the gravitational constant to astronomical units.
 petar.data.gether data
 petar.data.process -G 0.00449830997959438 data.snap.lst
+
+# use petar.movie to generate an animation with one x-y panel and one Lagrangian-radius panel.
+# - x-y panel uses '-m x-y -R 10'.
+# - Lagrangian panel uses '-L data.lagr --rlagr-min 0 --rlagr-max 5'.
+petar.movie -i none -t none -m x-y -R 10 -L data.lagr --rlagr-min 0 --rlagr-max 5 data.snap.lst

@@ -18,8 +18,8 @@ petar.init -c 8000,0,0,0,220,0 -t -v kms2pcmyr -f input test.dat.10
 # Use '-o 1.0' to generate output snapshots every 1 Myr.
 # Use '-u 1' to set the units to astronomical units (Msun, pc, pc/Myr).
 # Use '--galpy-set MWPotential2014' to switch on MilkyWay potential from Galpy model (see Bovy 2015 for details).
-# By default, OpenMP utilizes all CPU threads. For small N<=1000, one CPU is sufficient, 
-# use 'OMP_NUM_THREADS=[number of threads]' to limit the number of threads.
+# Parallel hint: this is a non-binaries N~10^3 sample, where one thread is usually efficient.
+# If needed, set 'OMP_NUM_THREADS=[number of threads]' and benchmark on your machine.
 # set 'OMP_STACKSIZE' to ensure sufficient stack memory for each thread, otherwise segmentation faults may occur.
 # To switch on Galpy potential package, the option '--with-external=galpy' is needed during configuration of petar.
 OMP_NUM_THREADS=1 OMP_STACKSIZE=128M petar -u 1 --galpy-set MWPotential2014 -t 100.0 -o 1.0 input &>output
@@ -30,3 +30,9 @@ OMP_NUM_THREADS=1 OMP_STACKSIZE=128M petar -u 1 --galpy-set MWPotential2014 -t 1
 # the files data.lagr, data.core, data.tidal are generated, see README of PeTar for details
 petar.data.gether data
 petar.data.process -t galpy --r-escape tidal -G 0.00449830997959438 data.snap.lst
+
+# use petar.movie to generate an animation with two x-y panels and one Lagrangian-radius panel.
+# - first x-y panel focuses on the cluster with '-R 10'.
+# - second x-y panel shows the Galactic scale with '-R 10000'.
+# - Lagrangian panel uses '-L data.lagr --rlagr-min 0 --rlagr-max 5'.
+petar.movie -i none -t galpy -m x-y,x-y -R 10,10000 --cm-mode core,none --marker-scale 1,0.1 -L data.lagr --rlagr-min 0 --rlagr-max 5 data.snap.lst

@@ -19,6 +19,7 @@ if __name__ == '__main__':
     simple_binary=True
     write_option='w'
     core_file='data.core'
+    core_format = None
     cm_mode='core'
 
     def usage():
@@ -126,9 +127,10 @@ if __name__ == '__main__':
         print("            Origin snapshot: Center of soft potential.")
         print("            Single(binary) snapshot: Core center.")
         print("  -C(--core-file)       [S]  Core data filename, for correction of position and velocity of single and binary snapshots [%s]" % core_file)
+        print("     --core-format [S]  Format of core data file: ascii, binary, npy [follow snapshot-format '-s']")
     try:
         shortargs = 'p:f:Bt:i:Ps:o:c:C:m:ah'
-        longargs = ['append','snapshot-type','full-binary','filename-prefix=','mode=','external-mode=','interrupt-mode=','use-mpfrc','snapshot-format=','output-format=','cm-mode=','core-file=','help']
+        longargs = ['append','snapshot-type','full-binary','filename-prefix=','mode=','external-mode=','interrupt-mode=','use-mpfrc','snapshot-format=','output-format=','cm-mode=','core-file=','core-format=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -162,6 +164,8 @@ if __name__ == '__main__':
                 cm_mode = arg
             elif opt in ('-C','--core-file'):
                 core_file = arg
+            elif opt in ('--core-format'):
+                core_format = arg
             else:
                 assert False, "unhandeld option"
 
@@ -252,8 +256,17 @@ if __name__ == '__main__':
 
     core = petar.Core()
     read_core = False
+    if core_format is None:
+        core_format = snapshot_format
     if (cm_mode == 'core') | ((snap_type != 'origin') & (cm_mode == 'external')):
-        core.loadtxt(core_file)
+        if core_format=='ascii':
+            core.loadtxt(core_file)
+        elif core_format=='binary':
+            core.fromfile(core_file)
+        elif core_format=='npy':
+            core.load(core_file+'.npy')
+        else:
+            raise ValueError('Core format %s is unknown, should be ascii, binary or npy.' % core_format)
         read_core = True
 
     def select_type(_data, _type):

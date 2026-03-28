@@ -605,14 +605,14 @@ class BSEMerge(DictNpArrayMix):
         ubid_merge = ubid_merge[sindex]
         
         # get merger progenitor history
-        sel_history=np.in1d(type_change.bid, bid_merge)
+        sel_history=np.isin(type_change.bid, bid_merge)
         merge_history = type_change[sel_history]
         ubid_history = calc_ubid(merge_history)
         
         # find merger history with same ubid to obtain the first initial status
         temp, index = np.unique(ubid_history, return_index=True)
         ubid_history_unique = ubid_history[index]
-        sel_merge_init = np.in1d(ubid_history_unique, ubid_merge)
+        sel_merge_init = np.isin(ubid_history_unique, ubid_merge)
         ubid_merge_init = ubid_history_unique[sel_merge_init]
         merge_init = merge_history[index][sel_merge_init]
         # sort merge init with ubid

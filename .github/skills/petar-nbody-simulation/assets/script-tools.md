@@ -17,6 +17,7 @@ These tools are installed from `install_script_tool` in `Makefile.in` and are pa
 
 - `petar.data.gether`
   Gather MPI outputs, split SSE/BSE event files, and generate snapshot lists.
+  Do not add `-g` by default; use `petar.data.gether -g <prefix>` only when merged group files are explicitly requested, because group outputs may be large.
 
 - `petar.data.clear`
   Remove events after a specified time before restarting from an intermediate snapshot.
@@ -43,6 +44,35 @@ These tools are installed from `install_script_tool` in `Makefile.in` and are pa
 - `petar.external.pot.movie`
   Generate movies for external potential map evolution.
 
+- `petar.galpy.pot.movie`
+  Generate movies for Galpy potential map evolution.
+
+## Additional utility scripts
+
+- `petar.get.init.binary`
+  Generate initial binary lists for BSE-style initialization workflows.
+
 ## Skill usage rule
 
 When the user asks for one of these tasks, the skill should suggest the corresponding tool command, not only the main solver binary.
+
+## Parallel sizing quick rule
+
+Keep launch recommendations consistent with `sample/` scripts:
+
+- Non-binaries, small-`N` (`N~10^3`) examples:
+  default to single thread (`OMP_NUM_THREADS=1`) unless benchmark shows benefit.
+- Binaries-rich, small-`N` (`N~10^3` with many primordial binaries) examples:
+  do not hard-cap to one thread; suggest trying moderate OpenMP (for example `OMP_NUM_THREADS=2-4`) and benchmarking.
+- In all cases:
+  set `OMP_STACKSIZE=128M`, set `OMP_NUM_THREADS` explicitly when user asks for a concrete launch layout, and avoid leaving thread count implicit in final tuned commands.
+
+## Snapshot reader warning rule
+
+For Python-based readers such as `petar.movie`, `petar.data.process`, `petar.format.transfer.post`, `petar.galev.process`, and `petar.get.object.snap`:
+
+- `Binary file size is not aligned with dtype itemsize` means binary snapshot reading is likely misconfigured.
+- `The reading data shape or the number of columns mismatches the number of columns` means ascii/schema reading is likely misconfigured.
+- `utf-8` decode errors usually mean binary data is being read as ascii/text.
+
+When these appear, stop the current processing command, correct format/schema parameters, and retry before trusting outputs.

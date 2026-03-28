@@ -17,8 +17,8 @@ petar.init -c 8000,0,0,0,-180,0 -t -v kms2pcmyr -f input test.dat.10
 # Use '-t 500.0' to run the simulation for 500 Myr.
 # Use '-o 1.0' to generate output snapshots every 1 Myr.
 # Use '-u 1' to set the units to astronomical units (Msun, pc, pc/Myr).
-# By default, OpenMP utilizes all CPU threads. For small N<=1000, one CPU is sufficient, 
-# use 'OMP_NUM_THREADS=[number of threads]' to limit the number of threads.
+# Parallel hint: this is a non-binaries N~10^3 sample, where one thread is usually efficient.
+# If needed, set 'OMP_NUM_THREADS=[number of threads]' and benchmark on your machine.
 # set 'OMP_STACKSIZE' to ensure sufficient stack memory for each thread, otherwise segmentation faults may occur.
 # To switch on Agama potential package, the option '--with-external=agama' is needed during configuration of petar.
 # To use Agama, it is necessary to generate the potential file with Agama, and the option '--agama-conf-file' is used to specify the configuration file for Agama potential. 

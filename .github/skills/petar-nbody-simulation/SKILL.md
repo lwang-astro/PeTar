@@ -39,6 +39,11 @@ The repository installs the following workflow tools via `install_script_tool` i
 - `petar.galev.process`
 - `petar.external.pot.movie`
 
+Additional workflow utilities frequently available on host installations include:
+
+- `petar.galpy.pot.movie`
+- `petar.get.init.binary`
+
 These tools are part of the skill surface and should be suggested when the user's request matches their purpose.
 
 ## Tool Selection By Task
@@ -53,6 +58,9 @@ Use these tools proactively when the user intent matches the task.
   update legacy parameter files from older PeTar versions.
 - `petar.data.gether`:
   merge MPI outputs and generate snapshot path lists.
+  By default, do not assume group files should be gathered.
+  If the user explicitly wants merged group outputs, use `petar.data.gether -g <prefix>`.
+  This matters because MPI ranks may write separate `data.group.*.nX` files and merged group outputs can be large.
 - `petar.data.process`:
   post-process snapshots into single/binary/multiple data, core data, Lagrangian radii, escapers.
 - `petar.data.clear`:
@@ -67,25 +75,64 @@ Use these tools proactively when the user intent matches the task.
   generate movies of snapshots, HR diagrams, binary evolution, and Lagrangian evolution.
 - `petar.external.pot.movie`:
   generate movies for external potential map evolution from `petar.external` outputs.
+- `petar.galpy.pot.movie`:
+  generate movies for Galpy potential map evolution.
+- `petar.get.init.binary`:
+  generate primordial binary pairing tables for BSE initialization workflows.
 
 If the user asks for one of these tasks, do not answer only with general advice; provide the corresponding tool command pattern.
 
 ## Installed Binary Families (Current Host)
 
-This skill is designed to work with installed binaries that start with:
+Do not assume a fixed install directory or a fixed SIMD family.
 
-- `petar.mpi.omp.avx512`
+Binary discovery rule:
 
-Current solver executables on this host are:
+1. Scan commands in `PATH` whose executable name starts with `petar`.
+2. Treat binaries ending with `*.hard.debug` or `*.format.transfer` as helper tools.
+3. Treat binaries exposing core runtime options `-u`, `-t`, and `-o` in `-h` as solver binaries.
+4. Use `.github/skills/petar-nbody-simulation/assets/option-matrix.md` as the machine-local inventory snapshot.
 
-- `petar.mpi.omp.avx512`
-- `petar.mpi.omp.avx512.agama`
-- `petar.mpi.omp.avx512.bse`
-- `petar.mpi.omp.avx512.bse.agama`
-- `petar.mpi.omp.avx512.bse.galpy`
-- `petar.mpi.omp.avx512.galpy`
+Requirement-driven selection rule:
 
-Installed helper tools with the same prefix family include:
+1. Do not assign a fixed priority across physics scenarios; scenario choice depends on user intent.
+2. Map user intent to configure features first:
+  - `--with-interrupt` controls interruption module family (`base`, `bse`, `mobse`, `bseEmp`).
+  - `--with-external` controls long-timescale external potential in tree steps (`galpy`, `agama`).
+  - `--with-external-hard` controls short-timescale external forces in hard integrators (`gasdrag`).
+  - `--with-pn` controls post-Newtonian relativistic corrections (`pn*`).
+3. Filter binaries by required feature suffixes first using `assets/option-matrix.md` section `Requirement-Driven Solver Filters`.
+4. After filtering, rank candidates by performance suffix priority: `gpu` > `avx512` > `avx2` > `omp` > `mpi`.
+5. Still validate requested options against `<selected_binary> -h` before emitting commands.
+
+Special-purpose modules (on-demand, not part of default recommendation ranking):
+
+- `--enable-64b`:
+  enable 64-bit floating-point particle-tree force calculation (default tree-force path is lower precision).
+- `--enable-mpfrc`:
+  represent particle positions with split high-precision components to reduce round-off errors in large dynamic-range setups (for example, star clusters embedded in galactic environments with extreme scale separation).
+- `--enable-gperf`:
+  enable gperftools profiling for runtime performance investigation.
+- `--with-debug=g`:
+  debug-focused build (`-O0`, `-g`) for debugger workflows such as `gdb`.
+- `--with-debug=assert`:
+  assertion-focused debug mode with optimization retained to avoid severe runtime slowdown.
+
+When these features are requested by the user, prioritize feature-matched binaries or provide reconfigure guidance; otherwise keep them outside default solver recommendations.
+
+Suffix tokens should be interpreted as configure-driven feature combinations from `configure.ac`, including categories such as:
+
+- parallel/runtime (`mpi`, `omp`, `gpu`)
+- architecture (`avx`, `avx2`, `avx512`, `64b`)
+- interruption mode (`base`, `bse`, `mobse`, `bseEmp`)
+- external potential (`galpy`, `agama`)
+- external hard-force (`gasdrag`)
+- post-Newtonian (`pn*`)
+- high-precision tree force (`64b`)
+- high-precision position (`mp` from `--enable-mpfrc`)
+- debug suffix (`g`, `d`)
+
+Helper tools include (but are not limited to):
 
 - `*.format.transfer`
 - `*.hard.debug`
@@ -124,7 +171,7 @@ If the user provides a binary name, infer the default physics stack before askin
 
 Inference rules:
 
-- `petar.mpi.omp.avx512`
+- `petar` (or any solver without explicit physics suffix)
   Default scenario: isolated cluster.
 - `*.bse`
   Default scenario: stellar evolution enabled.
@@ -136,6 +183,10 @@ Inference rules:
   Default scenario: stellar evolution plus Galpy.
 - `*.bse.agama`
   Default scenario: stellar evolution plus Agama.
+- `*.gasdrag`
+  Default scenario extension: short-timescale external hard force is enabled.
+- `*.pn*`
+  Default scenario extension: post-Newtonian relativistic corrections are enabled.
 
 When inferring from binary name:
 
@@ -155,6 +206,10 @@ Use the selected binary suffix to decide which extra option families are reasona
   all base options plus `--galpy-set`, `--galpy-conf-file`, `--galpy-type-arg`, `--galpy-rscale`, `--galpy-vscale`.
 - `.agama`:
   all base options plus `--agama-conf-file`, `--agama-rscale`, `--agama-vscale`.
+- `.gasdrag`:
+  hard-part external force is compiled in (short-timescale), typically from `--with-external-hard=gasdrag`.
+- `.pn*`:
+  post-Newtonian force terms are compiled in, typically from `--with-pn=<mode>`.
 
 Do not proactively suggest options from families that the binary cannot support.
 
@@ -167,7 +222,7 @@ Ask for the minimum set before generating commands:
 3. End time (`-t`) and output interval (`-o`).
 4. Parallel mode: serial | OpenMP | MPI+OpenMP | GPU.
 5. Whether initial data already exists in PeTar snapshot format.
-6. Target binary name (for example `petar.mpi.omp.avx512.bse.galpy`).
+6. Target binary name (for example `petar.mpi.omp.avx2.bse.galpy`).
 7. Extra custom options to pass through verbatim after validation.
 
 If the binary name is already given, infer item 1 when possible instead of asking again.
@@ -262,6 +317,74 @@ When invoked:
 4. Ask only for missing fields.
 5. If enough information is already present, skip questions and emit the command directly.
 
+## Output Prefix Selection Rule (`-f`)
+
+Choose output prefix conservatively to avoid unnecessary renaming while preventing collisions.
+
+1. If user explicitly provides `-f <prefix>`, use it unchanged.
+2. If workflow is a restart/resume from previous outputs, do not force default `data`; keep the restart context and choose prefix explicitly if needed.
+3. If user does not specify a prefix, workflow is not restart, and current working directory has no existing `data*` outputs, use default prefix `data`.
+4. If user does not specify a prefix and existing `data*` outputs are present, choose a distinct prefix (for example `data.<tag>`) and explain why.
+
+Downstream commands must use the same chosen prefix consistently, for example:
+
+```bash
+petar ... -f <prefix> ...
+petar.data.gether <prefix>
+petar.data.process <prefix>.snap.lst
+```
+
+## Snapshot Read-Mismatch Detection And Recovery
+
+Apply this rule to Python-based snapshot readers, especially:
+
+- `petar.movie`
+- `petar.data.process`
+- `petar.format.transfer.post`
+- `petar.galev.process`
+- `petar.get.object.snap`
+
+Treat the following messages as evidence that snapshot reading is misconfigured rather than merely noisy warnings:
+
+1. Binary misalignment warnings, for example:
+   `Binary file size is not aligned with dtype itemsize`
+2. ASCII column mismatch warnings, for example:
+   `The reading data shape or the number of columns mismatches the number of columns`
+3. Text decoding errors such as `utf-8` decode failures.
+
+Interpretation:
+
+- binary misalignment:
+  snapshot structure or reader mode is wrong.
+- ASCII shape/column mismatch:
+  snapshot format or particle schema is wrong.
+- `utf-8` decode failure:
+  reader is trying to read binary data as ascii/text, or wrong format was selected.
+
+Recovery procedure:
+
+1. Stop the current processing command first if it is still running.
+2. Re-check the tool help output before retrying.
+3. Retry by correcting reader parameters rather than ignoring the warning.
+
+Most common fixes to try:
+
+- snapshot format selection:
+  `-s ascii | binary | npy`
+- snapshot origin/type selection when available:
+  `--snapshot-type origin | post | generate_binary`
+- interrupt mode selection:
+  `-i none | base | bse | mobse`
+- external mode selection:
+  `-t none | galpy | agama`
+- use the exact spelling shown by current `-h`; do not assume aliases like `no` are valid when help says `none`.
+
+Decision rule:
+
+- If the warning disappears after parameter correction, continue with the corrected command only.
+- If warnings persist after reasonable parameter corrections, stop and warn the user explicitly that snapshot reading is likely misaligned and downstream products may be invalid.
+- Do not present movies, post-processing results, extracted objects, or converted files as trustworthy when these warnings remain unresolved.
+
 ## Input-Source Driven Workflow Selection
 
 Decide the command flow from the user's input source before generating commands.
@@ -353,6 +476,17 @@ petar.data.gether [options] <data_prefix>
 
 Use `-l` when only a snapshot list is needed.
 
+Group-data rule:
+
+- default behavior: do not add `-g` automatically.
+- if user explicitly asks to gather group files, use:
+
+```bash
+petar.data.gether -g <data_prefix>
+```
+
+- explain that this merges per-rank group outputs such as `data.group.*.n2`, `data.group.*.n3`, etc., and may create large files.
+
 ### Restart Cleanup
 
 If the user restarts from a non-final snapshot and wants to avoid duplicated events:
@@ -388,6 +522,8 @@ petar.galev.process [options] <snapshot_list>
 ### Movie Generation
 
 If the user wants visualization products:
+
+- For BSE-enabled scenarios (`-i bse`), default to `-c logtemp` for particle color unless the user explicitly requests another color mode.
 
 - simulation movie:
 
@@ -618,6 +754,38 @@ Always include these reminders when applicable:
 - `*.format.transfer` binaries are format-conversion helpers.
 - Neither `*.hard.debug` nor `*.format.transfer` should be used as the main simulation executable.
 
+### Parallel Sizing Heuristic (N and Primordial Binaries)
+
+This heuristic must stay consistent with the comments in `sample/star_cluster_plummer_N1k*.sh`.
+
+Use this default sizing rule before emitting launch commands:
+
+1. Infer workload scale from initial particle number `N` and primordial-binary richness.
+2. Prefer under-subscription over over-subscription for small-`N` runs.
+
+Default recommendations:
+
+- `N ~ 10^3` and no primordial binaries (or very few):
+  use single-process single-thread by default (`mpiexec -n 1`, `OMP_NUM_THREADS=1`).
+- `N ~ 10^4`:
+  multi-core OpenMP and/or MPI can be beneficial; start from moderate parallelism, then tune.
+- `N ~ 10^3` with many primordial binaries:
+  OpenMP multi-threading can be beneficial; consider `OMP_NUM_THREADS > 1`.
+
+When user does not provide this information, ask only these missing items:
+
+- approximate particle count scale (`10^3`, `10^4`, larger), and
+- whether primordial binaries are none/few/many.
+
+Command emission rule:
+
+- Do not leave OpenMP thread count implicit.
+- Explicitly set `OMP_NUM_THREADS` (and MPI rank count when used) in every launch command.
+- For small isolated runs, default to:
+  `OMP_STACKSIZE=128M OMP_NUM_THREADS=1 petar [options] <snapshot>`
+  or
+  `OMP_STACKSIZE=128M OMP_NUM_THREADS=1 mpiexec -n 1 petar [options] <snapshot>`.
+
 ## Response Format When Skill Is Invoked
 
 Return output in this fixed structure:
@@ -629,6 +797,37 @@ Return output in this fixed structure:
 5. Tool-driven follow-up commands when relevant (`petar.find.dt`, `petar.data.gether`, `petar.data.clear`, `petar.movie`, etc.).
 6. Validation checklist (expected output files and quick sanity checks).
 7. Optional next-step optimization knobs (`-s`, `-r`, `--r-search-min`, `--r-bin`).
+
+For interactive chat replies, use this three-stage template before full command details:
+
+1. Requirement detection (physics first):
+  - explicitly summarize user-required feature switches:
+    `interrupt?` | `external long-timescale? (galpy/agama)` | `external-hard short-timescale? (gasdrag)` | `pn?`.
+  - if any is missing and required, ask only those missing items.
+2. Default candidate selection (performance second):
+  - pick candidates from `Requirement-Driven Solver Filters` first.
+  - then rank within matched candidates by `gpu > avx512 > avx2 > omp > mpi`.
+3. Special-purpose optional modules (only if user asks):
+  - mention `--enable-64b`, `--enable-mpfrc`, `--enable-gperf`, `--with-debug=g|assert` as optional toggles,
+    and explain why they are not default choices.
+
+After these three stages, provide the runnable command block(s) and validation checklist.
+
+### Minimal Opening Checklist (Quick Ask)
+
+When user intent is not fully specified, ask this compact checklist first (only missing items):
+
+1. Physics requirements (toggle set):
+  - `interrupt`: off | base | bse | mobse | bseEmp
+  - `external (long-timescale tree step)`: off | galpy | agama
+  - `external-hard (short-timescale hard integrator)`: off | gasdrag
+  - `pn`: off | pnhermite | pnsdar | pnall (or other pn mode)
+2. Runtime/performance target: GPU needed? If not, accept best CPU candidate.
+3. Core run inputs: unit mode (`-u`), end time (`-t`), output interval (`-o`), initial source (raw | snapshot | restart).
+4. Parallel sizing inputs: approximate particle count scale (`10^3` | `10^4` | larger), primordial binaries (none | few | many).
+5. Optional special modules (only if user asks): `64b`, `mpfrc`, `gperf`, debug mode (`g` or `assert`).
+
+If all checklist items are already inferable from user input and selected binary name, do not ask again; emit commands directly.
 
 ## Guardrails
 

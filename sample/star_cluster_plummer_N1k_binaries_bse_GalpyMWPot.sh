@@ -17,7 +17,8 @@ petar.init -c 8000,0,0,0,220,0 -t -s bse -v kms2pcmyr -f input test.dat.10
 # Use '--bse-metallicity 0.02' to set the metallicity of star as Z=0.02.
 # Use '--galpy-set MWPotential2014' to switch on MilkyWay potential from Galpy model (see Bovy 2015 for details).
 # To switch on SSE/BSE stellar evolution package and Galpy potential package, the option '--with-interrupt=bse --with-external=galpy' is needed during configuration of petar.
-# By default, OpenMP utilizes all CPU threads. If you wish to use a specific number of threads, please add 'OMP_NUM_THREADS=[number of threads]'.
+# Parallel hint: for N~10^3 with many primordial binaries (this sample), multi-threading can help.
+# If needed, set 'OMP_NUM_THREADS=[number of threads]' (e.g. 2-4) and benchmark on your machine.
 OMP_STACKSIZE=128M petar -u 1 -b 500 --galpy-set MWPotential2014 --bse-metallicity 0.02 -t 100.0 -o 5.0 input &>output
 
 # after mode finished, gether the output data and do post-data process to detect binaries, obtain Lagrangian and core radii and corresponding properties.
@@ -25,4 +26,12 @@ OMP_STACKSIZE=128M petar -u 1 -b 500 --galpy-set MWPotential2014 --bse-metallici
 # the files data.lagr, data.core, data.tidal are generated, see README of PeTar for details
 petar.data.gether data
 petar.data.process -i bse -t galpy --r-escape tidal data.snap.lst
+
+# use petar.movie to generate an animation with two x-y panels, one binary semi-ecc panel, and one Lagrangian-radius panel.
+# For BSE cases, use '-c logtemp' to color particles by logarithmic temperature.
+# - first x-y panel focuses on the cluster with '-R 10'.
+# - second x-y panel shows the Galactic scale with '-R 10000'.
+# - semi-ecc panel is enabled by '-b'.
+# - Lagrangian panel uses '-L data.lagr --rlagr-min 0 --rlagr-max 5'.
+petar.movie -i bse -t galpy -m x-y,x-y -R 10,10000 --cm-mode core,none --marker-scale 1,0.1 -c logtemp -b -L data.lagr --rlagr-min 0 --rlagr-max 5 data.snap.lst
 
