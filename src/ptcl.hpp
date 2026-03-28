@@ -81,12 +81,12 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
-        ParticleBase::printColumnTitle(_fout, _width);
+    static void printColumnTitleAscii(std::ostream & _fout, const int _width=20) {
+        ParticleBase::printColumnTitleAscii(_fout, _width);
         _fout<<std::setw(_width)<<"r_search"
              <<std::setw(_width)<<"id";
-        ArtificialParticleInformation::printColumnTitle(_fout, _width);
-        ChangeOver::printColumnTitle(_fout, _width);
+        ArtificialParticleInformation::printColumnTitleAscii(_fout, _width);
+        ChangeOver::printColumnTitleAscii(_fout, _width);
     }
 
     //! print column title with meaning (each line for one column)
@@ -112,12 +112,12 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumn(std::ostream & _fout, const int _width=20){
-        ParticleBase::printColumn(_fout, _width);
+    void printColumnAscii(std::ostream & _fout, const int _width=20){
+        ParticleBase::printColumnAscii(_fout, _width);
         _fout<<std::setw(_width)<<r_search
              <<std::setw(_width)<<id;
-        group_data.artificial.printColumn(_fout, _width);
-        changeover.printColumn(_fout, _width);
+        group_data.artificial.printColumnAscii(_fout, _width);
+        changeover.printColumnAscii(_fout, _width);
     }
 
     //! print data of class members with pos and vel offset using column style
@@ -127,12 +127,17 @@ public:
       @param[in] _width: print width (defaulted 20)
      */
     template <class Tpcm>
-    void printColumnWithOffset(Tpcm& _pcm, std::ostream & _fout, const int _width=20){
-        ParticleBase::printColumnWithOffset(_pcm, _fout, _width);
+    void printColumnAsciiWithOffset(Tpcm& _pcm, std::ostream & _fout, const int _width=20){
+        ParticleBase::printColumnAsciiWithOffset(_pcm, _fout, _width);
         _fout<<std::setw(_width)<<r_search
              <<std::setw(_width)<<id;
-        group_data.artificial.printColumn(_fout, _width);
-        changeover.printColumn(_fout, _width);
+        group_data.artificial.printColumnAscii(_fout, _width);
+        changeover.printColumnAscii(_fout, _width);
+    }
+
+    template <class Tpcm>
+    void printColumnWithOffset(Tpcm& _pcm, std::ostream & _fout, const int _width=20){
+        printColumnAsciiWithOffset(_pcm, _fout, _width);
     }
 
     //! write class data with ASCII format

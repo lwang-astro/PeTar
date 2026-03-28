@@ -78,7 +78,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
     */
-    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
+    static void printColumnTitleAscii(std::ostream & _fout, const int _width=20) {
         _fout<<std::setw(_width)<<"mass"
              <<std::setw(_width)<<"pos.x"
              <<std::setw(_width)<<"pos.y"
@@ -93,7 +93,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
     */
-    void printColumn(std::ostream & _fout, const int _width=20){
+    void printColumnAscii(std::ostream & _fout, const int _width=20){
         _fout<<std::setw(_width)<<mass
              <<std::setw(_width)<<pos[0]
              <<std::setw(_width)<<pos[1]
@@ -239,7 +239,7 @@ int main(int argc, char** argv){
        fs>>bin.m1>>bin.m2>>bin.semi>>bin.ecc>>rad1>>rad2>>type1>>type2;
        //bin.calcParticles(G);
        
-       //bin.printColumn(std::cout);
+    //bin.printColumnAscii(std::cout);
        std::cout<<std::setw(width)<<bin.m1
                 <<std::setw(width)<<bin.m2
                 <<std::setw(width)<<bin.semi

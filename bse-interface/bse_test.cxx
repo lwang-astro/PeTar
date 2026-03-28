@@ -327,10 +327,10 @@ int main(int argc, char** argv){
              <<std::setw(width)<<"ecc0"
              <<std::setw(width)<<"P[days]"
              <<std::setw(width)<<"ecc";
-        StarParameter::printColumnTitle(_fout, width);
-        StarParameterOut::printColumnTitle(_fout, width);
-        StarParameter::printColumnTitle(_fout, width);
-        StarParameterOut::printColumnTitle(_fout, width);
+        StarParameter::printColumnTitleAscii(_fout, width);
+        StarParameterOut::printColumnTitleAscii(_fout, width);
+        StarParameter::printColumnTitleAscii(_fout, width);
+        StarParameterOut::printColumnTitleAscii(_fout, width);
         _fout<<std::endl;
     };
 
@@ -342,23 +342,23 @@ int main(int argc, char** argv){
         _fout<<std::setw(width)<<_bin.period*bse_manager.tscale*3.6524e8;
         _fout<<std::setw(width)<<_bin.ecc;
         for (int k=0; k<2; k++) {
-            _bin.star[k].printColumn(_fout, width);
-            _bin.out[k].printColumn(_fout, width);
+            _bin.star[k].printColumnAscii(_fout, width);
+            _bin.out[k].printColumnAscii(_fout, width);
         }
         _fout<<std::endl;
     };
 
     auto printSingleColumnTitle=[&](std::ostream & _fout) {
         _fout<<std::setw(width)<<"Mass_init[Msun]";
-        StarParameter::printColumnTitle(_fout, width);
-        StarParameterOut::printColumnTitle(_fout, width);
+        StarParameter::printColumnTitleAscii(_fout, width);
+        StarParameterOut::printColumnTitleAscii(_fout, width);
         _fout<<std::endl;
     };
 
     auto printSingleColumn=[&](std::ostream & _fout, double& _mass0, StarParameter& _star, StarParameterOut& _out) {
         _fout<<std::setw(width)<<_mass0*bse_manager.mscale;
-        _star.printColumn(_fout, width);
-        _out.printColumn(_fout, width);
+        _star.printColumnAscii(_fout, width);
+        _out.printColumnAscii(_fout, width);
         _fout<<std::endl;
     };
 
@@ -501,7 +501,7 @@ int main(int argc, char** argv){
                                        <<std::setw(WRITE_WIDTH)<<2*i+2
                                        <<std::setw(WRITE_WIDTH)<<k+1
                                        <<std::setw(WRITE_WIDTH)<<dv[3]*bse_manager.vscale;
-                            bin[i].star[k].printColumn(fout_bse_sn, WRITE_WIDTH);
+                            bin[i].star[k].printColumnAscii(fout_bse_sn, WRITE_WIDTH);
                             fout_bse_sn<<std::endl;
                         }
                         if (nbin==1) {
@@ -596,8 +596,8 @@ int main(int argc, char** argv){
 #pragma omp critical 
                         {
                             fout_sse_type<<std::setw(WRITE_WIDTH)<<i+1;
-                            star_bk.printColumn(fout_sse_type, WRITE_WIDTH);
-                            star[i].printColumn(fout_sse_type, WRITE_WIDTH);
+                            star_bk.printColumnAscii(fout_sse_type, WRITE_WIDTH);
+                            star[i].printColumnAscii(fout_sse_type, WRITE_WIDTH);
                             fout_sse_type<<std::endl;
                         }
                     }
@@ -609,7 +609,7 @@ int main(int argc, char** argv){
                         {
                             fout_sse_sn<<std::setw(WRITE_WIDTH)<<i+1
                                        <<std::setw(WRITE_WIDTH)<<dv[3]*bse_manager.vscale;
-                            star[i].printColumn(fout_sse_sn, WRITE_WIDTH);
+                            star[i].printColumnAscii(fout_sse_sn, WRITE_WIDTH);
                             fout_sse_sn<<std::endl;
                         }
 

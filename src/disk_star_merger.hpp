@@ -675,7 +675,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
+    static void printColumnTitleAscii(std::ostream & _fout, const int _width=20) {
         _fout<<std::setw(_width)<<"type"
              <<std::setw(_width)<<"n_merger_star"
              <<std::setw(_width)<<"n_merger_bh"
@@ -689,7 +689,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumn(std::ostream & _fout, const int _width=20) const{
+    void printColumnAscii(std::ostream & _fout, const int _width=20) const{
         _fout<<std::setw(_width)<<type
              <<std::setw(_width)<<n_merger_star
              <<std::setw(_width)<<n_merger_bh

@@ -66,11 +66,11 @@ int main(int argc, char **argv){
     int width = 21;
     std::cout<<std::setprecision(14);
 
-    p1.printColumnTitle(std::cout, width);
+    p1.printColumnTitleAscii(std::cout, width);
     std::cout<<std::endl;
-    p1.printColumn(std::cout, width);
+    p1.printColumnAscii(std::cout, width);
     std::cout<<std::endl;
-    p2.printColumn(std::cout, width);
+    p2.printColumnAscii(std::cout, width);
     std::cout<<std::endl;
 
     PostNewtonian pn;

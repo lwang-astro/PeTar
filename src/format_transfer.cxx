@@ -94,9 +94,10 @@ public:
         return n_body;
     }
 
-    void writeBinaryStream(std::ostream& _fout) const{
+    void printColumnBinary(std::ostream& _fout) const{
         _fout.write(reinterpret_cast<const char*>(this), sizeof(FileHeader));
     }
+
 };
 
 

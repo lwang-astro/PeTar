@@ -465,8 +465,8 @@ int main(int argc, char** argv)
         } 
         else if (write_style==2) {
             // write snapshot with one line
-            stat.printColumn(fstatus, WRITE_WIDTH);
-            for (int i=0; i<stat.n_real_loc; i++) sys[i].printColumn(fstatus, WRITE_WIDTH);
+            stat.printColumnAscii(fstatus, WRITE_WIDTH);
+            for (int i=0; i<stat.n_real_loc; i++) sys[i].printColumnAscii(fstatus, WRITE_WIDTH);
             fstatus<<std::endl;
         }    
         profile.output.barrier();

@@ -43,7 +43,7 @@ struct Particle{
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
+    static void printColumnTitleAscii(std::ostream & _fout, const int _width=20) {
         _fout<<std::setw(_width)<<"mass"
              <<std::setw(_width)<<"pos.x"
              <<std::setw(_width)<<"pos.y"
@@ -64,7 +64,7 @@ struct Particle{
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumn(std::ostream & _fout, const int _width=20) const{
+    void printColumnAscii(std::ostream & _fout, const int _width=20) const{
         _fout<<std::setw(_width)<<mass
              <<std::setw(_width)<<pos[0]
              <<std::setw(_width)<<pos[1]
@@ -249,7 +249,7 @@ int main(int argc, char** argv){
                             pjk.writeBinary(fxy);
                         }
                         else {
-                            pjk.printColumn(fxy);
+                            pjk.printColumnAscii(fxy);
                             fxy<<std::endl;
                         }
                     }
@@ -275,7 +275,7 @@ int main(int argc, char** argv){
                             pjk.writeBinary(fxz);
                         }
                         else {
-                            pjk.printColumn(fxz);
+                            pjk.printColumnAscii(fxz);
                             fxz<<std::endl;
                         }   
                     }
@@ -309,7 +309,7 @@ int main(int argc, char** argv){
 
         Particle particles[n];
 
-        Particle::printColumnTitle(std::cout);
+        Particle::printColumnTitleAscii(std::cout);
         std::cout<<std::endl;
 
         for (int i=0; i<n; i++) {
@@ -326,7 +326,7 @@ int main(int argc, char** argv){
 #elif AGAMA
             agama_manager.calcAccPot(pi.acc, pi.pot, time, 0, pos, &pi.pos[0]);
 #endif
-            pi.printColumn(std::cout);
+            pi.printColumnAscii(std::cout);
             std::cout<<std::endl;
         }
     }    

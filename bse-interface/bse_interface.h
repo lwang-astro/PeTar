@@ -336,7 +336,7 @@ struct StarParameter{
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
+    static void printColumnTitleAscii(std::ostream & _fout, const int _width=20) {
         _fout<<std::setw(_width)<<"s_type"
              <<std::setw(_width)<<"s_mass0[M*]"
              <<std::setw(_width)<<"s_mass[M*]"
@@ -356,7 +356,7 @@ struct StarParameter{
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumn(std::ostream & _fout, const int _width=20) const{
+    void printColumnAscii(std::ostream & _fout, const int _width=20) const{
         _fout<<std::setw(_width)<<kw
              <<std::setw(_width)<<m0
              <<std::setw(_width)<<mt
@@ -422,7 +422,7 @@ struct StarParameterOut{
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
+    static void printColumnTitleAscii(std::ostream & _fout, const int _width=20) {
         _fout<<std::setw(_width)<<"type0"
              <<std::setw(_width)<<"m_CE[M*]"
              <<std::setw(_width)<<"r_CE[R*]"
@@ -439,7 +439,7 @@ struct StarParameterOut{
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumn(std::ostream & _fout, const int _width=20) const{
+    void printColumnAscii(std::ostream & _fout, const int _width=20) const{
         _fout<<std::setw(_width)<<kw0
              <<std::setw(_width)<<menv
              <<std::setw(_width)<<renv
@@ -726,7 +726,7 @@ class BinaryEvent{
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
+    static void printColumnTitleAscii(std::ostream & _fout, const int _width=20) {
         _fout<<std::setw(_width)<<"t[Myr]"
              <<std::setw(_width)<<"m1[M*]"
              <<std::setw(_width)<<"m2[M*]"
@@ -760,7 +760,7 @@ class BinaryEvent{
       @param[in] _width: print width (defaulted 20)
       @param[in] _index: event index to print
      */
-    void printColumn(std::ostream & _fout, const int _index, const int _width=20) const{
+    void printColumnAscii(std::ostream & _fout, const int _index, const int _width=20) const{
         for (int i=0; i<3; i++) _fout<<std::setw(_width)<<record[i][_index];
         for (int i=3; i<5; i++) _fout<<std::setw(_width)<<int(record[i][_index]);
         for (int i=5; i<9; i++) _fout<<std::setw(_width)<<record[i][_index];
@@ -1566,9 +1566,9 @@ public:
         assert(type>=0&&type<15);
         if (print_type_name) _fout<<std::setw(16)<<binary_type[type];
         _fout<<std::setw(_width)<<type;
-        if (k==0) _bin_event.printColumn(_fout, _bin_event.getEventIndexInit(), _width);
-        else _bin_event.printColumn(_fout, k-1, _width);
-        _bin_event.printColumn(_fout, k, _width);
+        if (k==0) _bin_event.printColumnAscii(_fout, _bin_event.getEventIndexInit(), _width);
+        else _bin_event.printColumnAscii(_fout, k-1, _width);
+        _bin_event.printColumnAscii(_fout, k, _width);
     }
 
     //! get velocity change in NB unit

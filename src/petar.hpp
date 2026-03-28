@@ -1832,10 +1832,10 @@ public:
             if(my_rank==0) {
                 // status output
                 if (output_binary_flag) {
-                    stat.writeBinaryColumn(fstatus);
+                    stat.printColumnBinary(fstatus);
                 }
                 else {
-                    stat.printColumn(fstatus, WRITE_WIDTH);
+                    stat.printColumnAscii(fstatus, WRITE_WIDTH);
                     fstatus<<std::endl;
                 }
 
@@ -1853,10 +1853,10 @@ public:
         else if(write_style==2&&my_rank==0) {
             // write snapshot with one line
             if (output_binary_flag) {
-                stat.writeBinaryColumn(fstatus);
+                stat.printColumnBinary(fstatus);
             }
             else {
-                stat.printColumn(fstatus, WRITE_WIDTH);
+                stat.printColumnAscii(fstatus, WRITE_WIDTH);
             }
             for (int i=0; i<stat.n_real_loc; i++) {
 #ifdef RECORD_CM_IN_HEADER
@@ -1864,17 +1864,17 @@ public:
                     FPSoft pi = system_soft[i];
                     pi.pos += stat.pcm.pos;
                     pi.vel += stat.pcm.vel;
-                    pi.writeBinaryStream(fstatus);
+                    pi.printColumnBinary(fstatus);
                 }
                 else {
-                    system_soft[i].printColumnWithOffset(stat.pcm, fstatus, WRITE_WIDTH);
+                    system_soft[i].printColumnAsciiWithOffset(stat.pcm, fstatus, WRITE_WIDTH);
                 }
 #else
                 if (output_binary_flag) {
-                    system_soft[i].writeBinaryStream(fstatus);
+                    system_soft[i].printColumnBinary(fstatus);
                 }
                 else {
-                    system_soft[i].printColumn(fstatus, WRITE_WIDTH);
+                    system_soft[i].printColumnAscii(fstatus, WRITE_WIDTH);
                 }
 #endif
             }
@@ -1883,10 +1883,10 @@ public:
         // write status only
         else if(write_style==3&&my_rank==0) {
             if (output_binary_flag) {
-                stat.writeBinaryColumn(fstatus);
+                stat.printColumnBinary(fstatus);
             }
             else {
-                stat.printColumn(fstatus, WRITE_WIDTH);
+                stat.printColumnAscii(fstatus, WRITE_WIDTH);
                 fstatus<<std::endl;
             }
         }
@@ -2254,11 +2254,11 @@ public:
                         if (isOutputBinary()) {
                             const PS::F64 time_out = stat.time;
                             fesc.write(reinterpret_cast<const char*>(&time_out), sizeof(time_out));
-                            system_soft[index].writeBinaryStream(fesc);
+                            system_soft[index].printColumnBinary(fesc);
                         }
                         else {
                             fesc<<std::setw(WRITE_WIDTH)<<stat.time;
-                            system_soft[index].printColumn(fesc,WRITE_WIDTH);
+                            system_soft[index].printColumnAscii(fesc,WRITE_WIDTH);
                             fesc<<std::endl;
                         }
                     }
@@ -2707,9 +2707,9 @@ public:
             else {
                 fstatus.open((fname_snp+".status").c_str(),std::ofstream::out|status_mode);
                 // write titles of columns
-                //stat.printColumnTitle(fstatus,WRITE_WIDTH);
+                //stat.printColumnTitleAscii(fstatus,WRITE_WIDTH);
                 //if (write_style==2) {
-                //    for (int i=0; i<stat.n_real_loc; i++) system_soft[0].printColumnTitle(fstatus, WRITE_WIDTH);
+                //    for (int i=0; i<stat.n_real_loc; i++) system_soft[0].printColumnTitleAscii(fstatus, WRITE_WIDTH);
                 //}
                 //fstatus<<std::endl;
             }
@@ -2727,7 +2727,7 @@ public:
                 fesc.open(fname_esc.c_str(), std::ofstream::out|esc_mode);
                 // write titles of columns, will cause issue when gether different MPI ranks
                 // fesc<<std::setw(WRITE_WIDTH)<<"Time";
-                // FPSoft::printColumnTitle(fesc,WRITE_WIDTH);
+                // FPSoft::printColumnTitleAscii(fesc,WRITE_WIDTH);
                 // fesc<<std::endl;
             }
             fesc<<std::setprecision(WRITE_PRECISION);

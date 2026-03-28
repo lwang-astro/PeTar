@@ -108,7 +108,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 16)
     */
-    void printColumnTitle(std::ofstream & _fout, const PS::S32 _width=16) const {
+    void printColumnTitleAscii(std::ofstream & _fout, const PS::S32 _width=16) const {
         _fout<<std::setw(_width)<<"Error"
              <<std::setw(_width)<<"Error_cum"
              <<std::setw(_width)<<"Ekin"
@@ -142,7 +142,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 16)
     */
-    void printColumn(std::ofstream & _fout, const PS::S32 _width=16) const {
+    void printColumnAscii(std::ofstream & _fout, const PS::S32 _width=16) const {
         _fout<<std::setw(_width)<<getEnergyError() - error_cum_pre
              <<std::setw(_width)<<getEnergyError()
              <<std::setw(_width)<<ekin
@@ -175,7 +175,7 @@ public:
     /*! Notice no record separator is written at the end.
       @param[out] _fout: std::ostream output object
      */
-    void writeBinaryColumn(std::ostream& _fout) const {
+    void printColumnBinary(std::ostream& _fout) const {
         const PS::F64 error = getEnergyError() - error_cum_pre;
         const PS::F64 error_cum = getEnergyError();
         const PS::F64 etot = ekin + epot;

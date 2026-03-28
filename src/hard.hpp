@@ -1087,14 +1087,14 @@ public:
 
 
 #ifdef HARD_DEBUG_PRINT_TITLE
-            sym_int.printColumnTitle(std::cerr, WRITE_WIDTH, sym_int.info.binarytree.getSize());
+            sym_int.printColumnTitleAscii(std::cerr, WRITE_WIDTH, sym_int.info.binarytree.getSize());
             std::cerr<<std::endl;
 #endif
 #ifdef HARD_DEBUG_PRINT
             n_sd = sym_int.info.binarytree.getSize();
             fout_debug.open(output_filename_prefix + "_sdar_" + std::to_string(n_members) + "_" + std::to_string(n_sd) + ".log", std::ofstream::out|std::ofstream::app);
             fout_debug<<std::setprecision(WRITE_PRECISION);
-            sym_int.printColumn(fout_debug, WRITE_WIDTH, n_sd);
+            sym_int.printColumnAscii(fout_debug, WRITE_WIDTH, n_sd);
             fout_debug<<std::endl;
 #endif
         }
@@ -1283,14 +1283,14 @@ public:
 #endif
 
 #ifdef HARD_DEBUG_PRINT_TITLE
-            h4_int.printColumnTitle(std::cerr, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
+            h4_int.printColumnTitleAscii(std::cerr, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
             std::cerr<<std::endl;
 #endif
 #ifdef HARD_DEBUG_PRINT
             PS::S32 n_members = h4_int.particles.getSize();
             fout_debug.open(output_filename_prefix + "_h4_" + std::to_string(n_members) + "_" + std::to_string(n_group_sub_tot_init) + ".log", std::ofstream::out|std::ofstream::app);
             fout_debug<<std::setprecision(WRITE_PRECISION);
-            h4_int.printColumn(fout_debug, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
+            h4_int.printColumnAscii(fout_debug, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
             fout_debug<<std::endl;
 #endif
         }
@@ -1356,7 +1356,7 @@ public:
 #endif
 
 #ifdef HARD_DEBUG_PRINT
-            sym_int.printColumn(fout_debug, WRITE_WIDTH, n_sd);
+            sym_int.printColumnAscii(fout_debug, WRITE_WIDTH, n_sd);
             fout_debug<<std::endl;
 #endif
         }
@@ -1500,7 +1500,7 @@ public:
                 if ( int(time_ratio) - time_ratio == 0) {
                     h4_int.calcEnergySlowDown(false);
 
-                    h4_int.printColumn(fout_debug, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
+                    h4_int.printColumnAscii(fout_debug, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
                     fout_debug<<std::endl;
 
                     PS::F64 de_sd   = h4_int.getEnergyErrorSlowDown();

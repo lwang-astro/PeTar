@@ -133,7 +133,7 @@ public:
 #endif
     }
 
-    void writeBinaryStream(std::ostream& _fout) const{
+    void printColumnBinary(std::ostream& _fout) const{
         Ptcl::writeBinary(_fout);
 #ifdef EXTERNAL_POT_IN_PTCL
         _fout.write(reinterpret_cast<const char*>(&(this->acc)), sizeof(PS::F64)*7);
@@ -239,8 +239,8 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
-        Ptcl::printColumnTitle(_fout, _width);
+    static void printColumnTitleAscii(std::ostream & _fout, const int _width=20) {
+        Ptcl::printColumnTitleAscii(_fout, _width);
         _fout<<std::setw(_width)<<"acc_soft.x"
              <<std::setw(_width)<<"acc_soft.y"
              <<std::setw(_width)<<"acc_soft.z"
@@ -290,8 +290,8 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumn(std::ostream & _fout, const int _width=20){
-        Ptcl::printColumn(_fout, _width);
+    void printColumnAscii(std::ostream & _fout, const int _width=20){
+        Ptcl::printColumnAscii(_fout, _width);
         _fout<<std::setw(_width)<<acc.x
              <<std::setw(_width)<<acc.y
              <<std::setw(_width)<<acc.z
@@ -315,8 +315,8 @@ public:
       @param[in] _width: print width (defaulted 20)
      */
     template <class Tpcm>
-    void printColumnWithOffset(Tpcm& _pcm, std::ostream & _fout, const int _width=20){
-        Ptcl::printColumnWithOffset(_pcm, _fout, _width);
+    void printColumnAsciiWithOffset(Tpcm& _pcm, std::ostream & _fout, const int _width=20){
+        Ptcl::printColumnAsciiWithOffset(_pcm, _fout, _width);
         _fout<<std::setw(_width)<<acc.x
              <<std::setw(_width)<<acc.y
              <<std::setw(_width)<<acc.z

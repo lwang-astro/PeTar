@@ -42,7 +42,7 @@ public:
           @param[out] _fout: std::ostream output object
           @param[in] _width: print width (defaulted 20)
         */
-        void printColumnTitle(std::ofstream & _fout, const PS::S32 _width=20) {
+        void printColumnTitleAscii(std::ofstream & _fout, const PS::S32 _width=20) {
             _fout<<std::setw(_width)<<"CM.mass"
                  <<std::setw(_width)<<"CM.pos.x"
                  <<std::setw(_width)<<"CM.pos.y"
@@ -57,7 +57,7 @@ public:
           @param[out] _fout: std::ostream output object
           @param[in] _width: print width (defaulted 20)
         */
-        void printColumn(std::ofstream & _fout, const PS::S32 _width=20) {
+        void printColumnAscii(std::ofstream & _fout, const PS::S32 _width=20) {
             _fout<<std::setw(_width)<<mass
                  <<std::setw(_width)<<pos.x
                  <<std::setw(_width)<<pos.y
@@ -68,7 +68,7 @@ public:
         }
 
         //! write data of class members using the same order as printColumn in binary format
-        void writeBinaryColumn(std::ostream& _fout) const {
+        void printColumnBinary(std::ostream& _fout) const {
             _fout.write(reinterpret_cast<const char*>(&mass), sizeof(mass));
             _fout.write(reinterpret_cast<const char*>(&pos.x), sizeof(pos.x));
             _fout.write(reinterpret_cast<const char*>(&pos.y), sizeof(pos.y));
@@ -447,7 +447,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
     */
-    void printColumnTitle(std::ofstream & _fout, const PS::S32 _width=20) {
+    void printColumnTitleAscii(std::ofstream & _fout, const PS::S32 _width=20) {
         _fout<<std::setw(_width)<<"Time"
              <<std::setw(_width)<<"N_real_loc"
              <<std::setw(_width)<<"N_real_glb"
@@ -455,8 +455,8 @@ public:
              <<std::setw(_width)<<"N_all_glb"
              <<std::setw(_width)<<"N_rm_glb"
              <<std::setw(_width)<<"N_esc_glb";
-        energy.printColumnTitle(_fout, _width);
-        pcm.printColumnTitle(_fout, _width);
+        energy.printColumnTitleAscii(_fout, _width);
+        pcm.printColumnTitleAscii(_fout, _width);
     }
 
     //! print data of class members using column style
@@ -464,7 +464,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
     */
-    void printColumn(std::ofstream & _fout, const PS::S32 _width=20) {
+    void printColumnAscii(std::ofstream & _fout, const PS::S32 _width=20) {
         _fout<<std::setw(_width)<<time
              <<std::setw(_width)<<n_real_loc
              <<std::setw(_width)<<n_real_glb
@@ -472,15 +472,15 @@ public:
              <<std::setw(_width)<<n_all_glb
              <<std::setw(_width)<<n_remove_glb
              <<std::setw(_width)<<n_escape_glb;
-        energy.printColumn(_fout, _width);
-        pcm.printColumn(_fout, _width);
+        energy.printColumnAscii(_fout, _width);
+        pcm.printColumnAscii(_fout, _width);
     }
 
     //! write data of class members using the same order as printColumn in binary format
     /*! Notice no record separator is written at the end.
       @param[out] _fout: std::ostream output object
      */
-    void writeBinaryColumn(std::ostream& _fout) const {
+    void printColumnBinary(std::ostream& _fout) const {
         const PS::S64 n_remove_glb64 = n_remove_glb;
         const PS::S64 n_escape_glb64 = n_escape_glb;
         _fout.write(reinterpret_cast<const char*>(&time), sizeof(time));
@@ -490,8 +490,8 @@ public:
         _fout.write(reinterpret_cast<const char*>(&n_all_glb), sizeof(n_all_glb));
         _fout.write(reinterpret_cast<const char*>(&n_remove_glb64), sizeof(n_remove_glb64));
         _fout.write(reinterpret_cast<const char*>(&n_escape_glb64), sizeof(n_escape_glb64));
-        energy.writeBinaryColumn(_fout);
-        pcm.writeBinaryColumn(_fout);
+        energy.printColumnBinary(_fout);
+        pcm.printColumnBinary(_fout);
     }
 
     //! print title and values in one lines

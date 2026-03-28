@@ -15,14 +15,14 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
     */
-    void printColumnTitle(std::ostream & _fout, const int _width=20) {}
+    void printColumnTitleAscii(std::ostream & _fout, const int _width=20) {}
 
     //! print data of class members using column style
     /*! print data of class members in one line for column style. Notice no newline is printed at the end
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
     */
-    void printColumn(std::ostream & _fout, const int _width=20) {}
+    void printColumnAscii(std::ostream & _fout, const int _width=20) {}
 
     //! clear function
     void clear(){ }

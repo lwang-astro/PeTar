@@ -152,7 +152,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
+    static void printColumnTitleAscii(std::ostream & _fout, const int _width=20) {
         _fout<<std::setw(_width)<<"mass_bk"
              <<std::setw(_width)<<"status";
     }
@@ -177,7 +177,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumn(std::ostream & _fout, const int _width=20){
+    void printColumnAscii(std::ostream & _fout, const int _width=20){
         _fout<<std::setw(_width)<<mass_backup
              <<std::setw(_width)<<status;
     }

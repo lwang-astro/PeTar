@@ -321,7 +321,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
+        static void printColumnTitleAscii(std::ostream & _fout, const int _width=20) {
         _fout<<std::setw(_width)<<"mass"
              <<std::setw(_width)<<"pos.x"
              <<std::setw(_width)<<"pos.y"
@@ -336,7 +336,7 @@ public:
              <<std::setw(_width)<<"t_record"
              <<std::setw(_width)<<"t_interrupt";
 #if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
-        StarParameter::printColumnTitle(_fout, _width);
+    StarParameter::printColumnTitleAscii(_fout, _width);
 #endif
 #endif
     }
@@ -382,7 +382,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumn(std::ostream & _fout, const int _width=20) const{
+        void printColumnAscii(std::ostream & _fout, const int _width=20) const{
         _fout<<std::setw(_width)<<mass
              <<std::setw(_width)<<pos.x
              <<std::setw(_width)<<pos.y
@@ -402,7 +402,7 @@ public:
              <<std::setw(_width)<<time_record
              <<std::setw(_width)<<time_interrupt;
 #if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
-        star.printColumn(_fout, _width);
+    star.printColumnAscii(_fout, _width);
 #endif
 #endif
     }
@@ -414,7 +414,7 @@ public:
       @param[in] _width: print width (defaulted 20)
      */
         template <class Tpcm>
-        void printColumnWithOffset(Tpcm& _pcm, std::ostream & _fout, const int _width=20) const{
+        void printColumnAsciiWithOffset(Tpcm& _pcm, std::ostream & _fout, const int _width=20) const{
         _fout<<std::setw(_width)<<mass;
 #ifdef PETAR_USE_MPFRC
         mprealVec pos_mp(pos, pos_high);
@@ -442,11 +442,15 @@ public:
              <<std::setw(_width)<<time_record
              <<std::setw(_width)<<time_interrupt;
 #if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
-        star.printColumn(_fout, _width);
+    star.printColumnAscii(_fout, _width);
 #endif
 #endif
     }
-    
+
+    template <class Tpcm>
+    void printColumnWithOffset(Tpcm& _pcm, std::ostream & _fout, const int _width=20) const{
+        printColumnAsciiWithOffset(_pcm, _fout, _width);
+    }
 
     //! Copy from another ParticleBase 
     /*! This is used for data transfer between nodes and between soft and hard parts

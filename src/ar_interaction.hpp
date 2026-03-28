@@ -858,9 +858,9 @@ public:
                     fout_sse<<"Type_change ";
                     //bse_manager.printTypeChange(fout_sse, _p.star, output);
                     fout_sse<<std::setw(WRITE_WIDTH)<<_p.id;
-                    star_bk.printColumn(fout_sse, WRITE_WIDTH);
-                    _p.star.printColumn(fout_sse, WRITE_WIDTH);
-                    //output.printColumn(fout_sse, WRITE_WIDTH);
+                    star_bk.printColumnAscii(fout_sse, WRITE_WIDTH);
+                    _p.star.printColumnAscii(fout_sse, WRITE_WIDTH);
+                    //output.printColumnAscii(fout_sse, WRITE_WIDTH);
                     fout_sse<<std::endl;
                 }
             }
@@ -878,7 +878,7 @@ public:
                         fout_sse<<"SN_kick "
                                 <<std::setw(WRITE_WIDTH)<<_p.id
                                 <<std::setw(WRITE_WIDTH)<<dvabs*bse_manager.vscale;
-                        _p.star.printColumn(fout_sse, WRITE_WIDTH);
+                        _p.star.printColumnAscii(fout_sse, WRITE_WIDTH);
                         fout_sse<<std::endl;
                     }
                 }
@@ -1272,7 +1272,7 @@ public:
                                         <<std::setw(WRITE_WIDTH)<<p2->id
                                         <<std::setw(WRITE_WIDTH)<<k+1
                                         <<std::setw(WRITE_WIDTH)<<vkick[k][3]*bse_manager.vscale;
-                                pk->star.printColumn(fout_bse, WRITE_WIDTH);
+                                pk->star.printColumnAscii(fout_bse, WRITE_WIDTH);
                                 fout_bse<<std::endl;
                             }
                         }
@@ -1348,11 +1348,11 @@ public:
                                         <<std::setw(WRITE_WIDTH)<<sd_factor;
 #endif
                                 // before
-                                p1_star_bk.printColumn(fout_bse, WRITE_WIDTH);
-                                p2_star_bk.printColumn(fout_bse, WRITE_WIDTH);
+                                p1_star_bk.printColumnAscii(fout_bse, WRITE_WIDTH);
+                                p2_star_bk.printColumnAscii(fout_bse, WRITE_WIDTH);
                                 // after
-                                p1->star.printColumn(fout_bse, WRITE_WIDTH);
-                                p2->star.printColumn(fout_bse, WRITE_WIDTH);
+                                p1->star.printColumnAscii(fout_bse, WRITE_WIDTH);
+                                p2->star.printColumnAscii(fout_bse, WRITE_WIDTH);
                                 fout_bse<<std::endl;
 
                                 DATADUMP("dump_merger");
@@ -1364,7 +1364,7 @@ public:
                     // print data
 #pragma omp critical
                     {
-                        _bin_interrupt.printColumn(fout_interrupt, WRITE_WIDTH, true);
+                        _bin_interrupt.printColumnAscii(fout_interrupt, WRITE_WIDTH, true);
                         fout_interrupt<<std::endl;
 
                         DATADUMP("dump_interrupt"); 
@@ -1587,9 +1587,9 @@ public:
                                             <<std::setw(WRITE_WIDTH)<<ecc  //old
                                             <<std::setw(WRITE_WIDTH)<<Etid
                                             <<std::setw(WRITE_WIDTH)<<Ltid;
-                                    _bin.BinarySlowDown::printColumn(fout_bse, WRITE_WIDTH);
-                                    p1->star.printColumn(fout_bse, WRITE_WIDTH);
-                                    p2->star.printColumn(fout_bse, WRITE_WIDTH);
+                                    _bin.BinarySlowDown::printColumnAscii(fout_bse, WRITE_WIDTH);
+                                            p1->star.printColumnAscii(fout_bse, WRITE_WIDTH);
+                                            p2->star.printColumnAscii(fout_bse, WRITE_WIDTH);
                                     fout_bse<<std::endl;
                                 }
 
