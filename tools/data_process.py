@@ -152,16 +152,21 @@ def getProcessedTimeSet(filename_prefix, output_format, kwargs):
     return processed_time
 
 
+def readSnapshotHeader(path, kwargs):
+    header_kwargs = kwargs.copy()
+    header_kwargs.setdefault('snapshot_format', 'binary')
+    return petar.PeTarDataHeader(path, **header_kwargs)
+
+
 def filterUnprocessedSnapshots(path_list, filename_prefix, output_format, kwargs):
     processed_time = getProcessedTimeSet(filename_prefix, output_format, kwargs)
     if (len(processed_time) == 0):
         return path_list, 0
 
-    snapshot_format = kwargs.get('snapshot_format', 'binary')
     path_rest = []
     n_skip = 0
     for path in path_list:
-        header = petar.PeTarDataHeader(path, snapshot_format=snapshot_format, **kwargs)
+        header = readSnapshotHeader(path, kwargs)
         tkey = np.round(header.time, 12)
         if (tkey in processed_time):
             n_skip += 1
@@ -174,11 +179,10 @@ def filterSnapshotsFromTime(path_list, time_min, kwargs):
     if (time_min is None):
         return path_list, 0
 
-    snapshot_format = kwargs.get('snapshot_format', 'binary')
     path_rest = []
     n_skip = 0
     for path in path_list:
-        header = petar.PeTarDataHeader(path, snapshot_format=snapshot_format, **kwargs)
+        header = readSnapshotHeader(path, kwargs)
         if (header.time >= time_min):
             path_rest.append(path)
         else:
@@ -418,8 +422,7 @@ if __name__ == '__main__':
             kwargs['realtime_save_mode'] = write_option
             print('Auto-resume: detected %d processed snapshots, continue with %d remaining snapshots.' % (n_skip, len(path_list)))
             if (len(path_list) > 0):
-                snapshot_format = kwargs.get('snapshot_format', 'binary')
-                header_next = petar.PeTarDataHeader(path_list[0], snapshot_format=snapshot_format, **kwargs)
+                header_next = readSnapshotHeader(path_list[0], kwargs)
                 print('Auto-resume start from snapshot:', path_list[0], 'time:', header_next.time)
 
     if (resume_from_time is not None):
@@ -429,8 +432,7 @@ if __name__ == '__main__':
             kwargs['realtime_save_mode'] = write_option
         print('Resume-from-time: %.12g, skipped %d snapshots, remaining %d snapshots.' % (resume_from_time, n_skip_time, len(path_list)))
         if (len(path_list) > 0):
-            snapshot_format = kwargs.get('snapshot_format', 'binary')
-            header_next = petar.PeTarDataHeader(path_list[0], snapshot_format=snapshot_format, **kwargs)
+            header_next = readSnapshotHeader(path_list[0], kwargs)
             print('Resume-from-time start snapshot:', path_list[0], 'time:', header_next.time)
 
     if (recover_parallel_only):
