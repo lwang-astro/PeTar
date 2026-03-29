@@ -1,5 +1,16 @@
+set -e
+
 # use mcluster to generate a star cluster with the initial condition: N=1000 Kroupa (2001) IMF, 95% binary (Kroupa 1995 a,b Sana 2012 ..., see mcluster manual) and place in the Milkyway potential
 # The initial condition for NBODY6++GPU is created with -C 5, this is used to generated initial condtion for PeTar
+if ! command -v mcluster >/dev/null 2>&1; then
+    echo "Error: mcluster is not found in PATH. Please install mcluster first." >&2
+    exit 1
+fi
+
+if ! command -v petar.select >/dev/null 2>&1; then
+	echo "Error: petar.select is not found in PATH. Please run 'make install' for PeTar first." >&2
+	exit 1
+fi
 mcluster -N 1000 -b 0.95 -C 5 -u 1 >mc.log
 
 # use petar.init to create initial data for petar.
@@ -19,6 +30,7 @@ petar.init -c 8000,0,0,0,220,0 -t -s bse -v kms2pcmyr -f input test.dat.10
 # To switch on SSE/BSE stellar evolution package and Galpy potential package, the option '--with-interrupt=bse --with-external=galpy' is needed during configuration of petar.
 # Parallel hint: for N~10^3 with many primordial binaries (this sample), multi-threading can help.
 # If needed, set 'OMP_NUM_THREADS=[number of threads]' (e.g. 2-4) and benchmark on your machine.
+petar.select --require bse,galpy --optional mpi,omp,avx512,avx2
 OMP_STACKSIZE=128M petar -u 1 -b 500 --galpy-set MWPotential2014 --bse-metallicity 0.02 -t 100.0 -o 5.0 input &>output
 
 # after mode finished, gether the output data and do post-data process to detect binaries, obtain Lagrangian and core radii and corresponding properties.

@@ -68,3 +68,30 @@
 ```text
 请给出本次 skill 改动建议提交文件清单，并单独列出环境相关生成文件（可选提交）。
 ```
+
+## 8) Python 分析代码直出（基于 data_analysis.ipynb）
+
+```text
+请参考 sample/data_analysis.ipynb，直接给我可运行 Python 代码（不是 shell 命令）来做以下分析：
+- 读取 data.10 与 data.10.binary，并绘制 semi-ecc 分布
+- 读取 data.lagr 并绘制 0.1/0.3/0.5/0.7/0.9 及 core 半径随时间演化
+- 若是 BSE 场景，额外绘制 HR 图（温度-光度，按 stellar type 着色）
+要求：
+1) 明确写出 interrupt_mode/external_mode/G/snapshot_format 的匹配参数
+2) 原始 snapshot 使用正确 header offset
+3) 输出一段可直接复制运行的完整代码
+```
+
+## 9) Python 事件与对象时序分析
+
+```text
+请给我 Python 代码，读取并分析以下文件（基于 sample/data_analysis.ipynb 模式）：
+- data.sse.type_change, data.sse.sn_kick
+- data.bse.type_change, data.bse.sn_kick, data.bse.gw_kick, data.bse.dynamic_merge
+- object.1 或 object.MS.MS.binary（来自 petar.get.object.snap）
+任务：
+1) 打印前 10 条关键事件表
+2) 用 BSEMerge 汇总 merger candidate
+3) 画 object.1 的 x-y 轨迹（颜色为 time）或 BMS 的 semi-time 散点图
+并说明每一步读取时需要的类与关键参数。
+```

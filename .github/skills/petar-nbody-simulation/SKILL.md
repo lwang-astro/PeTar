@@ -1,6 +1,6 @@
 ---
 name: petar-nbody-simulation
-description: "Use when: setting up or running PeTar N-body simulations, including petar.init conversion, isolated clusters, BSE/SSE, Galpy or Agama external potential, MPI/OpenMP/GPU launch, restart/resume, petar.data post-processing, timestep tuning with petar.find.dt, output gathering with petar.data.gether, restart cleanup with petar.data.clear, snapshot extraction with petar.get.object.snap, format conversion with petar.format.transfer.post, galev processing, and movie generation."
+description: "Use when: setting up or running PeTar N-body simulations, including petar.select binary-family switching, petar.init conversion, isolated clusters, BSE/SSE, Galpy or Agama external potential, MPI/OpenMP/GPU launch, restart/resume, petar.data post-processing, timestep tuning with petar.find.dt, output gathering with petar.data.gether, restart cleanup with petar.data.clear, snapshot extraction with petar.get.object.snap, format conversion with petar.format.transfer.post, galev processing, and movie generation."
 ---
 
 # PeTar N-body Simulation Skill
@@ -17,6 +17,7 @@ Prefer these examples and docs as the source of truth:
 - `sample/star_cluster_plummer_N1k.sh`
 - `sample/star_cluster_plummer_N1k_binaries_bse.sh`
 - `sample/star_cluster_plummer_N1k_binaries_bse_GalpyMWPot.sh`
+- `sample/data_analysis.ipynb` (Python post-processing and plotting patterns)
 - `README.md` sections for OpenMP, MPI, GPU, restart, and options.
 - `assets/option-matrix.md` (generated from installed binary help)
 - `assets/script-tools.md` (installed script-tool inventory from Makefile.in)
@@ -28,6 +29,7 @@ Prefer these examples and docs as the source of truth:
 The repository installs the following workflow tools via `install_script_tool` in `Makefile.in`.
 
 - `petar.init`
+- `petar.select`
 - `petar.find.dt`
 - `petar.update.par`
 - `petar.data.clear`
@@ -52,6 +54,14 @@ Use these tools proactively when the user intent matches the task.
 
 - `petar.init`:
   convert raw particle tables into PeTar input snapshots.
+- `petar.select`:
+  switch installed symlinks `petar`, `petar.hard.debug`, and `petar.format.transfer` to a selected installed binary family.
+  Support direct target mode (`petar.select <suffix|binary-name>`), feature auto-select mode (`petar.select --require ... [--optional ...]`), and listing (`petar.select --list`).
+  In feature mode, all required tokens must match; optional tokens are used for ranking.
+  Treat physics/structure-sensitive families as require-only: interrupt (`base`, `bse`, `mobse`, `bseEmp`), external (`galpy`, `agama`), external-hard (`gasdrag`), `pn*`, and `mpfrc` (suffix token `mp`).
+  In other words, candidates containing these tokens are excluded unless explicitly requested in `--require`.
+  If no match exists, surface configure hints mapped from required features (for example, `bse -> --with-interrupt=bse`, `galpy -> --with-external=galpy`).
+  Unknown feature handling: `--require` must fail fast; `--optional` should warn and ignore unsupported tokens.
 - `petar.find.dt`:
   find a suitable tree time step for a given snapshot and launch configuration.
 - `petar.update.par`:
@@ -82,6 +92,9 @@ Use these tools proactively when the user intent matches the task.
 
 If the user asks for one of these tasks, do not answer only with general advice; provide the corresponding tool command pattern.
 
+For binary-family switching requests, prefer `petar.select` over manually editing symlinks.
+When the request contains physics requirements (for example, `bse`, `galpy`, `agama`), use `--require` first and keep performance-related tokens (for example, `mpi`, `omp`, `avx512`, `avx2`) in `--optional`.
+
 ## Installed Binary Families (Current Host)
 
 Do not assume a fixed install directory or a fixed SIMD family.
@@ -101,6 +114,7 @@ Requirement-driven selection rule:
   - `--with-external` controls long-timescale external potential in tree steps (`galpy`, `agama`).
   - `--with-external-hard` controls short-timescale external forces in hard integrators (`gasdrag`).
   - `--with-pn` controls post-Newtonian relativistic corrections (`pn*`).
+  - `--enable-mpfrc` changes position representation precision and affects snapshot structure compatibility (`mp` suffix token).
 3. Filter binaries by required feature suffixes first using `assets/option-matrix.md` section `Requirement-Driven Solver Filters`.
 4. After filtering, rank candidates by performance suffix priority: `gpu` > `avx512` > `avx2` > `omp` > `mpi`.
 5. Still validate requested options against `<selected_binary> -h` before emitting commands.
@@ -536,6 +550,150 @@ petar.movie [options] <snapshot_list>
 ```bash
 petar.external.pot.movie [options] <petar.external_parameter_file>
 ```
+
+## Python Data Analysis Templates (from `sample/data_analysis.ipynb`)
+
+When the user asks for analysis of PeTar outputs, provide runnable Python code snippets (not only shell commands), reusing these patterns.
+
+### Minimal Setup
+
+```python
+import petar
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+```
+
+### Read Original Snapshots
+
+- pure gravity:
+
+```python
+filename = 'data.10'
+header = petar.PeTarDataHeader(path + filename)
+particle = petar.Particle()
+particle.fromfile(path + filename, offset=petar.HEADER_OFFSET)
+```
+
+- SSE/BSE compiled:
+
+```python
+particle = petar.Particle(interrupt_mode='bse')
+particle.fromfile(path + 'data.10', offset=petar.HEADER_OFFSET)
+```
+
+- Galpy external potential:
+
+```python
+header = petar.PeTarDataHeader(path + 'data.10', external_mode='galpy')
+particle = petar.Particle(interrupt_mode='bse', external_mode='galpy')
+particle.fromfile(path + 'data.10', offset=petar.HEADER_OFFSET_WITH_CM)
+```
+
+### Read Post-processed Outputs (`petar.data.process`)
+
+```python
+single = petar.Particle()
+single.fromfile(path + 'data.10.single')
+
+binary = petar.Binary(member_particle_type=petar.Particle,
+            interrupt_mode='bse', external_mode='galpy',
+            G=petar.G_MSUN_PC_MYR)
+binary.fromfile(path + 'data.10.binary')
+
+lagr = petar.LagrangianMultiple()
+lagr.fromfile(path + 'data.lagr')
+```
+
+### Read Group Files (`petar.data.gether -g`)
+
+```python
+g2 = petar.GroupInfo(N=2); g2.fromfile(path + 'data.group.n2')
+g3 = petar.GroupInfo(N=3); g3.fromfile(path + 'data.group.n3')
+g4 = petar.GroupInfo(N=4); g4.fromfile(path + 'data.group.n4')
+```
+
+### Read Stellar-Evolution Event Files
+
+```python
+sse_type = petar.SSETypeChange();    sse_type.loadtxt(path + 'data.sse.type_change')
+sse_kick = petar.SSESNKick();        sse_kick.loadtxt(path + 'data.sse.sn_kick')
+bse_type = petar.BSETypeChange();    bse_type.loadtxt(path + 'data.bse.type_change')
+bse_kick = petar.BSEKick();          bse_kick.loadtxt(path + 'data.bse.sn_kick')
+bse_gw_kick = petar.BSEKick();       bse_gw_kick.loadtxt(path + 'data.bse.gw_kick')
+bse_dyn = petar.BSEDynamicMerge();   bse_dyn.loadtxt(path + 'data.bse.dynamic_merge')
+
+merger = petar.BSEMerge()
+merger.combine(bse_type, bse_dyn)
+```
+
+### Read `petar.get.object.snap` Outputs (time series)
+
+```python
+bms = petar.Binary(member_particle_type=petar.Particle,
+           interrupt_mode='bse', G=petar.G_MSUN_PC_MYR)
+bms.addNewMember('time', np.array([], dtype=float))
+bms.fromfile(path + 'object.MS.MS.binary')
+
+p1 = petar.Particle(interrupt_mode='bse')
+p1.addNewMember('time', np.array([], dtype=float))
+p1.fromfile(path + 'object.1')
+```
+
+### Read `data.status` for Few-body `-w 2` Runs
+
+```python
+status = petar.Status(external_mode='galpy', N_particle=1)
+status.fromfile(path + 'data.status')
+pos = status.particles.p0.pos
+```
+
+### Plot Templates
+
+- HR diagram (BSE):
+
+```python
+lum = particle.star.lum
+temp = 5778 * (particle.star.lum / (particle.star.rad * particle.star.rad))**0.25
+fig, ax = plt.subplots(1, 1)
+norm = colors.BoundaryNorm(boundaries=np.arange(16), ncolors=256)
+pt = ax.scatter(temp, lum, c=particle.star.type, cmap='rainbow', norm=norm)
+plt.colorbar(pt, ax=ax, label='SSE stellar type')
+ax.set_xscale('log'); ax.set_yscale('log')
+ax.set_xlim(30000, 1000); ax.set_ylim(1e-5, 1e6)
+ax.set_xlabel('Temperature'); ax.set_ylabel('Luminosity')
+```
+
+- Lagrangian radii evolution:
+
+```python
+fig, ax = plt.subplots(1, 1)
+for i in range(5):
+  ax.plot(lagr.time, lagr.all.r[:, i], '-', label=lagr.initargs['mass_fraction'][i])
+ax.plot(lagr.time, lagr.all.r[:, -1], '--', label='Rc')
+ax.set_xlabel('Time'); ax.set_ylabel('R'); ax.set_yscale('log'); ax.legend()
+```
+
+- binary semi-ecc scatter:
+
+```python
+x = binary.semi * 206265.0  # AU
+y = binary.ecc
+q = np.minimum(binary.p1.mass, binary.p2.mass) / np.maximum(binary.p1.mass, binary.p2.mass)
+fig, ax = plt.subplots(1, 1)
+pt = ax.scatter(x, y, s=binary.mass, c=q)
+ax.set_xscale('log')
+ax.set_xlabel('Semi-major axes [AU]'); ax.set_ylabel('eccentricity')
+plt.colorbar(pt, ax=ax, label='mass ratio')
+```
+
+### Python Analysis Guardrails
+
+- Always match `interrupt_mode`, `external_mode`, `snapshot_format`, and `G` to the simulation/data-processing setup.
+- For original snapshots (`data.*`), use header offset (`petar.HEADER_OFFSET` or `petar.HEADER_OFFSET_WITH_CM` for external-mode snapshots).
+- For `petar.data.process` outputs (`*.single`, `*.binary`, `data.lagr`, `data.core`), read directly without header offset.
+- When reading outputs from `petar.get.object.snap`, add a `time` member before `fromfile`.
+- If user asks for “give me Python code for this analysis”, return directly runnable snippet(s) using these templates and the user’s path/filename choices.
 
 ## Workflow
 

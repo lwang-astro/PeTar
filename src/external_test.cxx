@@ -130,7 +130,11 @@ int main(int argc, char** argv){
             break;
         case 'h':
             std::cout<<"The tool to calculate acceleration, potential and mass density for a given particle list \n"
-                     <<"Usage: petar.external [options] [data file]\n"
+#ifdef GALPY            
+                     <<"Usage: petar.external.galpy [options] [data file]\n"
+#elif AGAMA
+                     <<"Usage: petar.external.agama [options] [data file]\n"
+#endif
                      <<"       data file format: if -m, file contains the mesh parameters\n"
                      <<"                             one line: time, dt_evolve, n_step_evolve, dt_output, x_min, x_max, n_x, y_min, y_max, n_y, z_min, z_max, n_z\n"
                      <<"                         else file contains a particle list\n"

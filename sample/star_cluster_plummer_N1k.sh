@@ -1,3 +1,15 @@
+set -e
+
+if ! command -v mcluster >/dev/null 2>&1; then
+	echo "Error: mcluster is not found in PATH. Please install mcluster first." >&2
+	exit 1
+fi
+
+if ! command -v petar.select >/dev/null 2>&1; then
+	echo "Error: petar.select is not found in PATH. Please run 'make install' first." >&2
+	exit 1
+fi
+
 # use mcluster to generate a star cluster with the initial condtion: 
 # N=1000
 # Kroupa (2001) IMF
@@ -18,6 +30,7 @@ petar.init -v kms2pcmyr -f input test.dat.10
 # Parallel hint: this is a non-binaries N~10^3 sample, where one thread is usually efficient.
 # If needed, set 'OMP_NUM_THREADS=[number of threads]' and benchmark on your machine.
 # set 'OMP_STACKSIZE' to ensure sufficient stack memory for each thread, otherwise segmentation faults may occur.
+petar.select --optional mpi,omp,avx512,avx2
 OMP_NUM_THREADS=1 OMP_STACKSIZE=128M petar -u 1 -t 100.0 -o 1.0 input &>output
 
 # after mode finished, gether the output data and do post-data process to detect binaries, obtain Lagrangian and core radii and corresponding properties.

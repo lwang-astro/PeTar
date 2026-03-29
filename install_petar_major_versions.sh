@@ -7,6 +7,9 @@ make install
 ./configure --with-interrupt=bse --with-external=galpy
 make clean
 make install
+./configure --with-external=galpy --enable-mpfrc
+make clean
+make install
 ./configure --with-external=galpy
 make clean
 make install

@@ -36,10 +36,19 @@ This README document serves as a concise yet comprehensive guide detailing the i
 For a deeper understanding of the algorithms employed, additional details can be found in the work by Wang et al. (2020; available on arXiv: https://arxiv.org/abs/2006.16560).
 For developers seeking to understand the code structure, please consult the [Doxygen documentation](https://lwang-astro.github.io/PeTar/doc/html/index.html).
 
-After completing the installation process, users can quickly get started by exploring three sample scripts located in the sample folder: [star\_cluster.sh](https://github.com/lwang-astro/PeTar/blob/master/sample/star_cluster.sh), [star\_cluster\_bse.sh](https://github.com/lwang-astro/PeTar/blob/master/sample/star_cluster_bse.sh), and [star\_cluster\_bse\_galpy.sh](https://github.com/lwang-astro/PeTar/blob/master/test/star_cluster_bse_galpy.sh). These scripts provide practical demonstrations of simulating a star cluster using the PeTar code. They cover tasks such as generating initial conditions using `mcluster`, running simulations, and processing data to produce single and binary snapshots, core information, and Lagrangian radii. Here is a brief description of each script:
-- star\_cluster.sh: Simulates a star cluster for up to 100 Myr with 1000 stars initially, following the Kroupa (2001) IMF and including 95% primordial binaries (refer to the `mcluster` manual). This simulation uses only gravitational forces.
-- star\_cluster\_bse.sh: Similar to sample.sh but includes single and binary stellar evolution (SSE/BSE) with a metallicity of Z=0.02.
-- star\_cluster\_bse\_galpy.sh: Builds upon sample_bse.sh by incorporating the Milky Way potential from Galpy's MWPotential2014 (refer to Bovy 2015 for details).
+## Sample Scripts
+
+After completing the installation process, users can quickly get started by exploring sample scripts in the `sample` folder. These scripts provide practical demonstrations of generating initial conditions with `mcluster`, selecting a suitable installed PeTar binary family via `petar.select`, running simulations, and post-processing outputs. Each script starts with pre-checks for `mcluster` and `petar.select`.
+
+Core sample scripts:
+- [star\_cluster\_plummer\_N1k.sh](sample/star_cluster_plummer_N1k.sh): Isolated Plummer cluster (`N=1000`) without stellar evolution or external potential.
+- [star\_cluster\_plummer\_N1k\_binaries.sh](sample/star_cluster_plummer_N1k_binaries.sh): Isolated cluster with primordial binaries.
+- [star\_cluster\_plummer\_N1k\_binaries\_bse.sh](sample/star_cluster_plummer_N1k_binaries_bse.sh): Primordial binaries with SSE/BSE stellar evolution (`bse`).
+
+Additional external-potential examples (previously not covered in this quick-start list):
+- [star\_cluster\_plummer\_N1k\_GalpyMWPot.sh](sample/star_cluster_plummer_N1k_GalpyMWPot.sh): No-binary cluster in Galactic potential using Galpy (`galpy`).
+- [star\_cluster\_plummer\_N1k\_binaries\_bse\_GalpyMWPot.sh](sample/star_cluster_plummer_N1k_binaries_bse_GalpyMWPot.sh): Primordial binaries + SSE/BSE + Galpy potential (`bse,galpy`).
+- [star\_cluster\_plummer\_N1k\_AgamaMWPotHunter24.sh](sample/star_cluster_plummer_N1k_AgamaMWPotHunter24.sh): No-binary cluster in Agama potential (`agama`) with Hunter et al. (2024) Milky Way model configuration.
 
 Furthermore, users can access a Jupyter Notebook titled [data\_analysis.ipynb](https://github.com/lwang-astro/PeTar/blob/master/sample/data_analysis.ipynb), which provides examples of data analysis in Python. By running one of the sample scripts, users can subsequently refer to the demonstrations in this notebook to analyze the simulation results. The data analysis module in PeTar offers greater convenience compared to manually parsing the output files. It is advisable to leverage this module instead of crafting reading code from scratch.
 
@@ -84,6 +93,7 @@ The subsequent sections provide detailed explanations of the installation proces
         - [Using External Potential](#using-external-potential)
         - [Combining Multiple options](#combining-multiple-options)
      - [Compilation and Installation](#compilation-and-installation)
+- [Sample Scripts](#sample-scripts)
 - [Usage](#usage)
     - [Preparing the initial condition](#preparing-the-initial-condition)
     - [Starting a Simulation](#starting-a-simulation)
@@ -115,6 +125,7 @@ The subsequent sections provide detailed explanations of the installation proces
          - [Crash with Segmentation Fault](#crash-with-segmentation-fault)
     - [Data Format Update for Older Versions](#data-format-update-for-older-versions)
     - [Useful Tools](#useful-tools)
+            - [Selecting Installed Binary Families with `petar.select`](#selecting-installed-binary-families)
          - [Initial Input Data File with `petar.init`](#initial-input-data-file)
          - [Determining the Tree Time Step with `petar.find.it`](#determining-the-tree-time-step)
          - [Gathering Output Files with `petar.data.gether`](#gathering-output-files)
@@ -1018,6 +1029,49 @@ petar.[tool name] -h
 It is important to note that options with identical names may hold distinct meanings across various tools.
 
 The subsequent sections provide detailed descriptions of each tool.
+
+### Selecting Installed Binary Families
+
+When multiple PeTar binaries are installed (for example, combinations of `mpi`, `omp`, `avx2`, `avx512`, `bse`, `galpy`, `agama`), the `petar.select` tool can rebuild three symlinks in the install bin directory:
+
+- `petar`
+- `petar.hard.debug`
+- `petar.format.transfer`
+
+The tool supports three modes:
+
+```shell
+# select by explicit suffix or full binary name
+petar.select .mpi.omp.avx2.bse.galpy
+petar.select petar.mpi.omp.avx2.bse.galpy
+
+# auto-select by required and optional features
+petar.select --require bse,galpy --optional mpi,omp,avx512,avx2
+
+# list all selectable installed versions
+petar.select --list
+```
+
+Feature mode behavior:
+
+- All tokens in `--require` must match an installed binary; otherwise the command exits with an error.
+- Tokens in `--optional` are used only for ranking candidates.
+- Require-only feature families are included only when explicitly listed in `--require`.
+- This require-only policy applies to `interrupt` (`base`, `bse`, `mobse`, `bseEmp`), `external` (`galpy`, `agama`), `external-hard` (`gasdrag`), `pn*`, and `mpfrc` (`mp`).
+- Unsupported tokens in `--require` cause an immediate error.
+- Unsupported tokens in `--optional` are reported as warnings and ignored.
+
+When no installed binary satisfies `--require`, `petar.select` reports the available versions and provides configure hints for common feature tokens, e.g.:
+
+- `bse`, `mobse`, `bseEmp` -> `./configure --with-interrupt=<token>`
+- `galpy`, `agama` -> `./configure --with-external=<token>`
+- `gasdrag` -> `./configure --with-external-hard=gasdrag`
+- `mp`, `mpfrc` -> `./configure --enable-mpfrc`
+- `mpi` -> `./configure --with-mpi=yes`
+- `avx`, `avx2`, `avx512` -> `./configure --with-simd=<token>`
+- `gpu` -> `./configure --enable-cuda`
+
+After rebuilding with the needed options, run `make install` and re-run `petar.select`.
 
 ### Initial Input Data File
 

@@ -1,3 +1,15 @@
+set -e
+
+if ! command -v mcluster >/dev/null 2>&1; then
+	echo "Error: mcluster is not found in PATH. Please install mcluster first." >&2
+	exit 1
+fi
+
+if ! command -v petar.select >/dev/null 2>&1; then
+	echo "Error: petar.select is not found in PATH. Please run 'make install' first." >&2
+	exit 1
+fi
+
 # use mcluster to generate a star cluster with the initial condtion: 
 # N=1000
 # Kroupa (2001) IMF
@@ -22,6 +34,7 @@ petar.init -c 8000,0,0,0,220,0 -t -v kms2pcmyr -f input test.dat.10
 # If needed, set 'OMP_NUM_THREADS=[number of threads]' and benchmark on your machine.
 # set 'OMP_STACKSIZE' to ensure sufficient stack memory for each thread, otherwise segmentation faults may occur.
 # To switch on Galpy potential package, the option '--with-external=galpy' is needed during configuration of petar.
+petar.select --require galpy --optional mpi,omp,avx512,avx2
 OMP_NUM_THREADS=1 OMP_STACKSIZE=128M petar -u 1 --galpy-set MWPotential2014 -t 100.0 -o 1.0 input &>output
 
 # after mode finished, gether the output data and do post-data process to detect binaries, obtain Lagrangian and core radii and corresponding properties.
