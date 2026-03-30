@@ -45,5 +45,5 @@ petar.data.process -i bse -t galpy --r-escape tidal data.snap.lst
 # - second x-y panel shows the Galactic scale with '-R 10000'.
 # - semi-ecc panel is enabled by '-b'.
 # - Lagrangian panel uses '-L data.lagr --rlagr-min 0 --rlagr-max 5'.
-petar.movie -i bse -t galpy -m x-y,x-y -R 10,10000 --cm-mode core,none --marker-scale 1,0.1 -c logtemp -b -L data.lagr --rlagr-min 0 --rlagr-max 5 data.snap.lst
+petar.movie -i bse -t galpy -m x-y,x-y -R 10,10000 --cm-mode core,none --marker-scale 1,0.1 -c logtemp,logtemp -b -L data.lagr --rlagr-min 0 --rlagr-max 5 data.snap.lst
 
