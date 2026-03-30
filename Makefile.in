@@ -36,6 +36,9 @@ FDPS_VERSION_GE_8 := $(shell [ $(FDPS_VERSION_MAJOR) -ge 8 ] && echo yes || echo
 ifeq ($(FDPS_VERSION_GE_8),yes)
 FDPSFLAGS += -D FDPS_V8
 HARD_FDPSFLAGS += -D FDPS_V8
+CUDA_FDPSFLAGS = -D FDPS_V8
+else
+CUDA_FDPSFLAGS = 
 endif
 
 
@@ -275,9 +278,9 @@ endif # omp
 
 #---------------------------------------------
 ifeq ($(use_gpu_cuda),yes)
-CUDAFLAGS = -D PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
-FDPSFLAGS += $(CUDAFLAGS)
-NVCC = @NVCC@ @CUDAFLAGS@ -Xcompiler="$(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS)"
+CUDA_FDPSFLAGS += -D PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+FDPSFLAGS += $(CUDA_FDPSFLAGS)
+NVCC = @NVCC@ @CUDAFLAGS@ -Xcompiler="$(OPTFLAGS) $(CXXFLAGS) $(CUDA_FDPSFLAGS) $(MT_FLAGS)"
 CXXLIBS += @CUDALIBS@
 OBJS += build/force_gpu_cuda.o
 CXXFLAGS += -D USE_GPU

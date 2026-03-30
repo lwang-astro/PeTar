@@ -93,9 +93,17 @@ public:
 #endif
 
 #ifdef USE_QUAD
+#ifdef FDPS_V8
+#define SPJSoft PS::SPJQuadrupole
+#else
 #define SPJSoft PS::SPJQuadrupoleInAndOut
+#endif
+#else
+#ifdef FDPS_V8
+#define SPJSoft PS::SPJMonopole
 #else
 #define SPJSoft PS::SPJMonopoleInAndOut
+#endif
 #endif
 
 #ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX

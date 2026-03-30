@@ -33,9 +33,17 @@
 #include "force_gpu_cuda.hpp"
 #else
 #ifdef USE_QUAD
+#ifdef FDPS_V8
+#define SPJSoft PS::SPJQuadrupole
+#else
 #define SPJSoft PS::SPJQuadrupoleInAndOut
+#endif
+#else
+#ifdef FDPS_V8
+#define SPJSoft PS::SPJMonopole
 #else
 #define SPJSoft PS::SPJMonopoleInAndOut
+#endif
 #endif
 #ifdef USE_FUGAKU
 #include "force_fugaku.hpp"

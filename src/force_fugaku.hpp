@@ -10,9 +10,17 @@
 #include"soft_ptcl.hpp"
 
 #ifdef USE_QUAD
+#ifdef FDPS_V8
+#define SPJSoft PS::SPJQuadrupole
+#else
 #define SPJSoft PS::SPJQuadrupoleInAndOut
+#endif
+#else
+#ifdef FDPS_V8
+#define SPJSoft PS::SPJMonopole
 #else
 #define SPJSoft PS::SPJMonopoleInAndOut
+#endif
 #endif
 
 struct EPI32{
