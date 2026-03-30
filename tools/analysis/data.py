@@ -4,6 +4,9 @@ from scipy import spatial as sp
 from sdar.base import *
 from sdar.functions import *
 from sdar.ar import SDARInterruptBinary
+from sdar.ar import SDARData as sdar_SDARData
+from sdar.particle import ParticleGroup
+from sdar.hermite import HermiteData as hermite_HermiteData
 import sdar.group as hermite_group
 from .bse import *
 from .dsm import *
@@ -532,81 +535,6 @@ class Particle(HardParticle):
         etot = self.ekin + self.mass*self.pot
         self.addNewMember('etot',etot)
 
-class ParticleGroup(DictNpArrayMix):
-    """ A group of particles
-    Keys: (class members)
-        n (1D): number of particles, when keyword argument N_column_exist=False, this member does not exist
-        cm (cm_type): center-of-the-mass particle data 
-        p[x] (member_type): particle data, [x] indicate the indice, counting from 0
-    """
-    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
-        Parameters
-        ----------
-        keyword arguments:
-            member_type: type (SimpleParticle)
-                Member particle type
-            cm_type: type (SimpleParticle)
-                Center-of-the-mass particle type
-            N_particle: int (0)
-                Number of particles (ignore the value in the column N)
-                If data path is provided in the initialization; the column N exists and this argument is not provided, 
-                the first value in column N is used to determine N_particle
-            N_column_exist: bool (True)
-                if True, the class member n exists, otherwise not.
-            cm_column_exist: bool (True)
-                if True, the center-of-the-mass particle data exist, otherwise not
-            float_type: type (np.float64)
-                floating point data type
-        """
-
-        N_column_exist = True
-        if 'N_column_exist' in kwargs.keys():
-            N_column_exist = kwargs['N_column_exist']
-
-        n = 0
-        if (N_column_exist):
-            keys = [['n', np.int64]]
-            DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
-            if (type(_dat)!=type(None)) & (self.size>0): n = self.n[0]  
-        else:
-            self.keys = []
-            self.ncols = 0
-
-        if 'N_particle' in kwargs.keys(): n = kwargs['N_particle']
-
-        cm_column_exist = True
-        if 'cm_column_exist' in kwargs.keys():
-            cm_column_exist = kwargs['cm_column_exist']
-
-        cm_type = SimpleParticle
-        if ('cm_type' in kwargs.keys()): cm_type = kwargs['cm_type']
-
-        if (cm_column_exist):
-            keys_cm = [['cm', cm_type]]
-            DictNpArrayMix.__init__(self, keys_cm, _dat, _offset+self.ncols, True, **kwargs)
-
-        member_type = SimpleParticle
-        if ('member_type' in kwargs.keys()): member_type = kwargs['member_type']
-        
-        if (n>0):
-            keys_p = [['p'+str(i), member_type] for i in range(n)]
-            DictNpArrayMix.__init__(self, keys_p, _dat, _offset+self.ncols, True, **kwargs)
-        elif (not N_column_exist):
-            self.ncols = 0
-            self.size = 0
-
-    def get(self, index):
-        """ Get particle by using index
-        Parameters
-        ----------
-        index: int
-            particle index
-        """
-
-        key = 'p'+str(index)
-        return self.__dict__[key]
-
 class InterruptBinary(SDARInterruptBinary):
     """ Data of stellar evolution interrupted binary in base mode
         Inherit from sdar.ar.SDARInterruptBinary
@@ -1041,185 +969,6 @@ class Binary(SimpleParticle):
         np.savetxt(f, out_data, fmt='%.24g %.24g %d %d %.24g %.24g %.24g')
         f.close()
 
-        
-def findPair(_dat, _G, _rmax, use_kdtree=False, simple_binary=True):
-    """  Find binaries in a particle data set
-    The scipy.spatial.cKDTree is used to find pairs
-
-    Parameters
-    ----------
-    _dat: inhermited SimpleParticle
-        Particle data set
-    _G: float
-        Gravitational constant
-    _rmax: float
-        Maximum binary separation
-    use_kdtree: bool (False)
-        If True, use KDtree to find all binaries (slow); otherwise use information from PeTar, only hard binaries are detected (fast)
-    simple_binary: bool (True)
-        If True, only calculate semi and ecc (fast); otherwise calculating all binary parameters (slow)
-
-    Return
-    ----------
-    kdt: KDtree structure if use_kdtree=True
-    single: type of _dat
-        single particle data set
-    binary: Binary(simple_mode=simple_binary, member_particle_type=type(single), G=_G)
-        binary data set
-    """
-    if (not issubclass(type(_dat), SimpleParticle)):
-        raise ValueError("Data type wrong",type(_dat)," should be subclass of ", SimpleParticle)
-
-    if (use_kdtree):
-        # create KDTree
-        #print('create KDTree')
-        kdt=sp.cKDTree(_dat.pos)
-     
-        # find all close pairs
-        #pairs=kdt.query_pairs(_rmax*AU2PC)
-            
-        # only check nearest index
-        #pair_index=np.unique(np.transpose(np.array([np.array([x[0],x[1]]) for x in pairs])),axis=0)
-         
-        # find pair index and distance
-        #print('Get index')
-        r,index=kdt.query(_dat.pos,k=2)
-        pair_index=np.transpose(np.unique(np.sort(index,axis=1),axis=0))
-        #pair_index = np.transpose(index)
-
-        #index = kdt.query_pairs(_rmax,output_type='ndarray')
-        #pair_index = np.transpose(index)
-     
-        # two members
-        p1 = _dat[pair_index[0]]
-        p2 = _dat[pair_index[1]]
-     
-        # check orbits
-        #print('Create binary')
-        binary = Binary(p1, p2, G=_G, simple_mode=simple_binary)
-        apo =binary.semi*(binary.ecc+1.0)
-     
-        bsel= ((binary.semi>0) & (apo<_rmax))
-        binary = binary[bsel]
-        
-        single_mask = np.ones(_dat.size).astype(bool)
-        single_mask[pair_index[0][bsel]]=False
-        single_mask[pair_index[1][bsel]]=False
-        single = _dat[single_mask]
-        return kdt, single, binary
-    else:
-        idx = _dat.status.argsort()
-        dat_sort = _dat[idx]
-        status, index, inverse, counts = np.unique(dat_sort.status, return_index=True, return_inverse=True, return_counts=True)
-        binary_i1 = index[counts==2]
-        binary_i2 = binary_i1+1
-        binary = Binary(dat_sort[binary_i1], dat_sort[binary_i2], _G)
-        single = dat_sort[index[-1]:]
-
-        return single, binary
-
-def findMultiple(_single, _binary, _G, _rmax, simple_binary=True):
-    """  Find triples and quadruples from single and binary data
-    The scipy.spatial.cKDTree is used to find pairs
-
-    Parameters
-    ----------
-    _single: inhermited SimpleParticle
-        Single particle data set
-    _binary: Binary
-        Binary data set
-    _G: float
-        Gravitational constant
-    _rmax: float
-        Maximum binary separation
-    simple_binary: bool (True)
-        If True, only calculate semi and ecc (fast); otherwise calculating all binary parameters (slow)
-
-    Return
-    ----------
-    kdt: KDtree structure if use_kdtree=True
-    single: type of _dat
-        single particle data set
-    binary: Binary(simple_mode=simple_binary, member_particle_type=type(single), G=_G)
-        binary data set
-    triple: Binary(p1: type(single), p2: type(binary), G=_G)
-        triple data set
-    quadruple: Binary(p1: type(binary), p2: type(binary), G=_G)
-        quadruple (binary-binary) data set
-    """
-    if (not issubclass(type(_single), SimpleParticle)):
-        raise ValueError("Data type wrong",type(_single)," should be subclass of ", SimpleParticle)
-
-    single_sin = SimpleParticle(_single)
-    binary_sin = SimpleParticle(_binary)
-    all_sin = join(single_sin, binary_sin)
-
-    # create KDTree
-    kdt=sp.cKDTree(all_sin.pos)
-     
-    # find pair index and distance
-    r,index=kdt.query(all_sin.pos,k=2)
-    pair_index=np.transpose(np.unique(np.sort(index,axis=1),axis=0))
-
-    bout_i1 = pair_index[0]
-    bout_i2 = pair_index[1]
-
-    Ns = _single.size
-    Nb = _binary.size
-    quad_pre_sel= (bout_i1>=Ns) & (bout_i2>=Ns)
-    tri_pre_sel = (bout_i1<Ns) & (bout_i2>=Ns)
-    bin_pre_sel = (bout_i1<Ns) & (bout_i2<Ns)
-
-    n_quad_pre = quad_pre_sel.sum()
-    n_tri_pre = tri_pre_sel.sum()
-    n_bin_pre = bin_pre_sel.sum()
-    if (bout_i1.size != n_quad_pre + n_tri_pre + n_bin_pre):
-        raise ValueError('Error: multiple index selection size miss match: dat:',bout_i1.size,'quad:',n_quad_pre,'tri:',n_tri_pre,'bin:',n_bin_pre)
-
-    s_del_index=np.array([]).astype(int)
-    b_del_index=np.array([]).astype(int)
-
-    quadruple = Binary(member_particle_type = [type(_single), type(_single)], **{**_single.initargs, 'G':_G, 'simple_mode':simple_binary})
-    if (quad_pre_sel.sum()):
-        q1_index = bout_i1[quad_pre_sel]-Ns
-        q2_index = bout_i2[quad_pre_sel]-Ns
-        quad_pre = Binary(_binary[q1_index], _binary[q2_index], **{**_single.initargs, 'G':_G, 'simple_mode':simple_binary})
-        apo = quad_pre.semi*(quad_pre.ecc+1.0)
-        quad_sel = (quad_pre.semi>0) & (apo<_rmax)
-        quadruple = quad_pre[quad_sel]
-        b_del_index=np.append(q1_index[quad_sel],q2_index[quad_sel])
-
-    triple = Binary(member_particle_type_one = type(_single), 
-                    member_particle_type_two = [type(_single), type(_single)], 
-                    **{**_single.initargs, 'G':_G, 'simple_mode':simple_binary})
-    if (tri_pre_sel.sum()):
-        s_index = bout_i1[tri_pre_sel]
-        b_index = bout_i2[tri_pre_sel]-Ns
-        tri_pre = Binary(_single[s_index], _binary[b_index], **{**_single.initargs, 'G':_G, 'simple_mode':simple_binary})
-        apo = tri_pre.semi*(tri_pre.ecc+1.0)
-        tri_sel = (tri_pre.semi>0) & (apo<_rmax)
-        triple = tri_pre[tri_sel]
-        b_del_index=np.append(b_del_index,b_index[tri_sel])
-        s_del_index=s_index[tri_sel]
-        
-    bmask=np.ones(Nb).astype(bool)
-    if (b_del_index.size>0): bmask[b_del_index]=False;
-    binary = _binary[bmask]
-
-    if (bin_pre_sel.sum()):
-        s1_index = bout_i1[bin_pre_sel]
-        s2_index = bout_i2[bin_pre_sel]
-        bin_pre = Binary(_single[s1_index], _single[s2_index], **{**_single.initargs, 'G':_G, 'simple_mode':simple_binary})
-        apo = bin_pre.semi*(bin_pre.ecc+1.0)
-        bin_sel = (bin_pre.semi>0) & (apo<_rmax)
-        binary.append(bin_pre[bin_sel])
-        s_del_index = np.concatenate((s_del_index, s1_index[bin_sel], s2_index[bin_sel]))
-
-    smask=np.ones(Ns).astype(bool)
-    smask[s_del_index]=False
-    single = _single[smask]
-
-    return single, binary, triple, quadruple
 
 class GroupInfo(hermite_group.GroupInfo):
     """ Group information output from PeTar
@@ -1259,3 +1008,118 @@ class GroupInfo(hermite_group.GroupInfo):
         kwargs_local['member_particle_type'] = HardParticle
         super().__init__(_dat, _offset, _append, **kwargs_local)
     
+class SDARData(sdar_SDARData):
+    """ SDARData class for petar, inherit from sdar.SDARData
+
+        Keys: (class members)
+            time (1D): current evolved time (counting from zero)
+            de (1D): physical energy error
+            etot_ref (1D): initial total energy
+            ekin (1D): kinetic energy
+            epot (1D): potential energy
+            gt_drift (1D): time tranformation for drift step
+            H (1D): extened phase space Hamiltonian
+            if (keyword argument 'include_H_approx' == True):
+                H_approx (1D): approximated phase space Hamiltonian
+            de_interrupt (1D): energy change due to interruption
+            dH_interrupt (1D): H change due to interruption
+            perturber (perturber_type): perturber data, depending on the keyword argument 'perturber_type'
+                                        if not given, this key is not included
+            info (SDARInfo): SDAR information shown as follows:
+                ds (1D): integration step
+                time_offset (1D): time offset to obtain the actual time (time_offset + time)
+                r_break_crit (1D): distance criterion to break group (used in Hermite)
+            if (keyword argument 'hybrid' == True):
+                hybrid_flag (1D): if 1, hybrid method is used, else, normal method
+            profile (SDARProfile): SDAR profile
+            if (keyword argument 'slowdown' == True):
+                de_sd (1D): slowdown energy error
+                etot_sd (1D): slowdown energy
+                ekin_sd (1D): slowdown kinetic energy
+                epot_sd (1D): slowdown potential energy
+                de_sd_change (1D): slowdown energy change
+                dH_sd_change (1D): slowdown H change
+                de_sd_interrupt (1D): slowdown energy change due to interruption
+                dH_sd_interrupt (1D): slowdown H change due to interruption
+                sd (SlowDownGroup): slowdown data
+            particles (ParticleGroup): particle group, depending on the keyword argument 'member_type' and 'cm_type'
+
+    """
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ SDARData class for petar, inherit from sdar.SDARData
+
+            Parameters
+            ----------
+            keyword arguments:
+                member_type: member particle type (HardParticle)
+                cm_type: c.m. particle type (HermiteParticle)
+                perturber_type: perturber particle type (None)
+                N_particle: int (0)
+                    Number of particles, determined from file if not provided
+                slowdown: bool (False)
+                    if True, add slowdown keys
+                N_sd: int (0)
+                    Number of slowdown pair, used when slowdown='on'
+                time_measure: bool (False)
+                    if True, add time measure keys in profile
+                include_H_approx: bool (False)
+                    if True, add H_approx key
+                interrupt_mode: string (none)
+                    PeTar interrupt mode (set in configure): base, bse, mobse, none
+                    This option indicates whether columns of stellar evolution exist
+                external_mode: string (none)
+                    PeTar external mode (set in configure): galpy, agama, none 
+                    This option indicates whether the column of external potential exist
+                use_mpfrc: bool (False)
+                    If true, add three columns of pos_high indicating the high-precision parts of position
+                float_type: type (np.float64)
+                    floating point data type
+        """
+        kwargs_local = dict(kwargs)
+        kwargs_local['member_type'] = HardParticle
+        kwargs_local['cm_type'] = HermiteParticle
+
+        super().__init__(_dat, _offset, _append, **kwargs_local)
+
+class HermiteData(hermite_HermiteData):
+    """ HermiteData class for petar, inherit from sdar.HermiteData
+    Keys: (class members)
+        time (1D): current evolved time (counting from zero)
+        time_offset (1D): time offset to calculate the global time (time+time_offset)
+        energy_phy (HermiteEnergy): physical energy data
+        energy_sd (HermiteEnergy): slowdown energy data
+        sd (SlowDownGroup): slowdown data
+        profile (HermiteProfile): hermite profile
+        particles (ParticleGroup): particle group, depending on the keyword argument 'member_type' and 'cm_type'
+    """
+
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ HermiteData class for petar, inherit from sdar.HermiteData
+
+            Parameters
+            ----------
+            keyword arguments:
+                member_type: member particle type (HermiteParticle)
+                cm_type: c.m. particle type (HardParticle)
+                N_particle: int (0)
+                    Number of members of one group
+                N_sd: int (0)
+                    Number of slowdown pairs
+                time_measure: bool (False)
+                    if True, add time measure keys in profile
+                interrupt_mode: string (none)
+                    PeTar interrupt mode (set in configure): base, bse, mobse, none
+                    This option indicates whether columns of stellar evolution exist
+                external_mode: string (none)
+                    PeTar external mode (set in configure): galpy, agama, none 
+                    This option indicates whether the column of external potential exist
+                use_mpfrc: bool (False)
+                    If true, add three columns of pos_high indicating the high-precision parts of position
+                float_type: type (np.float64)
+                    floating point data type
+        """
+        kwargs_local = dict(kwargs)
+        kwargs_local['member_type'] = HermiteParticle
+        kwargs_local['cm_type'] = HardParticle
+
+        super().__init__(_dat, _offset, _append, **kwargs_local)
