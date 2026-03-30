@@ -131,7 +131,7 @@ public:
                     step_limit_ar(input_par_store, 1000000,  "ar-max-nstep", "Maximum step allowed for the SDAR sym integrator"),
                     sym_order_ar (input_par_store, -6,       "ar-sym-order", "Order of the symplectic integrator for SDAR, should be even number; -6,-8: Yoshida 2nd symplectic method; 4,6,8,...: Yoshida 1st symplectic method"),
                     ds_scale_ar  (input_par_store, 1.0,      "ar-ds-scale", "Scale factor for SDAR step size calculation"),
-                    sd_factor    (input_par_store, 1e-4,     "ar-slowdown-factor", "Slowdown perturbation criterion"),
+                    sd_factor    (input_par_store, 1e-6,     "ar-slowdown-factor", "Slowdown perturbation criterion"),
                     reinit_dt_dm_crit(input_par_store, 1e-4, "hermite-dm-crit", "Mass change rate criterion for reinitializing hermite time step"),
                     reinit_dt_de_crit(input_par_store, 1e-4, "hermite-de-crit", "Ekin change rate criterion for reinitializing hermite time step"),
                     n_neighbor_max(input_par_store, 300,     "hermite-n-neighbor-max", "Maximum number of group neighbors to be stored"),

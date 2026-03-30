@@ -1100,7 +1100,7 @@ class HermiteData(hermite_HermiteData):
             ----------
             keyword arguments:
                 member_type: member particle type (HermiteParticle)
-                cm_type: c.m. particle type (HardParticle)
+                cm_type: c.m. particle type (HermiteParticle)
                 N_particle: int (0)
                     Number of members of one group
                 N_sd: int (0)
@@ -1120,6 +1120,6 @@ class HermiteData(hermite_HermiteData):
         """
         kwargs_local = dict(kwargs)
         kwargs_local['member_type'] = HermiteParticle
-        kwargs_local['cm_type'] = HardParticle
+        kwargs_local['cm_type'] = HermiteParticle
 
         super().__init__(_dat, _offset, _append, **kwargs_local)

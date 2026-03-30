@@ -243,7 +243,7 @@ def dataProcessOne(file_path, result, time_profile,
     result: dict
         The results, keys: lagr, core|core_read, esc_single, esc_binary, [bse]
         If read_flag = True, core_read is needed, else core is needed
-        If interrupt_mode = bse, mobse, BSE based stellar evolution is needed
+        If interrupt_mode = bse, mobse, bseEmp, BSE based stellar evolution is needed
     time_profile: dict
         The CPU (wallclock) time for each parts of calculations
     read_flag: bool (False)
@@ -273,7 +273,7 @@ def dataProcessOne(file_path, result, time_profile,
             G: float (1.0)
                gravitational constant (1.0)
             interrupt_mode: string (none)
-               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               PeTar interrupt mode (set in configure): base, bse, mobse, bseEmp, none
                This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
                PeTar external mode (set in configure): galpy, agama, none 
