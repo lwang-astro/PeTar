@@ -264,11 +264,10 @@ public:
         }
         //const PS::S32 ith = PS::Comm::getThreadNum();
         if (hard_dump[ith].backup_flag) {
-            std::string point("_");
             std::time_t tnow = std::time(nullptr);
             //std::tm *local_time = localtime(&tnow);
             std::string fname = filename;
-            if (long_suffix_flag) fname = filename + point + std::to_string(hard_dump[ith].time_offset) + point + std::to_string(mpi_rank) + point + std::to_string(ith) + point + std::to_string(dump_number++) + point + std::to_string(tnow);
+            if (long_suffix_flag) fname += "_t" + std::to_string(hard_dump[ith].time_offset) + "_M" + std::to_string(mpi_rank) + "_O" + std::to_string(ith) + "_c" + std::to_string(dump_number++) + "_s" + std::to_string(tnow);
             std::FILE* fp;
             if (append_flag) 
                 fp = std::fopen(fname.c_str(),"a");

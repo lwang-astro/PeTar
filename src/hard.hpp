@@ -131,7 +131,7 @@ public:
                     step_limit_ar(input_par_store, 1000000,  "ar-max-nstep", "Maximum step allowed for the SDAR sym integrator"),
                     sym_order_ar (input_par_store, -6,       "ar-sym-order", "Order of the symplectic integrator for SDAR, should be even number; -6,-8: Yoshida 2nd symplectic method; 4,6,8,...: Yoshida 1st symplectic method"),
                     ds_scale_ar  (input_par_store, 1.0,      "ar-ds-scale", "Scale factor for SDAR step size calculation"),
-                    sd_factor    (input_par_store, 1e-6,     "ar-slowdown-factor", "Slowdown perturbation criterion"),
+                    sd_factor    (input_par_store, 1e-4,     "ar-slowdown-factor", "Slowdown perturbation criterion"),
                     reinit_dt_dm_crit(input_par_store, 1e-4, "hermite-dm-crit", "Mass change rate criterion for reinitializing hermite time step"),
                     reinit_dt_de_crit(input_par_store, 1e-4, "hermite-de-crit", "Ekin change rate criterion for reinitializing hermite time step"),
                     n_neighbor_max(input_par_store, 300,     "hermite-n-neighbor-max", "Maximum number of group neighbors to be stored"),
@@ -1349,7 +1349,8 @@ public:
 #ifdef HARD_DUMP
             if (sym_int.profile.step_count>manager->ar_manager.step_count_max&&!dump_flag) {
                 std::cerr<<"Large isolated AR step cluster found (dump): step: "<<sym_int.profile.step_count<<std::endl;
-                DATADUMP("dump_large_step");
+                std::string dump_name = "dump_large_step_ar_n" + std::to_string(sym_int.particles.getSize());
+                DATADUMP(dump_name.c_str());
                 dump_flag=true;
             }
 #endif
@@ -1483,7 +1484,8 @@ public:
 #ifdef HARD_DUMP
                 if (h4_int.profile.ar_step_count>manager->ar_manager.step_count_max&&!dump_flag) {
                     std::cerr<<"Large H4-AR step cluster found (dump): step: "<<h4_int.profile.ar_step_count<<std::endl;
-                    DATADUMP("dump_large_step");
+                    std::string dump_name = "dump_large_step_h4_n" + std::to_string(h4_int.particles.getSize()) + "_g" + std::to_string(h4_int.getNGroup());
+                    DATADUMP(dump_name.c_str());
                     dump_flag=true;
                 } 
 #endif
@@ -1994,7 +1996,12 @@ public:
                      <<" dE_SD/Etot_SD: "<<energy.de_sd/(ekin_sd+epot_sd)
                      <<std::endl;
 #ifdef HARD_DUMP
-            DATADUMP("hard_large_energy");
+            std::string dump_name = "hard_large_energy";
+            if (use_sym_int)
+                dump_name += "_ar_" + std::to_string(sym_int.particles.getSize());
+            else
+                dump_name += "_h4_n" + std::to_string(h4_int.particles.getSize()) + "_g" + std::to_string(h4_int.getNGroup());
+            DATADUMP(dump_name.c_str());
 #endif
             //abort();
         }
@@ -3127,7 +3134,8 @@ public:
             // For test hard dump
             if (n_ptcl > 1000) {
                 std::cout<<"Dump large cluster: n_ptcl="<<n_ptcl<<"; n_group="<<n_group<<std::endl;   
-                DATADUMP("large_cluster");
+                std::string dump_name = "dump_large_cluster_n"+std::to_string(n_ptcl)+"_g"+std::to_string(n_group);
+                DATADUMP(dump_name.c_str());
             }
 
             // if interrupt exist, escape initial
