@@ -362,6 +362,9 @@ AC_CHECK_FILE(["$fdps_prefix/src/ps_defs.hpp"],
               [FDPS_VERSION=`egrep 'Version' $fdps_prefix/src/ps_defs.hpp | sed 's:.*Version\ \(\S\+\).*:\1:'`],
               [AC_MSG_FAILURE([can't find FDPS ps_defs.hpp, please check the completeness of the FDPS library])])
 
+AS_IF([test x"$with_cpp_std" = x11 && test ${FDPS_VERSION%%.*} -ge 8],
+      [AC_MSG_ERROR([C++11 is incompatible with FDPS v8 or newer (detected FDPS version: $FDPS_VERSION). Please use FDPS v7.0, or switch to --with-cpp-std=17.])])
+
 AS_IF([test ${FDPS_VERSION%%.*} -ge 7 ],
       [use_fdps_comm=yes],
       [use_fdps_comm=no])

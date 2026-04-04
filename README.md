@@ -170,25 +170,29 @@ PeTar is built upon the _FDPS_ and the _SDAR_ codes. _FDPS_ offers the particle-
 
 Please download the two codes from the following GitHub links:
 
-- _FDPS_: https://github.com/FDPS/FDPS (please use v6.0 or v7.0; v7.1 may not work)
+- _FDPS_: https://github.com/FDPS/FDPS (for C++11 builds, use v7.0; after cloning FDPS from Git, in the FDPS directory, using the command: `git checkout v7.0`; FDPS v8+ is incompatible with C++11).
 
 - _SDAR_: https://github.com/lwang-astro/SDAR
 
-The latest version of FDPS (v7.1) has a known issue that could lead to a crash of PeTar with an assertion error related to NaN check. After cloning FDPS from Git, in the FDPS directory, switch to the previous release v7.0 using the command:
-```shell
-git checkout v7.0
-```
 
 ### Galpy
 
-To incorporate external galactic potentials in simulations, users can use the _Galpy_ code through an interface integrated into PeTar. To use Galpy, users should install it either by executing 
-```shell
-pip3 install --user galpy
-```
-In this scenario, PeTar can automatically detect _Galpy_.
-If `pip3` is unavailable, users can mamually download the source code from https://github.com/jobovy/galpy and specify the code path in the configure command (refer to the following guide).
+To incorporate external galactic potentials in simulations, users can use the _Galpy_ code through an interface integrated into PeTar. 
 
-Note that PowerSphericalPotentialwCutoff was modified in Galpy 1.11.0, making it incompatible with the current PeTar parameter setup for MWPotential2014. PeTar only supports Galpy versions up to 1.10.2. Please ensure your installed Galpy version matches this requirement.
+Note that the offical code (https://github.com/jobovy/galpy) has undergone significant updates, the PowerSphericalPotentialwCutoff was modified in Galpy 1.11.0, making it incompatible with the current PeTar parameter setup for MWPotential2014. 
+PeTar only supports Galpy versions up to 1.10.2. Please ensure your installed Galpy version matches this requirement.
+
+In addition, the official version does not support 3D potential calculations, and for non-axisymmetric cases the potential is inconsistent with the forces. We therefore recommend using the modified version available at https://github.com/lwang-astro/galpy, which supports full 3D potential calculations. 
+
+Users only need to download the source code of _Galpy_, and no need to compile it. However, users must ensure that the _GSL_ library is installed and detectable in the load library path, as it is a dependency for Galpy.
+
+### Agama
+
+PeTar also supports the _Agama_ external potential interface. Users can install Agama from source:
+
+- _Agama_: https://github.com/GalacticDynamics-Oxford/Agama
+
+Before configuring PeTar with Agama support, please compile Agama first so that `agama.a` is generated in the Agama directory.
 
 ### Code path
 
