@@ -2657,7 +2657,7 @@ public:
         return interrupt_list_.size();
     }
 
-    auto& getInterruptBinary(const std::size_t i) const {
+    const AR::InterruptBinary<PtclHard>& getInterruptBinary(const std::size_t i) const {
         return interrupt_list_[i];
     }
 
@@ -3877,7 +3877,8 @@ public:
                 }
             }
 
-            for (const auto& [bid, indices] : bid_index_map) {
+            for (auto it = bid_index_map.begin(); it != bid_index_map.end(); ++it) {
+                const auto& indices = it->second;
                 // calculate c.m. data and recover mass for members of group
                 PS::F64 mass_cm=0.0;
                 PS::F64vec vel_cm=PS::F64vec(0.0);

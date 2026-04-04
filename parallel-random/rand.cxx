@@ -1,5 +1,6 @@
 #include "rand.hpp"
 #include <cstddef>
+#include <cmath>
 
 #ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL 
 thread_local uint64_t RAND_SEED[2] = {0, 0}; // random seeds for one thread
@@ -113,7 +114,8 @@ extern "C" {
 
 // return one rand double
     double rand_f64(void) {
-        return 0x1.fffffffffffffP-65 * rand_xoroshiro();
+        //return 0x1.fffffffffffffP-65 * rand_xoroshiro();
+        return std::nextafter(std::ldexp(1.0, -64), 0.0) * rand_xoroshiro();
     }
 
 // set random seed in parallel
