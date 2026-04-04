@@ -1391,6 +1391,9 @@ public:
         //system_hard_isolated.setTimeOrigin(stat.time);
         //system_hard_connected.setTimeOrigin(stat.time);
         ////// set time
+#ifdef STELLAR_EVOLUTION
+        hard_manager.ar_manager.interaction.time_interrupt_max = stat.time + _dt_drift;
+#endif            
 
 #ifdef PROFILE
         profile.hard_single.start();
@@ -3468,7 +3471,6 @@ public:
 
 #ifdef BSE_BASE
         hard_manager.initial(hard_parameters, bse_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
-        hard_manager.ar_manager.interaction.time_interrupt_max = stat.time + dt_max_hermite;
 
         // initial stellar evolution for each star
         if (!restart_flag) {
@@ -3876,6 +3878,7 @@ public:
 #ifdef STELLAR_EVOLUTION
                 PS::F64 mbk = p.mass;
                 PS::F64vec vbk = p.vel; //back up velocity in case of change
+                hard_manager.ar_manager.interaction.time_interrupt_max = stat.time + dt_drift;
                 int modify_flag = hard_manager.ar_manager.interaction.modifyOneParticle(p, stat.time, stat.time + dt_drift);
                 if (modify_flag) {
                     auto& v = p.vel;
@@ -4149,10 +4152,6 @@ public:
             // >8. Hard integration 
             // get drift step
             dt_drift = dt_manager.getDtDriftContinue();
-            
-#ifdef STELLAR_EVOLUTION
-            hard_manager.ar_manager.interaction.time_interrupt_max = stat.time + dt_drift;
-#endif            
             
             drift(dt_drift);
             // update stat time 

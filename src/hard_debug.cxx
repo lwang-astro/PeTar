@@ -36,6 +36,7 @@ int main(int argc, char **argv){
   PS::S32 n_crit_group = 0;
   PS::S32 istart = -1;
   PS::S32 iend = -1;
+  PS::S32 sym_order_ar = 0;
 #ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE  
   PS::S32 n_kdtree_min = 0;
 #endif
@@ -81,16 +82,17 @@ int main(int argc, char **argv){
   static int opt_flag = -1;
   static struct option long_options[] = {
       {"hermite-dt-max",        required_argument, &opt_flag, 0},
-      {"hermite-dt-min-power",  required_argument, &opt_flag, 1},
-      {"energy-err-ar",         required_argument, &opt_flag, 2},
+      {"hermite-dt-min-index",  required_argument, &opt_flag, 1},
+      {"ar-max-error",          required_argument, &opt_flag, 2},
 #ifdef HARD_CHECK_ENERGY
       {"energy-err-hard",       required_argument, &opt_flag, 3},
 #endif
-      {"slowdown-factor",   required_argument, &opt_flag, 4},
-      {"step-limit-ar",     required_argument, &opt_flag, 5},
-      {"step-scale-ar",     required_argument, &opt_flag, 6},
-      {"hermite-eta-4th",   required_argument, &opt_flag, 7},
-      {"hermite-eta-2nd",   required_argument, &opt_flag, 8},
+      {"ar-slowdown-factor",   required_argument, &opt_flag, 4},
+      {"ar-sym-order",      required_argument, &opt_flag, 20},
+      {"ar-max-nstep",     required_argument, &opt_flag, 5},
+      {"ar-ds-scale",     required_argument, &opt_flag, 6},
+      {"hermite-eta",   required_argument, &opt_flag, 7},
+      {"hermite-eta-init",   required_argument, &opt_flag, 8},
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
       {"stellar-evolution", required_argument, &opt_flag, 9},
@@ -108,10 +110,10 @@ int main(int argc, char **argv){
       {"n-crit-group",      required_argument, &opt_flag, 15},
       {"n-crit-arti",       required_argument, &opt_flag, 16},
 #ifdef HERMITE_PN
-      {"h4-pn-p", required_argument, &opt_flag, 17},
+      {"pn-crit-hermite", required_argument, &opt_flag, 17},
 #endif
 #ifdef SDAR_PN
-      {"ar-pn-p", required_argument, &opt_flag, 18},
+      {"pn-crit-ar", required_argument, &opt_flag, 18},
 #endif
 #ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE  
       {"kdtree-n-particles-min", required_argument, &opt_flag, 19},
@@ -200,6 +202,9 @@ int main(int argc, char **argv){
             n_kdtree_min = atoi(optarg);
             break;
 #endif
+        case 20:
+            sym_order_ar = atoi(optarg);
+            break;
         default:
             break;
         }
@@ -272,13 +277,17 @@ int main(int argc, char **argv){
 #ifdef HARD_CHECK_ENERGY
                  <<"        --energy-err-hard   [double]:  hard energy limit\n"
 #endif
-                 <<"        --energy-err-ar     [double]:  AR energy limit \n"
                  <<"        --hermite-dt-max    [double]:  hard time step max (should use together with -d)\n"
-                 <<"        --hermite-dt-min-power [int]:  hard time step min power (should use together with -D)\n"
-                 <<"        --hermite-eta-4th   [double]:  Eta 4th for hermite \n"
-                 <<"        --hermite-eta-2nd   [double]:  Eta 2nd for hermite \n"
+                 <<"        --hermite-dt-min-index [int]:  hard time step min power index (should use together with -D)\n"
+                 <<"        --hermite-eta       [double]:  Eta 4th for hermite \n"
+                 <<"        --hermite-eta-init  [double]:  Eta 2nd for hermite \n"
+                 <<"        --ar-max-error      [double]:  AR energy limit \n"
+                 <<"        --ar-slowdown-factor[double]:  change slowdown factor reference\n"
+                 <<"        --ar-sym-order      [int]:     Symplectic order for AR integrator\n"
+                 <<"        --ar-step-limit     [int]:     AR step count limit\n"
+                 <<"        --ar-step-scale     [double]:  AR step scaling factor\n";
 #ifdef HERMITE_PN
-                 <<"        --pn-crit-h4        [double]:  Hermite speed criterion to switch on PN terms, in unit of radian \n"
+                 <<"        --pn-crit-hermite   [double]:  Hermite speed criterion to switch on PN terms, in unit of radian \n"
 #endif
 #ifdef SDAR_PN
                  <<"        --pn-crit-ar        [double]:  AR speed criterion to switch on PN terms, in unit of radian \n"
@@ -293,9 +302,6 @@ int main(int argc, char **argv){
                  <<"        --rand-seed         [int]:     random seed to generate kick velocity\n"
 #endif
 #endif
-                 <<"        --slowdown-factor   [double]:  change slowdown factor reference\n"
-                 <<"        --step-limit-ar     [int]:     AR step count limit\n"
-                 <<"        --step-scale-ar     [double]:  AR step scaling factor\n";
 #ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
         std::cout<<"        --kdtree-n-particles-min [int]: Minimum number of particles + groups for building kdtree to speed up neighbor search in Hermite-only neighbor force calculation: "<<n_kdtree_min<<std::endl;
 #endif
@@ -410,6 +416,12 @@ int main(int argc, char **argv){
   Status stat;
   hard_manager.status = &stat;
 
+  // set Symplectic order for AR manager
+  if (sym_order_ar!=0) {
+      std::cerr<<"New AR symplectic order: "<<sym_order_ar<<std::endl;
+      hard_manager.ar_manager.step.initialSymplecticCofficients(sym_order_ar);
+  }
+  
   // Set step limit for ARC sym
   if (step_arc_limit>0) {
       std::cerr<<"New AR step count max: "<<step_arc_limit<<std::endl;

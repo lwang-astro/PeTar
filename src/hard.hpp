@@ -154,7 +154,7 @@ public:
                     speed_of_light(input_par_store, 1, "pn-c", "speed of light value for Post Newtonian; if -u 1 is used, auto determined"),
 #endif
 #ifdef HERMITE_PN
-                    h4_speed_criterion(input_par_store, 1e-6, "pn-crit-h4", "Hermite speed criterion to switch on PN terms, min (v/c)^2"),
+                    h4_speed_criterion(input_par_store, 1e-6, "pn-crit-hermite", "Hermite speed criterion to switch on PN terms, min (v/c)^2"),
 #endif
 #ifdef SDAR_PN
                     ar_speed_criterion(input_par_store, 1e-6, "pn-crit-ar", "AR speed criterion to switch on PN terms, min (v/c)^2"),
@@ -616,6 +616,7 @@ public:
 #endif
 #ifdef STELLAR_EVOLUTION
         ar_manager.interaction.interrupt_detection_option = _input.interrupt_detection_option.value;
+        ar_manager.interaction.time_interrupt_max = _stat.time + _dt_soft;
 #ifdef BSE_BASE
         ar_manager.interaction.stellar_evolution_option = _input.stellar_evolution_option.value;
         if (_input.stellar_evolution_option.value>0) {

@@ -5,7 +5,8 @@ from sdar.base import *
 from sdar.functions import *
 from sdar.ar import SDARInterruptBinary
 from sdar.ar import SDARData as sdar_SDARData
-from sdar.particle import ParticleGroup
+from sdar.particle import SimpleParticle, ParticleGroup
+from sdar.particle import Binary as sdar_Binary
 from sdar.hermite import HermiteData as hermite_HermiteData
 import sdar.group as hermite_group
 from .bse import *
@@ -230,130 +231,6 @@ class PeTarDataHeader():
                        frame='galactocentric', representation_type='cartesian', **parameters)
         return sky
     
-
-class SimpleParticle(DictNpArrayMix):
-    """ Simple particle class with only mass, postion, velocity
-    keys: (class members)
-        mass (1D): mass
-        pos (2D,3): postion x, y, z
-        *pos_high (2D,3): high-precision parts of position x, y, z, only exist when use_mpfrc is True
-        vel (2D,3): velocity vx, vy, vz
-    """
-    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
-
-        Parameters:
-        -----------
-        Keyword arguments:
-            float_type: type (np.float64)
-                floating point data type
-            use_mpfrc: bool (False)
-                if true, add three columns of pos_high indicating the high-precision parts of position
-        """
-        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
-        else: float_type = np.float64
-        keys = [['mass', float_type], ['pos', (float_type, 3)]]
-        if ('use_mpfrc' in kwargs.keys()): use_mpfrc = kwargs['use_mpfrc']
-        else: use_mpfrc = False
-        if (use_mpfrc):
-            keys += [['pos_high', (float_type, 3)]]
-        keys += [['vel', (float_type, 3)]]
-        
-        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
-
-    def calcR2(self):
-        """ calculate distance square, r2, and add/update it as a class member
-        """
-        if (self.size>0):
-            r2 = vecDot(self.pos,self.pos)
-        else:
-            r2 = np.array([])
-        self.addNewMember('r2',r2)
-
-    def calcEkin(self):
-        """ calculate kinetic energy, ekin, and add/update it as a class member
-        """
-        if (self.size>0):
-            ekin = 0.5*vecDot(self.vel,self.vel)*self.mass
-        else:
-            ekin = np.array([])
-        self.addNewMember('ekin',ekin)
-
-    def correctCenter(self, cm_pos, cm_vel):
-        self.pos -= cm_pos
-        self.vel -= cm_vel
-
-
-    def toSkyCoord(self, **kwargs):
-        """ generate astropy.coordinates.SkyCoord data
-            Be careful when external_mode is used, remember to use the keyword arguments pos_offset and vel_offset to add the center shift in the header of PeTar snapshot.
-        Parameters
-        -----------------
-        kwargs: dict()
-            pos_offset: numpy.ndarray ([0.0,0.0,0.0])
-                 position offset to add
-            vel_offset: numpy.ndarray ([0.0,0.0,0.0]) 
-                 velocity offset to add
-            pos_unit: astropy.units (units.pc)
-                 position unit of the particle data
-            vel_unit: astropy.units (units.pc/units.Myr)
-                 velocity unit of the particle data
-            galcen_distance: floating with length units (8.0*units.kpc [Galpy])
-                 galactic central distance of the Sun
-            z_sun: floating with length units (15.0*units.pc [Galpy])
-                 z direction distance of the Sun
-            galcen_v_sun: astropy.coordinates.CartesianDifferential ([10.0, 235.0, 7.0]*units.km/units.s [Galpy])
-                 velocity of the Sun
-
-        Return
-        ----------------
-        snap: astropy.coordinates.SkyCoord
-            snapshot data using SkyCoord
-        """
-        import astropy 
-        from astropy.coordinates import SkyCoord  # High-level coordinates
-        from astropy.coordinates import ICRS, Galactic, Galactocentric, FK4, FK5  # Low-level frames
-        from astropy.coordinates import Angle, Latitude, Longitude  # Angles
-        from astropy.coordinates import CartesianDifferential
-        import astropy.units as u
-
-        cm_cor=np.zeros(6)
-        if ('pos_offset' in kwargs.keys()):
-            pos_offset = kwargs['pos_offset']
-            if(type(pos_offset)==np.ndarray) | (type(pos_offset)==list):
-                cm_cor[0] = pos_offset[0]
-                cm_cor[1] = pos_offset[1]
-                cm_cor[2] = pos_offset[2]
-            else:
-                raise ValueError('pos_offset should be an array or a list with size of 3, given ', pos_offset)
-        if ('vel_offset' in kwargs.keys()):
-            vel_offset = kwargs['vel_offset']
-            if(type(vel_offset)==np.ndarray) | (type(vel_offset)==list):
-                cm_cor[3] = vel_offset[0]
-                cm_cor[4] = vel_offset[1]
-                cm_cor[5] = vel_offset[2]
-            else:
-                raise ValueError('vel_offset should be an array or a list with size of 3, given ', vel_offset)
-
-        pos_unit = u.pc
-        if ('pos_unit' in kwargs.keys()): pos_unit = kwargs['pos_unit']
-        vel_unit = u.pc/u.Myr
-        if ('vel_unit' in kwargs.keys()): vel_unit = kwargs['vel_unit']
-
-        parameters={'galcen_distance':8.0*u.kpc, 'z_sun':15.*u.pc, 'galcen_v_sun':CartesianDifferential([10.0,235.,7.]*u.km/u.s)}
-        for key in parameters.keys():
-            if key in kwargs.keys():
-                parameters[key] = kwargs[key]
-
-        snap = SkyCoord(x=(self.pos[:,0]+cm_cor[0])*pos_unit, 
-                        y=(self.pos[:,1]+cm_cor[1])*pos_unit, 
-                        z=(self.pos[:,2]+cm_cor[2])*pos_unit, 
-                        v_x=(self.vel[:,0]+cm_cor[3])*vel_unit,
-                        v_y=(self.vel[:,1]+cm_cor[4])*vel_unit,
-                        v_z=(self.vel[:,2]+cm_cor[5])*vel_unit,
-                        frame='galactocentric', representation_type='cartesian', **parameters)
-        return snap
-        
 class BaseParticle(SimpleParticle):
     """ Base particle type of PeTar
         The members include simple particle information, binary status and stellar evolution data
@@ -535,50 +412,7 @@ class Particle(HardParticle):
         etot = self.ekin + self.mass*self.pot
         self.addNewMember('etot',etot)
 
-class InterruptBinary(SDARInterruptBinary):
-    """ Data of stellar evolution interrupted binary in base mode
-        Inherit from sdar.ar.SDARInterruptBinary
-    """
-    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """ Initial InterruptBinary class
-        Parameters
-        ----------
-        ----------
-        keyword arguments:
-            particle_type: type (HardParticle)
-                particle data type
-        """
-
-        if (not 'particle_type' in kwargs.keys()):
-            kwargs['particle_type'] = HardParticle
-        particle_type = kwargs['particle_type']
-
-        SDARInterruptBinary.__init__(self, _dat, _offset, _append, **kwargs)
-
-def calculateParticleCMDict(pcm, _p1, _p2):
-    """ Calculate the center-of-the-mass of two particle sets
-    
-    Parameters
-    ----------
-    _p1: inherited SimpleParticle
-        particle set 1
-    _p2: inherited SimpleParticle 
-        particle set 2, should have the same size as _p1
-    pcm: dict 
-        particle center-of-the-mass, should include keys: 'mass','pos','vel'.
-    """
-    if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
-        pcm['mass'] = _p1.mass + _p2.mass
-        pcm['pos']  = (_p1.mass[:,None]*_p1.pos + _p2.mass[:,None]*_p2.pos)/pcm['mass'][:,None]
-        pcm['vel']  = (_p1.mass[:,None]*_p1.vel + _p2.mass[:,None]*_p2.vel)/pcm['mass'][:,None]
-    elif (isinstance(_p1, collections.OrderedDict)) & (isinstance(_p2,collections.OrderedDict)) | (isinstance(_p1, dict)) & (isinstance(_p2, dict)):
-        pcm['mass'] = _p1['mass'] + _p2['mass']
-        pcm['pos']  = (_p1['mass'][:,None]*_p1['pos'] + _p2['mass'][:,None]*_p2['pos'])/pcm['mass'][:,None]
-        pcm['vel']  = (_p1['mass'][:,None]*_p1['vel'] + _p2['mass'][:,None]*_p2['vel'])/pcm['mass'][:,None]
-    else:
-        raise ValueError('Initial fail, date type should be Particle or collections.OrderDict, given',type(_p1))
-
-class Binary(SimpleParticle):
+class Binary(sdar_Binary):
     """ Binary class
         The binary (tree) data. Depending on the definition of two members 
         (keyword argument member_particle_type(|_one|_two), 
@@ -626,8 +460,8 @@ class Binary(SimpleParticle):
         the member is a binary with two single stars.
         A hierarchical list can be provided, e.g., [petar.Particle, [petar.Particle, petar.Particle]]
         to indicate a triple system.
-               
     """
+
     def __init__ (self, _p1=None, _p2=None, _offset=int(0), _append=False, **kwargs):
         """
         Parameters
@@ -650,325 +484,69 @@ class Binary(SimpleParticle):
             G: float (1.0)
                 Gravitational constant
             interrupt_mode: string (none)
-               PeTar interrupt mode (set in configure): base, bse, mobse, none
-               This option indicates whether columns of stellar evolution exist
+                PeTar interrupt mode (set in configure): base, bse, mobse, none
+                This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
-               PeTar external mode (set in configure): galpy, agama, none 
-               This option indicates whether the column of externa potential exist
+                PeTar external mode (set in configure): galpy, agama, none 
+                This option indicates whether the column of external potential exist
             use_mpfrc: bool (False)
                If true, add three columns of pos_high indicating the high-precision parts of position
-            member_particle_type: type or list (Particle)
+            member_particle_type: type or list (SimpleParticle)
                 Type of component particle (both)
-            member_particle_type_one: type or list (Particle)
+            member_particle_type_one: type or list (SimpleParticle)
                 Type of 1st component
-            member_particle_type_two: type or list (Particle)
+            member_particle_type_two: type or list (SimpleParticle)
                 Type of 2nd component 
             float_type: type (np.float64)
                 floating point data type
         """
-        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
-        else: float_type = np.float64
-
-        G=1
-        simple_mode=True
-        member_particle_type=Particle
-        member_particle_type_one=member_particle_type
-        member_particle_type_two=member_particle_type
-        
-        if 'G' in kwargs.keys(): G=kwargs['G']
-        if 'simple_mode' in kwargs.keys(): simple_mode=kwargs['simple_mode']
-        if 'member_particle_type' in kwargs.keys(): 
-            member_particle_type=kwargs['member_particle_type']
-            member_particle_type_one=member_particle_type
-            member_particle_type_two=member_particle_type
-        if 'member_particle_type_one' in kwargs.keys(): member_particle_type_one=kwargs['member_particle_type_one']
-        if 'member_particle_type_two' in kwargs.keys(): member_particle_type_two=kwargs['member_particle_type_two']
-
-        if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
-            self.initargs = kwargs.copy()
-            self.ncols = int(7)
-            self.keys = [['mass',float_type],['pos',(float_type,3)]]
-            if ('use_mpfrc' in _p1.initargs.keys()):
-                if (_p1.initargs['use_mpfrc']):
-                    self.keys += [['pos_high',(float_type,3)]]
-                    self.__dict__['pos_high'] = np.zeros((_p1.size,3),dtype=float_type)
-                    self.initargs['use_mpfrc'] = True
-                    self.ncols += 3
-            self.keys += [['vel',(float_type,3)]]
-            if (simple_mode): 
-                self.keys += [['rrel',float_type],['semi',float_type],['ecc',float_type],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
-                self.particleToSemiEcc(_p1, _p2, G)
-                self.ncols += 3
-            else:
-                self.keys += [['m1',float_type],['m2',float_type],['rrel',float_type],['semi',float_type],['am',(float_type,3)],['L',(float_type,3)],['eccvec',(float_type,3)],['incline',float_type],['rot_horizon',float_type],['ecc',float_type],['rot_self',float_type],['ecca',float_type],['period',float_type],['t_peri',float_type],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
-                self.particleToBinary(_p1, _p2, G)
-                self.ncols += 20
-            self.p1 = _p1
-            self.p1.setHost(self)
-            self.p2 = _p2
-            self.p2.setHost(self)
-            if (not 'host' in self.__dict__.keys()):
-                self.host = None
-            self.size = _p1.size
-            self.ncols += self.p1.ncols + self.p2.ncols
-            binary_tree = self.createMemberParticleTypeTree()
-            self.initargs['member_particle_type_one']=binary_tree[0]
-            self.initargs['member_particle_type_two']=binary_tree[1]
-        elif (_p2==None):
-            type_one = member_particle_type_one
-            if (type(member_particle_type_one) == list):
-                type_one = (Binary, {'member_particle_type_one':member_particle_type_one[0],'member_particle_type_two':member_particle_type_one[1]})
-            type_two = member_particle_type_two
-            if (type(member_particle_type_two) == list):
-                type_two = (Binary, {'member_particle_type_one':member_particle_type_two[0],'member_particle_type_two':member_particle_type_two[1]})
-            if (simple_mode):
-                keys = [['rrel',float_type],['semi',float_type],['ecc',float_type],['p1',type_one], ['p2', type_two]]
-                SimpleParticle.__init__(self, _p1, _offset, _append, **kwargs)
-                DictNpArrayMix.__init__(self, keys, _p1, _offset+self.ncols, True, **kwargs)
-            else:
-                keys=[['m1',float_type],['m2',float_type],['rrel',float_type],['semi',float_type],['am',(float_type,3)],['L',(float_type,3)],['eccvec',(float_type,3)],['incline',float_type],['rot_horizon',float_type],['ecc',float_type],['rot_self',float_type],['ecca',float_type],['period',float_type],['t_peri',float_type],['p1', type_one],['p2', type_two]]
-                SimpleParticle.__init__(self, _p1, _offset, _append, **kwargs)
-                DictNpArrayMix.__init__(self, keys, _p1, _offset+self.ncols, True, **kwargs)
-            self.initargs = kwargs.copy()
-        else:
-            raise ValueError('Initial fail, date type should be Particle (2), Binary (1) or no argument (0)')
-
-    def calcEkin(self, member_also=False):
-        """ Calculate c.m. kinetic energy, ekin, and add it as a member
-        """
-        if (self.size>0):
-            ekin = 0.5*vecDot(self.vel,self.vel)*self.mass
-        else:
-            ekin = np.array([])
-        self.addNewMember('ekin',ekin)
-        if (member_also):
-            self.p1.calcEkin()
-            self.p2.calcEkin()
-
-    def calcEtot(self, member_also=False):
-        """ Calculate c.m. total energy (binary energy is excluded) , etot, and add it as a member
-        """
-        etot = self.ekin + self.mass*self.pot
-        self.addNewMember('etot',etot)
-        if (member_also):
-            self.p1.calcEtot()
-            self.p2.calcEtot()
-
-    def calcR2(self, member_also=False):
-        """ Calculate c.m. distance square, r2, and add it as a member
-        """
-        if (self.size>0):
-            r2 = vecDot(self.pos,self.pos)
-        else:
-            r2 = np.array([])
-        self.addNewMember('r2',r2)
-        if (member_also):
-            self.p1.calcR2()
-            self.p2.calcR2()
-
-    def calcEbin(self):
-        """ Calculate binding energy, ebin, and add it as a member 
-            Notice G should be given the correct value in initialization (keyword argument 'G')
-        """
-        ebin = self.initargs['G']*self.p1.mass*self.p2.mass/(2*self.semi)
-        self.addNewMember('ebin',ebin)
-
-    def calcPot(self):
-        """ Calculate potential of c.m., pot, and add it as a member
-            Notice G should be given the correct value in initialization (keyword argument 'G')
-        """
-        G = self.initargs['G']
-        pos_b1 = self.p1.pos
-        pos_b2 = self.p2.pos
-        m_b1 = self.p1.mass
-        m_b2 = self.p2.mass
-        dr = pos_b1-pos_b2
-        dr2 = vecDot(dr,dr)
-        invr = 1/np.sqrt(dr2)
-        pot_b1 = self.p1.pot + G*m_b2*invr
-        pot_b2 = self.p2.pot + G*m_b1*invr
-        pot = (m_b2*pot_b1 + m_b1*pot_b2)/self.mass
-        self.addNewMember('pot',pot)
-
-    def calcPotExt(self):
-        """ Calculate external potential of c.m., pot_ext, and add it as a member
-        """
-        pot_ext = (self.p1.mass*self.p1.pot_ext + self.p2.mass*self.p2.pot_ext)/self.mass
-        self.addNewMember('pot_ext',pot_ext)
+        kwargs_local = dict(kwargs)
+        kwargs_local['member_particle_type'] = Particle
+        super().__init__(_p1, _p2, _offset, _append, **kwargs_local)
 
 
-    def generateBinaryID(self):
-        """ Use CantorPairing to map two components id to one binary id
-            Add new member bid 
-        """
-        bid = cantorPairing(self.p1.id, self.p2.id)
-        self.addNewMember('bid',bid)
-            
-    def correctCenter(self, cm_pos, cm_vel):
-        """ Corrent c.m and component position and velocity by subtracting cm_pos and cm_vel
-        """
-        self.pos -= cm_pos
-        self.vel -= cm_vel
-        self.p1.correctCenter(cm_pos, cm_vel)
-        self.p2.correctCenter(cm_pos, cm_vel)
-
-    def particleToSemiEcc(self, _p1, _p2, _G):
-        """ Calculate relative distance, semi-major axis and eccentricity from particle pairs
-
+class InterruptBinary(SDARInterruptBinary):
+    """ Data of stellar evolution interrupted binary in base mode
+        Inherit from sdar.ar.SDARInterruptBinary
+    """
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ Initial InterruptBinary class
         Parameters
         ----------
-        _p1, _p2: inherited SimpleParticle
-            Particle pair data set
-        _G: float
-            Gravitational constant
-
+        ----------
+        keyword arguments:
+            particle_type: type (HardParticle)
+                particle data type
         """
-        calculateParticleCMDict(self.__dict__, _p1, _p2)
 
-        if ('use_mpfrc' in _p1.initargs.keys()):
-            if (_p1.initargs['use_mpfrc']):
-                pos1_mp = np.zeros((_p1.size,3),dtype=np.float128)
-                pos1_mp += _p1.pos
-                pos1_mp += _p1.pos_high
-                pos2_mp = np.zeros((_p2.size,3),dtype=np.float128)
-                pos2_mp += _p2.pos
-                pos2_mp += _p2.pos_high
-                dr = (pos1_mp - pos2_mp)
-            else:
-                dr = (_p1.pos - _p2.pos)
-        else:
-            dr = (_p1.pos - _p2.pos)
-        dv = (_p1.vel - _p2.vel)
-        
-        dr2  = (dr*dr).sum(axis=1)
-        dv2  = (dv*dv).sum(axis=1)
-        rvdot= (dr*dv).sum(axis=1)
+        if (not 'particle_type' in kwargs.keys()):
+            kwargs['particle_type'] = HardParticle
+        particle_type = kwargs['particle_type']
+
+        SDARInterruptBinary.__init__(self, _dat, _offset, _append, **kwargs)
+
+def calculateParticleCMDict(pcm, _p1, _p2):
+    """ Calculate the center-of-the-mass of two particle sets
     
-        dr   = np.sqrt(dr2)
-        m    = (_p1.mass+_p2.mass)
-        semi = 1.0/(2.0/dr - dv2/(_G*m))
-
-        dr_semi = 1.0 - dr/semi
-        ecc = np.sqrt(dr_semi*dr_semi + rvdot*rvdot/(_G*m*semi))
-
-        self.rrel = dr
-        self.semi = semi
-        self.ecc  = ecc
-
-    def particleToBinary(self, _p1, _p2, _G):
-        """ Calculate binary orbit from particle pairs
-
-        Parameters
-        ----------
-        _p1, _p2: inherited SimpleParticle
-            Particle pair data set
-        _G: float
-            Gravitational constant
-
-        """
-        binary=self.__dict__
-     
-        def regular_sign(_a,_a_err):
-            _a[(_a<0) & (_a>-_a_err)] *= -1
-     
-        f_err = 1e-2
-        calculateParticleCMDict(binary, _p1, _p2)
-
-        binary['m1'] = _p1.mass
-        binary['m2'] = _p2.mass
-        m_tot = binary['mass']
-        Gm_tot = _G*m_tot
-        
-        dx = _p1.pos-_p2.pos
-        dv = _p1.vel-_p2.vel
-        dr2  = vecDot(dx,dx)
-        dv2  = vecDot(dv,dv)
-        rvdot= vecDot(dx,dv)
-        dr   = np.sqrt(dr2)
-        binary['rrel'] = np.sqrt(dr2)
-     
-        inv_dr = 1.0 / binary['rrel']
-        binary['semi'] = 1.0 / (2.0*inv_dr - dv2 / Gm_tot)
-        binary['am'] = np.cross(dx,dv)
-        dp = _p1.vel*_p1.mass[:,None] - _p2.vel*_p2.mass[:,None]
-        binary['L'] = np.cross(dx,dp)
-        binary['eccvec'] = np.cross(dv,binary['am'])/Gm_tot[:,None]-dx/dr[:,None]
-     
-        binary['incline'] = np.arctan2(np.sqrt(binary['am'][:,0]*binary['am'][:,0]+binary['am'][:,1]*binary['am'][:,1]),binary['am'][:,2])
-        binary['rot_horizon'] = np.arctan2(binary['am'][:,0],-binary['am'][:,1])
-        regular_sign(binary['am'][:,0],f_err)
-        regular_sign(binary['am'][:,1],f_err)
-        #binary['rot_horizon'][binary['rot_horizon']<0] += np.pi
-        binary['rot_horizon'][binary['am'][:,1]==0.0]=0.0
-     
-        cosOMG = np.cos(binary['rot_horizon'])
-        sinOMG = np.sin(binary['rot_horizon'])
-        cosinc = np.cos(binary['incline'])
-        sininc = np.sin(binary['incline'])
-     
-        pos_bar_x =   dx[:,0]*cosOMG + dx[:,1]*sinOMG
-        pos_bar_y = (-dx[:,0]*sinOMG + dx[:,1]*cosOMG)*cosinc + dx[:,2]*sininc
-        pos_bar_z = 0.0
-        vel_bar_x =   dv[:,0]*cosOMG + dv[:,1]*sinOMG
-        vel_bar_y = (-dv[:,0]*sinOMG + dv[:,1]*cosOMG)*cosinc + dv[:,2]*sininc
-        vel_bar_z = 0.0
-     
-        h = np.sqrt(np.sum(binary['am']*binary['am'],axis=1))
-        ecccosomg =  h/Gm_tot*vel_bar_y - pos_bar_x*inv_dr
-        eccsinomg = -h/Gm_tot*vel_bar_x - pos_bar_y*inv_dr
-        binary['ecc'] = np.sqrt( ecccosomg*ecccosomg + eccsinomg*eccsinomg )
-        regular_sign(ecccosomg,f_err)
-        regular_sign(eccsinomg,f_err)
-        binary['rot_self'] = np.arctan2(eccsinomg,ecccosomg)
-        #binary['rot_self'][binary['rot_self']<-np.pi+1e-5] += 2*np.pi 
-        #binary['rot_self'][binary['rot_self']>=np.pi-1e-5] -= 2*np.pi
-     
-        regular_sign(pos_bar_y,f_err)
-        regular_sign(pos_bar_x,f_err)
-        phi = np.arctan2(pos_bar_y, pos_bar_x)
-        #phi[phi<-np.pi+1e-5] += 2*np.pi
-        #phi[phi>=np.pi-1e-5] -= 2*np.pi
-     
-        f = phi - binary['rot_self']
-        binary['ecca'] = np.arctan(np.sin(f)*np.sqrt(np.abs(binary['ecc']*binary['ecc'] - 1.0))/(binary['ecc']+np.cos(f)))
-        n = np.sqrt(Gm_tot/np.abs(binary['semi']*binary['semi']*binary['semi']))
-        binary['period'] = 8.0*np.arctan(1.0)/n
-        l = binary['ecca'] - binary['ecc']*np.sin(binary['ecca'])
-        binary['t_peri'] = l / n
-
-    def createMemberParticleTypeTree(self):
-        """ scan the members to create the member particle type tree list
-            For example, if the binary structure is a triple: p1: single, p2: binary.
-            Then the returned tree list is [particle_typename, [particle_typename, particle_typename]]
-        """
-        binary_tree=[None,None]
-        if (type(self.p1) == Binary):
-            binary_tree[0] = self.p1.createMemberParticleTypeTree()
-        else:
-            binary_tree[0] = type(self.p1)
-        if (type(self.p2) == Binary):
-            binary_tree[1] = self.p2.createMemberParticleTypeTree()
-        else:
-            binary_tree[1] = type(self.p2)
-        return binary_tree
-
-    def generateBSEInput(self, fpath, time=0.0):
-        """
-        Generate input for petar.bse
-        line: m1, m2, type1, type2, period, ecc, time
-        
-        Parameters:
-        ------------
-        fpath: file path to save the input data
-        time: time of the snapshot (0.0)
-        """
-        period = periodToSemi(self.p1.mass, self.p2.mass, self.semi, self.initargs['G'])
-        out_data = np.transpose((self.p1.mass, self.p2.mass, self.p1.star.type, self.p2.star.type, period, self.ecc, np.ones(self.size)*time))
-        f = open(fpath, 'w')
-        f.write('%d\n' % self.size)
-        np.savetxt(f, out_data, fmt='%.24g %.24g %d %d %.24g %.24g %.24g')
-        f.close()
-
+    Parameters
+    ----------
+    _p1: inherited SimpleParticle
+        particle set 1
+    _p2: inherited SimpleParticle 
+        particle set 2, should have the same size as _p1
+    pcm: dict 
+        particle center-of-the-mass, should include keys: 'mass','pos','vel'.
+    """
+    if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
+        pcm['mass'] = _p1.mass + _p2.mass
+        pcm['pos']  = (_p1.mass[:,None]*_p1.pos + _p2.mass[:,None]*_p2.pos)/pcm['mass'][:,None]
+        pcm['vel']  = (_p1.mass[:,None]*_p1.vel + _p2.mass[:,None]*_p2.vel)/pcm['mass'][:,None]
+    elif (isinstance(_p1, collections.OrderedDict)) & (isinstance(_p2,collections.OrderedDict)) | (isinstance(_p1, dict)) & (isinstance(_p2, dict)):
+        pcm['mass'] = _p1['mass'] + _p2['mass']
+        pcm['pos']  = (_p1['mass'][:,None]*_p1['pos'] + _p2['mass'][:,None]*_p2['pos'])/pcm['mass'][:,None]
+        pcm['vel']  = (_p1['mass'][:,None]*_p1['vel'] + _p2['mass'][:,None]*_p2['vel'])/pcm['mass'][:,None]
+    else:
+        raise ValueError('Initial fail, date type should be Particle or collections.OrderDict, given',type(_p1))
 
 class GroupInfo(hermite_group.GroupInfo):
     """ Group information output from PeTar
