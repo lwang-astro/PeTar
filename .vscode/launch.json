@@ -1,0 +1,108 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug cluster (prompt args)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${env:HOME}/bin/petar",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${input:clusterRunCwd}",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "${env:HOME}/bin:${env:PATH}"
+                },
+                {
+                    "name": "OMP_NUM_THREADS",
+                    "value": "${input:clusterOmpThreads}"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set runtime args from prompt",
+                    "text": "set args ${input:clusterRunArgs}",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build", // Ensure the program is built before debugging
+            "miDebuggerPath": "/usr/bin/gdb", // Path to gdb
+            "logging": {
+                "engineLogging": false,
+                "trace": false,
+                "traceResponse": false
+            }
+        },
+        {
+            "name": "Debug cluster hard (prompt args)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${env:HOME}/bin/petar.hard.debug",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${input:clusterRunCwd}",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "${env:HOME}/bin:${env:PATH}"
+                },
+                {
+                    "name": "OMP_NUM_THREADS",
+                    "value": "${input:clusterOmpThreads}"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set runtime args from prompt",
+                    "text": "set args ${input:clusterRunArgs}",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build", // Ensure the program is built before debugging
+            "miDebuggerPath": "/usr/bin/gdb", // Path to gdb
+            "logging": {
+                "engineLogging": false,
+                "trace": false,
+                "traceResponse": false
+            }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "clusterRunArgs",
+            "type": "promptString",
+            "description": "Input runtime arguments for petar",
+            "default": " input"
+        },
+        {
+            "id": "clusterRunCwd",
+            "type": "promptString",
+            "description": "Input working directory (cwd) for debug run",
+            "default": "./"
+        },
+        {
+            "id": "clusterOmpThreads",
+            "type": "promptString",
+            "description": "Input OMP_NUM_THREADS for debug run",
+            "default": "1"
+        }
+    ]
+}

@@ -1,0 +1,82 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "make install",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"],  
+            "detail": "Build and install using Makefile"
+        },
+        {
+            "label": "build (compile only)",
+            "type": "shell",
+            "command": "make",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": ["$gcc"],
+            "detail": "Compile only without install"
+        },
+        {
+            "label": "configure",
+            "type": "shell",
+            "command": "./configure ${input:configureArgs}",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "detail": "Generated task for configuring using Makefile"
+        },
+        {
+            "label": "build (reconfigure custom)",
+            "type": "shell",
+            "command": "make install",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "dependsOn": [
+                "configure"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "Run ./configure with custom options, then build and install"
+        },
+        {
+            "label": "petar select",
+            "type": "shell",
+            "command": "petar.select ${input:petarSelectArgs}",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "detail": "Select active petar binary family"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "configureArgs",
+            "type": "promptString",
+            "description": "Input configure options (e.g. --with-debug=g --with-interrupt=bse --with-external=galpy)",
+            "default": "--with-debug=g"
+        },
+        {
+            "id": "petarSelectArgs",
+            "type": "promptString",
+            "description": "Input petar.select args (e.g. --list, avx2.bse.galpy, --require bse galpy --optional avx2 omp)",
+            "default": "--list"
+        }
+    ]
+}
