@@ -114,7 +114,7 @@ public:
 #endif
                     gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant", NULL, false),
                     eps              (input_par_store, 0.0,  "soft-eps", "Softening epsilon"),
-                    r_group          (input_par_store,-1.0,  "r-group", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.); = -1: auto-determine by 0.8*r_in; = 0: switch off SDAR; > 0: custom criterion value"),
+                    r_group          (input_par_store,-1.0,  "r-group", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.); = -1: auto-determine by 0.8*r_search_group; = 0: switch off SDAR; > 0: custom criterion value"),
                     r_search_group   (input_par_store,-1.0,  "r-search-group", "The radial criterion for detecting multiple group candidates; = -1: auto-determine by 1.0*r_in; = 0: switch off SDAR; > 0: custom criterion value"),
                     r_acc_offset     (input_par_store, 0.0,  "hermite-r-acc0", "radius for computing acceleration offset in time step calculation to avoid too small step when weak acceleration exist; = 0: use r_out; > 0: custom offset value"),
                     n_step_per_orbit (input_par_store, 4,    "tt-nstep", "Number of steps per slow-down binary orbits (period/dt_soft) for isolated binaries; also the maximum criterion for activating tidal tensor method"),
@@ -573,19 +573,17 @@ public:
         r_out_base = _r_out_base;
         r_in_base = _r_in_base;
         
-        // if r_group is not defined, set to 0.8*r_in
-        if (_input.r_group.value==-1.0) {
-            PtclHard::r_group_over_in = 0.8;
-            _input.r_group.value = 0.8*r_in_base;
-        }
-        else PtclHard::r_group_over_in = _input.r_group.value/r_in_base;
-        
         // if r_search_group is not defined, set to r_in
         if (_input.r_search_group.value==-1.0) {
-            PtclHard::r_search_group_over_in = 1.0;
             _input.r_search_group.value = r_in_base;
         }
-        else PtclHard::r_search_group_over_in = _input.r_search_group.value/r_in_base;
+        PtclHard::r_search_group_over_in = _input.r_search_group.value/r_in_base;
+
+        // if r_group is not defined, set to 0.8*r_search_group; 
+        if (_input.r_group.value==-1.0) {
+            _input.r_group.value = 0.8*_input.r_search_group.value;
+        }
+        PtclHard::r_group_over_in = _input.r_group.value/r_in_base;
 
         n_step_per_orbit = _input.n_step_per_orbit.value;
         tidal_tensor_switcher = bool(_input.tidal_tensor_switcher.value);
@@ -681,18 +679,18 @@ public:
 
     //! check paramters
     bool checkParams() {
-        ASSERT(energy_error_max>0.0);
-        ASSERT(eps_sq>=0.0 && eps_sq<=r_out_base*r_out_base); // avoid incorrect self-potential correction after tree force, when eps>r_out, self-potential is G m /r_eps instead of G m/r_cut;
-        ASSERT(eps_sq>=0.0);
-        ASSERT(r_out_base>0.0);
-        ASSERT(r_in_base>0.0 && r_in_base < r_out_base);
-        ASSERT(PtclHard::r_search_group_over_in>=0.0 && PtclHard::r_search_group_over_in<=1.0);
-        ASSERT(PtclHard::r_group_over_in>=0.0 && PtclHard::r_group_over_in<=PtclHard::r_search_group_over_in);
-        ASSERT(n_step_per_orbit>0.0);
-        ASSERT(ap_manager.checkParams());
-        ASSERT(h4_manager.checkParams());
-        ASSERT(ar_manager.checkParams());
-        ASSERT(status!=NULL);
+        assert(energy_error_max>0.0);
+        assert(eps_sq>=0.0 && eps_sq<=r_out_base*r_out_base); // avoid incorrect self-potential correction after tree force, when eps>r_out, self-potential is G m /r_eps instead of G m/r_cut;
+        assert(eps_sq>=0.0);
+        assert(r_out_base>0.0);
+        assert(r_in_base>0.0 && r_in_base < r_out_base);
+        assert(PtclHard::r_search_group_over_in>=0.0 && PtclHard::r_search_group_over_in<=1.0);
+        assert(PtclHard::r_group_over_in>=0.0 && PtclHard::r_group_over_in<=PtclHard::r_search_group_over_in);
+        assert(n_step_per_orbit>0.0);
+        assert(ap_manager.checkParams());
+        assert(h4_manager.checkParams());
+        assert(ar_manager.checkParams());
+        assert(status!=NULL);
         return true;
     }
 
