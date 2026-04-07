@@ -166,10 +166,10 @@ public:
         changeover.writeBinary(_fout);
     }
 
-    void writeBinary(std::ostream& _fout) const{
-        ParticleBase::writeBinary(_fout);
+    void printColumnBinary(std::ostream& _fout) const{
+        ParticleBase::printColumnBinary(_fout);
         _fout.write(reinterpret_cast<const char*>(&(this->r_search)), sizeof(PS::F64)*4);
-        changeover.writeBinary(_fout);
+        changeover.printColumnBinary(_fout);
     }
 
     //! read class data with ASCII format
@@ -181,7 +181,7 @@ public:
         PS::S64 rcount=fscanf(_fin, "%lf %" PRId64 " ",
                               &this->r_search, &this->id);
         if (rcount<2) {
-            std::cerr<<"Error: Ptcl data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Ptcl data reading r_search and id fails! requiring data number is 2, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
@@ -190,7 +190,7 @@ public:
         PS::S64 rcount=fscanf(_fin, "%lf %" PRId64 " %" PRId64 " %" PRId64 " ",
                               &this->r_search, &this->id, &this->group_data.data_int64.data1, &this->group_data.data_int64.data2);
         if (rcount<4) {
-            std::cerr<<"Error: Ptcl data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Ptcl data reading r_search, id, and group_data fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
@@ -205,7 +205,7 @@ public:
         ParticleBase::readBinary(_fin);
         size_t rcount = fread(&(this->r_search), sizeof(PS::F64), 4, _fin);
         if (rcount<4) {
-            std::cerr<<"Error: Ptcl data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Ptcl data reading r_search, id, and group_data fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
@@ -217,7 +217,7 @@ public:
         ParticleBase::readBinary(_fin);
         _fin.read(reinterpret_cast<char*>(&(this->r_search)), sizeof(PS::F64)*4);
         if (!_fin) {
-            std::cerr<<"Error: Ptcl data reading fails! requiring data number is 4.\n";
+            std::cerr<<"Error: Ptcl data reading r_search, id, and group_data fails! requiring data number is 4.\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }

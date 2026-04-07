@@ -535,7 +535,7 @@ public:
         fwrite(this, sizeof(*this),1,_fp);
     }
 
-    void writeBinary(std::ostream& _fout) const {
+    void printColumnBinary(std::ostream& _fout) const {
         _fout.write(reinterpret_cast<const char*>(this), sizeof(*this));
     }
 

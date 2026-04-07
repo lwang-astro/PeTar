@@ -251,7 +251,7 @@ public:
                               &this->radius, &this->dm, &this->time_record, &this->time_interrupt);
 
         if(rcount<12) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 12, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Data reading ParticleBase fails! requiring data number is 12, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
@@ -260,7 +260,7 @@ public:
 #endif
 #else
         if(rcount<8) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 8, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Data reading ParticleBase fails! requiring data number is 8, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
@@ -274,7 +274,7 @@ public:
         fwrite(&(this->mass), sizeof(ParticleBase), 1, fp);
     }
 
-    void writeBinary(std::ostream& _fout) const {
+    void printColumnBinary(std::ostream& _fout) const {
         _fout.write(reinterpret_cast<const char*>(&(this->mass)), sizeof(ParticleBase));
     }
 
@@ -284,7 +284,7 @@ public:
     void readBinary(FILE* fp) {
         size_t rcount=fread(&(this->mass), sizeof(ParticleBase), 1, fp);
         if(rcount<1) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Data reading ParticleBase fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
@@ -293,7 +293,7 @@ public:
     void readBinary(std::istream& _fin) {
         _fin.read(reinterpret_cast<char*>(&(this->mass)), sizeof(ParticleBase));
         if(!_fin) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 1.\n";
+            std::cerr<<"Error: Data reading ParticleBase fails! requiring data number is 1.\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }

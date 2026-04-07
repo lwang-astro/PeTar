@@ -163,7 +163,7 @@ public:
         fwrite(&gravitational_constant, sizeof(PS::F64), 1, _fp);
     }
 
-    void writeBinary(std::ostream& _fout) const {
+    void printColumnBinary(std::ostream& _fout) const {
         _fout.write(reinterpret_cast<const char*>(&n_split_), sizeof(PS::S32));
         _fout.write(reinterpret_cast<const char*>(&gravitational_constant), sizeof(PS::F64));
     }

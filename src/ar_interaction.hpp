@@ -1647,7 +1647,7 @@ public:
 #endif
     }
 
-    void writeBinary(std::ostream& _fout) const {
+    void printColumnBinary(std::ostream& _fout) const {
         _fout.write(reinterpret_cast<const char*>(&eps_sq), sizeof(Float));
         _fout.write(reinterpret_cast<const char*>(&gravitational_constant), sizeof(Float));
         _fout.write(reinterpret_cast<const char*>(&interrupt_detection_option), sizeof(int));
@@ -1660,7 +1660,7 @@ public:
 #endif
 #endif
 #ifdef SDAR_PN
-        pn.writeBinary(_fout);
+    pn.printColumnBinary(_fout);
 #endif
     }
 

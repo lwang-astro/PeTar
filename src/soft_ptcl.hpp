@@ -126,20 +126,30 @@ public:
 
     void writeBinary(FILE* fp) const{
         Ptcl::writeBinary(fp);
-#ifdef EXTERNAL_POT_IN_PTCL
-        fwrite(&(this->acc), sizeof(PS::F64), 7, fp);
-#else
-        fwrite(&(this->acc), sizeof(PS::F64), 6, fp);
-#endif
+        fwrite(&(this->acc), sizeof(PS::F64), 3, fp);
+    #ifdef COLLECT_SP_ACC
+        fwrite(&(this->acc_sp), sizeof(PS::F64), 3, fp);
+    #endif
+        fwrite(&(this->pot_tot), sizeof(PS::F64), 1, fp);
+        fwrite(&(this->pot_soft), sizeof(PS::F64), 1, fp);
+    #ifdef EXTERNAL_POT_IN_PTCL
+        fwrite(&(this->pot_ext), sizeof(PS::F64), 1, fp);
+    #endif
+        fwrite(&(this->n_ngb), sizeof(PS::S64), 1, fp);
     }
 
     void printColumnBinary(std::ostream& _fout) const{
-        Ptcl::writeBinary(_fout);
-#ifdef EXTERNAL_POT_IN_PTCL
-        _fout.write(reinterpret_cast<const char*>(&(this->acc)), sizeof(PS::F64)*7);
-#else
-        _fout.write(reinterpret_cast<const char*>(&(this->acc)), sizeof(PS::F64)*6);
-#endif
+        Ptcl::printColumnBinary(_fout);
+        _fout.write(reinterpret_cast<const char*>(&(this->acc)), sizeof(PS::F64)*3);
+    #ifdef COLLECT_SP_ACC
+        _fout.write(reinterpret_cast<const char*>(&(this->acc_sp)), sizeof(PS::F64)*3);
+    #endif
+        _fout.write(reinterpret_cast<const char*>(&(this->pot_tot)), sizeof(PS::F64));
+        _fout.write(reinterpret_cast<const char*>(&(this->pot_soft)), sizeof(PS::F64));
+    #ifdef EXTERNAL_POT_IN_PTCL
+        _fout.write(reinterpret_cast<const char*>(&(this->pot_ext)), sizeof(PS::F64));
+    #endif
+        _fout.write(reinterpret_cast<const char*>(&(this->n_ngb)), sizeof(PS::S64));
     }
 
     void readAscii(FILE* fp) {
@@ -147,7 +157,7 @@ public:
         PS::S64 rcount=fscanf(fp, "%lf %lf %lf ",
                               &this->acc.x, &this->acc.y, &this->acc.z);  // 9-11
         if (rcount<3) {
-            std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 3, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: FPSoft Data reading acc fails! requiring data number is 3, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
@@ -155,28 +165,28 @@ public:
         rcount=fscanf(fp, "%lf %lf %lf ",
                       &this->acc_sp.x, &this->acc_sp.y, &this->acc_sp.z);  // 12-14
         if (rcount<3) {
-            std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 3, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: FPSoft Data reading acc_sp fails! requiring data number is 3, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
 #endif
         rcount=fscanf(fp, "%lf %lf ", &this->pot_tot, &this->pot_soft);
         if (rcount<2) {
-            std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: FPSoft Data reading pot_tot and pot_soft fails! requiring data number is 2, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
 #ifdef EXTERNAL_POT_IN_PTCL
         rcount=fscanf(fp, "%lf ", &this->pot_ext);
         if (rcount<1) {
-            std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: FPSoft Data reading pot_ext fails!\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
 #endif
         rcount=fscanf(fp, "%" PRId64 "\n", &this->n_ngb);
         if (rcount<1) {
-            std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: FPSoft Data reading n_ngb fails!\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
@@ -184,40 +194,90 @@ public:
 
     void readBinary(FILE* fp) {
         Ptcl::readBinary(fp);
-#ifdef EXTERNAL_POT_IN_PTCL
-        size_t rcount = fread(&(this->acc), sizeof(PS::F64), 7, fp);
-        if (rcount<7) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 7, only obtain "<<rcount<<".\n";
+        size_t rcount = fread(&(this->acc), sizeof(PS::F64), 3, fp);
+        if (rcount<3) {
+            std::cerr<<"Error: Data reading acc fails! requiring data number is 3, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
-#else
-        size_t rcount = fread(&(this->acc), sizeof(PS::F64), 6, fp);
-        if (rcount<6) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 6, only obtain "<<rcount<<".\n";
+#ifdef COLLECT_SP_ACC
+        rcount = fread(&(this->acc_sp), sizeof(PS::F64), 3, fp);
+        if (rcount<3) {
+            std::cerr<<"Error: Data reading acc_sp fails! requiring data number is 3, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
 #endif
+        rcount = fread(&(this->pot_tot), sizeof(PS::F64), 1, fp);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading pot_tot fails!\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
+            abort();
+        }
+        rcount = fread(&(this->pot_soft), sizeof(PS::F64), 1, fp);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading pot_soft fails!\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
+            abort();
+        }
+#ifdef EXTERNAL_POT_IN_PTCL
+        rcount = fread(&(this->pot_ext), sizeof(PS::F64), 1, fp);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading pot_ext fails!\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
+            abort();
+        }
+#endif
+        rcount = fread(&(this->n_ngb), sizeof(PS::S64), 1, fp);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading n_ngb fails!\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
+            abort();
+        }
     }
 
     void readBinaryStream(std::istream& _fin) {
         Ptcl::readBinary(_fin);
-#ifdef EXTERNAL_POT_IN_PTCL
-        _fin.read(reinterpret_cast<char*>(&(this->acc)), sizeof(PS::F64)*7);
+        _fin.read(reinterpret_cast<char*>(&(this->acc)), sizeof(PS::F64)*3);
         if (!_fin) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 7.\n";
+            std::cerr<<"Error: Data reading acc fails! requiring data number is 3.\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
-#else
-        _fin.read(reinterpret_cast<char*>(&(this->acc)), sizeof(PS::F64)*6);
+#ifdef COLLECT_SP_ACC
+        _fin.read(reinterpret_cast<char*>(&(this->acc_sp)), sizeof(PS::F64)*3);
         if (!_fin) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 6.\n";
+            std::cerr<<"Error: Data reading acc_sp fails! requiring data number is 3.\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
 #endif
+        _fin.read(reinterpret_cast<char*>(&(this->pot_tot)), sizeof(PS::F64));
+        if (!_fin) {
+            std::cerr<<"Error: Data reading pot_tot fails!\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
+            abort();
+        }
+        _fin.read(reinterpret_cast<char*>(&(this->pot_soft)), sizeof(PS::F64));
+        if (!_fin) {
+            std::cerr<<"Error: Data reading pot_soft fails!\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
+            abort();
+        }
+#ifdef EXTERNAL_POT_IN_PTCL
+        _fin.read(reinterpret_cast<char*>(&(this->pot_ext)), sizeof(PS::F64));
+        if (!_fin) {
+            std::cerr<<"Error: Data reading pot_ext fails!\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
+            abort();
+        }
+#endif
+        _fin.read(reinterpret_cast<char*>(&(this->n_ngb)), sizeof(PS::S64));
+        if (!_fin) {
+            std::cerr<<"Error: Data reading n_ngb fails!\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
+            abort();
+        }
     }
 
     void print(std::ostream & fout){

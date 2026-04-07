@@ -705,12 +705,12 @@ public:
         ar_manager.writeBinary(_fp);
     }
 
-    void writeBinary(std::ostream& _fout) const {
+    void printColumnBinary(std::ostream& _fout) const {
         size_t size = sizeof(*this) - sizeof(ap_manager) - sizeof(h4_manager) - sizeof(ar_manager);
         _fout.write(reinterpret_cast<const char*>(this), size);
-        ap_manager.writeBinary(_fout);
-        h4_manager.writeBinary(_fout);
-        ar_manager.writeBinary(_fout);
+        ap_manager.printColumnBinary(_fout);
+        h4_manager.printColumnBinary(_fout);
+        ar_manager.printColumnBinary(_fout);
     }
 
     //! read class data to file with binary format

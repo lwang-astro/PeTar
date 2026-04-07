@@ -197,7 +197,7 @@ public:
         fwrite(this, sizeof(ArtificialParticleInformation), 1, _fin);
     }
 
-    void writeBinary(std::ostream& _fout) const{
+    void printColumnBinary(std::ostream& _fout) const{
         _fout.write(reinterpret_cast<const char*>(this), sizeof(ArtificialParticleInformation));
     }
 
@@ -529,11 +529,11 @@ public:
         orbit_manager.writeBinary(_fp);
     }    
 
-    void writeBinary(std::ostream& _fout) const {
+    void printColumnBinary(std::ostream& _fout) const {
         _fout.write(reinterpret_cast<const char*>(&r_tidal_tensor), sizeof(PS::F64));
         _fout.write(reinterpret_cast<const char*>(&id_offset), sizeof(PS::S64));
         _fout.write(reinterpret_cast<const char*>(&gravitational_constant), sizeof(PS::F64));
-        orbit_manager.writeBinary(_fout);
+        orbit_manager.printColumnBinary(_fout);
     }
 
     //! read class data to file with binary format

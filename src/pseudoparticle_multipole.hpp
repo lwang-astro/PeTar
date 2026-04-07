@@ -65,7 +65,7 @@ public:
     void writeBinary(FILE *_fp) const {
     }
 
-    void writeBinary(std::ostream& _fout) const {
+    void printColumnBinary(std::ostream& _fout) const {
     }
 
     //! read class data to file with binary format
