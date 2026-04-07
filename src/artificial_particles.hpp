@@ -361,6 +361,9 @@ public:
         PS::F64vec dvel = _bin.vel - apcm->vel;
         apcm->pos = _bin.pos;
         apcm->vel = _bin.vel;
+        // set pcm mass to 0 if orbital particles exist, otherwise set to binary mass
+        if (getOrbitalParticleN()>0) apcm->mass = 0.0;
+        else apcm->mass = _bin.mass;
 
         auto* aptt = getTidalTensorParticles(_ptcl_artificial);
         TidalTensor::shiftTidalTensorParticles(aptt, dpos, dvel);
@@ -368,6 +371,9 @@ public:
         // for orbital artificial particles, recalculate new data
         auto* aporb = getOrbitalParticles(_ptcl_artificial);
         orbit_manager.createSampleParticles(aporb, _bin);
+
+
+
     }
 
     //! correct orbit-samping/pseudo particles force
