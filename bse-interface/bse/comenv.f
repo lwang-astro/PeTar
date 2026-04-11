@@ -34,7 +34,9 @@
       PARAMETER (AURSUN = 214.95D0,K3 = 0.21D0) 
 ****
       REAL*8 ftzacc
-      PARAMETER (ftzacc=0.5D0)
+******      PARAMETER (ftzacc=0.5D0) *SR mod accretion too high, now accretes only 10% 
+      PARAMETER (ftzacc=0.1D0) 
+
 ****
       COMMON /VALUE2/ ALPHA1,LAMBDA
       LOGICAL COEL

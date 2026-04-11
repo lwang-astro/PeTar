@@ -35,7 +35,7 @@ do
 done
 
 if [ ! -e $fname ] | [ -z $fname ] ; then
-    echo 'Error, file name not provided' 
+    echo 'Error, file name not provided'
     exit
 fi
 [ -z $fout ] && fout=$fname
@@ -59,7 +59,7 @@ do
 		rm -i $fout.$s
 	    fi
 	fi
-	
+
 	echo 'gether '$file'.* to '$fout.$s
 	if [ ! -z $nmpi ]; then
 	    nend=`expr $nmpi - 1`
@@ -121,13 +121,23 @@ bse_opt='.bse .mobse .bseEmp'
 for s in $bse_opt
 do
     if [ -e $fout$s ]; then
-	echo 'get '$s' type_change, sn_kick, gw_kick, dynamic_merge, tide'
+	echo 'get '$s' type_change, sn_kick, gw_kick, dynamic_merge, GW_tide_merge, hyperbolic_tde, binary_tde, tide'
 	egrep '^Dynamic_merge' $fout$s |sed 's/Dynamic_merge://g' >$fout$s.dynamic_merge.tmp
 	awk '{if (NF==45) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $LINE}' $fout$s.dynamic_merge.tmp > $fout$s.dynamic_merge
 	rm -f $fout$s.dynamic_merge.tmp
+	egrep '^Binary_merge' $fout$s |sed 's/Binary_merge://g' >$fout$s.binary_merge.tmp
+	awk '{if (NF==45) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $LINE}' $fout$s.binary_merge.tmp > $fout$s.binary_merge
+	rm -f $fout$s.binary_merge.tmp
+	egrep '^Hyperbolic_TDE' $fout$s |sed 's/Hyperbolic_TDE://g' >$fout$s.hyperbolic_tde.tmp
+	awk '{if (NF==45) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $LINE}' $fout$s.hyperbolic_tde.tmp > $fout$s.hyperbolic_tde
+	rm -f $fout$s.hyperbolic_tde.tmp
+	egrep '^Binary_TDE' $fout$s |sed 's/Binary_TDE://g' >$fout$s.binary_tde.tmp
+	awk '{if (NF==45) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $LINE}' $fout$s.binary_tde.tmp > $fout$s.binary_tde
+	rm -f $fout$s.binary_tde.tmp
 	egrep '^SN_kick' $fout$s |sed 's/SN_kick//g' >$fout$s.sn_kick
+	egrep '^Hyperbolic_TDE' $fout$s |sed 's/Hyperbolic_TDE://g' >$fout$s.hyperbolic_tde
 	egrep '^Tide' $fout$s |sed 's/Tide//g' >$fout$s.tide
 	egrep '^GW_kick' $fout$s |sed 's/GW_kick//g' >$fout$s.gw_kick
-	egrep -v '^(Dynamic_merge|SN_kick|Tide|GW_kick)' $fout$s |awk '{for (i=2;i<=NF;i++) printf("%s ", $i); printf("\n")}' >$fout$s.type_change
+	egrep -v '^(Dynamic_merge|GW_tide_merge|Hyperbolic_TDE|Binary_TDE|SN_kick|Tide|GW_kick)' $fout$s |awk '{for (i=2;i<=NF;i++) printf("%s ", $i); printf("\n")}' >$fout$s.type_change
     fi
 done

@@ -19,7 +19,9 @@
 
 ****
       REAL*8 ftzacc
-      PARAMETER (ftzacc=0.5D0)
+******      PARAMETER (ftzacc=0.5D0) *SR mod accretion too high, now accretes only 10% 
+      PARAMETER (ftzacc=0.1D0) 
+      
 ****
       REAL*8 sigma, mxns
       INTEGER bhflag

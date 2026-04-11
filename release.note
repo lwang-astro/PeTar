@@ -60,6 +60,7 @@
 58. Make KDKDK 4th order as default method.
 59. Add Skills for AI agent (GitHub).
 60. Add petar.select tool to relink current petar to one of the installed petar versions.
+61. Add TDE treatment from Rastello S. et al. (2026).
 **Some existing issues include**
 
 2. In cases where a high-eccentric binary system transitions from a binary to a hyperbolic orbit temporarily due to significant perturbations at a large separation, the BSE code may incorrectly identify it as an immediate merger, even though the binary system does not actually merge. It is essential to establish a more precise criterion for invoking binary evolution codes in such scenarios.

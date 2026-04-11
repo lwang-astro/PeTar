@@ -11,7 +11,7 @@ PeTar is an N-body code specifically designed for modeling collisional stellar s
 
 - **Precise gravitational force modeling**: PeTar does not employ any softening of gravitational force, enabling accurate tracking of the orbital evolution of binaries, triples, and close encounters.
 
-- **Incorporation of single and binary stellar evolution**: Within the N-body simulation, PeTar dynamically evolves the masses, radii, and stellar types of individual stars. It also tracks significant events like supernovae, mass transfer, common envelope interactions, and binary mergers caused by stellar coalescence/collision and gravitational wave emission.
+- **Incorporation of single and binary stellar evolution**: Within the N-body simulation, PeTar dynamically evolves the masses, radii, and stellar types of individual stars. It also tracks significant events like supernovae, mass transfer, common envelope interactions, binary mergers and micro-tidal disruption caused by stellar coalescence/collision and gravitational wave emission.
 
 - **Galactic potential inclusion**: PeTar allows for the simulation of tidal effects on stellar systems by incorporating the galactic potential.
 
@@ -90,9 +90,10 @@ The subsequent sections provide detailed explanations of the installation proces
         - [Enabling GPU Acceleration](#enabling-gpu-acceleration)
         - [Debug mode](#debug-mode)
         - [Utilizing Stellar Evolution](#utilizing-stellar-evolution)
+        - [Micro-tidal disruption events](#micro-tidal-disruption-events)
         - [Using External Potential](#using-external-potential)
         - [Combining Multiple options](#combining-multiple-options)
-     - [Compilation and Installation](#compilation-and-installation)
+    - [Compilation and Installation](#compilation-and-installation)
 - [Sample Scripts](#sample-scripts)
 - [Usage](#usage)
     - [Preparing the initial condition](#preparing-the-initial-condition)
@@ -372,6 +373,11 @@ Enabling this option will also compile and install the standalone tool _petar.[b
 To use the extreme metal-poor evolution track of bseEmp, users must create a symbolic link in the working directory to either the _ffbonn_ or _ffgeneva_ directory located in 'PeTar/bse-interface/bseEmp/emptrack/', depending on the selected stellar evolution track mode during the execution of PeTar. Failure to do this will lead to a file I/O error, causing the simulation to crash.
 
 When utilizing SSE/BSE packages, users can control whether to activate stellar evolution during the simulation using the `petar` option `--stellar-evolution` and `--detect-interrupt` for single and binary evolution, respectively. When `--stellar-evolution 2` is specified, dynamical tide for binary stars and hyperbolic gravitational wave energy/angular momentum loss for compact binaries are enabled. It's worth noting that the dynamical tide is still an experimental feature, and its results may not always be physically accurate. By default (`--stellar-evolution 1`), dynamical tide remains inactive.
+
+### Micro-tidal disruption events
+
+When BSE-based packages are used, PeTar includes an implementation for treating **micro–tidal disruption events (micro-TDEs)** involving stars and compact objects (black holes or neutron stars) in both open and closed orbits. A detailed description of the implemented updates, physical assumptions, and numerical methods can be found in the accompanying paper:
+[Rastello S., Iorio G., Gieles M., Wang L., 2026, A&A, 707, A217](https://ui.adsabs.harvard.edu/abs/2026A&A...707A.217R). For further details, users can contact [Sara Rastello](mailto:sara.rastello@fqa.ub.edu) or [Giuliano Iorio](mailto:giuliano.iorio.astro@gmail.com).
 
 ### Using External Potential
 

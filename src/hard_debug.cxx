@@ -287,19 +287,19 @@ int main(int argc, char **argv){
                  <<"        --ar-step-limit     [int]:     AR step count limit\n"
                  <<"        --ar-step-scale     [double]:  AR step scaling factor\n";
 #ifdef HERMITE_PN
-                 <<"        --pn-crit-hermite   [double]:  Hermite speed criterion to switch on PN terms, in unit of radian \n"
+        std::cout<<"        --pn-crit-hermite   [double]:  Hermite speed criterion to switch on PN terms, in unit of radian \n";
 #endif
 #ifdef SDAR_PN
-                 <<"        --pn-crit-ar        [double]:  AR speed criterion to switch on PN terms, in unit of radian \n"
+        std::cout<<"        --pn-crit-ar        [double]:  AR speed criterion to switch on PN terms, in unit of radian \n";
 #endif
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
-                 <<"        --stellar-evolution [int]:     Stellar evolution option: \n"
+        std::cout<<"        --stellar-evolution [int]:     Stellar evolution option: \n";
 #else
-                 <<"        --detect-interrupt  [int]:     interrupt detection option: 0: no interrupt; 1: merge; 2: record binary status\n"
+        std::cout<<"        --detect-interrupt  [int]:     interrupt detection option: 0: no interrupt; 1: merge; 2: record binary status\n";
 #endif
 #if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
-                 <<"        --rand-seed         [int]:     random seed to generate kick velocity\n"
+        std::cout<<"        --rand-seed         [int]:     random seed to generate kick velocity\n";
 #endif
 #endif
 #ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE

@@ -96,7 +96,7 @@ public:
 #endif
 #endif
         return true;
-    }        
+    }
 
     //! print parameters
     void print(std::ostream & _fout) const{
@@ -191,7 +191,7 @@ public:
         _f2.pot_in = -gm1or;
 
 
-#ifdef AR_TTL 
+#ifdef AR_TTL
         // trans formation function gradient
 #ifdef AR_CHANGEOVER
         Float gm1m2or3 = gm1m2*inv_r3*k;
@@ -236,7 +236,7 @@ public:
             Float* acci = _force[i].acc_in;
             acci[0] = acci[1] = acci[2] = Float(0.0);
 
-#ifdef AR_TTL 
+#ifdef AR_TTL
             Float* gtgradi = _force[i].gtgrad;
             gtgradi[0] = gtgradi[1] = gtgradi[2] = Float(0.0);
 #endif
@@ -247,7 +247,7 @@ public:
             for (int j=0; j<_n_particle; j++) {
                 if (i==j) continue;
                 const Float massj = _particles[j].mass;
-                const Float* posj = &_particles[j].pos.x; 
+                const Float* posj = &_particles[j].pos.x;
                 Float dr[3] = {posj[0] -posi[0],
                                posj[1] -posi[1],
                                posj[2] -posi[2]};
@@ -269,7 +269,7 @@ public:
                 acci[1] += gmor3 * dr[1];
                 acci[2] += gmor3 * dr[2];
 
-#ifdef AR_TTL                     
+#ifdef AR_TTL
                 Float gmimjor3 = massi*gmor3;
                 gtgradi[0] += gmimjor3 * dr[0];
                 gtgradi[1] += gmimjor3 * dr[1];
@@ -278,7 +278,7 @@ public:
 
                 poti -= gmor;
                 gtki += gmor;
-                    
+
             }
             _epot += poti * massi;
             gt_kick_inv += gtki * massi;
@@ -449,10 +449,9 @@ public:
                 Float* acc_pert = _force[i].acc_pert;
                 Float& pot_pert = _force[i].pot_pert;
                 const auto& pi = _particles[i];
-                acc_pert[0] -= acc_pert_cm[0]; 
-                acc_pert[1] -= acc_pert_cm[1];        
-                acc_pert[2] -= acc_pert_cm[2]; 
-                
+                acc_pert[0] -= acc_pert_cm[0];
+                acc_pert[1] -= acc_pert_cm[1];
+                acc_pert[2] -= acc_pert_cm[2];
                 pot_pert -= acc_pert[0]*pi.pos[0] + acc_pert[1]*pi.pos[1] + acc_pert[2]*pi.pos[2];
 
 #ifdef SOFT_PERT
@@ -596,7 +595,7 @@ public:
 #endif
     }
 
-    //! calculate perturbation from distance to perturber and masses of particle and perturber 
+    //! calculate perturbation from distance to perturber and masses of particle and perturber
     static Float calcPertFromMR(const Float _r, const Float _mp, const Float _mpert) {
         Float r2 = _r*_r;
 #ifdef AR_SLOWDOWN_PERT_R4
@@ -617,10 +616,10 @@ public:
 
         Float semi = 1.0/(2.0/r - v2/gm);
         //hyperbolic, directly use velocity v
-        if (semi<0) 
+        if (semi<0)
             _t_min_sq = std::min(_t_min_sq, r2/v2);
         else {
-            Float ra_fact = (1 - r/semi); 
+            Float ra_fact = (1 - r/semi);
             Float e2 = drdv*drdv/(gm*semi) + ra_fact*ra_fact; // ecc^2
             Float r_vrmax = semi*(1-e2);
             if (r<r_vrmax) {
@@ -643,11 +642,11 @@ public:
     }
 
     //! calculate slowdown perturbation and timescale from particle j to particle i
-    /*! 
+    /*!
       @param[out] _pert_out: perturbation from particle j
       @param[out] _t_min_sq: timescale limit from particle j
       @param[in] _pi: particle i (cm of binary)
-      @param[in] _pj: particle j 
+      @param[in] _pj: particle j
      */
     void calcSlowDownPertOne(Float& _pert_out, Float& _t_min_sq, const PtclHard& pi, const PtclHard& pj) {
         Float dr[3] = {pj.pos[0] - pi.pos[0],
@@ -656,7 +655,7 @@ public:
         Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
         Float r = sqrt(r2);
         _pert_out += calcPertFromMR(r, pi.mass, pj.mass);
-            
+
 #ifdef AR_SLOWDOWN_TIMESCALE
         Float dv[3] = {pj.vel[0] - pi.vel[0],
                        pj.vel[1] - pi.vel[1],
@@ -704,8 +703,8 @@ public:
 
     //! (Necessary) calculate slowdown perturbation and timescale
     /*!
-      @param[out] _pert_out: perturbation 
-      @param[out] _t_min_sq: timescale limit 
+      @param[out] _pert_out: perturbation
+      @param[out] _t_min_sq: timescale limit
       @param[in] _time: physical time for prediction
       @param[in] _bin: binary tree of member particles
       @param[in] _particle_cm: center-of-mass particle
@@ -731,7 +730,7 @@ public:
             auto& chi = _particle_cm.changeover;
 
 #ifdef AR_SLOWDOWN_TIMESCALE
-            // velocity dependent method 
+            // velocity dependent method
             Float vp[3], vcm[3];
 
             vcm[0] = _particle_cm.vel[0] + dt*(_particle_cm.acc0[0] + 0.5*dt*_particle_cm.acc1[0]);
@@ -764,7 +763,7 @@ public:
                 _pert_out += calcPertFromMR(r, mcm, k*mj);
 
 #ifdef AR_SLOWDOWN_TIMESCALE
-                // velocity dependent method 
+                // velocity dependent method
                 vp[0] = pertj->vel[0] + dt*(pertj->acc0[0] + 0.5*dt*pertj->acc1[0]);
                 vp[1] = pertj->vel[1] + dt*(pertj->acc0[1] + 0.5*dt*pertj->acc1[1]);
                 vp[2] = pertj->vel[2] + dt*(pertj->acc0[2] + 0.5*dt*pertj->acc1[2]);
@@ -807,7 +806,7 @@ public:
         //    return true;
         //}
 #ifdef BSE_BASE
-        // SSE/BSE stellar evolution 
+        // SSE/BSE stellar evolution
         if (_p.time_interrupt<=_time_end&&stellar_evolution_option>0) {
             ASSERT(bse_manager.checkParams());
 
@@ -821,7 +820,7 @@ public:
             StarParameter star_bk = _p.star;
             int event_flag = bse_manager.evolveStar(_p.star, output, dt);
 
-            // error 
+            // error
             if (event_flag<0) {
                 std::cerr<<"SSE Error: ID= "<<_p.id;
                 _p.star.print(std::cerr);
@@ -837,18 +836,18 @@ public:
             double dt_miss = bse_manager.getDTMiss(output);
             _p.time_record += dt-dt_miss;
 
-            // estimate next time to check 
+            // estimate next time to check
             _p.time_interrupt = std::min(_p.time_record + bse_manager.getTimeStepStar(_p.star), time_interrupt_max);
 
             // record mass change (if loss, negative)
             double dm = bse_manager.getMassLoss(output);
             _p.dm += dm;
             if (dm==0.0) modify_flag = 0;
-            
+
             // change mass in main data
             _p.mass = bse_manager.getMass(_p.star);
 
-            // set merger check radius 
+            // set merger check radius
             _p.radius = bse_manager.getMergerRadius(_p.star);
 
             // type change
@@ -908,8 +907,8 @@ public:
         return 0;
     }
 
-    //! (Necessary) modify the orbits and interrupt check 
-    /*! check the inner left binary whether their separation is smaller than particle radius sum and become close, if true, set one component stauts to merger with cm mass and the other unused with zero mass. Return the binary tree address 
+    //! (Necessary) modify the orbits and interrupt check
+    /*! check the inner left binary whether their separation is smaller than particle radius sum and become close, if true, set one component stauts to merger with cm mass and the other unused with zero mass. Return the binary tree address
       @param[in] _bin_interrupt: interrupt binary information: adr: binary tree address; time_now: current physical time; time_end: integration finishing time; status: interrupt status: change, merge,none
       @param[in] _bin: binarytree to check iteratively
       \return 0: no modification; 2: modified; 3: destroyed
@@ -974,21 +973,21 @@ public:
 #ifdef BSE_BASE
             auto postProcess =[&](StarParameterOut* out, Float* pos_cm, Float*vel_cm, Float& semi, Float& ecc, int binary_type_final=0, double vkick[][4]=NULL) {
                 // if status not set, set to change
-                if (_bin_interrupt.status == AR::InterruptStatus::none) 
+                if (_bin_interrupt.status == AR::InterruptStatus::none)
                     _bin_interrupt.status = AR::InterruptStatus::change;
-                    
+
                 // set return flag >0
                 modify_return = 2;
 
                 p1->time_record = _bin_interrupt.time_now - bse_manager.getDTMiss(out[0]);
                 p2->time_record = _bin_interrupt.time_now - bse_manager.getDTMiss(out[1]);
 
-                // estimate next time to check 
+                // estimate next time to check
                 p1->time_interrupt = std::min(p1->time_record + bse_manager.getTimeStepBinary(p1->star, p2->star, semi, ecc, binary_type_final), time_interrupt_max);
                 p2->time_interrupt = p1->time_interrupt;
 
                 // reset collision state since binary orbit changes
-                if (p1->getBinaryInterruptState()== BinaryInterruptState::collision) 
+                if (p1->getBinaryInterruptState()== BinaryInterruptState::collision)
                     p1->setBinaryInterruptState(BinaryInterruptState::none);
                 if (p2->getBinaryInterruptState()== BinaryInterruptState::collision)
                     p2->setBinaryInterruptState(BinaryInterruptState::none);
@@ -1003,7 +1002,7 @@ public:
                 // dm is used to correct energy, thus must be correctly set, use += since it may change mass before merge
                 p1->dm += bse_manager.getMassLoss(out[0]);
                 p2->dm += bse_manager.getMassLoss(out[1]);
-                
+
                 // update masses
                 p1->mass = bse_manager.getMass(p1->star);
                 p2->mass = bse_manager.getMass(p2->star);
@@ -1109,12 +1108,11 @@ public:
                     }
                 }
                 if (mass_zero_flag) {
-                    DATADUMP("dump_merger");
+                    DATADUMP("dump_binary_merger");
                 }
 
             };
 
-            bool check_flag = false;
             COMM::Vector3<Float> pos_red(p2->pos[0] - p1->pos[0], p2->pos[1] - p1->pos[1], p2->pos[2] - p1->pos[2]);
             COMM::Vector3<Float> vel_red(p2->vel[0] - p1->vel[0], p2->vel[1] - p1->vel[1], p2->vel[2] - p1->vel[2]);
             Float drdv = pos_red * vel_red;
@@ -1124,22 +1122,22 @@ public:
                 int binary_type_init = 0;
                 if (binary_type_p1==binary_type_p2) binary_type_init = binary_type_p1;
 
-                // check whether need to update
+                // check whether need to update based on time step
                 double time_check = std::min(p1->time_interrupt, p2->time_interrupt);
-                Float dt = _bin_interrupt.time_now - std::max(p1->time_record,p2->time_record);
-                if (time_check<=_bin_interrupt.time_now&&dt>0) check_flag = true;
+                Float dt1 = _bin_interrupt.time_now - p1->time_record;
+                Float dt2 = _bin_interrupt.time_now - p2->time_record;
+                // if next time to check > time_now, do not evolve by setting dt = 0;
+                if (time_check>_bin_interrupt.time_now) dt1 = dt2 = 0.0;
 
-                if (!check_flag) {
-                    // pre simple check whether calling BSE is needed
-                    Float t_record_min = std::min(p1->time_record,p2->time_record);
-                    
+                // check whether bse is needed
+                Float dr[3] = {p1->pos[0] - p2->pos[0],
+                               p1->pos[1] - p2->pos[1],
+                               p1->pos[2] - p2->pos[2]};
+                Float dr2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
 
-                    if (t_record_min<_bin_interrupt.time_now&&_bin.semi>0 && (!bse_manager.isMassTransfer(binary_type_init)) && (!bse_manager.isDisrupt(binary_type_init))) {
-                        check_flag=bse_manager.isCallBSENeeded(p1->star, p2->star, _bin.semi, _bin.ecc, dt);
-                    }
-                }
+                bool check_flag = bse_manager.isCallBSENeeded(p1->star, p2->star, dr2, _bin.semi, _bin.ecc, dt1, dt2, binary_type_init);
 
-                if (check_flag) {
+	        	if (check_flag) {
                     ASSERT(bse_manager.checkParams());
                     // record address of modified binary
                     _bin_interrupt.setBinaryTreeAddress(&_bin);
@@ -1168,7 +1166,7 @@ public:
                     Float period = _bin.period;
                     //Float period_bk = period;
 
-                    // backup c.m. information 
+                    // backup c.m. information
                     Float pos_cm[3], vel_cm[3];
                     for (int k=0; k<3; k++) {
                         pos_cm[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mtot;
@@ -1206,7 +1204,7 @@ public:
                         std::cerr<<std::flush;
                         abort();
                     }
-                
+
                     // check binary type and print event information
                     int binary_type_final=0;
                     int nmax = bin_event.getEventNMax();
@@ -1293,9 +1291,9 @@ public:
             // dynamical merger and tide check
             if (_bin_interrupt.status!=AR::InterruptStatus::merge&&_bin_interrupt.status!=AR::InterruptStatus::destroy) {
 
-                auto merge = [&](const Float& dr, const Float& t_peri, const Float& sd_factor) {
+                auto merge = [&](const Float& dr, const Float& t_peri, const Float& sd_factor, std::string logmessage = "Dynamic_merge" ) {
                     _bin_interrupt.setBinaryTreeAddress(&_bin);
-                
+
 #ifdef BSE_BASE
                     //Float m1_bk = p1->mass;
                     //Float m2_bk = p2->mass;
@@ -1336,8 +1334,8 @@ public:
                         if (stellar_evolution_write_flag&&(p1->mass==0.0||p2->mass==0.0)) {
 #pragma omp critical
                             {
-                                fout_bse<<"Dynamic_merge: "
-                                        <<std::setw(WRITE_WIDTH)<<p1->id
+                                fout_bse<<logmessage<<" "
+                     			        <<std::setw(WRITE_WIDTH)<<p1->id
                                         <<std::setw(WRITE_WIDTH)<<p2->id
                                         <<std::setw(WRITE_WIDTH)<<_bin.period*bse_manager.tscale*bse_manager.year_to_day
                                         <<std::setw(WRITE_WIDTH)<<_bin.semi*bse_manager.rscale
@@ -1355,8 +1353,8 @@ public:
                                 p2->star.printColumnAscii(fout_bse, WRITE_WIDTH);
                                 fout_bse<<std::endl;
 
-                                DATADUMP("dump_merger");
-                                
+                                std::string dump_name = "dump_" + logmessage;
+                                DATADUMP(dump_name.c_str());
                             }
                         }
                     }
@@ -1426,8 +1424,7 @@ public:
                 if (p1->getBinaryInterruptState()== BinaryInterruptState::delaycollision && 
                     p2->getBinaryInterruptState()== BinaryInterruptState::delaycollision &&
                     (p1->time_interrupt<_bin_interrupt.time_now && p2->time_interrupt<_bin_interrupt.time_now) &&
-                    (p1->getBinaryPairID()==p2->id||p2->getBinaryPairID()==p1->id) &&
-                    (_bin_interrupt.status != AR::InterruptStatus::merge)) {
+                    (p1->getBinaryPairID()==p2->id||p2->getBinaryPairID()==p1->id)) {
                     Float dr[3] = {p1->pos[0] - p2->pos[0], 
                                    p1->pos[1] - p2->pos[1], 
                                    p1->pos[2] - p2->pos[2]};
@@ -1446,12 +1443,12 @@ public:
                         if (peri<radius) {
                             Float ecc_anomaly  = _bin.calcEccAnomaly(_bin.r);
                             Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
-                            Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi))); 
+                            Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi)));
                             Float t_peri = mean_anomaly/mean_motion;
-                            if (t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
-                                Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                                    p1->pos[1] - p2->pos[1], 
-                                    p1->pos[2] - p2->pos[2]};
+                            if (drdv<0 && t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
+                                Float dr[3] = {p1->pos[0] - p2->pos[0],
+                                               p1->pos[1] - p2->pos[1],
+                                               p1->pos[2] - p2->pos[2]};
                                 Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
                                 _bin_interrupt.time_now += t_peri;
                                 merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor());
@@ -1464,19 +1461,96 @@ public:
                                 p2->setBinaryInterruptState(BinaryInterruptState::delaycollision);
                                 p1->time_interrupt = std::min(_bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri), time_interrupt_max);
                                 p2->time_interrupt = p1->time_interrupt;
-                                    
+
                             }
                         }
                     }
                     else { // no slowdown case, check separation directly
-                        Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                            p1->pos[1] - p2->pos[1], 
-                            p1->pos[2] - p2->pos[2]};
+                        Float dr[3] = {p1->pos[0] - p2->pos[0],
+                                       p1->pos[1] - p2->pos[1],
+                                       p1->pos[2] - p2->pos[2]};
                         Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
                         if (dr2<radius*radius) merge(std::sqrt(dr2), 0.0, 1.0);
                     }
                 }
-#else // BSE_BASE 
+
+#else // BSE_BASE
+                // Check TDE 
+                //This my revised implementation (GIU), we do not distinguish a priori about the
+                //even type since the class _bin can handle both close and open orbit.
+                //Notice that this class is defined in SDAR::binary_trww
+                //One thing I don't uderstand is if we have to check for the slowdown as in the previous section
+
+                if (p1->getBinaryInterruptState()== BinaryInterruptState::tde && 
+                    p2->getBinaryInterruptState()== BinaryInterruptState::tde &&
+                    (p1->time_interrupt<_bin_interrupt.time_now && p2->time_interrupt<_bin_interrupt.time_now) &&
+                    (p1->getBinaryPairID()==p2->id||p2->getBinaryPairID()==p1->id)) {
+                    Float dr[3] = {p1->pos[0] - p2->pos[0], 
+                                   p1->pos[1] - p2->pos[1], 
+                                   p1->pos[2] - p2->pos[2]};
+                    Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                    merge(std::sqrt(dr2), 0.0, 1.0, "Binary_TDE");
+                }
+                else {
+                    Float r_tde = bse_manager.getTDERadius(p1->star, p2->star);
+                    if (r_tde>0) {
+                        /********* Hyperbolic and binary TDE ****************/
+                        //r_tde>r_peri, at certain point along the orbit the distance of the two objects is whitin the tidal radius
+                        Float r_peri = _bin.semi * (1-_bin.ecc);
+                        if (r_tde > r_peri){
+                            //Estimate distance at this point //Petar units
+                            Float dr[3] = {p1->pos[0] - p2->pos[0],
+                                        p1->pos[1] - p2->pos[1],
+                                        p1->pos[2] - p2->pos[2]};
+                            Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+
+                            //check if the two stars are already within the tidal radius
+                            if (dr2 < r_tde*r_tde){
+                                //Check if in hyperbolic or close orbit
+                                if (_bin.semi<0){merge(std::sqrt(dr2), 0 , _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE");}
+                                else if (_bin.semi>0){merge(std::sqrt(dr2), 0,  _bin.slowdown.getSlowDownFactor(), "Binary_TDE");}
+                            }
+                        
+                            //check if the star is approaching the BH/NS (drdv<0)
+                            if (drdv<0) {
+                                //Here we have three choice:
+                                //A: if this conditiond is satisfied always merge (but this can create situation in which
+                                //we create an instantenous TDE of very distant objects, very poor approximation)
+                                //if  (_bin.semi<0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE_A: ");
+                                //else if (_bin.semi>0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Binary_TDE_A: ");
+
+                                //B: A simple improvement merge only if the current distance is withinn 3 times the r_tde distance
+                                //if (dr2<9*r_tde*r_tde){
+                                //merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");
+                                //}
+
+                                //C: More realistic option, estimate the time needed to reach the pericentre and check
+                                //if this is within the current check timestep
+                                Float ecc_anomaly  = _bin.calcEccAnomaly(_bin.r);
+                                Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
+                                Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi)));
+                                Float t_peri = mean_anomaly/mean_motion;
+
+                                if (t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
+                                    //Check if in hyperbolic or close orbit
+                                    if (_bin.semi<0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE");}
+                                    else if (_bin.semi>0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Binary_TDE");}
+                                }
+                                else if(_bin.slowdown.getSlowDownFactor()>1.0){
+                                    p1->setBinaryPairID(p2->id);
+                                    p2->setBinaryPairID(p1->id);
+                                    p1->setBinaryInterruptState(BinaryInterruptState::tde);
+                                    p2->setBinaryInterruptState(BinaryInterruptState::tde);
+                                    p1->time_interrupt = std::min(_bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri), time_interrupt_max);
+                                    p2->time_interrupt = p1->time_interrupt;
+                                }
+                                //D: In the most realistic we shoud check the time needed to reach the position r=r_tde, not r=rp
+                            }
+                        }
+                    }
+                }
+
+                // Check hyperbolic merger
                 // in bse case, handle binary merger in bse, only check hyperbolic merger
                 if (_bin.semi<0.0) {
                     // check merger
@@ -1489,7 +1563,7 @@ public:
                     if (dr2<radius*radius) merge(std::sqrt(dr2), 0.0, 1.0);
                 }
 
-                // tide energy loss 
+                // tide energy loss
                 if (stellar_evolution_option==2 && p1->mass>0 && p2->mass>0) {
                     if (drdv<0) { // when two star approach each other; reset tide status
                         if (p1->getBinaryInterruptState() == BinaryInterruptState::tide) {
@@ -1520,22 +1594,22 @@ public:
                             Float ecc  = _bin.ecc;
                             Float rad1 = bse_manager.getStellarRadius(p1->star);
                             Float rad2 = bse_manager.getStellarRadius(p2->star);
-                            if (p1->star.kw>=10&&p1->star.kw<15&&p2->star.kw>=10&&p2->star.kw<15) {
+                            if (p1->star.isCompactObject() && p2->star.isCompactObject()) {
                                 if (_bin.semi<0) {
                                     bool merge_flag = tide.evolveOrbitHyperbolicGW(_bin, Etid, Ltid);
                                     if (merge_flag) {
-                                        Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                                                       p1->pos[1] - p2->pos[1], 
+                                        Float dr[3] = {p1->pos[0] - p2->pos[0],
+                                                       p1->pos[1] - p2->pos[1],
                                                        p1->pos[2] - p2->pos[2]};
                                         Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
-                                        merge(std::sqrt(dr2), 0.0, 1.0);
+                                        merge(std::sqrt(dr2), 0.0, 1.0, "GW_tide_merge");
                                     }
                                     else change_flag = true;
                                 }
                             }
-                            else if (std::min(p1->star.kw, p2->star.kw)<13) {
-                                poly_type1 = (p1->star.kw<=2) ? 3.0 : 1.5;
-                                poly_type2 = (p2->star.kw<=2) ? 3.0 : 1.5;
+                            else if (p1->star.isNotNSBH() || p2->star.isNotNSBH()) {
+                                poly_type1 = (p1->star.isBeforeGiant()) ? 3.0 : 1.5;
+                                poly_type2 = (p2->star.isBeforeGiant()) ? 3.0 : 1.5;
                                 Etid = tide.evolveOrbitDynamicalTide(_bin, rad1, rad2, poly_type1, poly_type2);
                                 change_flag = (Etid>0);
                                 // for slowdown case, repeating tide effect based on slowdown factor
@@ -1555,7 +1629,7 @@ public:
                                 _bin_interrupt.setBinaryTreeAddress(&_bin);
 
                                 // if status not set, set to change
-                                if (_bin_interrupt.status == AR::InterruptStatus::none) 
+                                if (_bin_interrupt.status == AR::InterruptStatus::none)
                                     _bin_interrupt.status = AR::InterruptStatus::change;
                                 _bin.calcParticles(gravitational_constant);
                                 p1->pos += _bin.pos;
@@ -1567,7 +1641,7 @@ public:
                                 //p2->setBinaryPairID(p1->id);
                                 p1->setBinaryInterruptState(BinaryInterruptState::tide);
                                 p2->setBinaryInterruptState(BinaryInterruptState::tide);
-                            
+
                                 modify_return = 2;
 
 #pragma omp critical
@@ -1757,4 +1831,3 @@ public:
 #endif
     }
 };
-
