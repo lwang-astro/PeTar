@@ -998,7 +998,7 @@ public:
         // update time and gas density
         hard_manager.h4_manager.interaction.ext_force.updateTime(stat.time);
 #endif
-        hard_manager.h4_manager.interaction.ext_force.updateCenter(&system_soft[0], stat.n_real_loc);
+        hard_manager.updateCenter(&system_soft[0], stat.n_real_loc);
 #endif
         
 #ifdef PROFILE
@@ -2235,7 +2235,7 @@ public:
                 // Registered removed particles have already done energy correction
                 else if (pi.mass==0.0&&pi.group_data.artificial.isUnused()) {
 #ifdef DISK_STAR_MERGER
-                    int modify_flag = hard_manager.ar_manager.interaction.disk_star_merger_manager.redistributeStar(&pi, &hard_manager.h4_manager.interaction.ext_force.center, &system_soft[0], stat.n_real_loc);
+                    int modify_flag = hard_manager.ar_manager.interaction.disk_star_merger_manager.redistributeStar(&pi, &hard_manager.center, &system_soft[0], stat.n_real_loc);
                     if (modify_flag == 1) pi.group_data.artificial.setParticleTypeToSingle(); 
                     else remove_list_thx[ith].push_back(i);
 #else
@@ -2474,7 +2474,7 @@ public:
 #endif
 
 #ifdef EXTERNAL_HARD
-        fout<<"Use external perturbation in hard: gasdrag\n";
+        fout<<"Use external perturbation in hard: "<<external_hard_parameters.getFeatureName()<<"\n";
 #endif
 
 #ifdef GALPY
@@ -2603,7 +2603,7 @@ public:
         all_pars.push_back(&galpy_parameters.input_par_store);
 #endif
 #ifdef EXTERNAL_HARD
-        all_pars.push_back(&external_hard_parameters.input_par_store);
+        external_hard_parameters.appendInputParamStores(all_pars);
 #endif
 #ifdef AGAMA
         all_pars.push_back(&agama_parameters.input_par_store);
@@ -2781,7 +2781,7 @@ public:
         const PS::S32 num_thread = PS::Comm::getNumberOfThread();
         hard_dump.initial(num_thread, my_rank);
 #ifdef EXTERNAL_HARD
-        hard_dump.center = &hard_manager.h4_manager.interaction.ext_force.center;
+        hard_dump.center = &hard_manager.center;
 #endif        
 #endif
 
@@ -3126,7 +3126,7 @@ public:
             input_parameters.gravitational_constant.value = G_ASTRO;
             hard_parameters.gravitational_constant.value = G_ASTRO;
 #ifdef EXTERNAL_HARD
-            external_hard_parameters.gravitational_constant.value = G_ASTRO;
+            external_hard_parameters.setGravitationalConstant(G_ASTRO);
 #endif
 #ifdef BSE_BASE
             bse_parameters.tscale.value = 1.0; // Myr
@@ -3488,10 +3488,10 @@ public:
 
 #ifdef EXTERNAL_HARD
 #ifdef GALPY
-        hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, galpy_manager, stat, print_flag);
+        hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, galpy_manager, stat, hard_manager.center, hard_manager.center_id, print_flag);
         hard_dump.galpy_manager = &galpy_manager;
 #else
-        hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, stat.time, print_flag);
+        hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, stat.time, hard_manager.center, hard_manager.center_id, print_flag);
 #endif
         hard_manager.ar_manager.interaction.ext_force = &hard_manager.h4_manager.interaction.ext_force;
 #endif
@@ -3614,7 +3614,7 @@ public:
                 fprintf(stderr,"Error: Cannot open file %s.\n", fexthard_par.c_str());
                 abort();
             }
-            external_hard_parameters.input_par_store.writeAscii(fpar_out);
+            external_hard_parameters.writeModelParamsAscii(fpar_out);
             fclose(fpar_out);
 #endif
         }
@@ -3789,7 +3789,7 @@ public:
 
 #ifdef EXTERNAL_HARD
                 /// force from external hard
-                if (hard_manager.h4_manager.interaction.ext_force.mode>0) {
+                if (hard_manager.h4_manager.interaction.ext_force.isEnabled()) {
                     hard_manager.h4_manager.interaction.ext_force.calcAccJerkExternal(&(p.acc[0]), NULL, p, false);
                 }
 #endif

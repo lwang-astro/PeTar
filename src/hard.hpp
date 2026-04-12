@@ -66,6 +66,7 @@ public:
     IOParams<PS::S64> n_split;
 #endif
     IOParams<PS::S64> id_offset;
+    IOParams<PS::S64> center_id;
     IOParams<PS::F64> eta;
     IOParams<PS::F64> eta_init;
     IOParams<PS::F64> dt_max_hermite;
@@ -123,6 +124,7 @@ public:
                     n_split          (input_par_store, 4,    "os-nsplit", "Number of binary sample points for tree perturbation force using orbit-sampling method"),
 #endif
                     id_offset        (input_par_store, -1,   "id-offset", "Starting ID for artificial particles, total number of real particles must always be smaller than this","n_glb+1"),
+                    center_id        (input_par_store, -1,   "center-id", "id of the central object for a system like a stellar disk", "None"),
                     eta              (input_par_store, 0.1,  "hermite-eta", "Hermite timestep coefficient eta"),
                     eta_init         (input_par_store, 0.001,"hermite-eta-init", "Hermite timestep coefficient eta for initial step in 2nd order"),
                     dt_max_hermite   (input_par_store, 0.0,  "hermite-dt-max", "Maximum hermite timestep", "dt_soft"),
@@ -189,6 +191,7 @@ public:
             {n_split.key,                required_argument, &hard_flag, 7},
 #endif
             {id_offset.key,              required_argument, &hard_flag, 8},
+            {center_id.key,              required_argument, &hard_flag, 33},
             {eta.key,                    required_argument, &hard_flag, 9},
             {eta_init.key,               required_argument, &hard_flag, 10},
             {dt_max_hermite.key,         required_argument, &hard_flag, 11},
@@ -285,6 +288,11 @@ public:
                     case 8:
                         id_offset.value = atoi(optarg);
                         if(print_flag) id_offset.print(std::cout);
+                        opt_used += 2;
+                        break;
+                    case 33:
+                        center_id.value = atoll(optarg);
+                        if(print_flag) center_id.print(std::cout);
                         opt_used += 2;
                         break;
                     case 9:
@@ -484,6 +492,8 @@ public:
 //! Hard integrator parameter manager
 class HardManager{
 public:
+    FPSoft center;
+    PS::S64 center_id;
     PS::F64 energy_error_max;
     PS::F64 eps_sq;
     PS::F64 r_in_base;
@@ -497,7 +507,46 @@ public:
     Status* status;
 
     //! constructor
-    HardManager(): energy_error_max(-1.0), eps_sq(-1.0), r_in_base(-1.0), r_out_base(-1.0), n_step_per_orbit(-1.0), tidal_tensor_switcher(true), ap_manager(), h4_manager(), ar_manager(), status(NULL) {}
+    HardManager(): center(), center_id(-1), energy_error_max(-1.0), eps_sq(-1.0), r_in_base(-1.0), r_out_base(-1.0), n_step_per_orbit(-1.0), tidal_tensor_switcher(true), ap_manager(), h4_manager(), ar_manager(), status(NULL) {}
+
+    void updateCenter(const FPSoft* system_soft, const int n) {
+        if (center_id<=0) {
+            if (status!=NULL) {
+                center.mass = status->pcm.mass;
+                center.pos  = status->pcm.pos;
+                center.vel  = status->pcm.vel;
+                center.id   = -1;
+            }
+            return;
+        }
+
+        if (center_id>0) {
+            bool find_center=false;
+            for (int i=0; i<n; i++) {
+                if (system_soft[i].id==center_id) {
+                    center = system_soft[i];
+                    find_center = true;
+                    break;
+                }
+            }
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+            int center_mpi_rank_local = find_center? PS::Comm::getRank()+1: 0;
+            int center_mpi_rank = PS::Comm::getSum(center_mpi_rank_local);
+            if (center_mpi_rank==0) {
+                std::cerr<<"Error: Cannot find center particle id="<<center_id<<".\n";
+                abort();
+            }
+            else {
+                PS::Comm::broadcast(&center, 1, center_mpi_rank-1);
+            }
+#else
+            if (!find_center) {
+                std::cerr<<"Error: Cannot find center particle id="<<center_id<<".\n";
+                abort();
+            }
+#endif
+        }
+    }
     
     //! set softening
     void setEpsSq(const PS::F64 _eps_sq) {
@@ -589,6 +638,7 @@ public:
         tidal_tensor_switcher = bool(_input.tidal_tensor_switcher.value);
         ap_manager.r_tidal_tensor = _input.r_group.value;
         ap_manager.id_offset = _input.id_offset.value;
+        center_id = _input.center_id.value;
 #ifdef ORBIT_SAMPLING
         ap_manager.orbit_manager.setParticleSplitN(_input.n_split.value);
 #endif
@@ -728,6 +778,7 @@ public:
         ar_manager.readBinary(_fin);
 #ifdef EXTERNAL_HARD
         ar_manager.interaction.ext_force = &h4_manager.interaction.ext_force;
+        h4_manager.interaction.ext_force.bindCenter(center, center_id);
 #endif
     }
 
@@ -743,6 +794,7 @@ public:
         ar_manager.readBinary(_fin);
 #ifdef EXTERNAL_HARD
         ar_manager.interaction.ext_force = &h4_manager.interaction.ext_force;
+        h4_manager.interaction.ext_force.bindCenter(center, center_id);
 #endif
     }
 
@@ -2774,7 +2826,7 @@ public:
 
 #ifdef EXTERNAL_HARD
             auto& ext_force = manager->h4_manager.interaction.ext_force;
-            if (ext_force.mode>0) {
+            if (ext_force.isEnabled()) {
                 H4::ForceH4 fi;
                 PS::F64 ti = 0;
                 assert(_dt>=0);

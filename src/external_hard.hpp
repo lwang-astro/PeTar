@@ -1,560 +1,355 @@
 #pragma once
 
-#include <iostream>
-#include <iomanip>
-#include <cstdio>
-#include <string>
 #include <getopt.h>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <vector>
 #include "io.hpp"
 #include "Common/Float.h"
 #include "static_variables.hpp"
-#ifdef GALPY
-#include "galpy_interface.h"
-#include "status.hpp"
-#include "soft_ptcl.hpp"
+#ifdef GAS_DRAG
+#include "gas_drag.hpp"
 #endif
 
 //! IO parameters manager for external perturbation in hard integration
-/*! For initializing the COMMON block variables from the commander option.
-  The description of each parameter is also provided.
- */
+/*! Stub implementation when no specific external hard-force model is enabled. */
 class IOParamsExternalHard{
 public:
     IOParamsContainer input_par_store;
-    IOParams<long long int> mode; // option to switch perturbation
-    IOParams<double> sound_speed; 
-    IOParams<double> coulomb_log; 
-    IOParams<double> polytropic_constant; // K
-    IOParams<double> polytropic_exponent; // gamma
-#ifdef GALPY
-    IOParams<long long int> galpy_gaspot_index;
-    IOParams<double> scale_density;
-#else
-    IOParams<double> gas_density; 
-    IOParams<double> decay_time;
-#endif
-    IOParams<double> gravitational_constant;
-    IOParams<long long int> center_id; // id of the center object 
+    IOParams<long long int> switcher;
     IOParams<std::string> fname_par;
-    
-    bool print_flag;
-    IOParamsExternalHard(): input_par_store(),
-                            mode  (input_par_store, 0,          "ext-hard-mode", "external force for hard integration; 0, not used; 1, gas dynamical friction (Ostriker 1999, Rozner et al. 2022); 2, gas dynamical friction only in radial direction"),
-                            sound_speed  (input_par_store, 0.0, "ext-sound-speed",  "sound speed in units of PeTar input, if given 0, calculate by sqrt(P/rho), based on hydrostatic equilibrium"),
-                            coulomb_log  (input_par_store, 3.1, "ext-coulomb-log",  "coulomb logarithm"),
-                            polytropic_constant (input_par_store, 1.0, "ext-K", "Polytropic constant in units of PeTar input, used to evaluate Pressure P = K rho^gamma"),
-                            polytropic_exponent (input_par_store, 4.0/3.0, "ext-gamma", "Polytropic exponent, used to evaluate Pressure P = K rho^gamma"),
-#ifdef GALPY
-                            galpy_gaspot_index(input_par_store, -1, "ext-gaspot-index",  "galpy potential set index for gas component, used for obtaining gas density", "None"),
-                            scale_density(input_par_store, 1/G_ASTRO, "ext-scale-density", "scale factor for galpy potential density","1/G"),
-#else
-                            gas_density  (input_par_store, 1.0, "ext-gas-density",  "gas density in units of PeTar input"),
-                            decay_time   (input_par_store, 0.0, "ext-decay-time",  "gas density decay time scale in units of PeTar input, if 0, no decay"),
+#ifdef GAS_DRAG
+    IOParamsGasDrag gas_drag;
 #endif
-                            gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant", NULL, false),
-                            center_id    (input_par_store, -1, "ext-center-id", "id of the central object, if given, the central object does not feel gas drag; and gas is assumed to rotating in kepler orbit around the center", "None"),
-                            fname_par    (input_par_store, "input.par", "p", "Input parameter file for external force (this option should be used first before any other options)",NULL,false),
-                            print_flag(false) {}
+    bool print_flag;
 
-    //! reading parameters from GNU option API
-    /*!
-      @param[in] argc: number of options
-      @param[in] argv: string of options
-      @param[in] print_format_info: if true, print the format information
-      @param[in] opt_used_pre: already used option number from previous reading, use to correctly count the remaining argument number
-      \return -1 if help is used; else the used number of argv
+    //! constructor
+    IOParamsExternalHard() :
+        input_par_store(),
+        switcher(input_par_store, 1, "ext-hard-switch", "switch of external hard force; 0: off, 1: on"),
+        fname_par(input_par_store, "input.par", "p", "Input parameter file for external force (this option should be used first before any other options)",NULL,false),
+#ifdef GAS_DRAG
+        gas_drag(),
+#endif
+        print_flag(false)
+    {}
+
+    //! append parameter containers for undefined-option checking
+    /*! 
+      @param[in,out] _par_list: list of parameter containers
      */
-    int read(int argc, char *argv[], const bool print_format_info=true, const int opt_used_pre=0) {
+    void appendInputParamStores(std::vector<IOParamsContainer*>& _par_list) {
+        _par_list.push_back(&input_par_store);
+#ifdef GAS_DRAG
+        _par_list.push_back(&gas_drag.input_par_store);
+#endif
+    }
+
+    //! set gravitational constant for model parameters
+    /*! 
+      @param[in] _grav_const: gravitational constant
+     */
+    void setGravitationalConstant(const Float _grav_const) {
+#ifdef GAS_DRAG
+        gas_drag.gravitational_constant.value = _grav_const;
+#endif
+    }
+
+    //! get active external hard-force feature name
+    /*! 
+      
+eturn feature name string
+     */
+    const char* getFeatureName() const {
+#ifdef GAS_DRAG
+        return "gasdrag";
+#else
+        return "unknown";
+#endif
+    }
+
+        //! write external hard parameter sets in ASCII format
+        /*! 
+          @param[in] _fout: output file pointer
+         */
+    void writeModelParamsAscii(FILE* _fout) {
+        input_par_store.writeAscii(_fout);
+#ifdef GAS_DRAG
+        gas_drag.input_par_store.writeAscii(_fout);
+#endif
+    }
+
+        //! read external hard parameter sets in ASCII format
+        /*! 
+          @param[in] _fin: input file pointer
+         */
+    void readModelParamsAscii(FILE* _fin) {
+        input_par_store.readAscii(_fin);
+#ifdef GAS_DRAG
+        gas_drag.input_par_store.readAscii(_fin);
+#endif
+    }
+
+        //! reading parameters from GNU option API
+        /*! 
+          @param[in] argc: number of options
+          @param[in] argv: string of options
+          @param[in] print_format_info: if true, print the format information
+          @param[in] opt_used_pre: already used option number from previous reading
+          
+eturn -1 if help is used; else the used number of argv
+         */
+    int read(int argc, char* argv[], const bool print_format_info=true, const int opt_used_pre=0) {
+        int opt_used = opt_used_pre;
         static int ext_flag=-1;
         const struct option long_options[] = {
-            {mode.key,    required_argument, &ext_flag, 0},  
-#ifdef GALPY
-            {galpy_gaspot_index.key, required_argument, &ext_flag, 1},  
-            {scale_density.key, required_argument, &ext_flag, 2},  
-#else
-            {gas_density.key, required_argument, &ext_flag, 1},  
-            {decay_time.key,  required_argument, &ext_flag, 2},  
-#endif
-            {sound_speed.key, required_argument, &ext_flag, 3},  
-            {coulomb_log.key, required_argument, &ext_flag, 4},  
-            {polytropic_constant.key, required_argument, &ext_flag, 5},
-            {polytropic_exponent.key, required_argument, &ext_flag, 6},
-            {center_id.key, required_argument, &ext_flag, 7},
-            {"help",      no_argument,       0, 'h'},
+            {switcher.key, required_argument, &ext_flag, 0},
+            {fname_par.key, required_argument, 0, 'p'},
+            {"help", no_argument, 0, 'h'},
             {0,0,0,0}
         };
 
-        int opt_used=opt_used_pre;
+        bool helf_option_used = false;
         int copt;
         int option_index;
         optind = 0;
-        while ((copt = getopt_long(argc, argv, "-G:p:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "-p:h", long_options, &option_index)) != -1) {
             switch (copt) {
             case 0:
-                switch (ext_flag) {
-                case 0:
-                    mode.value = atoi(optarg);
-                    if(print_flag) mode.print(std::cout);
-                    opt_used+=2;
-                    break;            
-#ifdef GALPY
-                case 1:
-                    galpy_gaspot_index.value = atoi(optarg);
-                    if(print_flag) galpy_gaspot_index.print(std::cout);
-                    opt_used+=2;
-                    break;            
-                case 2:
-                    scale_density.value = atof(optarg);
-                    if(print_flag) scale_density.print(std::cout);
-                    opt_used+=2;
-                    break;            
-#else
-                case 1:
-                    gas_density.value = atof(optarg);
-                    if(print_flag) gas_density.print(std::cout);
-                    opt_used+=2;
-                    break;            
-                case 2:
-                    decay_time.value = atof(optarg);
-                    if(print_flag) decay_time.print(std::cout);
-                    opt_used+=2;
-                    break;            
-#endif
-                case 3:
-                    sound_speed.value = atof(optarg);
-                    if(print_flag) sound_speed.print(std::cout);
-                    opt_used+=2;
-                    break;            
-                case 4:
-                    coulomb_log.value = atof(optarg);
-                    if(print_flag) coulomb_log.print(std::cout);
-                    opt_used+=2;
-                    break;
-                case 5:
-                    polytropic_constant.value = atof(optarg);
-                    if(print_flag) polytropic_constant.print(std::cout);
-                    opt_used+=2;
-                    break;
-                case 6:
-                    polytropic_exponent.value = atof(optarg);
-                    if(print_flag) polytropic_exponent.print(std::cout);
-                    opt_used+=2;
-                    break;
-                case 7:
-                    center_id.value = atoi(optarg);
-                    if(print_flag) center_id.print(std::cout);
-                    opt_used+=2;
-                    break;
-                default:
-                    break;
+                if (ext_flag==0) {
+                    switcher.value = atoll(optarg);
+                    if(print_flag) switcher.print(std::cout);
+                    opt_used += 2;
                 }
-                break;
-            case 'G':
-                gravitational_constant.value = atof(optarg);
-                if(print_flag) gravitational_constant.print(std::cout);
-                opt_used += 2;
-                assert(gravitational_constant.value>0.0);
                 break;
             case 'p':
                 fname_par.value = optarg;
                 if(print_flag) {
-                    std::string fgalpy_par = fname_par.value+".exthard"; 
+                    std::string fpar_name = fname_par.value+".exthard";
                     FILE* fpar_in;
-                    if( (fpar_in = fopen(fgalpy_par.c_str(),"r")) == NULL) {
-                        fprintf(stderr,"Error: Cannot open file %s.\n", fgalpy_par.c_str());
+                    if( (fpar_in = fopen(fpar_name.c_str(),"r")) == NULL) {
+                        fprintf(stderr,"Error: Cannot open file %s.\n", fpar_name.c_str());
                         abort();
                     }
                     input_par_store.readAscii(fpar_in);
                     fclose(fpar_in);
                 }
-                opt_used+=2;
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
                 input_par_store.mpi_broadcast();
                 PS::Comm::barrier();
 #endif
                 break;
             case 'h':
-                if(print_flag){
+                if (print_flag) {
                     std::cout<<"----- External perturbation for hard integration options: -----"<<std::endl;
                     input_par_store.printHelp(std::cout, print_format_info);
                 }
-                return -1;
+                helf_option_used = true;
+                break;
             case '?':
-                opt_used +=2;
+                opt_used += 2;
                 break;
             default:
                 break;
             }
-        
-        if(print_flag) std::cout<<"----- Finish reading input options of external perturbation for hard integration -----\n";
+        }
 
+        if (helf_option_used) opt_used = -1;
+
+#ifdef GAS_DRAG
+        gas_drag.print_flag = print_flag;
+        opt_used = gas_drag.read(argc, argv, print_format_info, opt_used);
+#endif
+        
         return opt_used;
-    }    
+    }
 };
 
+//! External force manager in hard integration
+/*! Stub implementation when no specific external hard-force model is enabled. */
 class ExternalHardForce{
 public:
-    int mode; 
-#ifdef GALPY
-    int galpy_gaspot_index; 
-    GalpyManager* galpy_manager;
-    Status* status;
-    Float scale_density;
-#else
-    Float gas_density; 
-    Float gas_density_init; 
-    Float decay_time;
-    Float time;
+    bool enabled;
+    FPSoft* center;
+    PS::S64* center_id;
+#ifdef GAS_DRAG
+    GasDragForce gas_drag;
 #endif
-    Float sound_speed; 
-    Float coulomb_log;
-    Float polytropic_constant;
-    Float polytropic_exponent;
-    Float gravitational_constant;
-    FPSoft center;
-    bool calc_sound_speed;
 
-    ExternalHardForce(): mode(0),
-#ifdef GALPY
-                         galpy_gaspot_index(-1), galpy_manager(NULL), status(NULL), scale_density(1.0),
-#else
-                         gas_density(1.0), gas_density_init(1.0), decay_time(0.0), time(0.0),
+    //! constructor
+    ExternalHardForce()
+        : enabled(false)
+        , center(NULL)
+        , center_id(NULL)
+#ifdef GAS_DRAG
+        , gas_drag()
 #endif
-                         sound_speed(0.0), coulomb_log(3.1), polytropic_constant(1.0), polytropic_exponent(4.0/3.0), gravitational_constant(1.0), center(), calc_sound_speed(true) {}
+    {}
 
-#ifdef GALPY
-    //! initial parameters for perturbation
-    /*!
-      @param[in] _input: input parameter
-      @param[in] _galpy_manager: galpy manager pointer
-      @param[in] _status: system status for information of time and pcm position and velocity offsets used for converting to galactic frame
-      @param[in] _print_flag: printing flag
+    //! bind center information used by external hard force
+    /*! 
+      @param[in] _center: center particle reference
+      @param[in] _center_id: center particle id reference
      */
-    void initial(const IOParamsExternalHard& _input, GalpyManager& _galpy_manager, Status& _status, bool _print_flag=false) {
-        mode = _input.mode.value;
-        galpy_gaspot_index = _input.galpy_gaspot_index.value;
-        galpy_manager = &_galpy_manager;
-        status = &_status;
-        scale_density = _input.scale_density.value;
-        sound_speed = _input.sound_speed.value;
-        coulomb_log = _input.coulomb_log.value;
-        polytropic_constant = _input.polytropic_constant.value;
-        polytropic_exponent = _input.polytropic_exponent.value;
-        gravitational_constant = _input.gravitational_constant.value;
-        center.id = _input.center_id.value;
-        if (sound_speed>0.0) calc_sound_speed = false;
-        else calc_sound_speed = true;
+    void bindCenter(FPSoft& _center, PS::S64& _center_id) {
+        center = &_center;
+        center_id = &_center_id;
     }
 
+#ifdef GALPY
+    //! initialize external hard force with galpy support
+    /*! 
+      @param[in] _input: external hard input parameters
+      @param[in] _galpy_manager: galpy manager
+      @param[in] _status: system status
+      @param[in] _center: center particle
+      @param[in] _center_id: center particle id
+      @param[in] _print_flag: print initialization information
+     */
+    template<class TGalpyManager, class TStatus>
+    void initial(const IOParamsExternalHard& _input, TGalpyManager& _galpy_manager, TStatus& _status, FPSoft& _center, PS::S64& _center_id, bool _print_flag=false) {
+        bindCenter(_center, _center_id);
+        enabled = (_input.switcher.value>0);
+#ifdef GAS_DRAG
+        gas_drag.initial(_input.gas_drag, _galpy_manager, _status, _print_flag);
+        enabled = enabled && (gas_drag.mode>0);
 #else
-    //! initial parameters for perturbation
-    void initial(const IOParamsExternalHard& _input, const Float _time, const bool _print_flag=false) {
-        mode = _input.mode.value;
-        gas_density_init = _input.gas_density.value;
-        decay_time  = _input.decay_time.value;
-        sound_speed = _input.sound_speed.value;
-        coulomb_log = _input.coulomb_log.value;
-        polytropic_constant = _input.polytropic_constant.value;
-        polytropic_exponent = _input.polytropic_exponent.value;
-        gravitational_constant = _input.gravitational_constant.value;
-        center.id = _input.center_id.value;
-        if (sound_speed>0.0) calc_sound_speed = false;
-        else calc_sound_speed = true;
-        updateTime(_time);
+        enabled = false;
+#endif
+    }
+#else
+    //! initialize external hard force without galpy support
+    /*! 
+      @param[in] _input: external hard input parameters
+      @param[in] _time: current time
+      @param[in] _center: center particle
+      @param[in] _center_id: center particle id
+      @param[in] _print_flag: print initialization information
+     */
+    void initial(const IOParamsExternalHard& _input, const Float _time, FPSoft& _center, PS::S64& _center_id, const bool _print_flag=false) {
+        bindCenter(_center, _center_id);
+        enabled = (_input.switcher.value>0);
+#ifdef GAS_DRAG
+        gas_drag.initial(_input.gas_drag, _time, _print_flag);
+        enabled = enabled && (gas_drag.mode>0);
+#else
+        enabled = false;
+#endif
     }
 
-    //! update time and gas density
+    //! update time-dependent model state
+    /*! 
+      @param[in] _time: current time
+     */
     void updateTime(const Float _time) {
-        time = _time;
-        if (decay_time>0.0) gas_density = gas_density_init * exp(-time/decay_time);
-        else gas_density = gas_density_init;
+#ifdef GAS_DRAG
+        if (enabled) gas_drag.updateTime(_time);
+#endif
     }
 #endif
 
-    //! Update center particle data
-    void updateCenter(const FPSoft* system_soft, const int n) {
-        if (center.id>0) {
-            bool find_center=false;    
-            for (int i=0; i<n; i++) {
-                if (system_soft[i].id==center.id) {
-                    center = system_soft[i];
-                    find_center = true;
-                    break;
-                }
-            }
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-            int center_mpi_rank_local = find_center? PS::Comm::getRank()+1: 0;
-            int center_mpi_rank = PS::Comm::getSum(center_mpi_rank_local);
-            if (center_mpi_rank==0) {
-                std::cerr<<"Error: Cannot find center particle id="<<center.id<<".\n";
-                abort();
-            }
-            else {
-                PS::Comm::broadcast(&center, 1, center_mpi_rank-1);
-            }
-#else
-            if (!find_center) {
-                std::cerr<<"Error: Cannot find center particle id="<<center.id<<".\n";
-                abort();
-            }
-#endif       
-        }
+    //! check whether external hard force is enabled at runtime
+    bool isEnabled() const {
+        return enabled;
     }
 
-    //! External force for one particle in hard part
-    /*!
-      Gas dynamical friction
-      Due to the acceleration dependence, this function must be used at the end of acceleration calculation
-      (Ostriker 1999, https://ui.adsabs.harvard.edu/abs/1999ApJ...513..252O, 
-      Rozner 2022, https://arxiv.org/abs/2212.00807)
-
-      @param[out] _acc0: acceleration 
-      @param[out] _acc1: jerk 
-      @param[in] _particle: particle data
+    //! calculate external acceleration and jerk
+    /*! 
+      @param[out] _acc0: acceleration
+      @param[out] _acc1: jerk
+      @param[in] _particle: target particle
       @param[in] _calc_acc1: if true, calculate jerk
       
-      Return: the next integration time step (default: maximum floating point number)
-    */
-    template<class Tp> 
+eturn time step criterion from model; NUMERIC_FLOAT_MAX if disabled
+     */
+    template<class Tp>
     Float calcAccJerkExternal(Float* _acc0, Float* _acc1, const Tp& _particle, const bool _calc_acc1) {
-        if (mode==0) 
-            return NUMERIC_FLOAT_MAX;
-
-        // ignore center particle            
-        if (_particle.id == center.id) 
-            return NUMERIC_FLOAT_MAX;
-        
-        auto& mass = _particle.mass;
-        auto& pos = _particle.pos;
-        auto& vel = _particle.vel;
-        
-        const Float PI = 4.0*atan(1.0);
-        Float G = gravitational_constant;
-        Float G2 = G*G;
-        
-        Float pos_rel[3] = {pos[0], pos[1], pos[2]};
-        Float vel_rel[3] = {vel[0], vel[1], vel[2]};
-#ifdef GALPY
-        // in galactic frame, required by galpy and used to calculate radial direction
-        if (center.id>0) {
-            // refer to center position and velocity
-            pos_rel[0] -= center.pos[0];
-            pos_rel[1] -= center.pos[1];
-            pos_rel[2] -= center.pos[2];
-
-            vel_rel[0] -= center.vel[0];
-            vel_rel[1] -= center.vel[1];
-            vel_rel[2] -= center.vel[2];
-        }
-        else {
-            // refer to gas potential center position and velocity
-            Float pot_pos[3];
-            galpy_manager->getSetPos(galpy_gaspot_index, pot_pos);
-            pos_rel[0] += status->pcm.pos[0] - pot_pos[0];
-            pos_rel[1] += status->pcm.pos[1] - pot_pos[1];
-            pos_rel[2] += status->pcm.pos[2] - pot_pos[2];
-            
-            // in gas potential center reference
-            Float pot_vel[3];
-            galpy_manager->getSetVel(galpy_gaspot_index, pot_vel);
-            vel_rel[0] += status->pcm.vel[0] - pot_vel[0];
-            vel_rel[2] += status->pcm.vel[1] - pot_vel[1];
-            vel_rel[3] += status->pcm.vel[2] - pot_vel[2];
-        }
-
-        // in galactic frame, required by galpy and used to calculate radial direction
-        Float pos_g[3] = {pos[0] + status->pcm.pos[0],
-                          pos[1] + status->pcm.pos[1],
-                          pos[2] + status->pcm.pos[2]};
-        Float gas_density = scale_density*galpy_manager->calcSetDensity(galpy_gaspot_index, status->time, pos_g, &pos[0]);
+        if (!enabled) return NUMERIC_FLOAT_MAX;
+        assert(center!=NULL);
+        assert(center_id!=NULL);
+#ifdef GAS_DRAG
+        return gas_drag.calcAccJerkExternal(_acc0, _acc1, _particle, _calc_acc1, *center, *center_id);
 #else
-        if (center.id>0) {
-            // refer to center position and velocity
-            pos_rel[0] -= center.pos[0];
-            pos_rel[1] -= center.pos[1];
-            pos_rel[2] -= center.pos[2];
-
-            vel_rel[0] -= center.vel[0];
-            vel_rel[1] -= center.vel[1];
-            vel_rel[2] -= center.vel[2];
-        }
-#endif
-        
-        Float r_rel = std::sqrt(pos_rel[0]*pos_rel[0] + pos_rel[1]*pos_rel[1] + pos_rel[2]*pos_rel[2]);
-        
-        // subtract keplerian velocity orbiting around the center
-        if (center.id>0) {
-            // circular velocity
-            Float v_circle = std::sqrt(G*center.mass/r_rel);
-            // get angular momentum direction
-            Float r_cross_v[3] = {pos_rel[1]*vel_rel[2] - pos_rel[2]*vel_rel[1],
-                                  pos_rel[2]*vel_rel[0] - pos_rel[0]*vel_rel[2],
-                                  pos_rel[0]*vel_rel[1] - pos_rel[1]*vel_rel[0]};
-            // get tangent velocity direction
-            Float r_cross_v_cross_r[3] = {r_cross_v[1]*pos_rel[2] - r_cross_v[2]*pos_rel[1],
-                                          r_cross_v[2]*pos_rel[0] - r_cross_v[0]*pos_rel[2],
-                                          r_cross_v[0]*pos_rel[1] - r_cross_v[1]*pos_rel[0]};
-            // normalization factor
-            Float r2vsq = std::sqrt(r_cross_v_cross_r[0]*r_cross_v_cross_r[0] + r_cross_v_cross_r[1]*r_cross_v_cross_r[1] + r_cross_v_cross_r[2]*r_cross_v_cross_r[2]);
-            
-            // remove circular velocity
-            vel_rel[0] -= v_circle*r_cross_v_cross_r[0]/r2vsq;
-            vel_rel[1] -= v_circle*r_cross_v_cross_r[1]/r2vsq;
-            vel_rel[2] -= v_circle*r_cross_v_cross_r[2]/r2vsq;
-        }
-
-        if (calc_sound_speed) 
-            sound_speed = std::sqrt(polytropic_constant*std::pow(gas_density, polytropic_exponent-1));
-
-        Float v2 = vel_rel[0]*vel_rel[0] + vel_rel[1]*vel_rel[1] + vel_rel[2]*vel_rel[2];
-        Float v = std::sqrt(v2);
-        Float cs2 = sound_speed*sound_speed;
-        Float v2_cs2 = v2 + cs2;
-
-        Float mach = v/sound_speed;
-        Float Ifunc, dIfunc;
-        if (mach<0.9) {
-            Float mach2 = mach*mach;
-            Ifunc = 0.5*std::log((1.0+mach)/(1.0-mach)) - mach;
-            dIfunc = mach2/(1-mach2);
-        }
-        else if (mach>=0.9 && mach<1.1) {
-            // 2nd order derivative Hermite interpolation
-            Float mach2 = mach*mach;
-            Float mach3 = mach2*mach;
-            Float mach4 = mach2*mach2;
-            Float mach5 = mach4*mach;
-            Ifunc = 8670.66512394438*mach5 - 43353.850000357*mach4 + 86337.1029009788*mach3 - 85594.6848365398*mach2 + 42251.2454762294*mach - 8309.08207013687;
-            dIfunc = 43353.3256197219*mach4 - 173415.400001428*mach3 + 259011.308702936*mach2 - 171189.36967308*mach + 42251.2454762294;
-        }
-        else{
-            Float mach2 = mach*mach;
-            Ifunc = 0.5*std::log(1-1/mach2) + coulomb_log;
-            dIfunc = 1/(mach2*mach - mach);
-        }
-
-#ifdef DISK_STAR_MERGER
-        Float c1 = -4*PI*G2*mass*gas_density*v/(v2_cs2*v2_cs2)*Ifunc;
-#else
-        Float v3 = v2*v;
-        Float c1 = -4*PI*G2*mass*gas_density/v3*Ifunc;
-#endif        
-
-        if (mode==1) {
-            // GDF force
-            _acc0[0] += c1*vel_rel[0];
-            _acc0[1] += c1*vel_rel[1];
-            _acc0[2] += c1*vel_rel[2];
-        }
-        else{
-            // GDF force only in radial direction
-            if (r_rel>0) {
-                Float vel_r = (vel_rel[0]*pos_rel[0] + vel_rel[1]*pos_rel[1] + vel_rel[2]*pos_rel[2])/r_rel;
-                _acc0[0] += c1*vel_r*pos_rel[0]/r_rel;
-                _acc0[1] += c1*vel_r*pos_rel[1]/r_rel;
-                _acc0[2] += c1*vel_r*pos_rel[2]/r_rel;
-            }
-        }
-
-        if (_calc_acc1) {
-            ASSERT(_acc1!=NULL);
-            Float vdota = vel_rel[0]*_acc0[0] + vel_rel[1]*_acc0[1] + vel_rel[2]*_acc0[2];
-#ifdef DISK_STAR_MERGER
-            // d(v/(v^2+cs^2)^2)/dt = (cs^2 - 3v^2)/(v^2+cs^2)^5(v^2) v dot a
-            Float c2 = c1*(cs2 - 3*v2)/(v2_cs2*v2)*vdota;
-#else
-            // d(1/v^3)/dt = -3/v^5 v dot a
-            Float c2 = -3*c1/v2*vdota;
-#endif
-            // d(v/ds)/dt  = v dot a / (v*ds) 
-            Float c3 = c1/Ifunc*dIfunc*vdota/(v*sound_speed);
-            
-            if (mode==1) {
-                // GDF force derivative
-                _acc1[0] += (c2+c3)*vel_rel[0] + c1*_acc0[0];
-                _acc1[1] += (c2+c3)*vel_rel[1] + c1*_acc0[1];
-                _acc1[2] += (c2+c3)*vel_rel[2] + c1*_acc0[2];
-            }
-            else if (mode==2) {
-                if (r_rel>0) {
-                    // GDF force derivative only in radial direction, assuming pos_rel is constant. For time-dependent pos_rel, additional term of time derivative of pos_rel should be added.
-                    Float vel_r = (vel_rel[0]*pos_rel[0] + vel_rel[1]*pos_rel[1] + vel_rel[2]*pos_rel[2])/r_rel;
-                    Float a_r = (_acc1[0]*pos_rel[0] + _acc1[1]*pos_rel[1] + _acc1[2]*pos_rel[2])/r_rel;
-                    Float pos_fac = (a_r + (v2 - 2*vel_r*vel_r)/r_rel);
-                    _acc1[0] += ((c2+c3)*vel_r*pos_rel[0] + c1*(pos_fac*pos_rel[0] + vel_r*vel_rel[0]))/r_rel;
-                    _acc1[1] += ((c2+c3)*vel_r*pos_rel[1] + c1*(pos_fac*pos_rel[1] + vel_r*vel_rel[1]))/r_rel;
-                    _acc1[2] += ((c2+c3)*vel_r*pos_rel[2] + c1*(pos_fac*pos_rel[2] + vel_r*vel_rel[2]))/r_rel;
-                }
-            }
-        }
-
         return NUMERIC_FLOAT_MAX;
+#endif
     }
 
-    //! check whether parameters values are correct
-    /*! \return true: all correct
-     */
+    //! check external hard force parameter consistency
     bool checkParams() {
-        ASSERT(mode>=0 && mode<=2);
-        if (mode>0) {
-            ASSERT(sound_speed>=0.0);
-#ifdef GALPY        
-            ASSERT(galpy_gaspot_index>=0);
-            ASSERT(galpy_manager!=NULL);
-            ASSERT(status!=NULL);
-#endif
-        }
-        return true;
-    }    
-
-    //! print parameters
-    void print(std::ostream & _fout) const{
-        _fout<<"----- External perturbation for hard integration parameters -----\n"
-             <<"external mode: "<<mode<<std::endl
-             <<"sound speed: "<<sound_speed<<std::endl
-             <<"coulomb log: "<<coulomb_log<<std::endl
-             <<"polytropic constant: "<<polytropic_constant<<std::endl
-             <<"polytropic exponent: "<<polytropic_exponent<<std::endl
-             <<"center id: "<<center.id<<std::endl
-             <<"center mass: "<<center.mass<<std::endl;
-#ifdef GALPY
-        _fout<<"galpy gaspot index: "<<galpy_gaspot_index<<std::endl
-             <<"scale density: "<<scale_density<<std::endl;
+        assert(center!=NULL);
+        assert(center_id!=NULL);
+#ifdef GAS_DRAG
+        return gas_drag.checkParams();
 #else
-        _fout<<"gas density init: "<<gas_density_init<<std::endl
-             <<"decay time: "<<decay_time<<std::endl;
+        return true;
 #endif
-        _fout<<"gravitational constant: "<<gravitational_constant<<std::endl
-             <<"----- Finish reading input options of external perturbation for hard integration -----\n";  
-    }    
+    }
 
-    //! write class data to file with binary format
-    /*! @param[in] _fp: FILE type file for output
+    //! print runtime status and model information
+    /*! 
+      @param[in,out] _fout: output stream
+     */
+    void print(std::ostream & _fout) const{
+        _fout<<"external hard enabled: "<<enabled<<std::endl;
+#ifdef GAS_DRAG
+        if (enabled) gas_drag.print(_fout);
+        if (enabled && center!=NULL && center_id!=NULL) {
+            _fout<<"center id: "<<(*center_id)<<std::endl
+                 <<"center mass: "<<center->mass<<std::endl;
+        }
+#endif
+    }
+
+    //! write binary data
+    /*! 
+      @param[in] _fp: output file pointer
      */
     void writeBinary(FILE *_fp) const {
-        fwrite(this, sizeof(*this),1,_fp);
+        fwrite(&enabled, sizeof(enabled), 1, _fp);
+#ifdef GAS_DRAG
+        gas_drag.writeBinary(_fp);
+#endif
     }
 
+    //! write binary columns to stream
+    /*! 
+      @param[in,out] _fout: output stream
+     */
     void printColumnBinary(std::ostream& _fout) const {
-        _fout.write(reinterpret_cast<const char*>(this), sizeof(*this));
+        _fout.write(reinterpret_cast<const char*>(&enabled), sizeof(enabled));
+#ifdef GAS_DRAG
+        gas_drag.printColumnBinary(_fout);
+#endif
     }
 
-    //! read class data to file with binary format
-    /*! @param[in] _fp: FILE type file for reading
+    //! read binary data from C file API
+    /*! 
+      @param[in] _fin: input file pointer
      */
     void readBinary(FILE *_fin) {
-        size_t rcount = fread(this, sizeof(*this), 1, _fin);
+        size_t rcount = fread(&enabled, sizeof(enabled), 1, _fin);
         if (rcount<1) {
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             abort();
         }
-    }        
+#ifdef GAS_DRAG
+        gas_drag.readBinary(_fin);
+#endif
+    }
 
+    //! read binary data from C++ stream API
+    /*! 
+      @param[in,out] _fin: input stream
+     */
     void readBinary(std::istream& _fin) {
-        _fin.read(reinterpret_cast<char*>(this), sizeof(*this));
+        _fin.read(reinterpret_cast<char*>(&enabled), sizeof(enabled));
         if (!_fin) {
             std::cerr<<"Error: Data reading fails! requiring data number is 1.\n";
             abort();
         }
+#ifdef GAS_DRAG
+        gas_drag.readBinary(_fin);
+#endif
     }
 };

@@ -409,7 +409,7 @@ public:
                 }
 
 #ifdef EXTERNAL_HARD
-                if (ext_force->mode>0) {
+                if (ext_force->isEnabled()) {
             
                     auto pgi = pi; 
                     auto gcm = _perturber.global_cm;
@@ -475,7 +475,7 @@ public:
             }
 
 #ifdef EXTERNAL_HARD
-            if (ext_force->mode>0) {
+            if (ext_force->isEnabled()) {
             
                 Float dt = _time - _particle_cm.time;
                 Float xcm[3],vcm[3];

@@ -196,7 +196,7 @@ public:
                 break;
             case 'h':
                 if(print_flag){
-                    std::cout<<"Disk star merger parameters, options:"<<std::endl;
+                    std::cout<<"----- Disk star merger parameters, options: -----"<<std::endl;
                     input_par_store.printHelp(std::cout, print_format_info);
                 }
                 return -1;

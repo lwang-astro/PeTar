@@ -490,7 +490,7 @@ public:
                                      const Tpi& _pi,
                                      const Tpcm& _pcm,
                                      const Tpert& _perturber) {
-        if (ext_force.mode>0) {
+        if (ext_force.isEnabled()) {
             
             Tpi p = _pi;
             p.pos[0] += _pcm.pos[0];

@@ -382,7 +382,7 @@ int main(int argc, char **argv){
       fprintf(stderr,"Error: Cannot open file %s.\n", fexthardpar.c_str());
       abort();
   }
-  external_hard_parameters.input_par_store.readAscii(fpar_in);
+  external_hard_parameters.readModelParamsAscii(fpar_in);
   fclose(fpar_in);
 
 #ifdef GALPY
@@ -499,7 +499,7 @@ int main(int argc, char **argv){
       ungetc(c, fp);
       hard_dump.readOneClusterBinary(fp);
 #ifdef EXTERNAL_HARD
-      hard_manager.h4_manager.interaction.ext_force.center.readBinary(fp);
+      hard_manager.center.readBinary(fp);
 #endif
 
 #if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
@@ -567,9 +567,9 @@ int main(int argc, char **argv){
           GalpyManager galpy_manager;
           std::string galpy_conf_filename = filename+".galpy";
           galpy_manager.initial(galpy_parameters, stat.time, galpy_conf_filename, true, true, false);
-          hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, galpy_manager, stat, true);
+          hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, galpy_manager, stat, hard_manager.center, hard_manager.center_id, true);
 #else
-          hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, stat.time, true);
+          hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, stat.time, hard_manager.center, hard_manager.center_id, true);
 #endif
 #endif
           HardIntegrator hard_int;
