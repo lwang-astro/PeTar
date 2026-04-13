@@ -26,6 +26,9 @@ public:
     IOParams<double> coulomb_log;
     IOParams<double> polytropic_constant; // K
     IOParams<double> polytropic_exponent; // gamma
+    IOParams<double> ifunc_mach_lower;
+    IOParams<double> ifunc_mach_upper;
+    IOParams<long long int> ifunc_smooth_order;
 #ifdef GALPY
     IOParams<long long int> galpy_gaspot_index;
     IOParams<double> scale_density;
@@ -43,6 +46,9 @@ public:
                        coulomb_log  (input_par_store, 3.1, "gdf-coulomb-log",  "coulomb logarithm"),
                        polytropic_constant (input_par_store, 1.0, "gdf-K", "Polytropic constant in units of PeTar input, used to evaluate Pressure P = K rho^gamma"),
                        polytropic_exponent (input_par_store, 4.0/3.0, "gdf-gamma", "Polytropic exponent, used to evaluate Pressure P = K rho^gamma"),
+                       ifunc_mach_lower (input_par_store, 0.9, "gdf-ifunc-mach-lower", "lower Mach boundary for Ifunc Hermite interpolation; recommended range: about 0.85 (or smaller) for derivative order = 3, typical 0.9 for order = 2"),
+                       ifunc_mach_upper (input_par_store, 1.1, "gdf-ifunc-mach-upper", "upper Mach boundary for Ifunc Hermite interpolation; recommended range: about 1.15 (or larger) for derivative order = 3, typical 1.1 for order = 2"),
+                       ifunc_smooth_order (input_par_store, 2, "gdf-ifunc-smooth-order", "Ifunc Hermite smooth derivative order at boundaries (2 or 3); recommended: 2 for robustness, 3 with a wider Mach range (e.g. 0.85-1.15 or wider)"),
 #ifdef GALPY
                        galpy_gaspot_index(input_par_store, -1, "gdf-gaspot-index",  "galpy potential set index for gas component, used for obtaining gas density", "None"),
                        scale_density(input_par_store, 1/G_ASTRO, "gdf-scale-density", "scale factor for galpy potential density","1/G"),
@@ -77,6 +83,9 @@ public:
             {coulomb_log.key, required_argument, &ext_flag, 4},
             {polytropic_constant.key, required_argument, &ext_flag, 5},
             {polytropic_exponent.key, required_argument, &ext_flag, 6},
+            {ifunc_mach_lower.key, required_argument, &ext_flag, 7},
+            {ifunc_mach_upper.key, required_argument, &ext_flag, 8},
+            {ifunc_smooth_order.key, required_argument, &ext_flag, 9},
             {"help",      no_argument,       0, 'h'},
             {0,0,0,0}
         };
@@ -135,6 +144,21 @@ public:
                 case 6:
                     polytropic_exponent.value = atof(optarg);
                     if(print_flag) polytropic_exponent.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 7:
+                    ifunc_mach_lower.value = atof(optarg);
+                    if(print_flag) ifunc_mach_lower.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 8:
+                    ifunc_mach_upper.value = atof(optarg);
+                    if(print_flag) ifunc_mach_upper.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 9:
+                    ifunc_smooth_order.value = atoi(optarg);
+                    if(print_flag) ifunc_smooth_order.print(std::cout);
                     opt_used+=2;
                     break;
                 default:
@@ -204,6 +228,12 @@ public:
     Float polytropic_exponent;
     Float gravitational_constant;
     bool calc_sound_speed;
+    int ifunc_smooth_order;
+    int ifunc_poly_ncoef;
+    Float mach_inter_lower;
+    Float mach_inter_upper;
+    Float ifunc_coef[8];
+    Float difunc_coef[7];
 
     GasDragForce(): mode(0),
 #ifdef GALPY
@@ -211,7 +241,156 @@ public:
 #else
                     gas_density(1.0), gas_density_init(1.0), decay_time(0.0), time(0.0),
 #endif
-                    sound_speed(0.0), coulomb_log(3.1), polytropic_constant(1.0), polytropic_exponent(4.0/3.0), gravitational_constant(1.0), calc_sound_speed(true) {}
+                    sound_speed(0.0), coulomb_log(3.1), polytropic_constant(1.0), polytropic_exponent(4.0/3.0), gravitational_constant(1.0), calc_sound_speed(true),
+                    ifunc_smooth_order(2), ifunc_poly_ncoef(6), mach_inter_lower(0.9), mach_inter_upper(1.1), ifunc_coef{0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}, difunc_coef{0.0,0.0,0.0,0.0,0.0,0.0,0.0} {}
+
+    Float calcIfuncSubsonic(const Float _mach) const {
+        return 0.5*std::log((1.0+_mach)/(1.0-_mach)) - _mach;
+    }
+
+    Float calcDIfuncSubsonic(const Float _mach) const {
+        const Float mach2 = _mach*_mach;
+        return mach2/(1.0-mach2);
+    }
+
+    Float calcDDIfuncSubsonic(const Float _mach) const {
+        const Float mach2 = _mach*_mach;
+        const Float den = 1.0 - mach2;
+        return 2.0*_mach/(den*den);
+    }
+
+    Float calcDDDIfuncSubsonic(const Float _mach) const {
+        const Float mach2 = _mach*_mach;
+        const Float den = 1.0 - mach2;
+        return 2.0*(1.0+3.0*mach2)/(den*den*den);
+    }
+
+    Float calcIfuncSupersonic(const Float _mach) const {
+        const Float mach2 = _mach*_mach;
+        return 0.5*std::log(1.0-1.0/mach2) + coulomb_log;
+    }
+
+    Float calcDIfuncSupersonic(const Float _mach) const {
+        const Float mach2 = _mach*_mach;
+        return 1.0/(mach2*_mach - _mach);
+    }
+
+    Float calcDDIfuncSupersonic(const Float _mach) const {
+        const Float mach2 = _mach*_mach;
+        const Float den = mach2*_mach - _mach;
+        return -(3.0*mach2 - 1.0)/(den*den);
+    }
+
+    Float calcDDDIfuncSupersonic(const Float _mach) const {
+        const Float mach2 = _mach*_mach;
+        const Float den = mach2*_mach - _mach;
+        const Float den2 = den*den;
+        const Float den3 = den2*den;
+        const Float dden = 3.0*mach2 - 1.0;
+        return -6.0*_mach/den2 + 2.0*dden*dden/den3;
+    }
+
+    Float polynomialDerivativeBasis(const int _power, const int _derivative_order, const Float _x) const {
+        if (_power<_derivative_order) return 0.0;
+        Float coeff = 1.0;
+        for (int i=0; i<_derivative_order; i++) coeff *= (_power-i);
+        Float xpow = 1.0;
+        for (int i=0; i<_power-_derivative_order; i++) xpow *= _x;
+        return coeff*xpow;
+    }
+
+    Float evaluatePolynomial(const Float _x, const Float* _coef, const int _n_coef) const {
+        ASSERT(_n_coef>0);
+        Float value = _coef[_n_coef-1];
+        for (int i=_n_coef-2; i>=0; i--) value = value*_x + _coef[i];
+        return value;
+    }
+
+    void hermite_interpolation(const Float _x0, const Float _x1, const Float* _f0, const Float* _f1, const int _smooth_order, Float* _coef, int& _n_coef) {
+        ASSERT(_smooth_order>=2 && _smooth_order<=3);
+        const int n_eq = 2*(_smooth_order+1);
+        const int n_col = n_eq + 1;
+        Float mat[8][9] = {{0.0}};
+
+        for (int d=0; d<=_smooth_order; d++) {
+            const int row_l = d;
+            const int row_r = d + _smooth_order + 1;
+            for (int p=0; p<n_eq; p++) {
+                mat[row_l][p] = polynomialDerivativeBasis(p, d, _x0);
+                mat[row_r][p] = polynomialDerivativeBasis(p, d, _x1);
+            }
+            mat[row_l][n_eq] = _f0[d];
+            mat[row_r][n_eq] = _f1[d];
+        }
+
+        for (int i=0; i<n_eq; i++) {
+            int pivot = i;
+            Float pivot_abs = std::abs(mat[i][i]);
+            for (int j=i+1; j<n_eq; j++) {
+                const Float cand_abs = std::abs(mat[j][i]);
+                if (cand_abs > pivot_abs) {
+                    pivot = j;
+                    pivot_abs = cand_abs;
+                }
+            }
+            ASSERT(pivot_abs>0.0);
+            if (pivot!=i) {
+                for (int k=i; k<n_col; k++) {
+                    const Float tmp = mat[i][k];
+                    mat[i][k] = mat[pivot][k];
+                    mat[pivot][k] = tmp;
+                }
+            }
+
+            const Float diag = mat[i][i];
+            for (int k=i; k<n_col; k++) mat[i][k] /= diag;
+
+            for (int j=0; j<n_eq; j++) {
+                if (j==i) continue;
+                const Float fac = mat[j][i];
+                if (fac==0.0) continue;
+                for (int k=i; k<n_col; k++) mat[j][k] -= fac*mat[i][k];
+            }
+        }
+
+        _n_coef = n_eq;
+        for (int i=0; i<n_eq; i++) _coef[i] = mat[i][n_eq];
+    }
+
+    void updateIfuncCoefficients(const bool _print_flag=false, const int _smooth_order=2) {
+        const int smooth_order = (_smooth_order==3) ? 3 : 2;
+        ifunc_smooth_order = smooth_order;
+
+        const Float ifunc_l = calcIfuncSubsonic(mach_inter_lower);
+        const Float difunc_l = calcDIfuncSubsonic(mach_inter_lower);
+        const Float ddifunc_l = calcDDIfuncSubsonic(mach_inter_lower);
+        const Float dddifunc_l = calcDDDIfuncSubsonic(mach_inter_lower);
+        const Float ifunc_r = calcIfuncSupersonic(mach_inter_upper);
+        const Float difunc_r = calcDIfuncSupersonic(mach_inter_upper);
+        const Float ddifunc_r = calcDDIfuncSupersonic(mach_inter_upper);
+        const Float dddifunc_r = calcDDDIfuncSupersonic(mach_inter_upper);
+
+        const Float left[4] = {ifunc_l, difunc_l, ddifunc_l, dddifunc_l};
+        const Float right[4] = {ifunc_r, difunc_r, ddifunc_r, dddifunc_r};
+        for (int i=0; i<8; i++) ifunc_coef[i] = 0.0;
+        for (int i=0; i<7; i++) difunc_coef[i] = 0.0;
+        hermite_interpolation(mach_inter_lower, mach_inter_upper, left, right, smooth_order, ifunc_coef, ifunc_poly_ncoef);
+
+        for (int i=0; i<ifunc_poly_ncoef-1; i++) {
+            difunc_coef[i] = (i+1)*ifunc_coef[i+1];
+        }
+
+        if (_print_flag) {
+            std::cout<<std::setprecision(18);
+            std::cout<<"GasDrag Ifunc Hermite coefficients (smooth order="<<ifunc_smooth_order<<", coulomb_log="<<coulomb_log<<")"<<std::endl;
+            std::cout<<"  Ifunc:";
+            for (int i=0; i<ifunc_poly_ncoef; i++) std::cout<<" c"<<i<<"="<<ifunc_coef[i];
+            std::cout<<std::endl;
+            std::cout<<"  dIfunc:";
+            for (int i=0; i<ifunc_poly_ncoef-1; i++) std::cout<<" c"<<i<<"="<<difunc_coef[i];
+            std::cout<<std::endl;
+        }
+    }
 
 #ifdef GALPY
     //! initial parameters for perturbation
@@ -231,9 +410,13 @@ public:
         coulomb_log = _input.coulomb_log.value;
         polytropic_constant = _input.polytropic_constant.value;
         polytropic_exponent = _input.polytropic_exponent.value;
+        mach_inter_lower = _input.ifunc_mach_lower.value;
+        mach_inter_upper = _input.ifunc_mach_upper.value;
+        ifunc_smooth_order = _input.ifunc_smooth_order.value;
         gravitational_constant = _input.gravitational_constant.value;
         if (sound_speed>0.0) calc_sound_speed = false;
         else calc_sound_speed = true;
+        updateIfuncCoefficients(_print_flag, ifunc_smooth_order);
     }
 
 #else
@@ -246,9 +429,13 @@ public:
         coulomb_log = _input.coulomb_log.value;
         polytropic_constant = _input.polytropic_constant.value;
         polytropic_exponent = _input.polytropic_exponent.value;
+        mach_inter_lower = _input.ifunc_mach_lower.value;
+        mach_inter_upper = _input.ifunc_mach_upper.value;
+        ifunc_smooth_order = _input.ifunc_smooth_order.value;
         gravitational_constant = _input.gravitational_constant.value;
         if (sound_speed>0.0) calc_sound_speed = false;
         else calc_sound_speed = true;
+        updateIfuncCoefficients(_print_flag, ifunc_smooth_order);
         updateTime(_time);
     }
 
@@ -371,33 +558,29 @@ public:
 
         Float mach = v/sound_speed;
         Float Ifunc, dIfunc;
-        if (mach<0.9) {
-            Float mach2 = mach*mach;
-            Ifunc = 0.5*std::log((1.0+mach)/(1.0-mach)) - mach;
-            dIfunc = mach2/(1-mach2);
+        if (mach<mach_inter_lower) {
+            Ifunc = calcIfuncSubsonic(mach);
+            dIfunc = calcDIfuncSubsonic(mach);
         }
-        else if (mach>=0.9 && mach<1.1) {
-            // 2nd order derivative Hermite interpolation
-            Float mach2 = mach*mach;
-            Float mach3 = mach2*mach;
-            Float mach4 = mach2*mach2;
-            Float mach5 = mach4*mach;
-            Ifunc = 8670.66512394438*mach5 - 43353.850000357*mach4 + 86337.1029009788*mach3 - 85594.6848365398*mach2 + 42251.2454762294*mach - 8309.08207013687;
-            dIfunc = 43353.3256197219*mach4 - 173415.400001428*mach3 + 259011.308702936*mach2 - 171189.36967308*mach + 42251.2454762294;
+        else if (mach>=mach_inter_lower && mach<mach_inter_upper) {
+            // Hermite interpolation with configurable smooth order (C2 or C3).
+            // Recommended setup: order=2 with 0.9-1.1 for robustness; order=3 with 0.85-1.15 for smoother high-order derivatives.
+            Ifunc = evaluatePolynomial(mach, ifunc_coef, ifunc_poly_ncoef);
+            dIfunc = evaluatePolynomial(mach, difunc_coef, ifunc_poly_ncoef-1);
         }
         else{
-            Float mach2 = mach*mach;
-            Ifunc = 0.5*std::log(1-1/mach2) + coulomb_log;
-            dIfunc = 1/(mach2*mach - mach);
+            Ifunc = calcIfuncSupersonic(mach);
+            dIfunc = calcDIfuncSupersonic(mach);
         }
 
-#ifdef DISK_STAR_MERGER
+
+        // More reasonable formulation with v^2+cs^2 in the denominator,
+        // which behaves better in the subsonic regime.
+        // The original Ostriker 1999 formulation with v^3 in the denominator is recovered in the supersonic limit.
         Float v2_cs2 = v2 + cs2;
         Float c1 = -4*PI*G2*mass*gas_density*v/(v2_cs2*v2_cs2)*Ifunc;
-#else
-        Float v3 = v2*v;
-        Float c1 = -4*PI*G2*mass*gas_density/v3*Ifunc;
-#endif
+//        Float v3 = v2*v;
+//        Float c1 = -4*PI*G2*mass*gas_density/v3*Ifunc;
 
         if (mode==1) {
             // GDF force
@@ -457,6 +640,9 @@ public:
         ASSERT(mode>=0 && mode<=2);
         if (mode>0) {
             ASSERT(sound_speed>=0.0);
+            ASSERT(mach_inter_lower>0.0);
+            ASSERT(mach_inter_upper>mach_inter_lower);
+            ASSERT(ifunc_smooth_order==2 || ifunc_smooth_order==3);
 #ifdef GALPY
             ASSERT(galpy_gaspot_index>=0);
             ASSERT(galpy_manager!=NULL);
@@ -473,7 +659,10 @@ public:
              <<"sound speed: "<<sound_speed<<std::endl
              <<"coulomb log: "<<coulomb_log<<std::endl
              <<"polytropic constant: "<<polytropic_constant<<std::endl
-             <<"polytropic exponent: "<<polytropic_exponent<<std::endl;
+             <<"polytropic exponent: "<<polytropic_exponent<<std::endl
+             <<"ifunc mach lower: "<<mach_inter_lower<<std::endl
+             <<"ifunc mach upper: "<<mach_inter_upper<<std::endl
+             <<"ifunc smooth order: "<<ifunc_smooth_order<<std::endl;
 #ifdef GALPY
         _fout<<"galpy gaspot index: "<<galpy_gaspot_index<<std::endl
              <<"scale density: "<<scale_density<<std::endl;
