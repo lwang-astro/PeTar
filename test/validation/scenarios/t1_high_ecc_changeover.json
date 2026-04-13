@@ -1,0 +1,89 @@
+{
+  "name": "t1_high_ecc_changeover",
+  "description": "High-eccentricity binary crossing changeover radii; compare 2nd/4th order convergence behavior.",
+  "workdir": "{repo_root}",
+  "setup_commands": [
+    "mkdir -p test/validation/work/t1",
+    "python3 test/validation/make_ic.py --case t1 --output test/validation/work/t1/input.base",
+    "cd test/validation/work/t1 && petar.init -f input input.base"
+  ],
+  "extract": {
+    "regex_counts": {
+      "hard_energy_significant": "Hard energy significant",
+      "large_step_warning": "Large step"
+    }
+  },
+  "runs": [
+    {
+      "id": "order2_dt1",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order2} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -b 1 -t 0.02 -s 2e-4 -r 0.1 -o 5e-4 -w 2 -f order2_dt1 input",
+      "output": "order2_dt1.log"
+    },
+    {
+      "id": "order2_dt05",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order2} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -b 1 -t 0.02 -s 1e-4 -r 0.1 -o 5e-4 -w 2 -f order2_dt05 input",
+      "output": "order2_dt05.log"
+    },
+    {
+      "id": "order4_dt1",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -b 1 -t 0.02 -s 2e-4 -r 0.1 -o 5e-4 -w 2 -f order4_dt1 input",
+      "output": "order4_dt1.log"
+    },
+    {
+      "id": "order4_dt05",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -b 1 -t 0.02 -s 1e-4 -r 0.1 -o 5e-4 -w 2 -f order4_dt05 input",
+      "output": "order4_dt05.log"
+    }
+  ],
+  "checks": [
+    {
+      "name": "order2_energy_bound_dt1",
+      "type": "max_threshold",
+      "run_id": "order2_dt1",
+      "metric": "max_abs_error_over_total",
+      "threshold": 1e-6
+    },
+    {
+      "name": "order4_energy_bound_dt1",
+      "type": "max_threshold",
+      "run_id": "order4_dt1",
+      "metric": "max_abs_error_over_total",
+      "threshold": 1e-8
+    },
+    {
+      "name": "order2_ratio_dt_halving",
+      "type": "convergence_ratio",
+      "coarse_run_id": "order2_dt1",
+      "fine_run_id": "order2_dt05",
+      "metric": "max_abs_error_over_total",
+      "expected_ratio": 4.0,
+      "relative_tolerance": 0.5,
+      "min_fine_error": 1e-10,
+      "skip_if_vars_equal": [
+        "petar_bin_order2",
+        "petar_bin_order4"
+      ]
+    },
+    {
+      "name": "order4_ratio_dt_halving",
+      "type": "convergence_ratio",
+      "coarse_run_id": "order4_dt1",
+      "fine_run_id": "order4_dt05",
+      "metric": "max_abs_error_over_total",
+      "expected_ratio": 16.0,
+      "relative_tolerance": 0.5,
+      "min_fine_error": 1e-10,
+      "skip_if_vars_equal": [
+        "petar_bin_order2",
+        "petar_bin_order4"
+      ]
+    },
+    {
+      "name": "order2_no_hard_energy_alarm",
+      "type": "regex_count_max",
+      "run_id": "order2_dt1",
+      "regex_key": "hard_energy_significant",
+      "threshold": 0
+    }
+  ]
+}

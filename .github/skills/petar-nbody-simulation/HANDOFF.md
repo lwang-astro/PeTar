@@ -193,3 +193,104 @@ make skill-check
 ```
 
 - `make skill-check` 全部通过。
+
+## 11) 本次补充更新（2026-04-13，验证框架 T1-T4）
+
+已在 `test/validation` 下建立可扩展验证框架，用于代码大改后的快速回归。
+
+新增/更新文件：
+
+- 入口与指标
+	- `test/validation/run_validation.py`
+	- `test/validation/metrics.py`
+- 初始条件生成
+	- `test/validation/make_ic.py`
+		- `--case t1`: 高偏心 2 体
+		- `--case t2`: 层级 3 体（切换测试）
+		- `--case t3`: 层级 3 体（稳定/压力）
+		- `--case t4`: 层级 3 体 + 背景粒子（tree+hard）
+- 场景定义
+	- `test/validation/scenarios/t1_high_ecc_changeover.json`
+	- `test/validation/scenarios/t2_hermite_sdar_switch.json`
+	- `test/validation/scenarios/t3_hierarchical_triple.json`
+	- `test/validation/scenarios/t4_tree_hard_from_triple.json`
+- 配置与文档
+	- `test/validation/criteria.json`
+	- `test/validation/README.md`
+
+当前验证状态（本机已完成）：
+
+- Dry-run（T1-T4）通过：
+	- `python3 test/validation/run_validation.py --dry-run`
+- 实跑通过：
+	- `test/validation/out/report.t1.json`
+	- `test/validation/out/report.t2.json`
+	- `test/validation/out/report.t3.json`
+	- `test/validation/out/report.t4.json`
+
+关键实现说明：
+
+- `run_validation.py` 支持场景批量执行、日志解析、JSON 报告输出。
+- 指标提取：`max_abs_error_over_total`、`max_abs_error_pp`、`regex_counts`。
+- 判定类型：`max_threshold`、`regex_count_max`、`convergence_ratio`。
+- T1 收敛比判定为条件启用：
+	- 当 `petar_bin_order2 == petar_bin_order4` 时自动 skip。
+	- 当 fine error 低于数值地板时自动 skip。
+
+跨机器恢复建议（验证框架）：
+
+```bash
+cd /path/to/PeTar
+
+# 1) 脚本语法检查
+python3 -m py_compile test/validation/run_validation.py test/validation/make_ic.py test/validation/metrics.py
+
+# 2) 全量 dry-run
+python3 test/validation/run_validation.py --dry-run
+
+# 3) 轻量 smoke
+python3 test/validation/run_validation.py --scenario test/validation/scenarios/t2_hermite_sdar_switch.json --report test/validation/out/report.t2.json
+python3 test/validation/run_validation.py --scenario test/validation/scenarios/t3_hierarchical_triple.json --report test/validation/out/report.t3.json
+
+# 4) 全量
+python3 test/validation/run_validation.py
+```
+
+如需强制执行 2/4 阶对照（T1）：
+
+```bash
+python3 test/validation/run_validation.py \
+	--var petar_bin_order2=<kdk_binary> \
+	--var petar_bin_order4=<kdkdk4_binary> \
+	--var petar_bin_switch=<switch_test_binary>
+```
+
+下一步待开发：
+
+- 增加 blogh A/B 占位场景（待 blogh 接入后直接启用）。
+- 让 runner 直接读取 `criteria.json`，减少场景文件中的阈值重复。
+- 增加多 seed 统计回归模式（均值/方差/KS）。
+
+## 12) 最短恢复提示词（跨机器一条消息）
+
+在新电脑的 VS Code Chat 里，直接发送下面这段：
+
+```text
+请读取 .github/skills/petar-nbody-simulation/HANDOFF.md 并按其中“验证框架 T1-T4”继续开发。
+先执行：
+1) python3 -m py_compile test/validation/run_validation.py test/validation/make_ic.py test/validation/metrics.py
+2) python3 test/validation/run_validation.py --dry-run
+3) python3 test/validation/run_validation.py --scenario test/validation/scenarios/t2_hermite_sdar_switch.json --report test/validation/out/report.t2.json
+然后汇报当前机器可用的 petar 二进制家族，并继续实现下一步：blogh A/B 占位场景。
+```
+
+如需立即做 2/4 阶强制对照（不是默认 skip），使用：
+
+```text
+请读取 .github/skills/petar-nbody-simulation/HANDOFF.md。
+执行 T1 对照并指定二进制：
+--var petar_bin_order2=<kdk_binary>
+--var petar_bin_order4=<kdkdk4_binary>
+--var petar_bin_switch=<switch_test_binary>
+然后给出 report.t1.json 的判定摘要。
+```

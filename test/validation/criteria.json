@@ -1,0 +1,56 @@
+{
+  "notes": {
+    "purpose": "Centralized threshold reference for validation scenarios.",
+    "usage": "Copy values into scenario checks or update runner to read this file as the next step."
+  },
+  "t1_high_ecc_changeover": {
+    "max_abs_error_over_total": {
+      "order2_dt1": 1e-6,
+      "order4_dt1": 1e-8
+    },
+    "convergence": {
+      "order2_dt_halving_ratio": {
+        "expected": 4.0,
+        "relative_tolerance": 0.5
+      },
+      "order4_dt_halving_ratio": {
+        "expected": 16.0,
+        "relative_tolerance": 0.5
+      }
+    }
+  },
+  "t2_hermite_sdar_switch": {
+    "max_abs_error_over_total": {
+      "baseline": 1e-6
+    },
+    "max_abs_error_pp": {
+      "stress": 1e-5
+    },
+    "regex_count_max": {
+      "large_step_warning": 0,
+      "hard_dump": 0
+    }
+  },
+  "t3_hierarchical_triple": {
+    "max_abs_error_over_total": {
+      "stable": 2e-6,
+      "stress": 2e-5
+    },
+    "regex_count_max": {
+      "large_step_warning": 0,
+      "hard_dump": 0
+    }
+  },
+  "t4_tree_hard_from_triple": {
+    "max_abs_error_over_total": {
+      "baseline": 5e-6
+    },
+    "max_abs_error_pp": {
+      "stress": 2e-5
+    },
+    "regex_count_max": {
+      "large_step_warning": 0,
+      "hard_dump": 0
+    }
+  }
+}

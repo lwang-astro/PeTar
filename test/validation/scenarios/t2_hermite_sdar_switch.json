@@ -1,0 +1,59 @@
+{
+  "name": "t2_hermite_sdar_switch",
+  "description": "Check Hermite+SDAR switching stability and hard-energy behavior during repeated close passages.",
+  "workdir": "{repo_root}",
+  "setup_commands": [
+    "mkdir -p test/validation/work/t2",
+    "python3 test/validation/make_ic.py --case t2 --output test/validation/work/t2/input.base",
+    "cd test/validation/work/t2 && petar.init -f input input.base"
+  ],
+  "extract": {
+    "regex_counts": {
+      "hard_energy_significant": "Hard energy significant",
+      "large_step_warning": "Large step",
+      "hard_dump": "hard_large_energy\\."
+    }
+  },
+  "runs": [
+    {
+      "id": "baseline",
+      "command": "cd test/validation/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 8e-4 --r-search-group 1.6e-3 -u 1 -b 1 -t 0.05 -s 2e-4 -r 0.05 -o 5e-4 -w 2 -f t2_baseline input",
+      "output": "baseline.log"
+    },
+    {
+      "id": "stress",
+      "command": "cd test/validation/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 2e-4 --r-search-group 4e-4 -u 1 -b 1 -t 0.05 -s 4e-4 -r 0.03 -o 5e-4 -w 2 -f t2_stress input",
+      "output": "stress.log"
+    }
+  ],
+  "checks": [
+    {
+      "name": "baseline_energy_bound",
+      "type": "max_threshold",
+      "run_id": "baseline",
+      "metric": "max_abs_error_over_total",
+      "threshold": 1e-6
+    },
+    {
+      "name": "stress_hard_energy_bound",
+      "type": "max_threshold",
+      "run_id": "stress",
+      "metric": "max_abs_error_pp",
+      "threshold": 1e-5
+    },
+    {
+      "name": "baseline_no_large_step_warning",
+      "type": "regex_count_max",
+      "run_id": "baseline",
+      "regex_key": "large_step_warning",
+      "threshold": 0
+    },
+    {
+      "name": "stress_no_hard_dump",
+      "type": "regex_count_max",
+      "run_id": "stress",
+      "regex_key": "hard_dump",
+      "threshold": 0
+    }
+  ]
+}
