@@ -22,6 +22,18 @@ Ask only if missing:
 - metallicity (`--bse-metallicity`)
 - parallel launch mode
 
+## DSM
+
+Ask only if missing:
+- initial condition source
+- unit mode
+- end time (`-t`)
+- output interval (`-o`)
+- DSM key controls to override (for example `--dsm-seed-mass`, `--dsm-he-disk`, `--dsm-lambda0`, `--dsm-dt-factor`)
+- parallel launch mode
+
+If `.galpy` or `.agama` is also enabled, also ask for matching external-potential inputs.
+
 ## Galpy
 
 Ask only if missing:

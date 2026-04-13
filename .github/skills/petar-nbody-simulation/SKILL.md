@@ -15,13 +15,16 @@ Support multiple installed executables and only suggest options confirmed by the
 Prefer these examples and docs as the source of truth:
 
 - `sample/star_cluster_plummer_N1k.sh`
+- `sample/star_cluster_plummer_N1k_binaries.sh`
 - `sample/star_cluster_plummer_N1k_binaries_bse.sh`
+- `sample/star_cluster_plummer_N1k_GalpyMWPot.sh`
 - `sample/star_cluster_plummer_N1k_binaries_bse_GalpyMWPot.sh`
+- `sample/star_cluster_plummer_N1k_AgamaMWPotHunter24.sh`
 - `sample/data_analysis.ipynb` (Python post-processing and plotting patterns)
 - `README.md` sections for OpenMP, MPI, GPU, restart, and options.
 - `assets/option-matrix.md` (generated from installed binary help)
 - `assets/script-tools.md` (installed script-tool inventory from Makefile.in)
-- `HANDOFF-2026-03-27.md` (cross-machine continuation notes)
+- `HANDOFF.md` (cross-machine continuation notes)
 - `assets/prompt-starters.md` (chat prompt templates for resuming work)
 
 ## Installed Script Tools (Current Host)
@@ -45,6 +48,9 @@ Additional workflow utilities frequently available on host installations include
 
 - `petar.galpy.pot.movie`
 - `petar.get.init.binary`
+- `petar.galpy.help`
+- `petar.external.galpy`
+- `petar.external.agama`
 
 These tools are part of the skill surface and should be suggested when the user's request matches their purpose.
 
@@ -58,7 +64,7 @@ Use these tools proactively when the user intent matches the task.
   switch installed symlinks `petar`, `petar.hard.debug`, and `petar.format.transfer` to a selected installed binary family.
   Support direct target mode (`petar.select <suffix|binary-name>`), feature auto-select mode (`petar.select --require ... [--optional ...]`), and listing (`petar.select --list`).
   In feature mode, all required tokens must match; optional tokens are used for ranking.
-  Treat physics/structure-sensitive families as require-only: interrupt (`base`, `bse`, `mobse`, `bseEmp`), external (`galpy`, `agama`), external-hard (`gasdrag`), `pn*`, and `mpfrc` (suffix token `mp`).
+  Treat physics/structure-sensitive families as require-only: interrupt (`base`, `bse`, `mobse`, `bseEmp`, `dsm`), external (`galpy`, `agama`), external-hard (`gasdrag`), `pn*`, and `mpfrc` (suffix token `mp`).
   In other words, candidates containing these tokens are excluded unless explicitly requested in `--require`.
   If no match exists, surface configure hints mapped from required features (for example, `bse -> --with-interrupt=bse`, `galpy -> --with-external=galpy`).
   Unknown feature handling: `--require` must fail fast; `--optional` should warn and ignore unsupported tokens.
@@ -89,6 +95,10 @@ Use these tools proactively when the user intent matches the task.
   generate movies for Galpy potential map evolution.
 - `petar.get.init.binary`:
   generate primordial binary pairing tables for BSE initialization workflows.
+- `petar.galpy.help`:
+  inspect Galpy potential models and generate option/configuration guidance.
+- `petar.external.galpy` / `petar.external.agama`:
+  generate external potential map snapshots from run parameters (for example before `petar.external.pot.movie` or `petar.movie --ext-pot`).
 
 If the user asks for one of these tasks, do not answer only with general advice; provide the corresponding tool command pattern.
 
@@ -110,7 +120,7 @@ Requirement-driven selection rule:
 
 1. Do not assign a fixed priority across physics scenarios; scenario choice depends on user intent.
 2. Map user intent to configure features first:
-  - `--with-interrupt` controls interruption module family (`base`, `bse`, `mobse`, `bseEmp`).
+  - `--with-interrupt` controls interruption module family (`base`, `bse`, `mobse`, `bseEmp`, `dsm`).
   - `--with-external` controls long-timescale external potential in tree steps (`galpy`, `agama`).
   - `--with-external-hard` controls short-timescale external forces in hard integrators (`gasdrag`).
   - `--with-pn` controls post-Newtonian relativistic corrections (`pn*`).
@@ -138,7 +148,7 @@ Suffix tokens should be interpreted as configure-driven feature combinations fro
 
 - parallel/runtime (`mpi`, `omp`, `gpu`)
 - architecture (`avx`, `avx2`, `avx512`, `64b`)
-- interruption mode (`base`, `bse`, `mobse`, `bseEmp`)
+- interruption mode (`base`, `bse`, `mobse`, `bseEmp`, `dsm`)
 - external potential (`galpy`, `agama`)
 - external hard-force (`gasdrag`)
 - post-Newtonian (`pn*`)
@@ -204,7 +214,7 @@ Inference rules:
 
 When inferring from binary name:
 
-1. Do not ask whether BSE, Galpy, or Agama is needed if the suffix already determines it.
+1. Do not ask whether BSE, DSM, Galpy, or Agama is needed if the suffix already determines it.
 2. Only ask for the missing physical inputs required by that inferred scenario.
 3. If the user explicitly asks for a different physics stack than the binary suffix implies, explain the mismatch and suggest the correct binary.
 
@@ -216,6 +226,8 @@ Use the selected binary suffix to decide which extra option families are reasona
   `-u`, `-t`, `-o`, `-p`, `-a`, `-b`, `-r`, `-s`, `--r-search-min`, `--r-group`, `--soft-eps`, `--dt-soft-*`, Hermite and AR options.
 - `.bse`:
   all base options plus `--bse-*`, `--stellar-evolution`, `--detect-interrupt`, `--rand-seed`, `--rand-seedfile`.
+- `.dsm`:
+  all base options plus `--dsm-*` option family and DSM-specific interrupt controls.
 - `.galpy`:
   all base options plus `--galpy-set`, `--galpy-conf-file`, `--galpy-type-arg`, `--galpy-rscale`, `--galpy-vscale`.
 - `.agama`:
@@ -231,7 +243,7 @@ Do not proactively suggest options from families that the binary cannot support.
 
 Ask for the minimum set before generating commands:
 
-1. Simulation type: isolated | BSE binaries | galactic tidal field (Galpy) | external potential (Agama) | restart.
+1. Simulation type: isolated | BSE binaries | DSM mode | galactic tidal field (Galpy) | external potential (Agama) | restart.
 2. Unit choice: Henon (`-u 0` default) or astrophysical (`-u 1`).
 3. End time (`-t`) and output interval (`-o`).
 4. Parallel mode: serial | OpenMP | MPI+OpenMP | GPU.
@@ -273,6 +285,21 @@ Required if not already provided:
 7. Parallel launch mode.
 
 Do not ask whether stellar evolution should be enabled if the binary already ends with `.bse`.
+
+### DSM Scenario
+
+Required if not already provided:
+
+1. Initial condition source.
+2. Unit mode.
+3. End time `-t`.
+4. Output interval `-o`.
+5. DSM key controls to override (only those requested), for example `--dsm-seed-mass`, `--dsm-he-disk`, `--dsm-lambda0`, `--dsm-dt-factor`.
+6. Parallel launch mode.
+
+If the binary is also `.galpy` or `.agama`, additionally ask for the corresponding external-potential inputs.
+
+If raw input is converted with `petar.init`, use `-s dsm` for DSM-compatible stellar columns.
 
 ### Galpy Scenario
 
@@ -388,7 +415,7 @@ Most common fixes to try:
 - snapshot origin/type selection when available:
   `--snapshot-type origin | post | generate_binary`
 - interrupt mode selection:
-  `-i none | base | bse | mobse`
+  `-i none | base | bse | mobse | bseEmp | dsm`
 - external mode selection:
   `-t none | galpy | agama`
 - use the exact spelling shown by current `-h`; do not assume aliases like `no` are valid when help says `none`.
@@ -550,6 +577,20 @@ petar.movie [options] <snapshot_list>
 ```bash
 petar.external.pot.movie [options] <petar.external_parameter_file>
 ```
+
+### External Potential Map Generation
+
+If the user asks to generate potential maps from runtime parameters before visualization:
+
+```bash
+petar.external.<galpy|agama> -p <input.par> -m <pot_conf>
+```
+
+Typical use:
+
+1. create a map configuration file (`pot_conf`) describing time/grid ranges;
+2. generate map snapshots with `petar.external.agama` or `petar.external.galpy`;
+3. visualize with `petar.external.pot.movie` or overlay in `petar.movie --ext-pot`.
 
 ## Python Data Analysis Templates (from `sample/data_analysis.ipynb`)
 
@@ -779,7 +820,7 @@ Default post-processing:
 
 ```bash
 petar.data.gether data
-petar.data.process data.snap.lst
+petar.data.process -t agama --r-escape tidal -G 0.00449830997959438 data.snap.lst
 ```
 
 ### BSE + Agama
@@ -788,7 +829,7 @@ Default post-processing:
 
 ```bash
 petar.data.gether data
-petar.data.process -i bse data.snap.lst
+petar.data.process -i bse -t agama --r-escape tidal -G 0.00449830997959438 data.snap.lst
 ```
 
 Optional follow-ups when relevant:
@@ -877,7 +918,7 @@ Run template:
 petar.init -c <x,y,z,vx,vy,vz_in_galactic_frame> -t -v kms2pcmyr -f input <raw_input_file>
 OMP_STACKSIZE=128M <petar_binary_with_agama> -u 1 -t <t_end_myr> -o <dt_out_myr> --agama-conf-file <agama_config_file> input > output 2>&1
 petar.data.gether data
-petar.data.process data.snap.lst
+petar.data.process -t agama --r-escape tidal -G 0.00449830997959438 data.snap.lst
 ```
 
 Compatibility rule:
@@ -976,7 +1017,7 @@ After these three stages, provide the runnable command block(s) and validation c
 When user intent is not fully specified, ask this compact checklist first (only missing items):
 
 1. Physics requirements (toggle set):
-  - `interrupt`: off | base | bse | mobse | bseEmp
+  - `interrupt`: off | base | bse | mobse | bseEmp | dsm
   - `external (long-timescale tree step)`: off | galpy | agama
   - `external-hard (short-timescale hard integrator)`: off | gasdrag
   - `pn`: off | pnhermite | pnsdar | pnall (or other pn mode)

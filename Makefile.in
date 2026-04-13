@@ -406,6 +406,9 @@ install: $(TARGET) SE_INSTALL EXT_INSTALL install_script_tool
 	ln -sf @prefix@/bin/@PROG_NAME@.hard.debug @prefix@/bin/petar.hard.debug
 	ln -sf @prefix@/bin/@PROG_NAME@.format.transfer @prefix@/bin/petar.format.transfer
 
+skill-check:
+	bash .github/skills/petar-nbody-simulation/assets/check_skill_consistency.sh
+
 clean: SE_CLEAN EXT_CLEAN RAND_CLEAN
 	rm -f $(TARGET) build/*.o 
 

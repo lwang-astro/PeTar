@@ -34,14 +34,14 @@ petar.data.process -i bse -t galpy --r-escape tidal data.snap.lst
 
 ```bash
 petar.data.gether data
-petar.data.process data.snap.lst
+petar.data.process -t agama --r-escape tidal -G 0.00449830997959438 data.snap.lst
 ```
 
 ## BSE + Agama
 
 ```bash
 petar.data.gether data
-petar.data.process -i bse data.snap.lst
+petar.data.process -i bse -t agama --r-escape tidal -G 0.00449830997959438 data.snap.lst
 ```
 
 ## Rule

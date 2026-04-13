@@ -19,3 +19,18 @@ make install
 ./configure --with-external=agama
 make clean
 make install
+./configure --with-interrupt=bse --with-external=galpy --with-external-hard=gasdrag
+make clean
+make install
+./configure --with-interrupt=bse --with-external-hard=gasdrag
+make clean
+make install
+./configure --with-interrupt=dsm --with-external=galpy --with-external-hard=gasdrag
+make clean
+make install
+./configure --with-interrupt=dsm --with-external-hard=gasdrag
+make clean
+make install
+./configure --with-external-hard=gasdrag
+make clean
+make install

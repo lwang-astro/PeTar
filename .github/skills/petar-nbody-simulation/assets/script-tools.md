@@ -52,9 +52,25 @@ These tools are installed from `install_script_tool` in `Makefile.in` and are pa
 - `petar.get.init.binary`
   Generate initial binary lists for BSE-style initialization workflows.
 
+- `petar.galpy.help`
+  Query Galpy potential families and argument/config help.
+
+- `petar.external.galpy` / `petar.external.agama`
+  Generate external potential map snapshots from run parameter files for visualization workflows.
+
 ## Skill usage rule
 
 When the user asks for one of these tasks, the skill should suggest the corresponding tool command, not only the main solver binary.
+
+## External potential map workflow
+
+When users ask to generate external potential maps before movies/overlays:
+
+1. Create a map config file (for example `pot_conf`) describing time and grid ranges.
+2. Generate map snapshots:
+  - `petar.external.galpy -p input.par -m pot_conf`
+  - `petar.external.agama -p input.par -m pot_conf`
+3. Visualize with `petar.external.pot.movie` or overlay with `petar.movie --ext-pot`.
 
 ## Parallel sizing quick rule
 

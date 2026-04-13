@@ -5,7 +5,7 @@
 ## 1) 完整恢复上下文
 
 ```text
-请先阅读 .github/skills/petar-nbody-simulation/HANDOFF-2026-03-27.md。
+请先阅读 .github/skills/petar-nbody-simulation/HANDOFF.md。
 然后执行：
 1) .github/skills/petar-nbody-simulation/assets/update_option_inventory.sh
 2) .github/skills/petar-nbody-simulation/assets/update_script_tool_help.sh
@@ -51,7 +51,7 @@
 
 ```text
 请先用“最小提问清单”收集缺失信息，并且只问缺项：
-1) interrupt: off/base/bse/mobse/bseEmp
+1) interrupt: off/base/bse/mobse/bseEmp/dsm
 2) external(long-timescale): off/galpy/agama
 3) external-hard(short-timescale): off/gasdrag
 4) pn: off/pnhermite/pnsdar/pnall
@@ -94,4 +94,15 @@
 2) 用 BSEMerge 汇总 merger candidate
 3) 画 object.1 的 x-y 轨迹（颜色为 time）或 BMS 的 semi-time 散点图
 并说明每一步读取时需要的类与关键参数。
+```
+
+## 10) 外势势场图与可视化链路
+
+```text
+请给我一个 Agama（或 Galpy）外势可视化完整链路：
+1) 生成 pot_conf（说明每列含义）
+2) 运行 petar.external.agama（或 petar.external.galpy）: -p input.par -m pot_conf
+3) 用 petar.external.pot.movie 生成势场演化视频
+4) 如果要叠加到粒子演化图，给 petar.movie --ext-pot 的示例
+要求：命令可直接复制执行，并说明输入输出文件对应关系。
 ```
