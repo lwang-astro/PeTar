@@ -601,13 +601,13 @@ public:
         if (_calc_acc1) {
             ASSERT(_acc1!=NULL);
             Float vdota = vel_rel[0]*_acc0[0] + vel_rel[1]*_acc0[1] + vel_rel[2]*_acc0[2];
-#ifdef DISK_STAR_MERGER
+
             // d(v/(v^2+cs^2)^2)/dt = (cs^2 - 3v^2)/(v^2+cs^2)^5(v^2) v dot a
             Float c2 = c1*(cs2 - 3*v2)/(v2_cs2*v2)*vdota;
-#else
+
             // d(1/v^3)/dt = -3/v^5 v dot a
-            Float c2 = -3*c1/v2*vdota;
-#endif
+            //Float c2 = -3*c1/v2*vdota;
+
             // d(v/ds)/dt  = v dot a / (v*ds)
             Float c3 = c1/Ifunc*dIfunc*vdota/(v*sound_speed);
 
