@@ -256,7 +256,7 @@ python3 test/validation/run_validation.py --scenario test/validation/scenarios/t
 python3 test/validation/run_validation.py
 ```
 
-如需强制执行 2/4 阶对照（T1）：
+如需强制执行 2/4 阶对照（T1：当前主测 kdkdk4，对照 kdk）：
 
 ```bash
 python3 test/validation/run_validation.py \
@@ -288,9 +288,57 @@ python3 test/validation/run_validation.py \
 
 ```text
 请读取 .github/skills/petar-nbody-simulation/HANDOFF.md。
-执行 T1 对照并指定二进制：
+先检查 ./configure -h 中 --with-step-mode（确认 kdk/kdkdk/kdkdk4 可用与默认值），再执行 T1 对照并指定二进制：
 --var petar_bin_order2=<kdk_binary>
 --var petar_bin_order4=<kdkdk4_binary>
 --var petar_bin_switch=<switch_test_binary>
 然后给出 report.t1.json 的判定摘要。
+```
+
+指定 kdk/kdkdk4（二进制优先）做 T1 强制对照（kdkdk 仅临时兜底）建议模板：
+
+```text
+请读取 .github/skills/petar-nbody-simulation/HANDOFF.md，并执行 T1 强制 2/4 阶对照。
+请先执行 ./configure -h 并确认 --with-step-mode（kdk/kdkdk/kdkdk4）;
+优先确认这台机器上的 kdk 与 kdkdk4 二进制名（若缺失请明确报错并给替代建议），再执行：
+python3 test/validation/run_validation.py \
+	--scenario test/validation/scenarios/t1_high_ecc_changeover.json \
+	--var petar_bin_order2=<kdk_binary> \
+	--var petar_bin_order4=<kdkdk4_binary> \
+	--var petar_bin_switch=<switch_test_binary> \
+	--report test/validation/out/report.t1.json
+最后输出：
+1) 实际使用的 order2/order4/switch 二进制名
+2) report.t1.json 的 PASS/FAIL 摘要
+3) 若 kdkdk4 缺失，可用 kdkdk 二进制临时对照，并说明结果可比性风险
+```
+
+英文版最短恢复提示词（便于对外协作）：
+
+```text
+Please read .github/skills/petar-nbody-simulation/HANDOFF.md and continue from the “Validation framework T1-T4” section.
+Run the following first:
+1) python3 -m py_compile test/validation/run_validation.py test/validation/make_ic.py test/validation/metrics.py
+2) python3 test/validation/run_validation.py --dry-run
+3) python3 test/validation/run_validation.py --scenario test/validation/scenarios/t2_hermite_sdar_switch.json --report test/validation/out/report.t2.json
+Then summarize the available petar binary families on this machine and continue with the next planned task.
+```
+
+英文版 T1 强制对照模板（primary: kdk vs kdkdk4; kdkdk as temporary fallback）：
+
+```text
+Please read .github/skills/petar-nbody-simulation/HANDOFF.md and run the forced T1 comparison.
+First run ./configure -h and check --with-step-mode (kdk/kdkdk/kdkdk4), then verify whether kdk and kdkdk4 binaries are available on this machine.
+After that, run:
+python3 test/validation/run_validation.py \
+	--scenario test/validation/scenarios/t1_high_ecc_changeover.json \
+	--var petar_bin_order2=<kdk_binary> \
+	--var petar_bin_order4=<kdkdk4_binary> \
+	--var petar_bin_switch=<switch_test_binary> \
+	--report test/validation/out/report.t1.json
+If kdkdk4 is unavailable, you may temporarily fall back to a kdkdk binary, but you must state the comparability risk explicitly.
+Finally report:
+1) the actual order2/order4/switch binaries used
+2) the PASS/FAIL summary from report.t1.json
+3) whether skip_if_vars_equal was triggered
 ```

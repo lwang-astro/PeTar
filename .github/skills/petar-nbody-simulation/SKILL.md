@@ -142,6 +142,13 @@ Special-purpose modules (on-demand, not part of default recommendation ranking):
 - `--with-debug=assert`:
   assertion-focused debug mode with optimization retained to avoid severe runtime slowdown.
 
+Step-mode selection rule:
+
+- `--with-step-mode` controls tree-step integration mode and must be validated from current `./configure -h` before suggesting reconfigure commands.
+- Treat supported modes as configure-driven build features, not runtime flags.
+- For the current T1 performance workflow in this repository, use explicit `kdk` vs `kdkdk4` binaries as the primary forced comparison.
+- If `kdkdk4` is missing on the current machine, say so explicitly and only then suggest temporary fallback to `kdkdk`, together with a warning that the comparison target changed.
+
 When these features are requested by the user, prioritize feature-matched binaries or provide reconfigure guidance; otherwise keep them outside default solver recommendations.
 
 Suffix tokens should be interpreted as configure-driven feature combinations from `configure.ac`, including categories such as:
