@@ -271,6 +271,17 @@ python3 test/validation/run_validation.py \
 - 让 runner 直接读取 `criteria.json`，减少场景文件中的阈值重复。
 - 增加多 seed 统计回归模式（均值/方差/KS）。
 
+补充（2026-04-13，跨机续开发后的最新增量）：
+
+- `test/validation/run_validation.py` 已支持 `--criteria`（默认 `test/validation/criteria.json`），并优先从 criteria 解析阈值：
+	- `max_threshold`: 使用 `criteria[scenario][metric][run_id]`
+	- `regex_count_max`: 使用 `criteria[scenario]["regex_count_max"][regex_key]`
+	- `convergence_ratio`: 支持 `criteria_key` 从 `criteria[scenario]["convergence"]` 读取
+- 新增 blogh A/B 占位场景：
+	- `test/validation/scenarios/t3_blogh_ab_placeholder.json`
+	- 默认变量：`petar_bin_blogh_a`、`petar_bin_blogh_b`（默认跟随 `petar_bin_switch`）
+- `test/validation/README.md` 已修复 markdown 代码块并更新新场景与用法。
+
 ## 12) 最短恢复提示词（跨机器一条消息）
 
 在新电脑的 VS Code Chat 里，直接发送下面这段：

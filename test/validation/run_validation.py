@@ -10,11 +10,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from metrics import check_convergence_ratio, check_max_threshold, summarize_results
+from metrics import check_convergence_ratio, check_loglog_slope, check_max_threshold, summarize_results
 
 
 ENERGY_HEADER_RE = re.compile(r"^Energy:\s+(.*)$")
 ENERGY_PHYSIC_RE = re.compile(r"^Physic:\s+(.*)$")
+TIME_RE = re.compile(r"^Time:\s*([0-9eE+\-.]+)")
 
 
 @dataclass
@@ -30,6 +31,66 @@ def load_json(path: Path) -> Dict[str, Any]:
         return json.load(fh)
 
 
+def load_criteria(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        return {}
+    return load_json(path)
+
+
+def resolve_threshold(
+    check: Dict[str, Any],
+    scenario_name: str,
+    criteria: Dict[str, Any],
+    metric: str,
+    key: str,
+    fallback: float,
+) -> float:
+    section = criteria.get(scenario_name, {})
+    metric_map = section.get(metric, {})
+    if isinstance(metric_map, dict) and key in metric_map:
+        return float(metric_map[key])
+
+    ref = check.get("criteria_ref")
+    if isinstance(ref, list) and len(ref) == 3:
+        sname, mname, kname = ref
+        if sname in criteria and isinstance(criteria[sname], dict):
+            cmap = criteria[sname].get(mname, {})
+            if isinstance(cmap, dict) and kname in cmap:
+                return float(cmap[kname])
+
+    return fallback
+
+
+def resolve_convergence(check: Dict[str, Any], scenario_name: str, criteria: Dict[str, Any]) -> Tuple[float, float]:
+    expected = float(check["expected_ratio"])
+    tolerance = float(check["relative_tolerance"])
+
+    ckey = check.get("criteria_key")
+    if ckey:
+        section = criteria.get(scenario_name, {})
+        conv = section.get("convergence", {})
+        if isinstance(conv, dict) and ckey in conv and isinstance(conv[ckey], dict):
+            citem = conv[ckey]
+            expected = float(citem.get("expected", expected))
+            tolerance = float(citem.get("relative_tolerance", tolerance))
+
+    return expected, tolerance
+
+
+def resolve_slope(check: Dict[str, Any], scenario_name: str, criteria: Dict[str, Any]) -> Tuple[float, float]:
+    expected = float(check["expected_slope"])
+    tolerance = float(check["slope_tolerance"])
+    ckey = check.get("criteria_key")
+    if ckey:
+        section = criteria.get(scenario_name, {})
+        slopes = section.get("loglog_slope", {})
+        if isinstance(slopes, dict) and ckey in slopes and isinstance(slopes[ckey], dict):
+            sitem = slopes[ckey]
+            expected = float(sitem.get("expected", expected))
+            tolerance = float(sitem.get("tolerance", tolerance))
+    return expected, tolerance
+
+
 def substitute_vars(command: str, variables: Dict[str, str]) -> str:
     for key, value in variables.items():
         command = command.replace("{" + key + "}", value)
@@ -43,6 +104,25 @@ def parse_key_value(items: List[str]) -> Dict[str, str]:
             raise ValueError(f"Invalid --var entry '{item}'. Use key=value format.")
         key, value = item.split("=", 1)
         parsed[key.strip()] = value.strip()
+    return parsed
+
+
+def parse_command_options(command: str) -> Dict[str, float]:
+    tokens = command.split()
+    parsed: Dict[str, float] = {}
+    i = 0
+    while i < len(tokens):
+        tok = tokens[i]
+        if tok in {"-s", "-r", "-t", "-o"} and i + 1 < len(tokens):
+            try:
+                parsed[{"-s": "dt_soft", "-r": "rout", "-t": "tend", "-o": "dt_out"}[tok]] = float(tokens[i + 1])
+            except ValueError:
+                pass
+            i += 2
+            continue
+        i += 1
+    if "rout" in parsed:
+        parsed["rin"] = 0.1 * parsed["rout"]
     return parsed
 
 
@@ -68,6 +148,59 @@ def parse_energy_rows(log_text: str) -> List[Dict[str, float]]:
     return rows
 
 
+def parse_time_error_series(log_text: str, metric: str = "Error/Total") -> List[Tuple[float, float]]:
+    lines = log_text.splitlines()
+    series: List[Tuple[float, float]] = []
+    current_time = None
+
+    for idx, line in enumerate(lines):
+        tmatch = TIME_RE.match(line.strip())
+        if tmatch:
+            try:
+                current_time = float(tmatch.group(1))
+            except ValueError:
+                current_time = None
+            continue
+
+        hmatch = ENERGY_HEADER_RE.match(line.strip())
+        if hmatch and idx + 1 < len(lines) and current_time is not None:
+            pmatch = ENERGY_PHYSIC_RE.match(lines[idx + 1].strip())
+            if not pmatch:
+                continue
+            header = hmatch.group(1).split()
+            values = pmatch.group(1).split()
+            if len(values) < len(header):
+                continue
+            rec = {header[j]: float(values[j]) for j in range(len(header))}
+            series.append((current_time, abs(rec.get(metric, 0.0))))
+
+    return series
+
+
+def period_maxima(
+    series: List[Tuple[float, float]],
+    period: float,
+    n_period: int,
+) -> List[float]:
+    if period <= 0.0 or n_period <= 0:
+        return []
+
+    period_max: Dict[int, float] = {}
+    t_upper = period * n_period + 1e-12
+
+    for t, value in series:
+        if t < 0.0 or t > t_upper:
+            continue
+        idx = int(t / period)
+        if idx >= n_period:
+            idx = n_period - 1
+        if idx < 0:
+            continue
+        period_max[idx] = max(period_max.get(idx, 0.0), value)
+
+    return [period_max[k] for k in sorted(period_max.keys())]
+
+
 def extract_regex_counts(log_text: str, patterns: Dict[str, str]) -> Dict[str, int]:
     counts = {}
     for key, pattern in patterns.items():
@@ -87,11 +220,66 @@ def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any]) -> Dict[str,
     regex_cfg = extract_cfg.get("regex_counts", {})
     regex_counts = extract_regex_counts(text, regex_cfg) if regex_cfg else {}
 
+    period = float(extract_cfg.get("period", 0.0) or 0.0)
+    n_period = int(extract_cfg.get("n_period", 0) or 0)
+    period_metric = str(extract_cfg.get("period_metric", "Error/Total"))
+    series = parse_time_error_series(text, metric=period_metric)
+    pmax = period_maxima(series, period=period, n_period=n_period) if (period > 0.0 and n_period > 0) else []
+
+    max_period_error = max(pmax) if pmax else 0.0
+    sum_period_error = sum(pmax) if pmax else 0.0
+    mean_period_error = (sum_period_error / len(pmax)) if pmax else 0.0
+
     return {
         "max_abs_error_over_total": max_err_total,
         "max_abs_error_pp": max_err_pp,
         "energy_sample_count": len(energy_rows),
         "regex_counts": regex_counts,
+        "period_bin_count": len(pmax),
+        "max_abs_error_period_max": max_period_error,
+        "sum_abs_error_period_max": sum_period_error,
+        "mean_abs_error_period_max": mean_period_error,
+    }
+
+
+def check_monotonic_trend(
+    values: List[float],
+    direction: str,
+    relative_tolerance: float,
+) -> Dict[str, Any]:
+    if len(values) < 2:
+        return {
+            "passed": False,
+            "message": "need at least two points for monotonic trend check",
+        }
+
+    if direction not in {"nondecreasing", "nonincreasing"}:
+        return {
+            "passed": False,
+            "message": f"unknown monotonic direction: {direction}",
+        }
+
+    for i in range(1, len(values)):
+        prev_v = values[i - 1]
+        curr_v = values[i]
+        if direction == "nondecreasing":
+            lower = prev_v * (1.0 - relative_tolerance)
+            if curr_v < lower:
+                return {
+                    "passed": False,
+                    "message": f"index {i}: {curr_v:.6e} < allowed lower {lower:.6e} (prev={prev_v:.6e})",
+                }
+        else:
+            upper = prev_v * (1.0 + relative_tolerance)
+            if curr_v > upper:
+                return {
+                    "passed": False,
+                    "message": f"index {i}: {curr_v:.6e} > allowed upper {upper:.6e} (prev={prev_v:.6e})",
+                }
+
+    return {
+        "passed": True,
+        "message": f"{direction} trend satisfied with relative_tolerance={relative_tolerance:.3f}",
     }
 
 
@@ -106,6 +294,7 @@ def execute_scenario(
     base_dir: Path,
     out_dir: Path,
     variables: Dict[str, str],
+    criteria: Dict[str, Any],
     dry_run: bool,
 ) -> Tuple[List[RunResult], List[Dict[str, Any]]]:
     scenario_name = scenario["name"]
@@ -135,12 +324,17 @@ def execute_scenario(
 
         if dry_run:
             print(f"[dry-run] run {scenario_name}/{run_id}: {cmd}")
-            metrics = {}
+            metrics = parse_command_options(cmd)
         else:
             code = run_shell(cmd, workdir, output_path)
             if code != 0:
                 raise RuntimeError(f"Run command failed ({scenario_name}/{run_id}): {cmd}")
             metrics = extract_metrics(output_path, scenario.get("extract", {}))
+            metrics.update(parse_command_options(cmd))
+            if "dt_soft" in metrics:
+                dt_soft = float(metrics["dt_soft"])
+                metrics["dt_soft_times_max_abs_error_period_max"] = dt_soft * float(metrics.get("max_abs_error_period_max", 0.0))
+                metrics["dt_soft_times_sum_abs_error_period_max"] = dt_soft * float(metrics.get("sum_abs_error_period_max", 0.0))
 
         run_results.append(RunResult(run_id=run_id, command=cmd, output_path=output_path, metrics=metrics))
 
@@ -152,7 +346,14 @@ def execute_scenario(
             if ctype == "max_threshold":
                 run_id = check["run_id"]
                 metric = check["metric"]
-                threshold = float(check["threshold"])
+                threshold = resolve_threshold(
+                    check=check,
+                    scenario_name=scenario_name,
+                    criteria=criteria,
+                    metric=metric,
+                    key=run_id,
+                    fallback=float(check["threshold"]),
+                )
                 value = float(per_run[run_id][metric])
                 result = check_max_threshold(value, threshold)
                 result.update({"scenario": scenario_name, "check": check["name"]})
@@ -177,8 +378,7 @@ def execute_scenario(
                 coarse_id = check["coarse_run_id"]
                 fine_id = check["fine_run_id"]
                 metric = check["metric"]
-                expected_ratio = float(check["expected_ratio"])
-                tolerance = float(check["relative_tolerance"])
+                expected_ratio, tolerance = resolve_convergence(check, scenario_name, criteria)
                 coarse = float(per_run[coarse_id][metric])
                 fine = float(per_run[fine_id][metric])
 
@@ -201,10 +401,85 @@ def execute_scenario(
             elif ctype == "regex_count_max":
                 run_id = check["run_id"]
                 regex_key = check["regex_key"]
-                threshold = int(check["threshold"])
+                threshold = int(
+                    resolve_threshold(
+                        check=check,
+                        scenario_name=scenario_name,
+                        criteria=criteria,
+                        metric="regex_count_max",
+                        key=regex_key,
+                        fallback=float(check["threshold"]),
+                    )
+                )
                 value = int(per_run[run_id]["regex_counts"].get(regex_key, 0))
                 result = check_max_threshold(float(value), float(threshold))
                 result.update({"scenario": scenario_name, "check": check["name"], "value": value, "threshold": threshold})
+                check_results.append(result)
+            elif ctype == "loglog_slope":
+                run_ids = check["run_ids"]
+                metric = check["metric"]
+                x_metric = check.get("x_metric", "dt_soft")
+                x_values = []
+                y_values = []
+                missing = []
+                for rid in run_ids:
+                    run_rec = next((r for r in run_results if r.run_id == rid), None)
+                    if run_rec is None:
+                        missing.append(rid)
+                        continue
+                    x_val = run_rec.metrics.get(x_metric)
+                    y_val = run_rec.metrics.get(metric)
+                    if x_val is None or y_val is None:
+                        missing.append(rid)
+                        continue
+                    x_values.append(float(x_val))
+                    y_values.append(float(y_val))
+                if missing:
+                    check_results.append(
+                        {
+                            "passed": False,
+                            "scenario": scenario_name,
+                            "check": check["name"],
+                            "message": f"missing metrics for runs: {', '.join(missing)}",
+                        }
+                    )
+                    continue
+                expected, tolerance = resolve_slope(check, scenario_name, criteria)
+                result = check_loglog_slope(x_values, y_values, expected, tolerance)
+                result.update({"scenario": scenario_name, "check": check["name"]})
+                check_results.append(result)
+            elif ctype == "monotonic_trend":
+                run_ids = check["run_ids"]
+                metric = check["metric"]
+                direction = str(check.get("direction", "nondecreasing"))
+                relative_tolerance = float(check.get("relative_tolerance", 0.0))
+
+                values = []
+                missing = []
+                for rid in run_ids:
+                    run_rec = next((r for r in run_results if r.run_id == rid), None)
+                    if run_rec is None:
+                        missing.append(rid)
+                        continue
+                    mv = run_rec.metrics.get(metric)
+                    if mv is None:
+                        missing.append(rid)
+                        continue
+                    values.append(float(mv))
+
+                if missing:
+                    check_results.append(
+                        {
+                            "passed": False,
+                            "scenario": scenario_name,
+                            "check": check["name"],
+                            "message": f"missing metrics for runs: {', '.join(missing)}",
+                        }
+                    )
+                    continue
+
+                result = check_monotonic_trend(values, direction=direction, relative_tolerance=relative_tolerance)
+                result.update({"scenario": scenario_name, "check": check["name"]})
                 check_results.append(result)
             else:
                 raise ValueError(f"Unknown check type: {ctype}")
@@ -220,18 +495,25 @@ def main() -> int:
     parser.add_argument("--var", action="append", default=[], help="Template variables key=value")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without running")
     parser.add_argument("--report", default="test/validation/out/report.json", help="Report JSON path")
+    parser.add_argument("--criteria", default="test/validation/criteria.json", help="Criteria JSON path")
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[2]
     scenario_dir = (repo_root / args.scenario_dir).resolve()
     out_dir = (repo_root / args.out_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
+    criteria_path = Path(args.criteria)
+    if not criteria_path.is_absolute():
+        criteria_path = (repo_root / args.criteria).resolve()
+    criteria = load_criteria(criteria_path)
 
     variables = parse_key_value(args.var)
     variables.setdefault("repo_root", str(repo_root))
     variables.setdefault("petar_bin_order2", "petar")
     variables.setdefault("petar_bin_order4", "petar")
     variables.setdefault("petar_bin_switch", "petar")
+    variables.setdefault("petar_bin_blogh_a", variables.get("petar_bin_switch", "petar"))
+    variables.setdefault("petar_bin_blogh_b", variables.get("petar_bin_switch", "petar"))
 
     scenario_paths = []
     if args.scenario:
@@ -257,6 +539,7 @@ def main() -> int:
             base_dir=repo_root,
             out_dir=out_dir,
             variables=variables,
+            criteria=criteria,
             dry_run=args.dry_run,
         )
 

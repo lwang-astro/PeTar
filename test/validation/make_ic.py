@@ -44,34 +44,35 @@ def write_rows(output: Path, rows: List[Tuple[float, List[float], List[float]]])
 
 def build_t1(output: Path) -> None:
     m1 = 1.0
-    m2 = 0.1
-    peri = 0.01
+    m2 = 10.0
+    semi = 0.1
     ecc = 0.9
-    r1, v1, r2, v2 = two_body_peri_state(m1, m2, peri, ecc, G_MSUN_PC_MYR)
+    apo = semi * (1.0 + ecc)
+    mass_sum = m1 + m2
+    rel_r = [apo, 0.0, 0.0]
+    rel_vy = math.sqrt(G_MSUN_PC_MYR * mass_sum * (1.0 - ecc) / (semi * (1.0 + ecc)))
+    rel_v = [0.0, rel_vy, 0.0]
+
+    factor1 = -m2 / mass_sum
+    factor2 = m1 / mass_sum
+    r1 = [factor1 * x for x in rel_r]
+    r2 = [factor2 * x for x in rel_r]
+    v1 = [factor1 * x for x in rel_v]
+    v2 = [factor2 * x for x in rel_v]
     rows = [(m1, r1, v1), (m2, r2, v2)]
     write_rows(output, rows)
 
 
 def build_t2(output: Path) -> None:
     m1 = 1.0
-    m2 = 0.7
-    m3 = 0.2
+    m2 = 10.0
+    semi = 0.01
+    ecc = 0.6
 
-    rin_peri = 0.003
-    ein = 0.6
-    r1_rel, v1_rel, r2_rel, v2_rel = two_body_peri_state(m1, m2, rin_peri, ein, G_MSUN_PC_MYR)
+    peri = semi * (1.0 - ecc)
+    r1, v1, r2, v2 = two_body_peri_state(m1, m2, peri, ecc, G_MSUN_PC_MYR)
 
-    m12 = m1 + m2
-    rout_peri = 0.03
-    eout = 0.8
-    r12, v12, r3, v3 = two_body_peri_state(m12, m3, rout_peri, eout, G_MSUN_PC_MYR)
-
-    p1 = [r12[i] + r1_rel[i] for i in range(3)]
-    p2 = [r12[i] + r2_rel[i] for i in range(3)]
-    v1 = [v12[i] + v1_rel[i] for i in range(3)]
-    v2 = [v12[i] + v2_rel[i] for i in range(3)]
-
-    rows = [(m1, p1, v1), (m2, p2, v2), (m3, r3, v3)]
+    rows = [(m1, r1, v1), (m2, r2, v2)]
     write_rows(output, rows)
 
 

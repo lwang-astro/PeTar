@@ -5,21 +5,26 @@
   },
   "t1_high_ecc_changeover": {
     "max_abs_error_over_total": {
-      "order2_dt1": 1e-6,
-      "order4_dt1": 1e-8
+      "inside_r0005_si00": 5e-10,
+      "cross_r128_si00": 5e-5
+    },
+    "loglog_slope": {
+      "inside_slope": {
+        "expected": 4.0,
+        "tolerance": 0.8
+      }
     },
     "convergence": {
-      "order2_dt_halving_ratio": {
-        "expected": 4.0,
-        "relative_tolerance": 0.5
-      },
-      "order4_dt_halving_ratio": {
-        "expected": 16.0,
-        "relative_tolerance": 0.5
+      "cross_r128_plateau_01_to_00": {
+        "expected": 1.0,
+        "relative_tolerance": 0.3
       }
+    },
+    "regex_count_max": {
+      "hard_energy_significant": 0
     }
   },
-  "t2_hermite_sdar_switch": {
+  "t2_binary_conservation_longterm": {
     "max_abs_error_over_total": {
       "baseline": 1e-6
     },
@@ -47,6 +52,16 @@
     },
     "max_abs_error_pp": {
       "stress": 2e-5
+    },
+    "regex_count_max": {
+      "large_step_warning": 0,
+      "hard_dump": 0
+    }
+  },
+  "t3_blogh_ab_placeholder": {
+    "max_abs_error_over_total": {
+      "method_a": 2e-6,
+      "method_b": 2e-6
     },
     "regex_count_max": {
       "large_step_warning": 0,

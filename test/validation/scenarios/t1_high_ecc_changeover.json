@@ -1,11 +1,12 @@
 {
   "name": "t1_high_ecc_changeover",
-  "description": "High-eccentricity binary crossing changeover radii; compare 2nd/4th order convergence behavior.",
+  "description": "Notebook-faithful KDKDK4 high-ecc binary test using semi=0.1 pc, e=0.9, m1=1, m2=10, dt=2^[-13,-6]. Includes three regimes: inside (rout < peri), peri-between (rin < peri < rout), and crossing (peri < rin < apo < rout).",
   "workdir": "{repo_root}",
   "setup_commands": [
     "mkdir -p test/validation/work/t1",
     "python3 test/validation/make_ic.py --case t1 --output test/validation/work/t1/input.base",
-    "cd test/validation/work/t1 && petar.init -f input input.base"
+    "cd test/validation/work/t1 && petar.init -f input input.base",
+    "cd test/validation/work/t1 && printf '2\n' > input.h4 && awk '{print $0,0.0}' input.base >> input.h4 && printf '0\n' >> input.h4"
   ],
   "extract": {
     "regex_counts": {
@@ -15,73 +16,220 @@
   },
   "runs": [
     {
-      "id": "order2_dt1",
-      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order2} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -b 1 -t 0.02 -s 2e-4 -r 0.1 -o 5e-4 -w 2 -f order2_dt1 input",
-      "output": "order2_dt1.log"
+      "id": "inside_r0005_si00",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.220703125e-4 -r 0.005 -o 1.220703125e-4 -w 2 -f inside_r0005_si00 input",
+      "output": "inside_r0005_si00.log"
     },
     {
-      "id": "order2_dt05",
-      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order2} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -b 1 -t 0.02 -s 1e-4 -r 0.1 -o 5e-4 -w 2 -f order2_dt05 input",
-      "output": "order2_dt05.log"
+      "id": "inside_r0005_si01",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 2.44140625e-4 -r 0.005 -o 2.44140625e-4 -w 2 -f inside_r0005_si01 input",
+      "output": "inside_r0005_si01.log"
     },
     {
-      "id": "order4_dt1",
-      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -b 1 -t 0.02 -s 2e-4 -r 0.1 -o 5e-4 -w 2 -f order4_dt1 input",
-      "output": "order4_dt1.log"
+      "id": "inside_r0005_si02",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 4.8828125e-4 -r 0.005 -o 4.8828125e-4 -w 2 -f inside_r0005_si02 input",
+      "output": "inside_r0005_si02.log"
     },
     {
-      "id": "order4_dt05",
-      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -b 1 -t 0.02 -s 1e-4 -r 0.1 -o 5e-4 -w 2 -f order4_dt05 input",
-      "output": "order4_dt05.log"
+      "id": "inside_r0005_si03",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 9.765625e-4 -r 0.005 -o 9.765625e-4 -w 2 -f inside_r0005_si03 input",
+      "output": "inside_r0005_si03.log"
+    },
+    {
+      "id": "inside_r0005_si04",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.953125e-3 -r 0.005 -o 1.953125e-3 -w 2 -f inside_r0005_si04 input",
+      "output": "inside_r0005_si04.log"
+    },
+    {
+      "id": "inside_r0005_si05",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 3.90625e-3 -r 0.005 -o 3.90625e-3 -w 2 -f inside_r0005_si05 input",
+      "output": "inside_r0005_si05.log"
+    },
+    {
+      "id": "inside_r0005_si06",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 7.8125e-3 -r 0.005 -o 7.8125e-3 -w 2 -f inside_r0005_si06 input",
+      "output": "inside_r0005_si06.log"
+    },
+    {
+      "id": "inside_r0005_si07",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.5625e-2 -r 0.005 -o 1.5625e-2 -w 2 -f inside_r0005_si07 input",
+      "output": "inside_r0005_si07.log"
+    },
+    {
+      "id": "peri_between_r005_si00",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.220703125e-4 -r 0.05 -o 1.220703125e-4 -w 2 -f peri_between_r005_si00 input",
+      "output": "peri_between_r005_si00.log"
+    },
+    {
+      "id": "peri_between_r005_si01",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 2.44140625e-4 -r 0.05 -o 2.44140625e-4 -w 2 -f peri_between_r005_si01 input",
+      "output": "peri_between_r005_si01.log"
+    },
+    {
+      "id": "peri_between_r005_si02",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 4.8828125e-4 -r 0.05 -o 4.8828125e-4 -w 2 -f peri_between_r005_si02 input",
+      "output": "peri_between_r005_si02.log"
+    },
+    {
+      "id": "peri_between_r005_si03",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 9.765625e-4 -r 0.05 -o 9.765625e-4 -w 2 -f peri_between_r005_si03 input",
+      "output": "peri_between_r005_si03.log"
+    },
+    {
+      "id": "peri_between_r005_si04",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.953125e-3 -r 0.05 -o 1.953125e-3 -w 2 -f peri_between_r005_si04 input",
+      "output": "peri_between_r005_si04.log"
+    },
+    {
+      "id": "peri_between_r005_si05",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 3.90625e-3 -r 0.05 -o 3.90625e-3 -w 2 -f peri_between_r005_si05 input",
+      "output": "peri_between_r005_si05.log"
+    },
+    {
+      "id": "peri_between_r005_si06",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 7.8125e-3 -r 0.05 -o 7.8125e-3 -w 2 -f peri_between_r005_si06 input",
+      "output": "peri_between_r005_si06.log"
+    },
+    {
+      "id": "peri_between_r005_si07",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.5625e-2 -r 0.05 -o 1.5625e-2 -w 2 -f peri_between_r005_si07 input",
+      "output": "peri_between_r005_si07.log"
+    },
+    {
+      "id": "cross_r032_si00",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.220703125e-4 -r 0.32 -o 1.220703125e-4 -w 2 -f cross_r032_si00 input",
+      "output": "cross_r032_si00.log"
+    },
+    {
+      "id": "cross_r032_si01",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 2.44140625e-4 -r 0.32 -o 2.44140625e-4 -w 2 -f cross_r032_si01 input",
+      "output": "cross_r032_si01.log"
+    },
+    {
+      "id": "cross_r032_si02",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 4.8828125e-4 -r 0.32 -o 4.8828125e-4 -w 2 -f cross_r032_si02 input",
+      "output": "cross_r032_si02.log"
+    },
+    {
+      "id": "cross_r032_si03",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 9.765625e-4 -r 0.32 -o 9.765625e-4 -w 2 -f cross_r032_si03 input",
+      "output": "cross_r032_si03.log"
+    },
+    {
+      "id": "cross_r032_si04",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.953125e-3 -r 0.32 -o 1.953125e-3 -w 2 -f cross_r032_si04 input",
+      "output": "cross_r032_si04.log"
+    },
+    {
+      "id": "cross_r032_si05",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 3.90625e-3 -r 0.32 -o 3.90625e-3 -w 2 -f cross_r032_si05 input",
+      "output": "cross_r032_si05.log"
+    },
+    {
+      "id": "cross_r032_si06",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 7.8125e-3 -r 0.32 -o 7.8125e-3 -w 2 -f cross_r032_si06 input",
+      "output": "cross_r032_si06.log"
+    },
+    {
+      "id": "cross_r032_si07",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.5625e-2 -r 0.32 -o 1.5625e-2 -w 2 -f cross_r032_si07 input",
+      "output": "cross_r032_si07.log"
+    },
+    {
+      "id": "cross_r128_si00",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.220703125e-4 -r 1.28 -o 1.220703125e-4 -w 2 -f cross_r128_si00 input",
+      "output": "cross_r128_si00.log"
+    },
+    {
+      "id": "cross_r128_si01",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 2.44140625e-4 -r 1.28 -o 2.44140625e-4 -w 2 -f cross_r128_si01 input",
+      "output": "cross_r128_si01.log"
+    },
+    {
+      "id": "cross_r128_si02",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 4.8828125e-4 -r 1.28 -o 4.8828125e-4 -w 2 -f cross_r128_si02 input",
+      "output": "cross_r128_si02.log"
+    },
+    {
+      "id": "cross_r128_si03",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 9.765625e-4 -r 1.28 -o 9.765625e-4 -w 2 -f cross_r128_si03 input",
+      "output": "cross_r128_si03.log"
+    },
+    {
+      "id": "cross_r128_si04",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.953125e-3 -r 1.28 -o 1.953125e-3 -w 2 -f cross_r128_si04 input",
+      "output": "cross_r128_si04.log"
+    },
+    {
+      "id": "cross_r128_si05",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 3.90625e-3 -r 1.28 -o 3.90625e-3 -w 2 -f cross_r128_si05 input",
+      "output": "cross_r128_si05.log"
+    },
+    {
+      "id": "cross_r128_si06",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 7.8125e-3 -r 1.28 -o 7.8125e-3 -w 2 -f cross_r128_si06 input",
+      "output": "cross_r128_si06.log"
+    },
+    {
+      "id": "cross_r128_si07",
+      "command": "cd test/validation/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.5625e-2 -r 1.28 -o 1.5625e-2 -w 2 -f cross_r128_si07 input",
+      "output": "cross_r128_si07.log"
     }
   ],
   "checks": [
     {
-      "name": "order2_energy_bound_dt1",
+      "name": "inside_energy_bound_fine",
       "type": "max_threshold",
-      "run_id": "order2_dt1",
+      "run_id": "inside_r0005_si00",
       "metric": "max_abs_error_over_total",
-      "threshold": 1e-6
+      "threshold": 5e-10
     },
     {
-      "name": "order4_energy_bound_dt1",
+      "name": "inside_loglog_slope",
+      "type": "loglog_slope",
+      "run_ids": [
+        "inside_r0005_si00",
+        "inside_r0005_si01",
+        "inside_r0005_si02",
+        "inside_r0005_si03",
+        "inside_r0005_si04",
+        "inside_r0005_si05",
+        "inside_r0005_si06",
+        "inside_r0005_si07"
+      ],
+      "metric": "max_abs_error_over_total",
+      "x_metric": "dt_soft",
+      "expected_slope": 4.0,
+      "slope_tolerance": 0.8
+    },
+    {
+      "name": "cross_r128_energy_bound_fine",
       "type": "max_threshold",
-      "run_id": "order4_dt1",
+      "run_id": "cross_r128_si00",
       "metric": "max_abs_error_over_total",
-      "threshold": 1e-8
+      "threshold": 5e-5
     },
     {
-      "name": "order2_ratio_dt_halving",
+      "name": "cross_r128_plateau_01_to_00",
       "type": "convergence_ratio",
-      "coarse_run_id": "order2_dt1",
-      "fine_run_id": "order2_dt05",
+      "coarse_run_id": "cross_r128_si01",
+      "fine_run_id": "cross_r128_si00",
       "metric": "max_abs_error_over_total",
-      "expected_ratio": 4.0,
-      "relative_tolerance": 0.5,
-      "min_fine_error": 1e-10,
-      "skip_if_vars_equal": [
-        "petar_bin_order2",
-        "petar_bin_order4"
-      ]
+      "expected_ratio": 1.0,
+      "relative_tolerance": 0.3,
+      "min_fine_error": 1e-11
     },
     {
-      "name": "order4_ratio_dt_halving",
-      "type": "convergence_ratio",
-      "coarse_run_id": "order4_dt1",
-      "fine_run_id": "order4_dt05",
-      "metric": "max_abs_error_over_total",
-      "expected_ratio": 16.0,
-      "relative_tolerance": 0.5,
-      "min_fine_error": 1e-10,
-      "skip_if_vars_equal": [
-        "petar_bin_order2",
-        "petar_bin_order4"
-      ]
-    },
-    {
-      "name": "order2_no_hard_energy_alarm",
+      "name": "inside_no_hard_energy_alarm",
       "type": "regex_count_max",
-      "run_id": "order2_dt1",
+      "run_id": "inside_r0005_si00",
+      "regex_key": "hard_energy_significant",
+      "threshold": 0
+    },
+    {
+      "name": "cross_r128_no_hard_energy_alarm",
+      "type": "regex_count_max",
+      "run_id": "cross_r128_si00",
       "regex_key": "hard_energy_significant",
       "threshold": 0
     }

@@ -44,6 +44,61 @@ def check_convergence_ratio(
     }
 
 
+def check_loglog_slope(
+    x_values: List[float],
+    y_values: List[float],
+    expected_slope: float,
+    slope_tolerance: float,
+) -> Dict[str, object]:
+    if len(x_values) != len(y_values) or len(x_values) < 2:
+        return {
+            "passed": False,
+            "value": math.nan,
+            "expected": expected_slope,
+            "tolerance": slope_tolerance,
+            "message": "need at least two valid points for slope fit",
+        }
+
+    if any(x <= 0.0 for x in x_values) or any(y <= 0.0 for y in y_values):
+        return {
+            "passed": False,
+            "value": math.nan,
+            "expected": expected_slope,
+            "tolerance": slope_tolerance,
+            "message": "log-log slope requires positive x/y values",
+        }
+
+    lx = [math.log10(v) for v in x_values]
+    ly = [math.log10(v) for v in y_values]
+    mx = sum(lx) / len(lx)
+    my = sum(ly) / len(ly)
+    denom = sum((x - mx) ** 2 for x in lx)
+    if denom == 0.0:
+        return {
+            "passed": False,
+            "value": math.nan,
+            "expected": expected_slope,
+            "tolerance": slope_tolerance,
+            "message": "zero variance in x values",
+        }
+
+    slope = sum((x - mx) * (y - my) for x, y in zip(lx, ly)) / denom
+    lower = expected_slope - slope_tolerance
+    upper = expected_slope + slope_tolerance
+    passed = lower <= slope <= upper
+    return {
+        "passed": passed,
+        "value": slope,
+        "expected": expected_slope,
+        "tolerance": slope_tolerance,
+        "message": (
+            f"slope={slope:.4f} within [{lower:.4f}, {upper:.4f}]"
+            if passed
+            else f"slope={slope:.4f} outside [{lower:.4f}, {upper:.4f}]"
+        ),
+    }
+
+
 def summarize_results(results: List[Dict[str, object]]) -> Dict[str, object]:
     failed = [item for item in results if not item.get("passed", False)]
     return {
