@@ -1,0 +1,97 @@
+{
+  "name": "t3_binary_hard_switch_longterm",
+  "description": "Long-term binary test with fixed r_out and three r_group/r-search-group regimes to evaluate Hermite-SDAR switching error accumulation.",
+  "workdir": "{repo_root}",
+  "setup_commands": [
+    "mkdir -p test/validation/work/t3",
+    "python3 test/validation/make_ic.py --case t2 --output test/validation/work/t3/input.base",
+    "cd test/validation/work/t3 && petar.init -f input input.base"
+  ],
+  "extract": {
+    "period": 0.028256534656,
+    "n_period": 100,
+    "period_metric": "Error/Total",
+    "status_n_particle": 2,
+    "regex_counts": {
+      "hard_energy_significant": "Hard energy significant",
+      "large_step_warning": "Large step",
+      "hard_dump": "hard_large_energy\\."
+    }
+  },
+  "runs": [
+    {
+      "id": "outside_apo",
+      "command": "cd test/validation/work/t3 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 1.8e-2 --r-search-group 2.0e-2 -u 1 -b 1 -t 3.2 -s 9.765625e-4 -r 0.2 -o 1.953125e-3 -w 2 -f t3_outside_apo input",
+      "output": "outside_apo.log"
+    },
+    {
+      "id": "between_peri_apo",
+      "command": "cd test/validation/work/t3 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 8.0e-3 --r-search-group 1.0e-2 -u 1 -b 1 -t 3.2 -s 9.765625e-4 -r 0.2 -o 1.953125e-3 -w 2 -f t3_between input",
+      "output": "between_peri_apo.log"
+    },
+    {
+      "id": "inside_peri",
+      "command": "cd test/validation/work/t3 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 2.0e-3 --r-search-group 4.0e-3 -u 1 -b 1 -t 3.2 -s 9.765625e-4 -r 0.2 -o 1.953125e-3 -w 2 -f t3_inside_peri input",
+      "output": "inside_peri.log"
+    }
+  ],
+  "checks": [
+    {
+      "name": "semi_drift_order_outside_to_inside",
+      "type": "monotonic_trend",
+      "run_ids": [
+        "outside_apo",
+        "between_peri_apo",
+        "inside_peri"
+      ],
+      "metric": "max_rel_drift_semi",
+      "direction": "nondecreasing",
+      "relative_tolerance": 0.15
+    },
+    {
+      "name": "ecc_drift_order_outside_to_inside",
+      "type": "monotonic_trend",
+      "run_ids": [
+        "outside_apo",
+        "between_peri_apo",
+        "inside_peri"
+      ],
+      "metric": "max_abs_drift_ecc",
+      "direction": "nondecreasing",
+      "relative_tolerance": 0.15
+    },
+    {
+      "name": "sum_period_error_order_outside_to_inside",
+      "type": "monotonic_trend",
+      "run_ids": [
+        "outside_apo",
+        "between_peri_apo",
+        "inside_peri"
+      ],
+      "metric": "sum_abs_error_period_max",
+      "direction": "nondecreasing",
+      "relative_tolerance": 0.15
+    },
+    {
+      "name": "outside_apo_no_large_step_warning",
+      "type": "regex_count_max",
+      "run_id": "outside_apo",
+      "regex_key": "large_step_warning",
+      "threshold": 0
+    },
+    {
+      "name": "between_peri_apo_no_large_step_warning",
+      "type": "regex_count_max",
+      "run_id": "between_peri_apo",
+      "regex_key": "large_step_warning",
+      "threshold": 0
+    },
+    {
+      "name": "inside_peri_no_large_step_warning",
+      "type": "regex_count_max",
+      "run_id": "inside_peri",
+      "regex_key": "large_step_warning",
+      "threshold": 0
+    }
+  ]
+}

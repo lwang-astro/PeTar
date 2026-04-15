@@ -36,14 +36,9 @@
       "hard_dump": 0
     }
   },
-  "t3_hierarchical_triple": {
-    "max_abs_error_over_total": {
-      "stable": 2e-6,
-      "stress": 2e-5
-    },
+  "t3_binary_hard_switch_longterm": {
     "regex_count_max": {
-      "large_step_warning": 0,
-      "hard_dump": 0
+      "large_step_warning": 0
     }
   },
   "t4_tree_hard_from_triple": {

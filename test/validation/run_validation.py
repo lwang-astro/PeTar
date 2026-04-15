@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import math
 import os
 import re
 import shlex
@@ -10,12 +11,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+import numpy as np
+
 from metrics import check_convergence_ratio, check_loglog_slope, check_max_threshold, summarize_results
 
 
 ENERGY_HEADER_RE = re.compile(r"^Energy:\s+(.*)$")
 ENERGY_PHYSIC_RE = re.compile(r"^Physic:\s+(.*)$")
 TIME_RE = re.compile(r"^Time:\s*([0-9eE+\-.]+)")
+G_MSUN_PC_MYR = 0.00449830997959438
 
 
 @dataclass
@@ -201,6 +205,67 @@ def period_maxima(
     return [period_max[k] for k in sorted(period_max.keys())]
 
 
+def resolve_status_path_from_command(command: str, workdir: Path) -> Path | None:
+    tokens = shlex.split(command)
+    prefix = None
+    run_dir = workdir
+
+    for i, tok in enumerate(tokens):
+        if tok == "-f" and i + 1 < len(tokens):
+            prefix = tokens[i + 1]
+            break
+
+    if prefix is None:
+        return None
+
+    if len(tokens) >= 3 and tokens[0] == "cd" and tokens[2] == "&&":
+        p = Path(tokens[1])
+        run_dir = p if p.is_absolute() else (workdir / p)
+
+    return run_dir.resolve() / f"{prefix}.status"
+
+
+def extract_orbital_drift_from_status(status_path: Path, repo_root: Path, n_particle: int) -> Dict[str, float]:
+    if n_particle < 2:
+        return {}
+
+    tools_path = (repo_root / "tools").resolve()
+    if str(tools_path) not in sys.path:
+        sys.path.insert(0, str(tools_path))
+
+    from analysis.status import Status  # pylint: disable=import-outside-toplevel  # pyright: ignore[reportMissingImports]
+
+    st = Status(N_particle=n_particle)
+    st.fromfile(str(status_path))
+
+    p0 = st.particles.p0
+    p1 = st.particles.p1
+    m1 = float(p0.mass[0])
+    m2 = float(p1.mass[0])
+    mu = G_MSUN_PC_MYR * (m1 + m2)
+
+    r = p1.pos - p0.pos
+    v = p1.vel - p0.vel
+    rnorm = np.linalg.norm(r, axis=1)
+    v2 = np.sum(v * v, axis=1)
+    eps = 0.5 * v2 - mu / rnorm
+    a = -mu / (2.0 * eps)
+    h = np.cross(r, v)
+    h2 = np.sum(h * h, axis=1)
+    e = np.sqrt(np.maximum(0.0, 1.0 + 2.0 * eps * h2 / (mu * mu)))
+
+    a0 = float(a[0])
+    e0 = float(e[0])
+    da_rel = np.abs((a - a0) / a0)
+    de_abs = np.abs(e - e0)
+
+    return {
+        "max_rel_drift_semi": float(np.max(da_rel)),
+        "max_abs_drift_ecc": float(np.max(de_abs)),
+        "status_sample_count": int(st.size),
+    }
+
+
 def extract_regex_counts(log_text: str, patterns: Dict[str, str]) -> Dict[str, int]:
     counts = {}
     for key, pattern in patterns.items():
@@ -208,7 +273,7 @@ def extract_regex_counts(log_text: str, patterns: Dict[str, str]) -> Dict[str, i
     return counts
 
 
-def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any]) -> Dict[str, Any]:
+def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any], command: str, workdir: Path, repo_root: Path) -> Dict[str, Any]:
     text = output_path.read_text(encoding="utf-8", errors="replace")
     energy_rows = parse_energy_rows(text)
     max_err_total = 0.0
@@ -230,6 +295,13 @@ def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any]) -> Dict[str,
     sum_period_error = sum(pmax) if pmax else 0.0
     mean_period_error = (sum_period_error / len(pmax)) if pmax else 0.0
 
+    orbital_metrics: Dict[str, float] = {}
+    status_n_particle = int(extract_cfg.get("status_n_particle", 0) or 0)
+    if status_n_particle >= 2:
+        status_path = resolve_status_path_from_command(command, workdir)
+        if status_path is not None and status_path.exists():
+            orbital_metrics = extract_orbital_drift_from_status(status_path, repo_root=repo_root, n_particle=status_n_particle)
+
     return {
         "max_abs_error_over_total": max_err_total,
         "max_abs_error_pp": max_err_pp,
@@ -239,6 +311,7 @@ def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any]) -> Dict[str,
         "max_abs_error_period_max": max_period_error,
         "sum_abs_error_period_max": sum_period_error,
         "mean_abs_error_period_max": mean_period_error,
+        **orbital_metrics,
     }
 
 
@@ -329,7 +402,13 @@ def execute_scenario(
             code = run_shell(cmd, workdir, output_path)
             if code != 0:
                 raise RuntimeError(f"Run command failed ({scenario_name}/{run_id}): {cmd}")
-            metrics = extract_metrics(output_path, scenario.get("extract", {}))
+            metrics = extract_metrics(
+                output_path,
+                scenario.get("extract", {}),
+                command=cmd,
+                workdir=workdir,
+                repo_root=base_dir,
+            )
             metrics.update(parse_command_options(cmd))
             if "dt_soft" in metrics:
                 dt_soft = float(metrics["dt_soft"])
