@@ -7,18 +7,22 @@ import re
 import shlex
 import subprocess
 import sys
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
 
-from metrics import check_convergence_ratio, check_loglog_slope, check_max_threshold, summarize_results
+from metrics import check_convergence_ratio, check_loglog_slope, check_max_threshold, check_min_threshold, summarize_results
 
 
 ENERGY_HEADER_RE = re.compile(r"^Energy:\s+(.*)$")
 ENERGY_PHYSIC_RE = re.compile(r"^Physic:\s+(.*)$")
 TIME_RE = re.compile(r"^Time:\s*([0-9eE+\-.]+)")
+COUNT_RE = re.compile(
+    r"^Time:\s*([0-9eE+\-.]+)\s+N_real\(loc\):\s*(\d+)\s+N_real\(glb\):\s*(\d+)\s+N_all\(loc\):\s*(\d+)\s+N_all\(glb\):\s*(\d+)"
+)
 G_MSUN_PC_MYR = 0.00449830997959438
 
 
@@ -112,7 +116,7 @@ def parse_key_value(items: List[str]) -> Dict[str, str]:
 
 
 def parse_command_options(command: str) -> Dict[str, float]:
-    tokens = command.split()
+    tokens = shlex.split(command)
     parsed: Dict[str, float] = {}
     i = 0
     while i < len(tokens):
@@ -124,10 +128,43 @@ def parse_command_options(command: str) -> Dict[str, float]:
                 pass
             i += 2
             continue
+        if tok in {"--r-group", "--r-search-group", "--tt-switch", "--tt-nstep", "--r-ratio"} and i + 1 < len(tokens):
+            key_map = {
+                "--r-group": "r_group",
+                "--r-search-group": "r_search_group",
+                "--tt-switch": "tt_switch",
+                "--tt-nstep": "tt_nstep",
+                "--r-ratio": "r_ratio",
+            }
+            try:
+                parsed[key_map[tok]] = float(tokens[i + 1])
+            except ValueError:
+                pass
+            i += 2
+            continue
         i += 1
     if "rout" in parsed:
-        parsed["rin"] = 0.1 * parsed["rout"]
+        r_ratio = parsed.get("r_ratio", 0.1)
+        parsed["rin"] = r_ratio * parsed["rout"]
     return parsed
+
+
+def parse_time_counts(log_text: str) -> List[Dict[str, float]]:
+    rows: List[Dict[str, float]] = []
+    for line in log_text.splitlines():
+        match = COUNT_RE.match(line.strip())
+        if not match:
+            continue
+        rows.append(
+            {
+                "time": float(match.group(1)),
+                "n_real_loc": float(match.group(2)),
+                "n_real_glb": float(match.group(3)),
+                "n_all_loc": float(match.group(4)),
+                "n_all_glb": float(match.group(5)),
+            }
+        )
+    return rows
 
 
 def parse_energy_rows(log_text: str) -> List[Dict[str, float]]:
@@ -236,7 +273,15 @@ def extract_orbital_drift_from_status(status_path: Path, repo_root: Path, n_part
     from analysis.status import Status  # pylint: disable=import-outside-toplevel  # pyright: ignore[reportMissingImports]
 
     st = Status(N_particle=n_particle)
-    st.fromfile(str(status_path))
+    with warnings.catch_warnings(record=True) as warn_list:
+        warnings.simplefilter("always", category=UserWarning)
+        st.fromfile(str(status_path))
+    if warn_list:
+        msg = "; ".join(str(item.message) for item in warn_list)
+        raise RuntimeError(
+            f"Status parse warning for {status_path} with N_particle={n_particle}: {msg}. "
+            "This usually indicates an N_particle mismatch."
+        )
 
     p0 = st.particles.p0
     p1 = st.particles.p1
@@ -276,6 +321,7 @@ def extract_regex_counts(log_text: str, patterns: Dict[str, str]) -> Dict[str, i
 def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any], command: str, workdir: Path, repo_root: Path) -> Dict[str, Any]:
     text = output_path.read_text(encoding="utf-8", errors="replace")
     energy_rows = parse_energy_rows(text)
+    count_rows = parse_time_counts(text)
     max_err_total = 0.0
     max_err_pp = 0.0
     if energy_rows:
@@ -302,10 +348,26 @@ def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any], command: str
         if status_path is not None and status_path.exists():
             orbital_metrics = extract_orbital_drift_from_status(status_path, repo_root=repo_root, n_particle=status_n_particle)
 
+    max_n_real_glb = max((row["n_real_glb"] for row in count_rows), default=0.0)
+    max_n_all_glb = max((row["n_all_glb"] for row in count_rows), default=0.0)
+    max_n_real_loc = max((row["n_real_loc"] for row in count_rows), default=0.0)
+    max_n_all_loc = max((row["n_all_loc"] for row in count_rows), default=0.0)
+    max_artificial_particles_glb = max((row["n_all_glb"] - row["n_real_glb"] for row in count_rows), default=0.0)
+    max_artificial_particles_loc = max((row["n_all_loc"] - row["n_real_loc"] for row in count_rows), default=0.0)
+    final_time = count_rows[-1]["time"] if count_rows else 0.0
+
     return {
         "max_abs_error_over_total": max_err_total,
         "max_abs_error_pp": max_err_pp,
         "energy_sample_count": len(energy_rows),
+        "time_sample_count": len(count_rows),
+        "max_n_real_glb": max_n_real_glb,
+        "max_n_all_glb": max_n_all_glb,
+        "max_n_real_loc": max_n_real_loc,
+        "max_n_all_loc": max_n_all_loc,
+        "max_artificial_particles_glb": max_artificial_particles_glb,
+        "max_artificial_particles_loc": max_artificial_particles_loc,
+        "final_time_log": final_time,
         "regex_counts": regex_counts,
         "period_bin_count": len(pmax),
         "max_abs_error_period_max": max_period_error,
@@ -435,6 +497,14 @@ def execute_scenario(
                 )
                 value = float(per_run[run_id][metric])
                 result = check_max_threshold(value, threshold)
+                result.update({"scenario": scenario_name, "check": check["name"]})
+                check_results.append(result)
+            elif ctype == "min_threshold":
+                run_id = check["run_id"]
+                metric = check["metric"]
+                threshold = float(check["threshold"])
+                value = float(per_run[run_id][metric])
+                result = check_min_threshold(value, threshold)
                 result.update({"scenario": scenario_name, "check": check["name"]})
                 check_results.append(result)
             elif ctype == "convergence_ratio":

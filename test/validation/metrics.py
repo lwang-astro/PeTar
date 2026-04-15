@@ -12,6 +12,16 @@ def check_max_threshold(value: float, threshold: float) -> Dict[str, object]:
     }
 
 
+def check_min_threshold(value: float, threshold: float) -> Dict[str, object]:
+    passed = value >= threshold
+    return {
+        "passed": passed,
+        "value": value,
+        "threshold": threshold,
+        "message": f"value={value:.6e} >= {threshold:.6e}" if passed else f"value={value:.6e} < {threshold:.6e}",
+    }
+
+
 def check_convergence_ratio(
     coarse: float,
     fine: float,

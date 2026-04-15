@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import math
-import random
 from pathlib import Path
 from typing import List, Tuple
 
@@ -100,17 +99,21 @@ def build_t3(output: Path) -> None:
 
 
 def build_t4(output: Path) -> None:
-    m1 = 1.0
-    m2 = 0.5
-    m3 = 0.05
+    # Notebook-inspired hierarchical triple scales from "Tidal tensor test: 3-body".
+    # We keep the mass/ecc hierarchy and use a scaled outer semi-major axis so T4 can
+    # cover multiple outer periods in practical runtime.
+    # Outer: (0.01, 1.0) with a=0.15, e=0.01; inner: (0.001, 0.009) with a=1e-3, e=0.9.
+    m1 = 0.001
+    m2 = 0.009
+    m3 = 1.0
 
-    rin_peri = 0.002
-    ein = 0.6
+    rin_peri = 1.0e-4
+    ein = 0.9
     r1_rel, v1_rel, r2_rel, v2_rel = two_body_peri_state(m1, m2, rin_peri, ein, G_MSUN_PC_MYR)
 
     m12 = m1 + m2
-    rout_peri = 0.04
-    eout = 0.5
+    rout_peri = 0.15 * (1.0 - 0.01)
+    eout = 0.01
     r12, v12, r3, v3 = two_body_peri_state(m12, m3, rout_peri, eout, G_MSUN_PC_MYR)
 
     p1 = [r12[i] + r1_rel[i] for i in range(3)]
@@ -119,33 +122,6 @@ def build_t4(output: Path) -> None:
     v2 = [v12[i] + v2_rel[i] for i in range(3)]
 
     rows: List[Tuple[float, List[float], List[float]]] = [(m1, p1, v1), (m2, p2, v2), (m3, r3, v3)]
-
-    rng = random.Random(20260413)
-    n_bg = 24
-    m_bg = 0.02
-    rmax = 0.25
-    vmax = 0.25
-    for _ in range(n_bg):
-        radius = rmax * (rng.random() ** (1.0 / 3.0))
-        cost = 2.0 * rng.random() - 1.0
-        sint = math.sqrt(max(0.0, 1.0 - cost * cost))
-        phi = 2.0 * math.pi * rng.random()
-        pos = [
-            radius * sint * math.cos(phi),
-            radius * sint * math.sin(phi),
-            radius * cost,
-        ]
-
-        v_radius = vmax * rng.random()
-        v_cost = 2.0 * rng.random() - 1.0
-        v_sint = math.sqrt(max(0.0, 1.0 - v_cost * v_cost))
-        v_phi = 2.0 * math.pi * rng.random()
-        vel = [
-            v_radius * v_sint * math.cos(v_phi),
-            v_radius * v_sint * math.sin(v_phi),
-            v_radius * v_cost,
-        ]
-        rows.append((m_bg, pos, vel))
 
     mass_tot = sum(item[0] for item in rows)
     com_pos = [sum(item[0] * item[1][k] for item in rows) / mass_tot for k in range(3)]
