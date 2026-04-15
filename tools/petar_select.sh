@@ -29,7 +29,7 @@ Examples:
 	petar.select --require bse,agama --optional mpi,omp,avx2
 
 Feature tokens and related configure options:
-	base|bse|mobse|bseEmp -> --with-interrupt=<token>
+	base|bse|mobse|bseEmp|dsm -> --with-interrupt=<token>
 	galpy|agama           -> --with-external=<token>
 	gasdrag               -> --with-external-hard=gasdrag
 	mpi                   -> --with-mpi=yes
@@ -73,7 +73,7 @@ split_csv_to_array() {
 feature_to_configure_hint() {
 	local token="$1"
 	case "$token" in
-		base|bse|mobse|bseEmp)
+		base|bse|mobse|bseEmp|dsm)
 			printf '%s\n' "  - $token -> ./configure --with-interrupt=$token"
 			return 0
 			;;
@@ -135,7 +135,7 @@ feature_to_configure_hint() {
 is_supported_feature_token() {
 	local token="$1"
 	case "$token" in
-		base|bse|mobse|bseEmp|galpy|agama|gasdrag|mpi|omp|avx|avx2|avx512|gpu|64b|mp|mpfrc|g|d)
+		base|bse|mobse|bseEmp|dsm|galpy|agama|gasdrag|mpi|omp|avx|avx2|avx512|gpu|64b|mp|mpfrc|g|d)
 			return 0
 			;;
 		pn*)
@@ -162,7 +162,7 @@ canonical_feature_token() {
 is_interrupt_feature_token() {
 	local token="$1"
 	case "$token" in
-		base|bse|mobse|bseEmp)
+		base|bse|mobse|bseEmp|dsm)
 			return 0
 			;;
 		*)
@@ -174,7 +174,7 @@ is_interrupt_feature_token() {
 is_require_only_feature_token() {
 	local token="$1"
 	case "$token" in
-		base|bse|mobse|bseEmp|galpy|agama|gasdrag|mp)
+		base|bse|mobse|bseEmp|dsm|galpy|agama|gasdrag|mp)
 			return 0
 			;;
 		pn*)
@@ -223,7 +223,7 @@ is_performance_feature_token() {
 }
 
 print_supported_features() {
-	echo "Supported features: base,bse,mobse,bseEmp,galpy,agama,gasdrag,mpi,omp,avx,avx2,avx512,gpu,64b,mp,mpfrc,pn*,g,d" >&2
+	echo "Supported features: base,bse,mobse,bseEmp,dsm,galpy,agama,gasdrag,mpi,omp,avx,avx2,avx512,gpu,64b,mp,mpfrc,pn*,g,d" >&2
 }
 
 validate_feature_csv() {
@@ -344,11 +344,19 @@ count_optional_hits() {
 has_interrupt_token_in_name() {
 	local name="$1"
 	local token
-	for token in base bse mobse bseEmp; do
+	for token in base bse mobse bseEmp dsm; do
 		if has_token "$name" "$token"; then
 			return 0
 		fi
 	done
+	return 1
+}
+
+is_dsm_requested() {
+	local requested_physical_tokens=("$@")
+	if array_contains_token "dsm" "${requested_physical_tokens[@]}"; then
+		return 0
+	fi
 	return 1
 }
 
@@ -445,6 +453,7 @@ select_by_features() {
 	local score
 	local require_physical_tokens=()
 	local require_has_debug=0
+	local dsm_requested=0
 
 	for token in "${require_tokens[@]}"; do
 		if [[ -z "$token" ]]; then
@@ -457,6 +466,10 @@ select_by_features() {
 			require_has_debug=1
 		fi
 	done
+
+	if is_dsm_requested "${require_physical_tokens[@]}"; then
+		dsm_requested=1
+	fi
 
 	for name in "${candidates[@]}"; do
 		miss=0
@@ -482,6 +495,9 @@ select_by_features() {
 		if [[ "$require_has_debug" -eq 0 ]] && ! has_debug_token_in_name "$name"; then
 			score=$((score+100000))
 		fi
+		if [[ "$dsm_requested" -eq 0 ]] && has_token "$name" dsm; then
+			score=$((score-50000))
+		fi
 		if [[ "$score" -gt "$best_score" ]]; then
 			best_score="$score"
 			best_name="$name"
@@ -491,7 +507,7 @@ select_by_features() {
 	if [[ -z "$best_name" ]]; then
 		echo "Error: no installed petar version matches required features: ${require_csv}" >&2
 		echo "Hint: require-only feature families are included only when explicitly required." >&2
-		echo "Hint: this applies to interrupt (base/bse/mobse/bseEmp), external (galpy/agama), external-hard (gasdrag), pn*, and mpfrc/mp features." >&2
+		echo "Hint: this applies to interrupt (base/bse/mobse/bseEmp/dsm), external (galpy/agama), external-hard (gasdrag), pn*, and mpfrc/mp features." >&2
 		print_configure_hints_for_csv "$require_csv"
 		echo "Available versions in $bindir:" >&2
 		list_versions "$bindir" >&2 || true
