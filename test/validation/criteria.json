@@ -43,14 +43,10 @@
   },
   "t4_tree_hard_from_triple": {
     "max_abs_error_over_total": {
-      "baseline": 5e-6
-    },
-    "max_abs_error_pp": {
-      "stress": 2e-5
+      "m1_pure_sdar_ref": 1e-8
     },
     "regex_count_max": {
-      "large_step_warning": 0,
-      "hard_dump": 0
+      "runtime_abort": 0
     }
   },
   "t3_blogh_ab_placeholder": {

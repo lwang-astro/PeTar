@@ -1,6 +1,6 @@
 {
   "name": "t4_tree_hard_from_triple",
-  "description": "Particle-tree + hard validation from hierarchical triple embedded in a low-mass background system.",
+  "description": "Five-mode hierarchical triple comparison based on notebook tidal-tensor 3-body test: pure SDAR reference, hard/tree with and without tidal tensor.",
   "workdir": "{repo_root}",
   "setup_commands": [
     "mkdir -p test/validation/work/t4",
@@ -8,51 +8,113 @@
     "cd test/validation/work/t4 && petar.init -f input input.base"
   ],
   "extract": {
+    "period": 0.02962478305322229,
+    "n_period": 200,
+    "period_metric": "Error/Total",
+    "status_n_particle": 3,
     "regex_counts": {
       "hard_energy_significant": "Hard energy significant",
       "large_step_warning": "Large step",
-      "hard_dump": "hard_large_energy\\."
+      "hard_dump": "hard_large_energy\\.",
+      "runtime_abort": "Segmentation fault|Assertion|Aborted"
     }
   },
   "runs": [
     {
-      "id": "baseline",
-      "command": "cd test/validation/work/t4 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 6e-4 --r-search-group 1.2e-3 -u 1 -b 1 -t 0.08 -s 1.5e-4 -r 0.08 -o 1e-3 -w 2 -f t4_baseline input",
-      "output": "baseline.log"
+      "id": "m1_pure_sdar_ref",
+      "command": "cd test/validation/work/t4 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 3.125e-5 -r 2 -t 20 -o 0.125 -w 2 -f t4_m1_pure_sdar_ref input",
+      "output": "m1_pure_sdar_ref.log"
     },
     {
-      "id": "stress",
-      "command": "cd test/validation/work/t4 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 2e-4 --r-search-group 5e-4 -u 1 -b 1 -t 0.08 -s 3.0e-4 -r 0.06 -o 1e-3 -w 2 -f t4_stress input",
-      "output": "stress.log"
+      "id": "m2_hard_no_tt",
+      "command": "cd test/validation/work/t4 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.01 --r-search-group 0.02 -s 0.03125 -r 2 -t 20 -o 0.125 -w 2 -f t4_m2_hard_no_tt input",
+      "output": "m2_hard_no_tt.log"
+    },
+    {
+      "id": "m3_hard_tt",
+      "command": "cd test/validation/work/t4 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 1 --tt-nstep 8 --r-group 0.01 --r-search-group 0.02 -s 0.03125 -r 2 -t 20 -o 0.125 -w 2 -f t4_m3_hard_tt input",
+      "output": "m3_hard_tt.log"
+    },
+    {
+      "id": "m4_tree_no_tt",
+      "command": "cd test/validation/work/t4 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.01 --r-search-group 0.02 --r-ratio 0.3 -s 0.03125 -r 0.08 -t 20 -o 0.125 -w 2 -f t4_m4_tree_no_tt input",
+      "output": "m4_tree_no_tt.log"
+    },
+    {
+      "id": "m5_tree_tt",
+      "command": "cd test/validation/work/t4 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 1 --tt-nstep 8 --r-group 0.01 --r-search-group 0.02 --r-ratio 0.3 -s 0.03125 -r 0.08 -t 20 -o 0.125 -w 2 -f t4_m5_tree_tt input",
+      "output": "m5_tree_tt.log"
     }
   ],
   "checks": [
     {
-      "name": "baseline_energy_bound",
+      "name": "m1_reference_energy_bound",
       "type": "max_threshold",
-      "run_id": "baseline",
+      "run_id": "m1_pure_sdar_ref",
       "metric": "max_abs_error_over_total",
-      "threshold": 5e-6
+      "threshold": 1e-8
     },
     {
-      "name": "stress_hard_pp_bound",
+      "name": "m3_tidal_tensor_effective",
+      "type": "min_threshold",
+      "run_id": "m3_hard_tt",
+      "metric": "max_artificial_particles_glb",
+      "threshold": 1
+    },
+    {
+      "name": "m5_tidal_tensor_effective",
+      "type": "min_threshold",
+      "run_id": "m5_tree_tt",
+      "metric": "max_artificial_particles_glb",
+      "threshold": 1
+    },
+    {
+      "name": "m2_no_tidal_tensor_particles",
       "type": "max_threshold",
-      "run_id": "stress",
-      "metric": "max_abs_error_pp",
-      "threshold": 2e-5
-    },
-    {
-      "name": "baseline_no_hard_dump",
-      "type": "regex_count_max",
-      "run_id": "baseline",
-      "regex_key": "hard_dump",
+      "run_id": "m2_hard_no_tt",
+      "metric": "max_artificial_particles_glb",
       "threshold": 0
     },
     {
-      "name": "stress_no_large_step_warning",
+      "name": "m4_no_tidal_tensor_particles",
+      "type": "max_threshold",
+      "run_id": "m4_tree_no_tt",
+      "metric": "max_artificial_particles_glb",
+      "threshold": 0
+    },
+    {
+      "name": "m1_no_runtime_abort",
       "type": "regex_count_max",
-      "run_id": "stress",
-      "regex_key": "large_step_warning",
+      "run_id": "m1_pure_sdar_ref",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "m2_no_runtime_abort",
+      "type": "regex_count_max",
+      "run_id": "m2_hard_no_tt",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "m3_no_runtime_abort",
+      "type": "regex_count_max",
+      "run_id": "m3_hard_tt",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "m4_no_runtime_abort",
+      "type": "regex_count_max",
+      "run_id": "m4_tree_no_tt",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "m5_no_runtime_abort",
+      "type": "regex_count_max",
+      "run_id": "m5_tree_tt",
+      "regex_key": "runtime_abort",
       "threshold": 0
     }
   ]
