@@ -52,17 +52,20 @@ public:
     /*!
       If satisfy, switch on PN1, 2, 2.5, others are not yet tested.
       @param[out] used_pn_orders: determine which PN orders are calculated: set in a bool array: [PN1, PN2, PN2.5, PN3, PN3.5, SPIN]
-      @param[in] r: distance between two particles
+      @param[in] v2: relative velocity square between two particles
+      @param[in] m1: mass of particle 1
+      @param[in] m2: mass of particle 2
       return: if use PN: true
     */
-    bool setUsedPNOrders(bool used_pn_orders[6], Float v2) {
+    bool setUsedPNOrders(bool used_pn_orders[6], Float v2,Float m1, Float m2) {
         const Float c = speed_of_light;
         Float c2 = c*c;
         //Float theta = 4*gravitational_constant*m/(r*c2); // precession angle 
         Float voc2 = v2/c2;
         bool used_pn = false;
         // PN1
-        if (voc2 > speed_criterion) {
+        Float M = m1 + m2;
+        if (voc2 * M > speed_criterion) {
             used_pn_orders[0] = true;
             used_pn_orders[1] = true;
             used_pn_orders[2] = true;

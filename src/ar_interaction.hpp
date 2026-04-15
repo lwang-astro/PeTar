@@ -21,6 +21,7 @@
 #ifdef SDAR_PN
 #include "pn.hpp"
 #endif
+//#define GR_PRECESSION
 
 //! AR interaction clas
 class ARInteraction{
@@ -560,7 +561,7 @@ public:
                                pj.vel[2]-pi.vel[2]};
                 Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
                 bool used_pn_orders[6] = {false,false,false,false,false,false};
-                if (pn.setUsedPNOrders(used_pn_orders, v2)) {
+                if (pn.setUsedPNOrders(used_pn_orders, v2, pi.mass, pj.mass)) {
                     Float ai[6][3], aj[6][3];
                     pn.calcAccJerkPN(ai, aj, NULL, NULL, NULL, NULL, pi.mass, pj.mass, dr, dv, NULL, NULL, used_pn_orders, false);
                     pn.sumAccJerkPN(&_force[i].acc_pert[0], NULL, ai, NULL, 1);
@@ -978,13 +979,47 @@ public:
 
                 // set return flag >0
                 modify_return = 2;
-
                 p1->time_record = _bin_interrupt.time_now - bse_manager.getDTMiss(out[0]);
                 p2->time_record = _bin_interrupt.time_now - bse_manager.getDTMiss(out[1]);
-
                 // estimate next time to check
                 p1->time_interrupt = std::min(p1->time_record + bse_manager.getTimeStepBinary(p1->star, p2->star, semi, ecc, binary_type_final), time_interrupt_max);
                 p2->time_interrupt = p1->time_interrupt;
+
+#ifdef GR_PRECESSION
+    // calculate GR precession angular frequency 
+                auto calcOmegaGR = [&](Float _m1, Float _m2, Float _semi, Float _ecc)->Float {
+                    const Float c = bse_manager.getSpeedOfLight();
+                    const Float c2 = c*c;
+                    const Float mean_motion  = sqrt(gravitational_constant*(_m1+_m2)/fabs(_semi*_semi*_semi));
+                    return 3.0 * gravitational_constant * (_m1 + _m2)*mean_motion / (c2 * _semi * (1.0 - _ecc * _ecc));
+                };
+
+
+
+                // calculate GR precession timescale and choose appropriate interrupt timestep
+                Float Omega_GR = calcOmegaGR(p1->mass, p2->mass, _bin.semi, _bin.ecc);
+                std::cout<<"_bin.semi: "<<_bin.semi<<std::endl;
+                std::cout<<"_bin.ecc: "<<_bin.ecc<<std::endl;
+                std::cout<<"bse_manager.getSpeedOfLight(): "<<bse_manager.getSpeedOfLight()<<std::endl;
+                Float time_precession = 6.28318530717958647692 / Omega_GR; // 2*pi / Omega_GR
+                Float period = _bin.period;
+                Float N_precession = time_precession / period; // how many orbits to rotate 2pi
+
+                if (N_precession > 18.0) {
+                    // 
+                    p1->time_interrupt = p1->time_record + 0.1f/Omega_GR;
+                    //std::min({p1->time_record + bse_manager.getTimeStepBinary(p1->star, p2->star, semi, ecc, binary_type_final), p1->time_record + 0.1f/Omega_GR, time_interrupt_max})
+                    std::cout<<"bse_manager.getTimeStepBinary: "<<bse_manager.getTimeStepBinary(p1->star, p2->star, semi, ecc, binary_type_final)<<std::endl;
+                    std::cout<< 'time_interrupt(0.1f/Omega_GR):'<<0.1f/Omega_GR<<std::endl;
+                }
+                else {
+                    // precession timescale is short: use precession timescale but enforce a minimum
+                    time_precession = std::max(time_precession, 1e-2f*period);
+                    p1->time_interrupt = std::min({p1->time_record + bse_manager.getTimeStepBinary(p1->star, p2->star, semi, ecc, binary_type_final), p1->time_record + time_precession, time_interrupt_max});
+                }
+                p2->time_interrupt = p1->time_interrupt;
+
+#endif
 
                 // reset collision state since binary orbit changes
                 if (p1->getBinaryInterruptState()== BinaryInterruptState::collision)
@@ -1079,6 +1114,7 @@ public:
                             _bin.m2 = p2->mass;
                             //if (((ecc-ecc_bk)/(1-ecc)>0.01||(period-period_bk)/period>1e-2)) {
                             // kepler orbit to particles using the same ecc anomaly
+                            
                             _bin.calcParticles(gravitational_constant);
                             p1->pos += _bin.pos;
                             p2->pos += _bin.pos;
@@ -1281,6 +1317,28 @@ public:
                     // update semi
                     mtot = bse_manager.getMass(p1->star) + bse_manager.getMass(p2->star);
                     semi = COMM::Binary::periodToSemi(period, mtot, gravitational_constant);
+
+#ifdef GR_PRECESSION
+                    auto calcOmegaGR = [&](Float _m1, Float _m2, Float _semi, Float _ecc)->Float {
+                    const Float c = bse_manager.getSpeedOfLight();
+                    const Float c2 = c*c;
+                    const Float mean_motion  = sqrt(gravitational_constant*(_m1+_m2)/fabs(_semi*_semi*_semi));
+                    return 3.0 * gravitational_constant * (_m1 + _m2)*mean_motion / (c2 * _semi * (1.0 - _ecc * _ecc));
+                    };
+                    Float Omega_GR = calcOmegaGR(p1->mass, p2->mass, semi, ecc);
+                    _bin.rot_self += Omega_GR*dt;
+
+
+                    std::cout<<"dt"<<dt<<std::endl;
+                    std::cout<<"rot_self: "<<_bin.rot_self<<std::endl;
+                    std::cout<<"_bin_interrupt.time_now: "<<_bin_interrupt.time_now<<std::endl;
+                    std::cout<<"p1->time_record "<<p1->time_record<<std::endl;
+                    std::cout<<"p1->time_interrupt "<<p1->time_interrupt<<std::endl;
+
+
+
+
+#endif
 
                     // change p1 and p2 due to output from stellar evolution
                     postProcess(out, pos_cm, vel_cm, semi, ecc, binary_type_final, vkick);
@@ -1562,6 +1620,33 @@ public:
                     Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
                     if (dr2<radius*radius) merge(std::sqrt(dr2), 0.0, 1.0);
                 }
+
+        //             // LSO merger check
+        //                 if (_bin.semi > 0.0 && _bin.ecc < 1.0 && p1->mass > 0 && p2->mass > 0) {
+        //                     Float lso = 6.0 * (p1->radius + p2->radius);
+        //                     if (_bin.semi * (1.0 - _bin.ecc) < lso) {
+        //                         Float dr[3] = {p1->pos[0] - p2->pos[0], 
+        //                                     p1->pos[1] - p2->pos[1], 
+        //                                     p1->pos[2] - p2->pos[2]};
+        //                         Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+        //                         merge(std::sqrt(dr2), 0.0, 1.0);
+                                
+        // #pragma omp critical
+        //                         {
+        //                             fout_bse<<"LSO_merger "
+        //                                     <<std::setw(WRITE_WIDTH)<<_bin_interrupt.time_now
+        //                                     <<std::setw(WRITE_WIDTH)<<p1->id
+        //                                     <<std::setw(WRITE_WIDTH)<<p2->id
+        //                                     <<std::setw(WRITE_WIDTH)<<_bin.semi
+        //                                     <<std::setw(WRITE_WIDTH)<<_bin.ecc
+        //                                     <<std::setw(WRITE_WIDTH)<<_bin.semi * (1.0 - _bin.ecc)
+        //                                     <<std::setw(WRITE_WIDTH)<<lso
+        //                                     <<std::endl;
+        //                         }
+        //                     // After merge, status could be merge or destroy, we should skip the tide part
+        //                     if (_bin_interrupt.status == AR::InterruptStatus::merge || _bin_interrupt.status == AR::InterruptStatus::destroy) return modify_return;
+        //                 }
+        //             }
 
                 // tide energy loss
                 if (stellar_evolution_option==2 && p1->mass>0 && p2->mass>0) {

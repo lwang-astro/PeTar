@@ -98,7 +98,7 @@ public:
 #ifdef HERMITE_PN
         bool used_pn_orders[6] = {false, false, false, false, false, false};
         const Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
-        if (pn.setUsedPNOrders(used_pn_orders, v2)) {
+        if (pn.setUsedPNOrders(used_pn_orders, v2, _pi.mass, _pj.mass)) {
          
 #ifdef HARD_DEBUG_PRINT
             if (r > _pi.changeover.getRin() || r > _pj.changeover.getRin()) {
