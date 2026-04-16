@@ -65,6 +65,11 @@ void setSpj(const PS::F64 N, SPJSoft& sp) {
 #endif
 }
 
+static inline PS::F64 getAbsRelDiff(const PS::F64 ref, const PS::F64 val) {
+    const PS::F64 scale = std::max(std::abs(ref), PS::F64(1.0e-30));
+    return std::abs(ref - val) / scale;
+}
+
 int main(int argc, char **argv){
     const int Nepi = 2000;
     const int Nepj = 1000;
@@ -288,8 +293,11 @@ int main(int argc, char **argv){
     PS::F64 nbcount_ave_simd=0;
 #endif
 #ifdef USE_GPU
-    PS::F64 dfmax_gpu=0, dfpmax_gpu=0, dfmin_gpu=1e10, dfpmin_gpu=1e10;
+    PS::F64 dfmax_gpu=0, dfpmax_gpu=0;
+    PS::F64 dfabsmax_gpu=0, dfpabsmax_gpu=0;
     PS::F64 nbcount_ave_gpu=0;
+    PS::S32 nforce_warn_gpu=0, npot_warn_gpu=0, nnb_warn_gpu=0;
+    PS::S32 nforce_report_gpu=0, npot_report_gpu=0, nnb_report_gpu=0;
 #endif
 #ifdef USE_FUGAKU
     PS::F64 dfmax_fgk=0,dfpmax_fgk=0, dfmin_fgk=1e10, dfpmin_fgk=1e10;
@@ -318,9 +326,24 @@ int main(int argc, char **argv){
 #endif            
 #endif
 #ifdef USE_GPU
-            dfmax_gpu = std::max(dfmax_gpu, df);
-            dfmin_gpu = std::min(dfmin_gpu, df);
-            if(df>DF_MAX) std::cerr<<"Force diff: i="<<i<<" nosimd["<<j<<"] "<<force[i].acc[j]+force_sp[i].acc[j]<<" gpu["<<j<<"] "<<force_gpu[i].acc[j]<<std::endl;
+            const PS::F64 force_ref = force[i].acc[j] + force_sp[i].acc[j];
+            const PS::F64 force_err_abs = std::abs(force_ref - force_gpu[i].acc[j]);
+            const PS::F64 force_err_rel = getAbsRelDiff(force_ref, force_gpu[i].acc[j]);
+            dfmax_gpu = std::max(dfmax_gpu, force_err_rel);
+            dfabsmax_gpu = std::max(dfabsmax_gpu, force_err_abs);
+            if(force_err_rel>DF_MAX) {
+                nforce_warn_gpu++;
+                if (nforce_report_gpu<10) {
+                    std::cerr<<"GPU force diff: i="<<i
+                             <<" comp="<<j
+                             <<" ref="<<force_ref
+                             <<" gpu="<<force_gpu[i].acc[j]
+                             <<" rel="<<force_err_rel
+                             <<" abs="<<force_err_abs
+                             <<std::endl;
+                    nforce_report_gpu++;
+                }
+            }
 #endif
 #ifdef USE_FUGAKU
             df=(force[i].acc[j]-force_fgk[i].acc[j])/force[i].acc[j];
@@ -349,11 +372,30 @@ int main(int argc, char **argv){
         nbcount_ave_simd += force_simd[i].n_ngb;
 #endif
 #ifdef USE_GPU
-        dfpmax_gpu = std::max(dfpmax_gpu, (force_sp[i].pot+force[i].pot - force_gpu[i].pot)/force_gpu[i].pot);
-        dfpmin_gpu = std::min(dfpmin_gpu, (force_sp[i].pot+force[i].pot - force_gpu[i].pot)/force_gpu[i].pot);
+        const PS::F64 pot_ref = force_sp[i].pot + force[i].pot;
+        const PS::F64 pot_err_abs = std::abs(pot_ref - force_gpu[i].pot);
+        const PS::F64 pot_err_rel = getAbsRelDiff(pot_ref, force_gpu[i].pot);
+        dfpmax_gpu = std::max(dfpmax_gpu, pot_err_rel);
+        dfpabsmax_gpu = std::max(dfpabsmax_gpu, pot_err_abs);
+        if (pot_err_rel>DF_MAX) {
+            npot_warn_gpu++;
+            if (npot_report_gpu<10) {
+                std::cerr<<"GPU pot diff: i="<<i
+                         <<" ref="<<pot_ref
+                         <<" gpu="<<force_gpu[i].pot
+                         <<" rel="<<pot_err_rel
+                         <<" abs="<<pot_err_abs
+                         <<std::endl;
+                npot_report_gpu++;
+            }
+        }
 
         if(force[i].n_ngb!=force_gpu[i].n_ngb) {
-            std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" gpu "<<force_gpu[i].n_ngb<<std::endl;
+            nnb_warn_gpu++;
+            if (nnb_report_gpu<10) {
+                std::cerr<<"GPU neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" gpu "<<force_gpu[i].n_ngb<<std::endl;
+                nnb_report_gpu++;
+            }
         }
         nbcount_ave_gpu += force_gpu[i].n_ngb;
 #endif
@@ -436,7 +478,16 @@ int main(int argc, char **argv){
 #endif             
 #endif
 #ifdef USE_GPU
-    std::cout<<"GPU EP+SP force diff max: "<<dfmax_gpu<<" min: "<<dfmin_gpu<<" Pot diff max: "<<dfpmax_gpu<<" min: "<<dfpmin_gpu<<std::endl;
+    const bool gpu_compare_pass = (nforce_warn_gpu==0 && npot_warn_gpu==0 && nnb_warn_gpu==0);
+    std::cout<<"GPU EP+SP force rel diff max: "<<dfmax_gpu
+             <<" abs diff max: "<<dfabsmax_gpu
+             <<" Pot rel diff max: "<<dfpmax_gpu
+             <<" abs diff max: "<<dfpabsmax_gpu
+             <<" force warn: "<<nforce_warn_gpu
+             <<" pot warn: "<<npot_warn_gpu
+             <<" nngb warn: "<<nnb_warn_gpu
+             <<" status: "<<(gpu_compare_pass ? "PASS" : "CHECK")
+             <<std::endl;
 #endif
 #ifdef USE_FUGAKU
     std::cout<<"Fugaku EP-EP diff max: "<<dfmax_fgk<<" min: "<<dfmin_fgk<<" Pot diff max: "<<dfpmax_fgk<<" min: "<<dfpmin_fgk<<std::endl

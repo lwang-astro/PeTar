@@ -174,14 +174,13 @@ AX_CHECK_COMPILE_FLAG([-Wall],
 
 AC_ARG_WITH([cpp-std],
 	    [AS_HELP_STRING([--with-cpp-std],
-                          [version of c++ standard (11, 17). Default: 17])],
+                          [version of c++ standard (e.g. 11, 17, 20). Default: 17])],
           [],
 	    [with_cpp_std=17])
 
 AX_CHECK_COMPILE_FLAG([-std=c++$with_cpp_std],
                       [OPTFLAGS=$OPTFLAGS" -std=c++"$with_cpp_std
-                       DEBFLAGS=$DEBFLAGS" -std=c++"$with_cpp_std
-                       CUDAFLAGS=$CUDAFLAGS" -std=c++"$with_cpp_std],
+                       DEBFLAGS=$DEBFLAGS" -std=c++"$with_cpp_std],
                       [AC_MSG_FAILURE([c++$with_cpp_std support is required for the compiler])])
 
 # OpenMP
@@ -362,8 +361,10 @@ AC_CHECK_FILE(["$fdps_prefix/src/ps_defs.hpp"],
               [FDPS_VERSION=`egrep 'Version' $fdps_prefix/src/ps_defs.hpp | sed 's:.*Version\ \(\S\+\).*:\1:'`],
               [AC_MSG_FAILURE([can't find FDPS ps_defs.hpp, please check the completeness of the FDPS library])])
 
-AS_IF([test x"$with_cpp_std" = x11 && test ${FDPS_VERSION%%.*} -ge 8],
-      [AC_MSG_ERROR([C++11 is incompatible with FDPS v8 or newer (detected FDPS version: $FDPS_VERSION). Please use FDPS v7.0, or switch to --with-cpp-std=17.])])
+AS_IF([test ${FDPS_VERSION%%.*} -ge 8 && test "$with_cpp_std" -lt 17],
+      [AC_MSG_ERROR([FDPS v8 or newer (detected FDPS version: $FDPS_VERSION) requires C++17 or newer. Please use --with-cpp-std=17 or a higher standard, or switch FDPS version to v7.0.])])
+
+CUDAFLAGS=$CUDAFLAGS" -std=c++"$with_cpp_std
 
 AS_IF([test ${FDPS_VERSION%%.*} -ge 7 ],
       [use_fdps_comm=yes],
@@ -636,6 +637,7 @@ AC_MSG_NOTICE([     Version:           $VERSION])
 AC_MSG_NOTICE([     FDPS Version:      $FDPS_VERSION])
 AC_MSG_NOTICE([     Using MPI:         $use_mpi])
 AC_MSG_NOTICE([     Using GPU:         $use_cuda])
+AC_MSG_NOTICE([     C++ std:           c++$with_cpp_std])
 AC_MSG_NOTICE([     Using arch:        $with_arch])
 AC_MSG_NOTICE([     Using 64b:         $use_64b])
 AS_IF([test "x$use_simd" != xno],

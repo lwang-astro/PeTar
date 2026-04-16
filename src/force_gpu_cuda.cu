@@ -16,57 +16,89 @@ enum{
 	NJ_LIMIT     = N_WALK_LIMIT*10000,
 };
 
+#if defined(CALC_EP_64bit) || defined(CALC_EP_MIX) || defined(P3T_64BIT) || defined(P3T_MIXBIT)
+#define PETAR_GPU_DP
+#endif
+
+#ifdef PETAR_GPU_DP
+typedef double   GpuReal;
+typedef double3  GpuVec3;
+typedef double4  GpuVec4;
+#define PETAR_GPU_REAL_C(x) x
+#else
+typedef float    GpuReal;
+typedef float3   GpuVec3;
+typedef float4   GpuVec4;
+#define PETAR_GPU_REAL_C(x) x##f
+#endif
+
+inline __device__ GpuVec4 makeGpuVec4(const GpuReal x, const GpuReal y, const GpuReal z, const GpuReal w) {
+#ifdef PETAR_GPU_DP
+    return make_double4(x, y, z, w);
+#else
+    return make_float4(x, y, z, w);
+#endif
+}
+
+inline __device__ GpuReal invSqrtGpu(const GpuReal x) {
+#ifdef PETAR_GPU_DP
+    return rsqrt(x);
+#else
+    return rsqrtf(x);
+#endif
+}
+
 struct EpiGPU{
-	float3 pos;
-    float  r_search;
+	GpuVec3 pos;
+    GpuReal r_search;
 	int    id_walk;
 };
 
 struct EpiDev{
-	float3 pos;
-    float  r_search;
+	GpuVec3 pos;
+    GpuReal r_search;
 };
 
 struct EpjGPU{
-	float3 pos;
-    float  m;
-    float  r_search;
+	GpuVec3 pos;
+    GpuReal m;
+    GpuReal r_search;
 };
 
 struct SpjGPU{
-    float3 pos;
-    float  m;
+    GpuVec3 pos;
+    GpuReal m;
 #ifdef USE_QUAD
-    float  qxx, qyy, qzz, qxy, qxz, qyz;
+    GpuReal qxx, qyy, qzz, qxy, qxz, qyz;
 #endif
 };
 
 struct ForceGPU{
-	float4 accp;
+	GpuVec4 accp;
     int    nnb;
 };
 
 //! device pair force of Epi and Epi with linear cutoff
 inline __device__ ForceGPU dev_gravity_ep_ep(
-    float  eps2,
-    float  rcut2,
-    float  G,
+    GpuReal eps2,
+    GpuReal rcut2,
+    GpuReal G,
     EpiDev epii,
     EpjGPU epjj,
     ForceGPU forcei)
 {
-	float dx = epjj.pos.x - epii.pos.x;
-	float dy = epjj.pos.y - epii.pos.y;
-	float dz = epjj.pos.z - epii.pos.z;
+	GpuReal dx = epjj.pos.x - epii.pos.x;
+	GpuReal dy = epjj.pos.y - epii.pos.y;
+	GpuReal dz = epjj.pos.z - epii.pos.z;
 
-	float r2   = eps2 + dx*dx + dy*dy + dz*dz;
-    float rsmin = max(epii.r_search, epjj.r_search);
+    GpuReal r2 = eps2 + dx*dx + dy*dy + dz*dz;
+    GpuReal rsmin = fmax(epii.r_search, epjj.r_search);
     if (r2 < rsmin*rsmin) forcei.nnb ++;
 
-    float r2_cut = (r2 > rcut2)? r2 : rcut2;
-	float rinv = rsqrtf(r2_cut);
-	float pij  = epjj.m * rinv;
-	float mri3 = G*rinv*rinv * pij;
+    GpuReal r2_cut = (r2 > rcut2)? r2 : rcut2;
+	GpuReal rinv = invSqrtGpu(r2_cut);
+	GpuReal pij  = epjj.m * rinv;
+	GpuReal mri3 = G*rinv*rinv * pij;
 
 	forcei.accp.x += mri3 * dx;
 	forcei.accp.y += mri3 * dy;
@@ -86,9 +118,9 @@ __device__ ForceGPU force_kernel_ep_ep_1walk(
     const int    *id_epj,
 #endif
     ForceGPU      forcei,
-    const float   eps2,
-    const float   rcut2,
-    const float   G) {
+    const GpuReal eps2,
+    const GpuReal rcut2,
+    const GpuReal G) {
 
     const int tid = threadIdx.x;
     const int j_head = ij_disp[id_walk  ].y;
@@ -130,9 +162,9 @@ __device__ ForceGPU force_kernel_ep_ep_2walk(
     const int    *id_epj,
 #endif
     ForceGPU      forcei,
-    const float   eps2,
-    const float   rcut2,
-    const float   G) {
+    const GpuReal eps2,
+    const GpuReal rcut2,
+    const GpuReal G) {
 
 	const int jbeg0 = ij_disp[iwalk0].y;
 	const int jbeg1 = ij_disp[iwalk1].y;
@@ -201,9 +233,9 @@ __device__ ForceGPU force_kernel_ep_ep_multiwalk(
     const int    *id_epj,
 #endif
     ForceGPU      forcei,
-    const float   eps2,
-    const float   rcut2,
-    const float   G) {
+    const GpuReal eps2,
+    const GpuReal rcut2,
+    const GpuReal G) {
 
     const int j_head = ij_disp[id_walk  ].y;
     const int j_tail = ij_disp[id_walk+1].y;
@@ -227,9 +259,9 @@ __global__ void force_kernel_ep_ep(
     const int    *id_epj,
 #endif
     ForceGPU     * force,
-    const float    eps2,
-    const float    rcut2,
-    const float    G) {
+    const GpuReal  eps2,
+    const GpuReal  rcut2,
+    const GpuReal  G) {
 
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
 	EpiDev epii;
@@ -237,7 +269,7 @@ __global__ void force_kernel_ep_ep(
     epii.r_search  = epi[tid].r_search;
 	int    id_walk = epi[tid].id_walk;
 	ForceGPU forcei;
-    forcei.accp = make_float4(0.f, 0.f, 0.f, 0.f);
+    forcei.accp = makeGpuVec4(PETAR_GPU_REAL_C(0.0), PETAR_GPU_REAL_C(0.0), PETAR_GPU_REAL_C(0.0), PETAR_GPU_REAL_C(0.0));
     forcei.nnb  = 0;
 
 	int t_head = blockDim.x * blockIdx.x;
@@ -273,44 +305,44 @@ __global__ void force_kernel_ep_ep(
 }
 
 //! device pair force of Epi and Spi 
-inline __device__ float4 dev_gravity_ep_sp(
-    float  eps2,
-    float  G,
-    float3 posi,
+inline __device__ GpuVec4 dev_gravity_ep_sp(
+    GpuReal eps2,
+    GpuReal G,
+    GpuVec3 posi,
     SpjGPU spjj,
-    float4 accpi) {
+    GpuVec4 accpi) {
 
-	float dx = posi.x - spjj.pos.x;
-	float dy = posi.y - spjj.pos.y;
-	float dz = posi.z - spjj.pos.z;
+	GpuReal dx = posi.x - spjj.pos.x;
+	GpuReal dy = posi.y - spjj.pos.y;
+	GpuReal dz = posi.z - spjj.pos.z;
 
-	float r2   = eps2 + dx*dx + dy*dy + dz*dz;
-	float rinv = rsqrtf(r2);
+	GpuReal r2   = eps2 + dx*dx + dy*dy + dz*dz;
+	GpuReal rinv = invSqrtGpu(r2);
 
 #ifdef USE_QUAD
-    float qrx = spjj.qxx*dx + spjj.qxy*dy + spjj.qxz*dz;
-    float qry = spjj.qxy*dx + spjj.qyy*dy + spjj.qyz*dz;
-    float qrz = spjj.qxz*dx + spjj.qyz*dy + spjj.qzz*dz;
-    float tr = spjj.qxx + spjj.qyy + spjj.qzz;
+    GpuReal qrx = spjj.qxx*dx + spjj.qxy*dy + spjj.qxz*dz;
+    GpuReal qry = spjj.qxy*dx + spjj.qyy*dy + spjj.qyz*dz;
+    GpuReal qrz = spjj.qxz*dx + spjj.qyz*dy + spjj.qzz*dz;
+    GpuReal tr = spjj.qxx + spjj.qyy + spjj.qzz;
     
-    float qrr = qrx*dx + qry*dy + qrz*dz;
-    float rinv2 = rinv*rinv;
-    float rinv3 = rinv2*rinv;
-    float rinv5 = rinv2*rinv3*1.5f;
-    float qrr_r5 = rinv5*qrr;
-    float qrr_r7 = rinv2*qrr_r5;
-    float A = G*(spjj.m*rinv3 - tr*rinv5 + 5.0f*qrr_r7);
-    float B = -2.0f*G*rinv5;
+    GpuReal qrr = qrx*dx + qry*dy + qrz*dz;
+    GpuReal rinv2 = rinv*rinv;
+    GpuReal rinv3 = rinv2*rinv;
+    GpuReal rinv5 = rinv2*rinv3*PETAR_GPU_REAL_C(1.5);
+    GpuReal qrr_r5 = rinv5*qrr;
+    GpuReal qrr_r7 = rinv2*qrr_r5;
+    GpuReal A = G*(spjj.m*rinv3 - tr*rinv5 + PETAR_GPU_REAL_C(5.0)*qrr_r7);
+    GpuReal B = -PETAR_GPU_REAL_C(2.0)*G*rinv5;
     
     accpi.x -= A*dx + B*qrx;
     accpi.y -= A*dy + B*qry;
     accpi.z -= A*dz + B*qrz;
-    accpi.w -= G*(spjj.m*rinv - 0.5f*tr*rinv3 + qrr_r5);
+    accpi.w -= G*(spjj.m*rinv - PETAR_GPU_REAL_C(0.5)*tr*rinv3 + qrr_r5);
 
 #else
     
-	float pij  = spjj.m * rinv;
-	float mri3 = G*rinv*rinv * pij;
+	GpuReal pij  = spjj.m * rinv;
+	GpuReal mri3 = G*rinv*rinv * pij;
 
 	accpi.x += mri3 * dx;
 	accpi.y += mri3 * dy;
@@ -322,18 +354,18 @@ inline __device__ float4 dev_gravity_ep_sp(
     return accpi;
 }
 
-__device__ float4 force_kernel_ep_sp_1walk(
+__device__ GpuVec4 force_kernel_ep_sp_1walk(
     SpjGPU   *jpsh,
-    const float3  posi,
+    const GpuVec3 posi,
     const int     id_walk,
     const int3   *ij_disp,
     const SpjGPU *spj, 
 #ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
     const int    *id_spj,
 #endif
-    float4        accpi,
-    const float   eps2,
-    const float   G) {
+    GpuVec4       accpi,
+    const GpuReal eps2,
+    const GpuReal G) {
 
     const int tid = threadIdx.x;
     const int j_head = ij_disp[id_walk  ].z;
@@ -363,9 +395,9 @@ __device__ float4 force_kernel_ep_sp_1walk(
 	return accpi;
 }
 
-__device__ float4 force_kernel_ep_sp_2walk(
+__device__ GpuVec4 force_kernel_ep_sp_2walk(
     SpjGPU        jpsh[2][N_THREAD_GPU],
-    const float3  posi,
+    const GpuVec3 posi,
     const int     id_walk,
     const int     iwalk0,
     const int     iwalk1,
@@ -374,9 +406,9 @@ __device__ float4 force_kernel_ep_sp_2walk(
 #ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
     const int    *id_spj,
 #endif
-    float4        accpi,
-    const float   eps2,
-    const float   G)
+    GpuVec4       accpi,
+    const GpuReal eps2,
+    const GpuReal G)
 {
 	const int jbeg0 = ij_disp[iwalk0].z;
 	const int jbeg1 = ij_disp[iwalk1].z;
@@ -436,17 +468,17 @@ __device__ float4 force_kernel_ep_sp_2walk(
 	return accpi;
 }
 
-__device__ float4 force_kernel_ep_sp_multiwalk(
-    const float3  posi,
+__device__ GpuVec4 force_kernel_ep_sp_multiwalk(
+    const GpuVec3 posi,
     const int     id_walk,
     const int3   *ij_disp,
     const SpjGPU *spj, 
 #ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
     const int    *id_spj,
 #endif
-    float4        accpi,
-    const float   eps2,
-    const float   G)
+    GpuVec4       accpi,
+    const GpuReal eps2,
+    const GpuReal G)
 {
     const int j_head = ij_disp[id_walk  ].z;
     const int j_tail = ij_disp[id_walk+1].z;
@@ -470,13 +502,13 @@ __global__ void force_kernel_ep_sp(
     const int    *id_spj,
 #endif
     ForceGPU     * force,
-    const float    eps2,
-    const float    G) {
+    const GpuReal  eps2,
+    const GpuReal  G) {
 
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
-	float3 posi    = epi[tid].pos;
+	GpuVec3 posi    = epi[tid].pos;
 	int    id_walk = epi[tid].id_walk;
-	float4 accpi   = force[tid].accp;
+	GpuVec4 accpi   = force[tid].accp;
 
 	int t_head = blockDim.x * blockIdx.x;
 	int t_tail = t_head + N_THREAD_GPU - 1;
