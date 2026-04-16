@@ -6,6 +6,7 @@
 #include"cstdlib"
 #include <algorithm>
 #include<cmath>
+#include <limits>
 
 #include"AR/symplectic_integrator.h"
 #include"Hermite/hermite_integrator.h"
@@ -627,12 +628,25 @@ public:
             _input.r_search_group.value = r_in_base;
         }
         PtclHard::r_search_group_over_in = _input.r_search_group.value/r_in_base;
+        const PS::F64 ratio_eps = 8.0*std::numeric_limits<PS::F64>::epsilon();
+        if (PtclHard::r_search_group_over_in < 0.0 && PtclHard::r_search_group_over_in > -ratio_eps) {
+            PtclHard::r_search_group_over_in = 0.0;
+        }
+        else if (PtclHard::r_search_group_over_in > 1.0 && PtclHard::r_search_group_over_in < 1.0 + ratio_eps) {
+            PtclHard::r_search_group_over_in = 1.0;
+        }
 
         // if r_group is not defined, set to 0.8*r_search_group; 
         if (_input.r_group.value==-1.0) {
             _input.r_group.value = 0.8*_input.r_search_group.value;
         }
         PtclHard::r_group_over_in = _input.r_group.value/r_in_base;
+        if (PtclHard::r_group_over_in < 0.0 && PtclHard::r_group_over_in > -ratio_eps) {
+            PtclHard::r_group_over_in = 0.0;
+        }
+        else if (PtclHard::r_group_over_in > PtclHard::r_search_group_over_in && PtclHard::r_group_over_in < PtclHard::r_search_group_over_in + ratio_eps) {
+            PtclHard::r_group_over_in = PtclHard::r_search_group_over_in;
+        }
 
         n_step_per_orbit = _input.n_step_per_orbit.value;
         tidal_tensor_switcher = bool(_input.tidal_tensor_switcher.value);

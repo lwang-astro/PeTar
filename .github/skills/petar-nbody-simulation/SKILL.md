@@ -293,6 +293,13 @@ Required if not already provided:
 
 Do not ask whether stellar evolution should be enabled if the binary already ends with `.bse`.
 
+Primordial-binary counting rule (avoid a common misunderstanding):
+
+- `N` in generator commands and the PeTar input header is the total number of stars (single stars + binary members), not the number of systems.
+- A binary fraction like `mcluster -b 0.95` means about 95% of stars are arranged into pairs, so the primordial binary count is approximately `n_bin ~= 0.95 * N / 2`.
+- Therefore, a header value such as `500` still means 500 stars in total; with 95% binary fraction this implies about 237-238 binaries (about 474-476 stars in binaries), not 500 binaries.
+- Keep `petar -b <n_bin>` consistent with the actual generated pairing count (read from generator log if available), while keeping header `N` as the total star count.
+
 ### DSM Scenario
 
 Required if not already provided:
@@ -456,6 +463,7 @@ Default conversion rules:
 - If user works in astrophysical units from examples in this repository, prefer `petar.init -v kms2pcmyr -f input ...`.
 - If scenario includes BSE, add `-s bse` to `petar.init`.
 - If scenario includes Galpy or Agama and the initial condition is in a galactic frame, add `-c ... -t` to `petar.init`.
+- If the source was generated with a high binary fraction (for example `mcluster -b 0.95`), do not reinterpret header `N` as binary count; `N` remains total stars and `petar -b` should use the actual primordial binary pair count.
 
 ### Case B: Existing PeTar Snapshot
 

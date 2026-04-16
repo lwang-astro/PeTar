@@ -153,7 +153,7 @@ public:
     }
 
     void writeAscii(FILE *_fout) {
-        for(auto iter = d_f64.begin(); iter!=d_f64.end(); iter++) fprintf(_fout, "%c %s %26.15e\n", IOParamsPrintHelp::getValueTypeShortName(iter->second->value), iter->first, iter->second->value);
+        for(auto iter = d_f64.begin(); iter!=d_f64.end(); iter++) fprintf(_fout, "%c %s %27.16e\n", IOParamsPrintHelp::getValueTypeShortName(iter->second->value), iter->first, iter->second->value);
         for(auto iter = d_l64.begin(); iter!=d_l64.end(); iter++) fprintf(_fout, "%c %s %ld\n",     IOParamsPrintHelp::getValueTypeShortName(iter->second->value), iter->first, iter->second->value);
         for(auto iter = d_ll64.begin();iter!=d_ll64.end();iter++) fprintf(_fout, "%c %s %lld\n",    IOParamsPrintHelp::getValueTypeShortName(iter->second->value), iter->first, iter->second->value);
         for(auto iter = d_str.begin(); iter!=d_str.end(); iter++) fprintf(_fout, "%c %s %s\n",      IOParamsPrintHelp::getValueTypeShortName(iter->second->value), iter->first, iter->second->value.c_str());
