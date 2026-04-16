@@ -236,6 +236,7 @@ public:
 #else
         enabled = false;
 #endif
+        checkParams();
     }
 
     //! update time-dependent model state

@@ -395,23 +395,30 @@ public:
         Also modify p->time_interrupt for next call time.
         @param[in] p: particle
         @param[in] time: current time
-        @param[in] time_step_max: maximum time step to check mass change
+        @param[in] time_interrupt_max: maximum next time to check mass change
 
         \return 0: no change; 1: modified mass
         */
     template <class TParticle>
-    int calcMassChange(TParticle* p, const Float& time, const Float& time_step_max) {
-        int return_flag = 0;
+    int calcMassChange(TParticle* p, const Float& time, const Float& time_interrupt_max) {
 
         // no mass change if salpeter_timescale is 0        
-        if (salpeter_timescale == 0) return 0; 
+        if (salpeter_timescale == 0) {
+            p->star.last_mass_change_time = time;
+            p->time_record = time;
+            p->time_interrupt = time_interrupt_max;
+            return 0; 
+        }
 
         // if type is star, evolve mass to equilbrium mass    
         if (p->star.getType()==StarType::star) {
             Float dt = time - p->star.last_mass_change_time;
             if (dt>0) {
                 // Helium growth
-                p->star.helium_fraction += lambda0 / (epsilon_helium * salpeter_timescale) * dt;
+                Float helium_change_rate = lambda0 / (epsilon_helium * salpeter_timescale);
+                // avoid too large step that helium fraction change too much in one step, thus use time_step_factor to control the step size
+                dt = std::min(dt, time_step_factor / helium_change_rate);
+                p->star.helium_fraction += helium_change_rate * dt;
                 
                 // Helium fraction should be between 0 and 1, if 1, evolve to BH
                 if (p->star.helium_fraction > 1.0) {
@@ -428,10 +435,13 @@ public:
                     // set type to BH
                     p->star.setType(StarType::bh);
                     p->star.last_mass_change_time = time_bh_form;
+                    p->time_record = time_bh_form;
+                    p->time_interrupt = time;
+                    ASSERT(p->time_interrupt>=p->time_record);
                     // set Swartzchild radius
                     p->radius = gravitational_constant * p->mass / (speed_of_light * speed_of_light);
 
-                    return_flag = 1;
+                    return 1;
                 }
                 else {
                     // calculate equilbrium mass
@@ -450,26 +460,28 @@ public:
                     // net mass change rate m'_net = m'_acc - m'_wind
                     Float mdot = (s_fb - lambda0 * (1 - s_fb)/2) * mdot_eddington;
                     Float new_mass = p->mass + mdot * dt;
+                    ASSERT(new_mass>0.0);
 
                     // update parameters
                     p->dm += new_mass - p->mass;
                     p->mass = new_mass;
 
                     p->radius = stellar_radius_scale * std::pow(new_mass, stellar_radius_power_index);
-                    p->star.last_mass_change_time = time;
+                    p->star.last_mass_change_time += dt;
                     
                     // set next time to check mass change
-                    Float next_dt = std::min(p->mass/mdot * time_step_factor, time_step_max);
+                    Float next_dt = p->mass/mdot * time_step_factor;
                     
                     // check whether helium fraction reach 1 in next_dt                    
-                    Float next_helium_fraction = p->star.helium_fraction + lambda0 / (epsilon_helium * salpeter_timescale) * dt;
+                    Float next_helium_fraction = p->star.helium_fraction + helium_change_rate * dt;
                     if (next_helium_fraction >= 1.0) {
                         next_dt = (1.0 - p->star.helium_fraction) * (epsilon_helium * salpeter_timescale) / lambda0;
                     }
 
-                    p->time_interrupt = next_dt + time;
+                    p->time_record = p->star.last_mass_change_time;
+                    p->time_interrupt = std::min(next_dt + p->star.last_mass_change_time, time_interrupt_max);
 
-                    return_flag = 1;
+                    return 1;
                 }
             }         
         }
@@ -480,24 +492,28 @@ public:
             if (dt>0) {
                 // Eddington accretion 
                 Float mdot = p->mass /(epsilon_bh * salpeter_timescale);
+                dt = std::min(dt, p->mass/mdot * time_step_factor);
                 Float new_mass = p->mass + mdot * dt;
 
                 p->dm += new_mass - p->mass;
                 p->mass = new_mass;
 
                 p->radius = gravitational_constant * p->mass / (speed_of_light * speed_of_light);
-                p->star.last_mass_change_time = time;
+                p->star.last_mass_change_time += dt;
 
-                Float next_dt = std::min(p->mass/mdot * time_step_factor, time_step_max);
-                p->time_interrupt = next_dt + time;
+                Float next_dt = p->mass/mdot * time_step_factor;
+                p->time_record = p->star.last_mass_change_time;
+                p->time_interrupt = std::min(next_dt + p->star.last_mass_change_time, time_interrupt_max);
 
-                return_flag = 1;
+                return 1;
             }
         }
 
+        p->star.last_mass_change_time = time;
         p->time_record = time;
+        p->time_interrupt = time_interrupt_max;
 
-        return return_flag;
+        return 0;
     }
 
     //! Set the remnant orbit to the center of mass

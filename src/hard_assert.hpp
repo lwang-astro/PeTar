@@ -116,7 +116,7 @@ public:
         fwrite(&n_group, sizeof(PS::S32), 1, fp);
         fwrite(n_member_in_group.getPointer(), sizeof(PS::S32), n_group, fp);
         for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].writeBinary(fp);
-#ifdef BSE_BASE
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
         fwrite(rand_seed, sizeof(uint64_t), 2, fp);
 #endif
     }
@@ -129,7 +129,7 @@ public:
         size_t rcount = fread(&time_offset, sizeof(PS::F64),1,fp);
         rcount += fread(&time_end, sizeof(PS::F64),1,fp);
         if (rcount<2) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Time data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
             abort();
         }
         // read gcm
@@ -137,17 +137,17 @@ public:
         rcount += fread(&gcm_pos, sizeof(PS::F64vec),1,fp);
         rcount += fread(&gcm_vel, sizeof(PS::F64vec),1,fp);
         if (rcount<3) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Global CM data reading fails! requiring data number is 3, only obtain "<<rcount<<".\n";
             abort();
         }
         // read hard particles
         rcount = fread(&n_ptcl, sizeof(PS::S32),1, fp);
         if (rcount<1) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Hard particle number reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             abort();
         }
         if (n_ptcl<=0) {
-            std::cerr<<"Error: particle number "<<n_ptcl<<" <=0 !\n";
+            std::cerr<<"Error: Hard particle number "<<n_ptcl<<" <=0 !\n";
             abort();
         }
         ptcl_bk.resizeNoInitialize(n_ptcl);
@@ -155,8 +155,8 @@ public:
         // static members
         PS::F64 ptcl_st_dat[5];
         rcount = fread(ptcl_st_dat, sizeof(PS::F64),5, fp);
-        if (rcount<4) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 3, only obtain "<<rcount<<".\n";
+        if (rcount<5) {
+            std::cerr<<"Error: Ptcl static parameters reading fails! requiring data number is 5, only obtain "<<rcount<<".\n";
             abort();
         }
         Ptcl::search_factor = ptcl_st_dat[0];
@@ -164,29 +164,29 @@ public:
         Ptcl::mean_mass_inv = ptcl_st_dat[2];
         PtclHard::r_group_over_in = ptcl_st_dat[3];
         PtclHard::r_search_group_over_in = ptcl_st_dat[4];
-        // artifical particles
+        // artificial particles
         rcount = fread(&n_arti, sizeof(PS::S32),1,fp);
         // number of groups
         rcount += fread(&n_group, sizeof(PS::S32), 1, fp);
         if (rcount<2) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Artificial particle and group data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
+            abort();
+        }
+        if (n_arti<0) {
+            std::cerr<<"Error: Artificial particle number "<<n_arti<<" <0 !\n";
+            abort();
+        }
+        if (n_group<0) {
+            std::cerr<<"Error: Group number "<<n_group<<" <0 !\n";
             abort();
         }
         n_member_in_group.resizeNoInitialize(n_group);
         rcount = fread(n_member_in_group.getPointer(), sizeof(PS::S32), n_group, fp);
         if (rcount<(size_t)n_group) {
-            std::cerr<<"Error: Data reading fails! requiring data number is "<<n_group<<", only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Group member data reading fails! requiring data number is "<<n_group<<", only obtain "<<rcount<<".\n";
             abort();
         }
-        if (n_arti<0) {
-            std::cerr<<"Error: artificial particle number "<<n_arti<<" <0 !\n";
-            abort();
-        }
-        if (n_group<0) {
-            std::cerr<<"Error: group number "<<n_group<<" <0 !\n";
-            abort();
-        }
-        // read artifical particles
+        // read artificial particles
         if (n_arti>0) {
             ptcl_arti_bk.resizeNoInitialize(n_arti);
             for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].readBinary(fp);
@@ -270,9 +270,9 @@ public:
             if (long_suffix_flag) fname += "_t" + std::to_string(hard_dump[ith].time_offset) + "_M" + std::to_string(mpi_rank) + "_O" + std::to_string(ith) + "_c" + std::to_string(dump_number++) + "_s" + std::to_string(tnow);
             std::FILE* fp;
             if (append_flag) 
-                fp = std::fopen(fname.c_str(),"a");
+                fp = std::fopen(fname.c_str(),"ab");
             else
-                fp = std::fopen(fname.c_str(),"w");
+                fp = std::fopen(fname.c_str(),"wb");
             if (fp==NULL) {
                 std::cerr<<"Error: filename "<<fname.c_str()<<" cannot be open!\n";
                 abort();

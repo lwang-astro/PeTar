@@ -484,7 +484,7 @@ int main(int argc, char **argv){
   hard_manager.checkParams();
   hard_manager.print(std::cerr);
 
-  std::FILE* fp = std::fopen(filename.c_str(),"r");
+  std::FILE* fp = std::fopen(filename.c_str(),"rb");
   if (fp==NULL) {
       std::cerr<<"Error: filename "<<filename<<" cannot be open!\n";
       abort();

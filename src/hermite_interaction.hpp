@@ -37,7 +37,7 @@ public:
         ASSERT(eps_sq>=0.0);
         ASSERT(gravitational_constant>0.0);
 #ifdef EXTERNAL_HARD
-        ASSERT(ext_force.checkParams());
+//        ASSERT(ext_force.checkParams());
 #endif
 #ifdef HERMITE_PN
         ASSERT(pn.checkParams());

@@ -897,7 +897,11 @@ public:
         if (_p.getBinaryInterruptState() != BinaryInterruptState::delaycollision) {
             // call mass change function
             if (_p.time_interrupt<=_time_end) {
-                int modify_flag = disk_star_merger_manager.calcMassChange(&_p, _time_end, time_interrupt_max);
+                int modify_flag = 0;
+                while (_p.star.last_mass_change_time < _time_end) {
+                    int modify_flag_iter = disk_star_merger_manager.calcMassChange(&_p, _time_end, time_interrupt_max);
+                    modify_flag = std::max(modify_flag, modify_flag_iter);
+                }
                 return modify_flag;
             }
             else return 0;
