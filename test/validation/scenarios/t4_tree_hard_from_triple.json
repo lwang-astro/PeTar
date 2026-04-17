@@ -22,7 +22,7 @@
   "runs": [
     {
       "id": "m1_pure_sdar_ref",
-      "command": "cd test/validation/work/t4 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 3.125e-5 -r 2 -t 20 -o 0.125 -w 2 -f t4_m1_pure_sdar_ref input",
+      "command": "cd test/validation/work/t4 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 3.0e-5 -r 2 -t 20 -o 0.125 -w 2 -f t4_m1_pure_sdar_ref input",
       "output": "m1_pure_sdar_ref.log"
     },
     {

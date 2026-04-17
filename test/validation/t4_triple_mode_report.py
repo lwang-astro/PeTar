@@ -18,6 +18,8 @@ ENERGY_HEADER_RE = re.compile(r"^Energy:\s+(.*)$")
 ENERGY_PHYSIC_RE = re.compile(r"^Physic:\s+(.*)$")
 INPUT_UNIT_RE = re.compile(r"^Input data unit:\s*(\d+)")
 UNIT_SET_RE = re.compile(r"^----- Unit set\s*(\d+)\s*:\s*(.*)-----$")
+TREE_DT_RE = re.compile(r"^Tree time step\s*=\s*([0-9eE+\-.]+)$")
+OUTPUT_DT_RE = re.compile(r"^Output time step\s*=\s*([0-9eE+\-.]+)$")
 
 Point = Tuple[float, float]
 
@@ -132,12 +134,32 @@ def parse_unit_info(log_text: str) -> Dict[str, str]:
     return {"input_unit": input_unit, "unit_set": unit_set}
 
 
+def parse_runtime_steps(log_text: str) -> Dict[str, float]:
+    tree_dt = math.nan
+    output_dt = math.nan
+    for line in log_text.splitlines():
+        sm = line.strip()
+        tm = TREE_DT_RE.match(sm)
+        if tm:
+            tree_dt = float(tm.group(1))
+        om = OUTPUT_DT_RE.match(sm)
+        if om:
+            output_dt = float(om.group(1))
+    return {"tree_dt": tree_dt, "output_dt": output_dt}
+
+
 def resolve_status_path(run_record: Dict) -> Path:
     cmd = run_record["command"]
     args_map = parse_command_args(cmd)
     prefix = args_map.get("-f", run_record["run_id"])
+    cd_match = re.search(r"\bcd\s+([^&;]+?)\s*&&", cmd)
+    if cd_match:
+        work_dir = Path(cd_match.group(1).strip())
+        if not work_dir.is_absolute():
+            work_dir = (Path.cwd() / work_dir).resolve()
+        return work_dir / f"{prefix}.status"
     log_path = Path(run_record["output"])
-    return log_path.parent / ".." / ".." / "work" / "t4" / f"{prefix}.status"
+    return log_path.parent / f"{prefix}.status"
 
 
 def load_status_particles(path: Path, n_particle: int):
@@ -425,9 +447,98 @@ def scenario_file_from_name(scenario: str) -> Path:
     return Path("test/validation/scenarios") / f"{scenario}.json"
 
 
+def normalize_mode_id(run_id: str) -> str:
+    return run_id[:-4] if run_id.endswith("_o15") else run_id
+
+
+def collect_plot_series(rows: List[Dict]) -> Dict[str, object]:
+    energy_total_series: Dict[str, List[Point]] = {}
+    energy_pp_series: Dict[str, List[Point]] = {}
+    a_in_series: Dict[str, List[Point]] = {}
+    e_in_series: Dict[str, List[Point]] = {}
+    i_in_series: Dict[str, List[Point]] = {}
+    a_out_series: Dict[str, List[Point]] = {}
+    e_out_series: Dict[str, List[Point]] = {}
+    i_out_series: Dict[str, List[Point]] = {}
+    i_mutual_series: Dict[str, List[Point]] = {}
+    unit_rows = []
+
+    for row in rows:
+        label = f"{row['run_id']} | tt={row['tt_switch']}"
+        log_text = Path(row["log_path"]).read_text(encoding="utf-8", errors="replace")
+        energy_total_series[label] = parse_time_metric_series(log_text, "Error/Total")
+        energy_pp_series[label] = parse_time_metric_series(log_text, "Error_PP")
+        orbit = derive_orbital_series_from_status(Path(row["status_path"]), int(row["max_n_real_glb"]))
+        tvals = orbit["time"]
+        row["a_in0"] = float(orbit["a_in"][0]) if orbit["a_in"] else math.nan
+        row["e_in0"] = float(orbit["e_in"][0]) if orbit["e_in"] else math.nan
+        row["i_in0"] = float(orbit["i_in"][0]) if orbit["i_in"] else math.nan
+        row["a_out0"] = float(orbit["a_out"][0]) if orbit["a_out"] else math.nan
+        row["e_out0"] = float(orbit["e_out"][0]) if orbit["e_out"] else math.nan
+        row["i_out0"] = float(orbit["i_out"][0]) if orbit["i_out"] else math.nan
+        row["i_mutual0"] = float(orbit["i_mutual"][0]) if orbit["i_mutual"] else math.nan
+        a_in_series[label] = list(zip(tvals, orbit["a_in"]))
+        e_in_series[label] = list(zip(tvals, orbit["e_in"]))
+        i_in_series[label] = list(zip(tvals, orbit["i_in"]))
+        a_out_series[label] = list(zip(tvals, orbit["a_out"]))
+        e_out_series[label] = list(zip(tvals, orbit["e_out"]))
+        i_out_series[label] = list(zip(tvals, orbit["i_out"]))
+        i_mutual_series[label] = list(zip(tvals, orbit["i_mutual"]))
+        units = parse_unit_info(log_text)
+        unit_rows.append((row["run_id"], units["input_unit"], units["unit_set"]))
+
+    return {
+        "energy_total_series": energy_total_series,
+        "energy_pp_series": energy_pp_series,
+        "a_in_series": a_in_series,
+        "e_in_series": e_in_series,
+        "i_in_series": i_in_series,
+        "a_out_series": a_out_series,
+        "e_out_series": e_out_series,
+        "i_out_series": i_out_series,
+        "i_mutual_series": i_mutual_series,
+        "unit_rows": unit_rows,
+    }
+
+
+def build_orbit_figure_section(title_prefix: str, figure_offset: int, series: Dict[str, Dict[str, List[Point]]]) -> str:
+    return f"""
+<h2>{html_escape(title_prefix)}: Energy Error</h2>
+<h3>Figure {figure_offset}: Total Relative Energy Error vs Time</h3>
+{svg_multi_plot(series['energy_total_series'], f'{title_prefix}: |Error/Total|(t)', 'time [Myr]', '|Error/Total|', logx=False, logy=True)}
+
+<h3>Figure {figure_offset + 1}: Short-range Energy Error (PP) vs Time</h3>
+{svg_multi_plot(series['energy_pp_series'], f'{title_prefix}: |Error_PP|(t)', 'time [Myr]', '|Error_PP|', logx=False, logy=True)}
+
+<h2>{html_escape(title_prefix)}: Orbital Evolution of Inner Orbit</h2>
+<h3>Figure {figure_offset + 2}: Inner Semi-major Axis a_in(t)</h3>
+{svg_multi_plot(series['a_in_series'], f'{title_prefix}: inner orbit a(t)', 'time [Myr]', 'a_in [pc]', logx=False, logy=False)}
+
+<h3>Figure {figure_offset + 3}: Inner Eccentricity e_in(t)</h3>
+{svg_multi_plot(series['e_in_series'], f'{title_prefix}: inner orbit e(t)', 'time [Myr]', 'e_in', logx=False, logy=False)}
+
+<h3>Figure {figure_offset + 4}: Inner Inclination i_in(t)</h3>
+{svg_multi_plot(series['i_in_series'], f'{title_prefix}: inner orbit inclination i(t)', 'time [Myr]', 'i_in [deg]', logx=False, logy=False)}
+
+<h2>{html_escape(title_prefix)}: Orbital Evolution of Outer Orbit</h2>
+<h3>Figure {figure_offset + 5}: Outer Semi-major Axis a_out(t)</h3>
+{svg_multi_plot(series['a_out_series'], f'{title_prefix}: outer orbit a(t)', 'time [Myr]', 'a_out [pc]', logx=False, logy=False)}
+
+<h3>Figure {figure_offset + 6}: Outer Eccentricity e_out(t)</h3>
+{svg_multi_plot(series['e_out_series'], f'{title_prefix}: outer orbit e(t)', 'time [Myr]', 'e_out', logx=False, logy=False)}
+
+<h3>Figure {figure_offset + 7}: Outer Inclination i_out(t)</h3>
+{svg_multi_plot(series['i_out_series'], f'{title_prefix}: outer orbit inclination i(t)', 'time [Myr]', 'i_out [deg]', logx=False, logy=False)}
+
+<h3>Figure {figure_offset + 8}: Mutual Inclination i_mutual(t)</h3>
+{svg_multi_plot(series['i_mutual_series'], f'{title_prefix}: mutual inclination i_mutual(t)', 'time [Myr]', 'i_mutual [deg]', logx=False, logy=False)}
+"""
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate T4 triple mode comparison HTML report")
     parser.add_argument("--report", default="test/validation/out/report.t4.triple.json")
+    parser.add_argument("--report-control", default="", help="Optional control-group report (e.g. outer a=1.5)")
     parser.add_argument("--scenario", default="t4_tree_hard_from_triple")
     parser.add_argument("--scenario-file", default="")
     parser.add_argument("--output", default="test/validation/out/t4_triple_mode_summary.html")
@@ -449,6 +560,13 @@ def main() -> int:
         args_map = parse_command_args(run["command"])
         status_path = resolve_status_path(run)
         metrics = run.get("metrics", {})
+        log_text = Path(run["output"]).read_text(encoding="utf-8", errors="replace")
+        runtime_steps = parse_runtime_steps(log_text)
+        dt_soft = float(metrics.get("dt_soft", math.nan))
+        if not math.isfinite(dt_soft):
+            dt_soft = runtime_steps["tree_dt"]
+        tree_dt = runtime_steps["tree_dt"]
+        dt_le_tree = (dt_soft <= tree_dt + 1e-15) if (math.isfinite(dt_soft) and math.isfinite(tree_dt)) else False
         n_particle = int(float(metrics.get("max_n_real_glb", 0.0))) if "max_n_real_glb" in metrics else 0
         if n_particle < 2:
             n_particle = 3
@@ -467,7 +585,9 @@ def main() -> int:
                 "r_group": float(metrics.get("r_group", math.nan)),
                 "r_search_group": float(metrics.get("r_search_group", math.nan)),
                 "rout": float(metrics.get("rout", math.nan)),
-                "dt_soft": float(metrics.get("dt_soft", math.nan)),
+                "dt_soft": dt_soft,
+                "tree_dt": tree_dt,
+                "dt_le_tree": dt_le_tree,
                 "max_abs_error_over_total": float(metrics.get("max_abs_error_over_total", 0.0)),
                 "max_abs_error_pp": float(metrics.get("max_abs_error_pp", 0.0)),
                 "max_artificial_particles_glb": int(float(metrics.get("max_artificial_particles_glb", 0.0))),
@@ -496,43 +616,112 @@ def main() -> int:
         "m5_tree_tt",
     ]
     rows = sorted(rows, key=lambda x: order.index(x["run_id"]) if x["run_id"] in order else 999)
-
     log_path0 = Path(rows[0]["log_path"])
     metadata = parse_log_metadata(log_path0)
 
-    energy_total_series: Dict[str, List[Point]] = {}
-    energy_pp_series: Dict[str, List[Point]] = {}
-    a_in_series: Dict[str, List[Point]] = {}
-    e_in_series: Dict[str, List[Point]] = {}
-    i_in_series: Dict[str, List[Point]] = {}
-    a_out_series: Dict[str, List[Point]] = {}
-    e_out_series: Dict[str, List[Point]] = {}
-    i_out_series: Dict[str, List[Point]] = {}
-    i_mutual_series: Dict[str, List[Point]] = {}
-    unit_rows = []
-    for row in rows:
-        label = f"{row['run_id']} | tt={row['tt_switch']}"
-        log_text = Path(row["log_path"]).read_text(encoding="utf-8", errors="replace")
-        energy_total_series[label] = parse_time_metric_series(log_text, "Error/Total")
-        energy_pp_series[label] = parse_time_metric_series(log_text, "Error_PP")
-        orbit = derive_orbital_series_from_status(Path(row["status_path"]), int(row["max_n_real_glb"]))
-        tvals = orbit["time"]
-        a_in_series[label] = list(zip(tvals, orbit["a_in"]))
-        e_in_series[label] = list(zip(tvals, orbit["e_in"]))
-        i_in_series[label] = list(zip(tvals, orbit["i_in"]))
-        a_out_series[label] = list(zip(tvals, orbit["a_out"]))
-        e_out_series[label] = list(zip(tvals, orbit["e_out"]))
-        i_out_series[label] = list(zip(tvals, orbit["i_out"]))
-        i_mutual_series[label] = list(zip(tvals, orbit["i_mutual"]))
-        units = parse_unit_info(log_text)
-        unit_rows.append((row["run_id"], units["input_unit"], units["unit_set"]))
+    series = collect_plot_series(rows)
+    energy_total_series = series["energy_total_series"]
+    energy_pp_series = series["energy_pp_series"]
+    a_in_series = series["a_in_series"]
+    e_in_series = series["e_in_series"]
+    i_in_series = series["i_in_series"]
+    a_out_series = series["a_out_series"]
+    e_out_series = series["e_out_series"]
+    i_out_series = series["i_out_series"]
+    i_mutual_series = series["i_mutual_series"]
+    unit_rows = series["unit_rows"]
 
     run_rows_html = "\n".join(
         "<tr>"
-        f"<td>{html_escape(r['run_id'])}</td><td>{r['tt_switch']}</td><td>{r['tt_nstep']}</td><td>{r['r_group']:.6e}</td><td>{r['r_search_group']:.6e}</td><td>{r['rout']:.6e}</td><td>{r['dt_soft']:.6e}</td><td>{r['t_end']:.6e}</td><td>{r['inner_period_covered']:.2f}</td><td>{r['outer_period_covered']:.2f}</td><td>{r['max_abs_error_over_total']:.6e}</td><td>{r['max_abs_error_pp']:.6e}</td><td>{r['da_rel_max']:.6e}</td><td>{r['de_abs_max']:.6e}</td><td>{r['max_n_real_glb']}</td><td>{r['max_n_all_glb']}</td><td>{r['max_artificial_particles_glb']}</td>"
+        f"<td>{html_escape(r['run_id'])}</td><td>{r['tt_switch']}</td><td>{r['tt_nstep']}</td><td>{r['r_group']:.6e}</td><td>{r['r_search_group']:.6e}</td><td>{r['rout']:.6e}</td><td>{r['dt_soft']:.6e}</td><td>{r['tree_dt']:.6e}</td><td>{'YES' if r['dt_le_tree'] else 'NO'}</td><td>{r['a_in0']:.6e}</td><td>{r['e_in0']:.6e}</td><td>{r['i_in0']:.3f}</td><td>{r['a_out0']:.6e}</td><td>{r['e_out0']:.6e}</td><td>{r['i_out0']:.3f}</td><td>{r['i_mutual0']:.3f}</td><td>{r['t_end']:.6e}</td><td>{r['inner_period_covered']:.2f}</td><td>{r['outer_period_covered']:.2f}</td><td>{r['max_abs_error_over_total']:.6e}</td><td>{r['max_abs_error_pp']:.6e}</td><td>{r['da_rel_max']:.6e}</td><td>{r['de_abs_max']:.6e}</td><td>{r['max_n_real_glb']}</td><td>{r['max_n_all_glb']}</td><td>{r['max_artificial_particles_glb']}</td>"
         "</tr>"
         for r in rows
     )
+
+    base_figures_html = build_orbit_figure_section("Base Group", 1, series)
+    control_compare_html = ""
+    control_figures_html = ""
+    if args.report_control:
+        control_report = load_json(Path(args.report_control))
+        control_runs = control_report.get("runs", [])
+        if isinstance(control_runs, list) and control_runs:
+            control_rows = []
+            for rr in control_runs:
+                rmet = rr.get("metrics", {})
+                status_path = resolve_status_path(rr)
+                log_text = Path(rr["output"]).read_text(encoding="utf-8", errors="replace")
+                runtime_steps = parse_runtime_steps(log_text)
+                dt_soft = float(rmet.get("dt_soft", math.nan))
+                if not math.isfinite(dt_soft):
+                    dt_soft = runtime_steps["tree_dt"]
+                tree_dt = runtime_steps["tree_dt"]
+                dt_le_tree = (dt_soft <= tree_dt + 1e-15) if (math.isfinite(dt_soft) and math.isfinite(tree_dt)) else False
+                control_rows.append(
+                    {
+                        "run_id": rr.get("run_id", ""),
+                        "mode_id": normalize_mode_id(str(rr.get("run_id", ""))),
+                        "tt_switch": int(float(rmet.get("tt_switch", 0.0))),
+                        "tt_nstep": int(float(rmet.get("tt_nstep", 0.0))) if "tt_nstep" in rmet else 0,
+                        "r_group": float(rmet.get("r_group", math.nan)),
+                        "r_search_group": float(rmet.get("r_search_group", math.nan)),
+                        "rout": float(rmet.get("rout", math.nan)),
+                        "dt_soft": dt_soft,
+                        "tree_dt": tree_dt,
+                        "dt_le_tree": dt_le_tree,
+                        "err_tot": float(rmet.get("max_abs_error_over_total", math.nan)),
+                        "err_pp": float(rmet.get("max_abs_error_pp", math.nan)),
+                        "da": float(rmet.get("max_abs_a_frac_drift", rmet.get("max_rel_drift_semi", rmet.get("da_rel_max", math.nan)))),
+                        "de": float(rmet.get("max_abs_e_abs_drift", rmet.get("max_abs_drift_ecc", rmet.get("de_abs_max", math.nan)))),
+                        "max_art": float(rmet.get("max_artificial_particles_glb", math.nan)),
+                        "max_abs_error_over_total": float(rmet.get("max_abs_error_over_total", math.nan)),
+                        "max_abs_error_pp": float(rmet.get("max_abs_error_pp", math.nan)),
+                        "max_artificial_particles_glb": int(float(rmet.get("max_artificial_particles_glb", 0.0))),
+                        "max_n_real_glb": int(float(rmet.get("max_n_real_glb", 0.0))),
+                        "max_n_all_glb": int(float(rmet.get("max_n_all_glb", 0.0))),
+                        "command": rr["command"],
+                        "log_path": rr["output"],
+                        "status_path": str(status_path),
+                    }
+                )
+
+            control_rows = sorted(control_rows, key=lambda x: order.index(x["mode_id"]) if x["mode_id"] in order else 999)
+            control_series = collect_plot_series(control_rows)
+            control_figures_html = build_orbit_figure_section("Control Group (Outer a=1.5)", 10, control_series)
+
+            base_by_mode = {
+                normalize_mode_id(str(r["run_id"])): r
+                for r in rows
+            }
+            ctrl_by_mode = {r["mode_id"]: r for r in control_rows}
+
+            lines = []
+            for mode in ["m1_pure_sdar_ref", "m2_hard_no_tt", "m3_hard_tt", "m4_tree_no_tt", "m5_tree_tt"]:
+                if mode not in base_by_mode or mode not in ctrl_by_mode:
+                    continue
+                b = base_by_mode[mode]
+                c = ctrl_by_mode[mode]
+                lines.append(
+                    "<tr>"
+                    f"<td>{html_escape(mode)}</td>"
+                    f"<td>{b['max_abs_error_over_total']:.6e}</td>"
+                    f"<td>{c['err_tot']:.6e}</td>"
+                    f"<td>{b['max_abs_error_pp']:.6e}</td>"
+                    f"<td>{c['err_pp']:.6e}</td>"
+                    f"<td>{b['da_rel_max']:.6e}</td>"
+                    f"<td>{c['da']:.6e}</td>"
+                    f"<td>{b['de_abs_max']:.6e}</td>"
+                    f"<td>{c['de']:.6e}</td>"
+                    f"<td>{b['max_artificial_particles_glb']}</td>"
+                    f"<td>{c['max_art']:.0f}</td>"
+                    "</tr>"
+                )
+            if lines:
+                control_compare_html = (
+                    "<h2>Control Group Comparison (Outer a=1.5)</h2>"
+                    "<table><tr><th>mode</th><th>base |Error/Total|</th><th>control |Error/Total|</th><th>base |Error_PP|</th><th>control |Error_PP|</th><th>base |Δa/a0|</th><th>control |Δa/a0|</th><th>base |Δe|</th><th>control |Δe|</th><th>base max artificial</th><th>control max artificial</th></tr>"
+                    + "\n".join(lines)
+                    + "</table>"
+                )
 
     command_rows_html = "\n".join(
         "<tr>"
@@ -576,34 +765,9 @@ Five-mode comparison from notebook-style hierarchical triple scales: <code>m1_pu
 Tidal tensor activation is validated by checking <code>N_all(glb)-N_real(glb) &gt; 0</code> when <code>--tt-switch=1</code>.
 </div>
 
-<h2>Figure 1: Total Relative Energy Error vs Time</h2>
-{svg_multi_plot(energy_total_series, 'T4: |Error/Total|(t)', 'time [Myr]', '|Error/Total|', logx=False, logy=True)}
+{base_figures_html}
 
-<h2>Figure 2: Short-range Energy Error (PP) vs Time</h2>
-{svg_multi_plot(energy_pp_series, 'T4: |Error_PP|(t)', 'time [Myr]', '|Error_PP|', logx=False, logy=True)}
-
-<h2>Orbital Evolution: Inner Orbit</h2>
-<h3>Figure 3: Inner Semi-major Axis a_in(t)</h3>
-{svg_multi_plot(a_in_series, 'T4: inner orbit a(t)', 'time [Myr]', 'a_in [pc]', logx=False, logy=False)}
-
-<h3>Figure 4: Inner Eccentricity e_in(t)</h3>
-{svg_multi_plot(e_in_series, 'T4: inner orbit e(t)', 'time [Myr]', 'e_in', logx=False, logy=False)}
-
-<h3>Figure 5: Inner Inclination i_in(t)</h3>
-{svg_multi_plot(i_in_series, 'T4: inner orbit inclination i(t)', 'time [Myr]', 'i_in [deg]', logx=False, logy=False)}
-
-<h2>Orbital Evolution: Outer Orbit</h2>
-<h3>Figure 6: Outer Semi-major Axis a_out(t)</h3>
-{svg_multi_plot(a_out_series, 'T4: outer orbit a(t)', 'time [Myr]', 'a_out [pc]', logx=False, logy=False)}
-
-<h3>Figure 7: Outer Eccentricity e_out(t)</h3>
-{svg_multi_plot(e_out_series, 'T4: outer orbit e(t)', 'time [Myr]', 'e_out', logx=False, logy=False)}
-
-<h3>Figure 8: Outer Inclination i_out(t)</h3>
-{svg_multi_plot(i_out_series, 'T4: outer orbit inclination i(t)', 'time [Myr]', 'i_out [deg]', logx=False, logy=False)}
-
-<h3>Figure 9: Mutual Inclination i_mutual(t)</h3>
-{svg_multi_plot(i_mutual_series, 'T4: mutual inclination i_mutual(t)', 'time [Myr]', 'i_mutual [deg]', logx=False, logy=False)}
+{control_figures_html}
 
 <h2>Unit Consistency Check</h2>
 <table><tr><th>run_id</th><th>Input data unit</th><th>Unit set line</th></tr>
@@ -618,9 +782,11 @@ Tidal tensor activation is validated by checking <code>N_all(glb)-N_real(glb) &g
 </ul>
 
 <h2>Run Summary</h2>
-<table><tr><th>run_id</th><th>tt_switch</th><th>tt_nstep</th><th>r_group</th><th>r_search_group</th><th>r_out</th><th>dt_soft</th><th>t_end</th><th>inner periods</th><th>outer periods</th><th>max |Error/Total|</th><th>max |Error_PP|</th><th>max |Δa/a0| (dynamic)</th><th>max |Δe| (dynamic)</th><th>max N_real</th><th>max N_all</th><th>max artificial</th></tr>
+<table><tr><th>run_id</th><th>tt_switch</th><th>tt_nstep</th><th>r_group</th><th>r_search_group</th><th>r_out</th><th>dt_soft</th><th>tree_dt(auto)</th><th>dt_soft&lt;=tree_dt</th><th>a_in(0)</th><th>e_in(0)</th><th>i_in(0) [deg]</th><th>a_out(0)</th><th>e_out(0)</th><th>i_out(0) [deg]</th><th>i_mutual(0) [deg]</th><th>t_end</th><th>inner periods</th><th>outer periods</th><th>max |Error/Total|</th><th>max |Error_PP|</th><th>max |Δa/a0| (dynamic)</th><th>max |Δe| (dynamic)</th><th>max N_real</th><th>max N_all</th><th>max artificial</th></tr>
 {run_rows_html}
 </table>
+
+{control_compare_html}
 
 <h2>PeTar Version and Executable Info</h2>
 <ul>

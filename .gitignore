@@ -25,3 +25,17 @@ mobse-interface/petar.mobse
 GPATH
 GRTAGS
 GTAGS
+
+# validation generated artifacts
+test/validation/work/
+test/validation/out_t4_64b/
+test/validation/out_t4_autodt/
+test/validation/out_t4_fixed/
+test/validation/out_t4_outer15/
+test/validation/out_t4_triple/
+test/validation/__pycache__/
+tools/analysis/__pycache__/
+
+# generated option snapshots for skill assets
+.github/skills/petar-nbody-simulation/assets/*.options.txt
+.github/skills/petar-nbody-simulation/assets/tool-help/

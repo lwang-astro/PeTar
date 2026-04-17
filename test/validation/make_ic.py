@@ -98,11 +98,10 @@ def build_t3(output: Path) -> None:
     write_rows(output, rows)
 
 
-def build_t4(output: Path) -> None:
+def build_t4_with_outer_a(output: Path, outer_a: float) -> None:
     # Notebook-inspired hierarchical triple scales from "Tidal tensor test: 3-body".
-    # We keep the mass/ecc hierarchy and use a scaled outer semi-major axis so T4 can
-    # cover multiple outer periods in practical runtime.
-    # Outer: (0.01, 1.0) with a=0.15, e=0.01; inner: (0.001, 0.009) with a=1e-3, e=0.9.
+    # Inner: (0.001, 0.009) with a=1e-3, e=0.9; outer: (0.01, 1.0) with e=0.01.
+    # outer_a is configurable to support both the shortened and original-scale controls.
     m1 = 0.001
     m2 = 0.009
     m3 = 1.0
@@ -112,7 +111,7 @@ def build_t4(output: Path) -> None:
     r1_rel, v1_rel, r2_rel, v2_rel = two_body_peri_state(m1, m2, rin_peri, ein, G_MSUN_PC_MYR)
 
     m12 = m1 + m2
-    rout_peri = 0.15 * (1.0 - 0.01)
+    rout_peri = outer_a * (1.0 - 0.01)
     eout = 0.01
     r12, v12, r3, v3 = two_body_peri_state(m12, m3, rout_peri, eout, G_MSUN_PC_MYR)
 
@@ -136,9 +135,19 @@ def build_t4(output: Path) -> None:
     write_rows(output, recentered)
 
 
+def build_t4(output: Path) -> None:
+    # Shortened outer orbit for practical runtime.
+    build_t4_with_outer_a(output, outer_a=0.15)
+
+
+def build_t4_outer15(output: Path) -> None:
+    # Original notebook-scale outer orbit.
+    build_t4_with_outer_a(output, outer_a=1.5)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate deterministic initial conditions for PeTar validation scenarios")
-    parser.add_argument("--case", choices=["t1", "t2", "t3", "t4"], required=True)
+    parser.add_argument("--case", choices=["t1", "t2", "t3", "t4", "t4_outer15"], required=True)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
@@ -151,6 +160,8 @@ def main() -> int:
         build_t3(out)
     elif args.case == "t4":
         build_t4(out)
+    elif args.case == "t4_outer15":
+        build_t4_outer15(out)
     return 0
 
 
