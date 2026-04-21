@@ -32,8 +32,9 @@ public:
     IOParams<double> lambda0; //!< fraction of star's intrinsic luminosity over the Eddington luminosity without merger
     IOParams<double> helium_fraction_disk; //!< helium fraction in the disk, used to calculate the equilbrium mass
     IOParams<double> salpeter_timescale; //!< salpeter timescale, for the star to reach equilbrium if NUMERIC_FLOAT_MAX, no growth
-    IOParams<double> epsilon_helium; //!< helium enrichment efficiency
-    IOParams<double> epsilon_bh; //!< the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH
+    IOParams<double> epsilon_helium; //!< helium enrichment scaling factor, used to calculate helium enrichment timescale, if zero, no helium enrichment
+    IOParams<double> epsilon_bh; //!< the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH, if zero, no accretion growth for BH
+    IOParams<double> epsilon_mdot; //!<  mass-change scaling factor, used to calculate mass-change timescale, if zero, no growth or mass loss
     IOParams<double> gravitational_constant; //!< gravitational constant
     IOParams<double> speed_of_light; //!< speed of light
     IOParams<double> time_step_factor; //!< time step factor for mass change calculation
@@ -52,8 +53,9 @@ public:
                               lambda0(input_par_store, 0.75, "dsm-lambda0", "fraction of star's intrinsic luminosity over the Eddington luminosity without merger"),   
                               helium_fraction_disk(input_par_store, 0.28, "dsm-he-disk", "helium fraction in the disk, used to calculate the equilbrium mass"),
                               salpeter_timescale(input_par_store, 0, "dsm-salpeter-time", "salpeter timescale, for the star to reach equilbrium, if zero, no stellar evolution"),
-                              epsilon_helium(input_par_store, 0.006, "dsm-epsilon-he", "helium enrichment efficiency, used to calculate helium enrichment timescale"),
-                              epsilon_bh(input_par_store, 0.06, "dsm-epsilon-bh", "the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH"),
+                              epsilon_helium(input_par_store, 0.006, "dsm-epsilon-he", "helium enrichment scaling factor, used to calculate helium enrichment timescale; = 0: no helium enrichment"),
+                              epsilon_bh(input_par_store, 0.06, "dsm-epsilon-bh", "the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH; = 0: no accretion growth for BH"),
+                              epsilon_mdot(input_par_store, 1.0, "dsm-epsilon-mdot", "mass-change scaling factor, used to calculate mass-change timescale; = 0: no growth or mass loss"),
                               gravitational_constant(input_par_store, 1.0, "G", "gravitational constant", NULL, false),
                               speed_of_light(input_par_store, 1.0, "dsm-speed-of-light", "speed of light"),
                               time_step_factor(input_par_store, 0.001, "dsm-dt-factor", "time step factor for mass change calculation"),
@@ -82,9 +84,10 @@ public:
             {salpeter_timescale.key, required_argument, &merger_flag, 8},
             {epsilon_helium.key, required_argument, &merger_flag, 9},
             {epsilon_bh.key, required_argument, &merger_flag, 10},
-            {speed_of_light.key, required_argument, &merger_flag, 11},
-            {time_step_factor.key, required_argument, &merger_flag, 12},
-            {redistribute_star_mode.key, required_argument, &merger_flag, 13},
+            {epsilon_mdot.key, required_argument, &merger_flag, 11},
+            {speed_of_light.key, required_argument, &merger_flag, 12},
+            {time_step_factor.key, required_argument, &merger_flag, 13},
+            {redistribute_star_mode.key, required_argument, &merger_flag, 14},
             {"help",      no_argument,       0, 'h'},
             {0,0,0,0}
         };
@@ -153,16 +156,21 @@ public:
                     opt_used+=2;
                     break;
                 case 11:
+                    epsilon_mdot.value = atof(optarg);
+                    if(print_flag) epsilon_mdot.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 12:
                     speed_of_light.value = atof(optarg);
                     if(print_flag) speed_of_light.print(std::cout);
                     opt_used+=2;
                     break;
-                case 12:
+                case 13:
                     time_step_factor.value = atof(optarg);
                     if(print_flag) time_step_factor.print(std::cout);
                     opt_used+=2;
                     break;
-                case 13:
+                case 14:
                     redistribute_star_mode.value = atoi(optarg);
                     if(print_flag) redistribute_star_mode.print(std::cout);
                     opt_used+=2;
@@ -224,8 +232,9 @@ public:
     Float lambda0; //!< fraction of star's intrinsic luminosity over the Eddington luminosity
     Float helium_fraction_disk; //!< helium fraction in the disk, used to calculate the equilbrium mass
     Float salpeter_timescale; //!< Salpeter timescale, for the star to reach equilbrium if NUMERIC_FLOAT_MAX, no growth
-    Float epsilon_helium; //!< helium enrichment efficiency, used to calculate helium enrichment timescale
-    Float epsilon_bh; //!< the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH
+    Float epsilon_helium; //!< helium enrichment scaling factor, used to calculate helium enrichment timescale, if zero, no helium enrichment
+    Float epsilon_bh; //!< the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH, if zero, no accretion growth for BH
+    Float epsilon_mdot; //!< mass-change scaling factor, used to calculate mass-change timescale, if zero, no growth or mass loss
     Float gravitational_constant; //!< gravitational constant
     Float speed_of_light; //!< speed of light
     Float time_step_factor; //!< time step factor for mass change calculation
@@ -243,6 +252,7 @@ public:
                              salpeter_timescale(NUMERIC_FLOAT_MAX),
                              epsilon_helium(0.0),
                              epsilon_bh(0.0), 
+                             epsilon_mdot(0.0),
                              gravitational_constant(0.0),
                              speed_of_light(0.0),
                              time_step_factor(0.0),
@@ -261,8 +271,9 @@ public:
         assert(lambda0>0.0);
         assert(helium_fraction_disk>0.0);
         assert(salpeter_timescale>=0.0);
-        assert(epsilon_helium>0.0 && epsilon_helium<=1.0);
-        assert(epsilon_bh>0.0 && epsilon_bh<=1.0);
+        assert(epsilon_helium>=0.0);
+        assert(epsilon_bh>=0.0);
+        assert(epsilon_mdot>=0.0);
         assert(gravitational_constant>0.0);
         assert(speed_of_light>0.0);
         assert(time_step_factor>0.0);
@@ -283,6 +294,7 @@ public:
              <<"salpeter_timescale : "<<salpeter_timescale<<std::endl
              <<"epsilon_helium : "<<epsilon_helium<<std::endl
              <<"epsilon_bh : "<<epsilon_bh<<std::endl
+             <<"epsilon_mdot : "<<epsilon_mdot<<std::endl
              <<"gravitational_constant : "<<gravitational_constant<<std::endl
              <<"speed_of_light : "<<speed_of_light<<std::endl
              <<"time_step_factor : "<<time_step_factor<<std::endl
@@ -306,6 +318,7 @@ public:
         salpeter_timescale = _input.salpeter_timescale.value;
         epsilon_helium = _input.epsilon_helium.value;
         epsilon_bh = _input.epsilon_bh.value;
+        epsilon_mdot = _input.epsilon_mdot.value;
         gravitational_constant = _input.gravitational_constant.value;
         speed_of_light = _input.speed_of_light.value;
         time_step_factor = _input.time_step_factor.value;
@@ -410,45 +423,21 @@ public:
             return 0; 
         }
 
-        // if type is star, evolve mass to equilbrium mass    
+        // initial return_flag, set -1 for checking whether it is updated in the function
+        int return_flag = -1;
+
+        // if type is star, evolve mass to equilbrium mass
         if (p->star.getType()==StarType::star) {
             Float dt = time - p->star.last_mass_change_time;
+            Float next_dt = time_interrupt_max - time;        
             if (dt>0) {
-                // Helium growth
-                Float helium_change_rate = lambda0 / (epsilon_helium * salpeter_timescale);
-                // avoid too large step that helium fraction change too much in one step, thus use time_step_factor to control the step size
-                dt = std::min(dt, time_step_factor / helium_change_rate);
-                p->star.helium_fraction += helium_change_rate * dt;
-                
-                // Helium fraction should be between 0 and 1, if 1, evolve to BH
-                if (p->star.helium_fraction > 1.0) {
-
-                    // calculate time to reach BH                       
-                    Float time_bh_form = epsilon_helium * salpeter_timescale * (1.0 - p->star.helium_fraction) / lambda0 + time;
-                    p->star.helium_fraction = 1.0;
-                    
-                    // if helium fraction is 1, then star evolve to post-main sequence and eventually become a BH
-                    Float new_mass = initial_equlibrium_mass * std::pow(helium_fraction_disk, 2.5);
-                    p->dm += new_mass - p->mass;
-                    p->mass = new_mass;
-
-                    // set type to BH
-                    p->star.setType(StarType::bh);
-                    p->star.last_mass_change_time = time_bh_form;
-                    p->time_record = time_bh_form;
-                    p->time_interrupt = time;
-                    ASSERT(p->time_interrupt>=p->time_record);
-                    // set Swartzchild radius
-                    p->radius = gravitational_constant * p->mass / (speed_of_light * speed_of_light);
-
-                    return 1;
-                }
-                else {
+                if (epsilon_mdot > 0.0) {
                     // calculate equilbrium mass
                     Float equilbrium_mass = initial_equlibrium_mass * std::pow(helium_fraction_disk / p->star.helium_fraction, 2.5);
 
                     // Eddington accretion rate m'_edd = r/r_grav * m / tau_salpeter = r c^2 / (G tau_salpeter)
-                    Float mdot_eddington = p->radius * speed_of_light * speed_of_light / (gravitational_constant * salpeter_timescale);
+                    // use epsilon_mdot to control the Eddington growth/mass rate
+                    Float mdot_eddington = p->radius * speed_of_light * speed_of_light / (gravitational_constant * epsilon_mdot * salpeter_timescale);
 
                     // factor of star's intrinsic luminosity over the Eddington luminosity
                     Float m_frac_8 = std::pow(p->mass / equilbrium_mass, 8.0);
@@ -459,6 +448,14 @@ public:
                     // wind mass loss rate m'_wind = lambda*(1 - S_feedback)/2 * m'_edd
                     // net mass change rate m'_net = m'_acc - m'_wind
                     Float mdot = (s_fb - lambda0 * (1 - s_fb)/2) * mdot_eddington;
+                    // avoid too large step that mass change too much in one step, thus use time_step_factor to control the step size
+                    if (mdot != 0.0) {
+                        Float dt_mdot = std::abs(std::max(p->mass, stellar_seed_mass)/mdot) * time_step_factor;
+                        dt = std::min(dt, dt_mdot);
+                        // set next time to check mass change
+                        next_dt = dt_mdot;
+                    }
+
                     Float new_mass = p->mass + mdot * dt;
                     ASSERT(new_mass>0.0);
 
@@ -467,29 +464,57 @@ public:
                     p->mass = new_mass;
 
                     p->radius = stellar_radius_scale * std::pow(new_mass, stellar_radius_power_index);
-                    p->star.last_mass_change_time += dt;
-                    
-                    // set next time to check mass change
-                    Float next_dt = p->mass/mdot * time_step_factor;
-                    
-                    // check whether helium fraction reach 1 in next_dt                    
-                    Float next_helium_fraction = p->star.helium_fraction + helium_change_rate * dt;
-                    if (next_helium_fraction >= 1.0) {
-                        next_dt = (1.0 - p->star.helium_fraction) * (epsilon_helium * salpeter_timescale) / lambda0;
-                    }
 
-                    p->time_record = p->star.last_mass_change_time;
-                    p->time_interrupt = std::min(next_dt + p->star.last_mass_change_time, time_interrupt_max);
-
-                    return 1;
+                    return_flag = 1;
                 }
-            }         
+
+                // Helium growth
+                if (epsilon_helium > 0.0) {
+                    Float helium_change_rate = lambda0 / (epsilon_helium * salpeter_timescale);
+                    if (epsilon_mdot == 0.0) {
+                        // avoid too large step that helium fraction change too much in one step, thus use time_step_factor to control the step size
+                        Float dt_he = std::min(dt, time_step_factor / helium_change_rate);
+                        dt = std::min(dt, dt_he);
+                        next_dt = dt_he;
+                    }
+                    p->star.helium_fraction += helium_change_rate * dt;
+
+                    // Helium fraction should be between 0 and 1, if 1, evolve to BH
+                    if (p->star.helium_fraction > 1.0) {
+
+                        // calculate time to reach BH, since helium fraction is already larger than 1, 
+                        // it means the star will evolve to BH in this step, thus calculate the time to reach BH and set next_dt to this time to make sure the mass change and radius change can be applied in the same step
+                        dt += epsilon_helium * salpeter_timescale * (1.0 - p->star.helium_fraction) / lambda0;
+                        Float time_bh_form = p->star.last_mass_change_time + dt;
+                        ASSERT(dt>=0);
+                        next_dt = time - time_bh_form;
+                        p->star.helium_fraction = 1.0;
+                        
+                        // if helium fraction is 1, then star evolve to post-main sequence and eventually become a BH
+                        Float new_mass = initial_equlibrium_mass * std::pow(helium_fraction_disk, 2.5);
+                        p->dm += new_mass - p->mass;
+                        p->mass = new_mass;
+
+                        // set type to BH
+                        p->star.setType(StarType::bh);
+                        // set Swartzchild radius
+                        p->radius = gravitational_constant * p->mass / (speed_of_light * speed_of_light);
+
+                        return_flag = 1;
+
+                    }
+                }
+                p->star.last_mass_change_time += dt;
+                p->time_record = p->star.last_mass_change_time;
+                p->time_interrupt = std::min(next_dt + p->star.last_mass_change_time, time_interrupt_max);
+                ASSERT(p->time_interrupt>=p->time_record);
+            }
         }
 
         // if type is black hole, considering accretion
         if (p->star.getType() == StarType::bh) {
             Float dt = time - p->star.last_mass_change_time;
-            if (dt>0) {
+            if (dt>0 && epsilon_bh > 0.0) {
                 // Eddington accretion 
                 Float mdot = p->mass /(epsilon_bh * salpeter_timescale);
                 dt = std::min(dt, p->mass/mdot * time_step_factor);
@@ -505,15 +530,20 @@ public:
                 p->time_record = p->star.last_mass_change_time;
                 p->time_interrupt = std::min(next_dt + p->star.last_mass_change_time, time_interrupt_max);
 
-                return 1;
+                return_flag = 1;
             }
         }
+        
+        if (return_flag == -1) {
+            p->star.last_mass_change_time = time;
+            p->time_record = time;
+            p->time_interrupt = time_interrupt_max;
 
-        p->star.last_mass_change_time = time;
-        p->time_record = time;
-        p->time_interrupt = time_interrupt_max;
-
-        return 0;
+            return 0;
+        }
+        else {
+            return return_flag;
+        }
     }
 
     //! Set the remnant orbit to the center of mass
