@@ -3470,7 +3470,7 @@ public:
 #endif
 
 #ifdef BSE_BASE
-        hard_manager.initial(hard_parameters, bse_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
+        hard_manager.initial(hard_parameters, bse_parameters, stat, write_style, print_flag, mass_average, r_out, input_parameters.r_in_over_out.value, dt_max_hermite);
 
         // initial stellar evolution for each star
         if (!restart_flag) {
@@ -3481,9 +3481,9 @@ public:
             }
         }
 #elif DISK_STAR_MERGER
-        hard_manager.initial(hard_parameters, disk_star_merger_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
+        hard_manager.initial(hard_parameters, disk_star_merger_parameters, stat, write_style, print_flag, mass_average, r_out, input_parameters.r_in_over_out.value, dt_max_hermite);
 #else
-        hard_manager.initial(hard_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
+        hard_manager.initial(hard_parameters, stat, write_style, print_flag, mass_average, r_out, input_parameters.r_in_over_out.value, dt_max_hermite);
 #endif
 
 #ifdef EXTERNAL_HARD

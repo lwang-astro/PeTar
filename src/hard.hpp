@@ -60,7 +60,9 @@ public:
     IOParams<PS::F64> eps;
     IOParams<PS::F64> r_group;
     IOParams<PS::F64> r_search_group;
-    IOParams<PS::F64> r_acc_offset;
+    IOParams<PS::F64> r_out;
+    IOParams<PS::F64> r_in_over_out;
+    IOParams<PS::F64> acc_offset_sq;
     IOParams<PS::S64> n_step_per_orbit;
     IOParams<PS::S64> tidal_tensor_switcher;
 #ifdef ORBIT_SAMPLING
@@ -118,7 +120,9 @@ public:
                     eps              (input_par_store, 0.0,  "soft-eps", "Softening epsilon"),
                     r_group          (input_par_store,-1.0,  "r-group", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.); = -1: auto-determine by 0.8*r_search_group; = 0: switch off SDAR; > 0: custom criterion value"),
                     r_search_group   (input_par_store,-1.0,  "r-search-group", "The radial criterion for detecting multiple group candidates; = -1: auto-determine by 1.0*r_in; = 0: switch off SDAR; > 0: custom criterion value"),
-                    r_acc_offset     (input_par_store, 0.0,  "hermite-r-acc0", "radius for computing acceleration offset in time step calculation to avoid too small step when weak acceleration exist; = 0: use r_out; > 0: custom offset value"),
+                    r_out            (input_par_store, 0.0,  "r", "Outer changeover radius for hard manager initialization; = 0: use external r_out input", NULL, false),
+                    r_in_over_out    (input_par_store, 0.0,  "r-ratio", "Inner-to-outer changeover radius ratio (r_in/r_out) for hard manager initialization; must be in (0,1) when used", NULL, false),
+                    acc_offset_sq    (input_par_store, -1.0, "hermite-acc-offset-sq", "Square acceleration offset for Hermite time step calculation to avoid too small step when weak acceleration exists; = -1: calculate from mean mass <m> and r_out (G*<m>/r_out^2)^2; = 0: no offset; > 0: custom offset value"),
                     n_step_per_orbit (input_par_store, 4,    "tt-nstep", "Number of steps per slow-down binary orbits (period/dt_soft) for isolated binaries; also the maximum criterion for activating tidal tensor method"),
                     tidal_tensor_switcher(input_par_store, 1,"tt-switch", "Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0: off, 1: on"),
 #ifdef ORBIT_SAMPLING
@@ -185,7 +189,9 @@ public:
             {eps.key,                    required_argument, &hard_flag, 2},
             {r_group.key,                required_argument, &hard_flag, 3},
             {r_search_group.key,         required_argument, &hard_flag, 4},
-            {r_acc_offset.key,           required_argument, &hard_flag, 23},
+            {r_out.key,                  required_argument, &hard_flag, 34},
+            {r_in_over_out.key,          required_argument, &hard_flag, 35},
+            {acc_offset_sq.key,          required_argument, &hard_flag, 23},
             {n_step_per_orbit.key,       required_argument, &hard_flag, 5},
             {tidal_tensor_switcher.key,  required_argument, &hard_flag, 6},
 #ifdef ORBIT_SAMPLING
@@ -266,6 +272,18 @@ public:
                         if(print_flag) r_search_group.print(std::cout);
                         opt_used += 2;
                         //assert(r_search_group.value>=0.0);
+                        break;
+                    case 34:
+                        r_out.value = atof(optarg);
+                        if(print_flag) r_out.print(std::cout);
+                        opt_used += 2;
+                        assert(r_out.value>=0.0);
+                        break;
+                    case 35:
+                        r_in_over_out.value = atof(optarg);
+                        if(print_flag) r_in_over_out.print(std::cout);
+                        opt_used += 2;
+                        assert(r_in_over_out.value>0.0 && r_in_over_out.value<1.0);
                         break;
                     case 5:
                         n_step_per_orbit.value = atof(optarg);
@@ -409,9 +427,10 @@ public:
                         opt_used += 2;
                         break;
                     case 23:
-                        r_acc_offset.value = atof(optarg);
-                        if(print_flag) r_acc_offset.print(std::cout);
+                        acc_offset_sq.value = atof(optarg);
+                        if(print_flag) acc_offset_sq.print(std::cout);
                         opt_used += 2;
+                        assert(acc_offset_sq.value==-1.0 || acc_offset_sq.value>=0.0);
                         break;
 #if (defined HERMITE_PN) || (defined SDAR_PN)
                     case 27:
@@ -586,13 +605,13 @@ public:
     /*!
         @param[in] _input: input parameters
         @param[in] _input_bse: input parameters for BSE (if stellar evolution and bse is switched on)
-        @param[in] _mass_average: average mass of particles
-        @param[in] _r_out_base: outer changeover radius reference
-        @param[in] _r_in_base: inner changeover radius reference
-        @param[in] _dt_soft: softening time step
         @param[in] _stat: global status
         @param[in] _write_style: write style
         @param[in] _print_flag: print flag
+        @param[in] _mass_average: average mass of particles; <=0 means do not override and use only when needed
+        @param[in] _r_out_base: outer changeover radius override; <=0 means use _input.r_out
+        @param[in] _r_in_over_out_base: ratio override (r_in/r_out); <=0 means use _input.r_in_over_out
+        @param[in] _dt_soft: softening time step override for dt_max_hermite fallback; <=0 means no override
     */
     void initial(IOParamsHard& _input, 
 #ifdef STELLAR_EVOLUTION
@@ -602,13 +621,13 @@ public:
                  const IOParamsDiskStarMerger& _input_dsm,
 #endif
 #endif
-                 const PS::F64 _mass_average, 
-                 const PS::F64 _r_out_base,
-                 const PS::F64 _r_in_base, 
-                 const PS::F64 _dt_soft,
                  Status& _stat,
                  const int _write_style, 
-                 const bool _print_flag=false) {
+                 const bool _print_flag=false,
+                 const PS::F64 _mass_average=0.0, 
+                 const PS::F64 _r_out_base=0.0,
+                 const PS::F64 _r_in_over_out_base=0.0,
+                 const PS::F64 _dt_soft=0.0) {
 
         // set system hard paramters
 #ifdef HARD_CHECK_ENERGY
@@ -620,8 +639,14 @@ public:
         setGravitationalConstant(_input.gravitational_constant.value);
         setEpsSq(_input.eps.value*_input.eps.value);
 
-        r_out_base = _r_out_base;
-        r_in_base = _r_in_base;
+        if (_r_out_base>0.0) _input.r_out.value = _r_out_base;
+        if (_r_in_over_out_base>0.0) _input.r_in_over_out.value = _r_in_over_out_base;
+
+        assert(_input.r_out.value>0.0);
+        assert(_input.r_in_over_out.value>0.0 && _input.r_in_over_out.value<1.0);
+
+        r_out_base = _input.r_out.value;
+        r_in_base = r_out_base * _input.r_in_over_out.value;
         
         // if r_search_group is not defined, set to r_in
         if (_input.r_search_group.value==-1.0) {
@@ -658,9 +683,17 @@ public:
 #endif
         h4_manager.step.eta_4th = _input.eta.value;
         h4_manager.step.eta_2nd = _input.eta_init.value;
-        if (_input.r_acc_offset.value==0.0) _input.r_acc_offset.value = _r_out_base;
-        h4_manager.step.calcAcc0OffsetSq(_mass_average, _input.r_acc_offset.value, _input.gravitational_constant.value);
-        if (_input.dt_max_hermite.value==0.0) _input.dt_max_hermite.value = _dt_soft;
+        if (_input.acc_offset_sq.value<0.0) {
+            assert(_mass_average>0.0);
+            h4_manager.step.calcAcc0OffsetSq(_mass_average, r_out_base, _input.gravitational_constant.value);
+        }
+        else {
+            h4_manager.step.acc0_offset_sq = _input.acc_offset_sq.value;
+        }
+        if (_input.dt_max_hermite.value==0.0) {
+            assert(_dt_soft>0.0);
+            _input.dt_max_hermite.value = _dt_soft;
+        }
         setDtRange(_input.dt_max_hermite.value, _input.dt_min_hermite_index.value);
         h4_manager.reinitialize_step_dm_criterion = _input.reinit_dt_dm_crit.value;
         h4_manager.reinitialize_step_de_criterion = _input.reinit_dt_de_crit.value;
