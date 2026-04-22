@@ -3498,6 +3498,7 @@ public:
 
         // check consistence of paramters
         input_parameters.checkParams();
+        hard_manager.checkParams();
 
         // initial hard class and parameters
         system_hard_one_cluster.manager = &hard_manager;

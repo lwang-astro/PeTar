@@ -38,7 +38,7 @@ public:
     bool print_flag;
 
     IOParamsHardDebug(): input_par_store(),
-                         mode(input_par_store, 0, "m", "running mode: 0: evolve system to time_end; 1: stability check"),
+                         mode(input_par_store, 0, "m", "running mode; 0: evolve system to time_end; 1: stability check"),
                          n_crit_ptcl(input_par_store, 0, "n", "if >0, only do integration when particle number matches the given value"),
                          tstart(input_par_store, -1.0, "tstart", "if >0 only do integration when physical time >= tstart"),
                          tend(input_par_store, -1.0, "tend", "if >0 only do integration when physical time < tend"),
@@ -208,11 +208,12 @@ int main(int argc, char **argv){
         return _str.size() >= _suffix.size() && _str.compare(_str.size()-_suffix.size(), _suffix.size(), _suffix) == 0;
     };
 
-    // put default -p parameters    
+    // Inject default -p early so explicit CLI options that appear later keep precedence.
     std::vector<std::string> adjusted_args;
     adjusted_args.reserve(argc + 2);
     bool has_p_option = false;
-    for (int i=0; i<argc; i++) adjusted_args.push_back(argv[i]);
+    adjusted_args.push_back(argv[0]);
+    for (int i=1; i<argc; i++) adjusted_args.push_back(argv[i]);
     for (int i=1; i<argc; i++) {
         if (adjusted_args[i] == "-p" && i+1<argc) {
             has_p_option = true;
@@ -225,8 +226,8 @@ int main(int argc, char **argv){
 #endif
     }
     if (!has_p_option) {
-        adjusted_args.push_back("-p");
-        adjusted_args.push_back(debug_io.fname_par.value);
+        adjusted_args.insert(adjusted_args.begin()+1, "-p");
+        adjusted_args.insert(adjusted_args.begin()+2, debug_io.fname_par.value);
     }
     std::vector<char*> adjusted_argv;
     adjusted_argv.reserve(adjusted_args.size());
@@ -285,11 +286,11 @@ int main(int argc, char **argv){
 #if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
     all_pars.push_back(&rand_io.input_par_store);
 #endif
+#ifdef EXTERNAL_HARD
+    ext_hard_io.appendInputParamStores(all_pars);
 #ifdef GALPY
     all_pars.push_back(&galpy_io.input_par_store);
 #endif
-#ifdef EXTERNAL_HARD
-    ext_hard_io.appendInputParamStores(all_pars);
 #endif
     std::vector<std::string> known_options;
     known_options.push_back("help");
@@ -359,12 +360,9 @@ int main(int argc, char **argv){
 
 #ifdef ADJUST_GROUP_PRINT
     if (hard_manager.h4_manager.group_info_output.isWriteEnabled()) {
-        hard_manager.h4_manager.group_info_output.setup(filename+".group", false, false, WRITE_PRECISION);
+        const bool binary_flag = (hard_io.adjust_group_write_option.value==2);
+        hard_manager.h4_manager.group_info_output.setup(filename+".group", false, binary_flag, WRITE_PRECISION);
     }
-#endif
-
-#ifdef HARD_CHECK_ENERGY
-    // Hard parameters are parsed from ASCII IOParams.
 #endif
 
     hard_manager.checkParams();

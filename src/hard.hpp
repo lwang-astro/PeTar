@@ -771,8 +771,6 @@ public:
             std::cout<<" KDTree minimum particles+groups   = "<<h4_manager.kdtree_n_particles_min<<std::endl;
 #endif                     
         }
-
-        checkParams();
     }    
 
     //! check paramters
