@@ -15,607 +15,497 @@
 #include "status.hpp"
 
 #if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
+#include "../parallel-random/rand_io.hpp"
 #include "../parallel-random/rand_interface.hpp"
 #endif
 
-int main(int argc, char **argv){
-  int mode=0; // 0: integrate to time; 1: times stability
-  PS::F64 tstart = -1;
-  PS::F64 tend = -1;
-  PS::F64 slowdown_factor=0;
-  PS::F64 eta_4th=0;
-  PS::F64 eta_2nd=0;
-  PS::F64 e_err_ar = -1;
-  PS::F64 e_err_hard = 1e-4;
-  PS::S32 dt_min_power = -1;
-  PS::F64 dt_max = -1;
-  PS::F64 ds_scale = -1.0;
-  PS::S32 step_arc_limit = 100000;
-  PS::S32 n_crit_ptcl = 0;
-  PS::S32 n_crit_arti = 0;
-  PS::S32 n_crit_group = 0;
-  PS::S32 istart = -1;
-  PS::S32 iend = -1;
-  PS::S32 sym_order_ar = 0;
-#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE  
-  PS::S32 n_kdtree_min = 0;
-#endif
-  std::string filename="hard_dump";
-  std::string fhardpar="input.par.hard.dump";
-#ifdef STELLAR_EVOLUTION
-#ifdef BSE_BASE
-  int stellar_evolution_option = -1;
-  std::string bse_name = BSEManager::getBSEName();
-  std::string fsse_suffix = BSEManager::getSSEOutputFilenameSuffix();
-  std::string fbse_suffix = BSEManager::getBSEOutputFilenameSuffix();
-
-  std::string fbsepar = "input.par" + fbse_suffix;
-#elif DISK_STAR_MERGER
-  std::string fdsmpar = "input.par.disk_star_merger";
-  int interrupt_detection_option = -1;
-#else
-  int interrupt_detection_option = -1;
-#endif
-#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
-  uint64_t seed = 0;
-#endif
-#endif
-#ifdef EXTERNAL_HARD
-  std::string fexthardpar = "input.par.exthard";
-#ifdef GALPY
-  std::string fgalpypar = "input.par.galpy";
-#endif
-#endif
+class IOParamsHardDebug {
+public:
+    IOParamsContainer input_par_store;
+    IOParams<PS::S64> mode;
+    IOParams<PS::S64> n_crit_ptcl;
+    IOParams<PS::F64> tstart;
+    IOParams<PS::F64> tend;
+    IOParams<PS::S64> istart;
+    IOParams<PS::S64> iend;
+    IOParams<PS::S64> n_crit_group;
+    IOParams<PS::S64> n_crit_arti;
 #ifdef SOFT_PERT
-  bool soft_pert_flag=true;
+    IOParams<PS::S64> soft_perturbation;
 #endif
-#ifdef HERMITE_PN
-  PS::F64 h4_pn_crit = -1;
-#endif
-#ifdef SDAR_PN
-  PS::F64 ar_pn_crit = -1;
-#endif
+    IOParams<std::string> fname_par;
+    IOParams<std::string> fname_dump;
+    bool print_flag;
 
+    IOParamsHardDebug(): input_par_store(),
+                         mode(input_par_store, 0, "m", "running mode: 0: evolve system to time_end; 1: stability check"),
+                         n_crit_ptcl(input_par_store, 0, "n", "if >0, only do integration when particle number matches the given value"),
+                         tstart(input_par_store, -1.0, "tstart", "if >0 only do integration when physical time >= tstart"),
+                         tend(input_par_store, -1.0, "tend", "if >0 only do integration when physical time < tend"),
+                         istart(input_par_store, -1, "istart", "if >0 only do integration when dump index >= istart (counting from 1)"),
+                         iend(input_par_store, -1, "iend", "if >0 only do integration when dump index < iend (counting from 1)"),
+                         n_crit_group(input_par_store, 0, "n-crit-group", "if >0 only do integration when group number matches the given value"),
+                         n_crit_arti(input_par_store, 0, "n-crit-arti", "if >0 only do integration when artificial particle number matches the given value"),
+#ifdef SOFT_PERT
+                         soft_perturbation(input_par_store, 1, "soft-perturbation", "switch of soft perturbation (tidal tensor); 1: enable, 0: suppress"),
+#endif
+                         fname_par(input_par_store, "input.par", "p", "Parameter file prefix; related files are <prefix>.hard/.bse/.dsm/.exthard/.galpy/.rand", NULL, false),
+                         fname_dump(input_par_store, "hard_dump", "dump-filename", "Hard dump data filename", NULL, false),
+                         print_flag(false)
+    {}
 
-  int copt;
-  int option_index;
-  static int opt_flag = -1;
-  static struct option long_options[] = {
-      {"hermite-dt-max",        required_argument, &opt_flag, 0},
-      {"hermite-dt-min-index",  required_argument, &opt_flag, 1},
-      {"ar-max-error",          required_argument, &opt_flag, 2},
-#ifdef HARD_CHECK_ENERGY
-      {"energy-err-hard",       required_argument, &opt_flag, 3},
+    int read(int argc, char* argv[], const int opt_used_pre=0) {
+        static int debug_flag=-1;
+        static struct option long_options[] = {
+            {tstart.key, required_argument, &debug_flag, 0},
+            {tend.key, required_argument, &debug_flag, 1},
+            {istart.key, required_argument, &debug_flag, 2},
+            {iend.key, required_argument, &debug_flag, 3},
+            {n_crit_group.key, required_argument, &debug_flag, 4},
+            {n_crit_arti.key, required_argument, &debug_flag, 5},
+#ifdef SOFT_PERT
+            {soft_perturbation.key, required_argument, &debug_flag, 6},
 #endif
-      {"ar-slowdown-factor",   required_argument, &opt_flag, 4},
-      {"ar-sym-order",      required_argument, &opt_flag, 20},
-      {"ar-max-nstep",     required_argument, &opt_flag, 5},
-      {"ar-ds-scale",     required_argument, &opt_flag, 6},
-      {"hermite-eta",   required_argument, &opt_flag, 7},
-      {"hermite-eta-init",   required_argument, &opt_flag, 8},
-#ifdef STELLAR_EVOLUTION
-#ifdef BSE_BASE
-      {"stellar-evolution", required_argument, &opt_flag, 9},
-#else
-      {"detect-interrupt", required_argument, &opt_flag, 9},
-#endif
-#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
-      {"rand-seed",         required_argument, &opt_flag, 10},
-#endif
-#endif
-      {"tstart",            required_argument, &opt_flag, 11},
-      {"tend",              required_argument, &opt_flag, 12},
-      {"istart",            required_argument, &opt_flag, 13},
-      {"iend",              required_argument, &opt_flag, 14},
-      {"n-crit-group",      required_argument, &opt_flag, 15},
-      {"n-crit-arti",       required_argument, &opt_flag, 16},
-#ifdef HERMITE_PN
-      {"pn-crit-hermite", required_argument, &opt_flag, 17},
-#endif
-#ifdef SDAR_PN
-      {"pn-crit-ar", required_argument, &opt_flag, 18},
-#endif
-#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE  
-      {"kdtree-n-particles-min", required_argument, &opt_flag, 19},
-#endif      
-      {"help",        no_argument, 0, 'h'},        
-      {0,0,0,0}
-  };
+            {"help", no_argument, 0, 'h'},
+            {0,0,0,0}
+        };
 
-  while ((copt = getopt_long(argc, argv, "m:n:b:e:g:p:d:Sh", long_options, &option_index)) != -1)
-    switch (copt) {
-    case 0:
-        switch (opt_flag) {
-        case 0:
-            dt_max = atof(optarg);
-            break;
-        case 1:
-            dt_min_power = atoi(optarg);
-            break;
-        case 2:
-            e_err_ar = atof(optarg);
-            break;
-#ifdef HARD_CHECK_ENERGY
-        case 3:
-            e_err_hard = atof(optarg);
-            break;
+        int opt_used = opt_used_pre;
+        int copt;
+        int option_index;
+        optind = 0;
+        while ((copt = getopt_long(argc, argv,
+                                   "-m:n:p:h",
+                                   long_options, &option_index)) != -1) {
+            switch (copt) {
+            case 0:
+                switch (debug_flag) {
+                case 0:
+                    tstart.value = atof(optarg);
+                    if (print_flag) tstart.print(std::cout);
+                    opt_used += 2;
+                    break;
+                case 1:
+                    tend.value = atof(optarg);
+                    if (print_flag) tend.print(std::cout);
+                    opt_used += 2;
+                    break;
+                case 2:
+                    istart.value = atoi(optarg);
+                    if (print_flag) istart.print(std::cout);
+                    opt_used += 2;
+                    break;
+                case 3:
+                    iend.value = atoi(optarg);
+                    if (print_flag) iend.print(std::cout);
+                    opt_used += 2;
+                    break;
+                case 4:
+                    n_crit_group.value = atoi(optarg);
+                    if (print_flag) n_crit_group.print(std::cout);
+                    opt_used += 2;
+                    break;
+                case 5:
+                    n_crit_arti.value = atoi(optarg);
+                    if (print_flag) n_crit_arti.print(std::cout);
+                    opt_used += 2;
+                    break;
+#ifdef SOFT_PERT
+                case 6:
+                    soft_perturbation.value = atoi(optarg);
+                    if (print_flag) soft_perturbation.print(std::cout);
+                    opt_used += 2;
+                    break;
 #endif
-        case 4:
-            slowdown_factor = atof(optarg);
-            break;
-        case 5:
-            step_arc_limit = atoi(optarg);
-            break;
-        case 6:
-            ds_scale = atof(optarg);
-            break;
-        case 7:
-            eta_4th = atof(optarg);
-            break;
-        case 8:
-            eta_2nd = atof(optarg);
-            break;
-#ifdef STELLAR_EVOLUTION
-#ifdef BSE_BASE
-        case 9:
-            stellar_evolution_option = atoi(optarg);
-            break;
-        case 10:
-            seed = atoi(optarg);
-            break;
-#else
-        case 9:
-            interrupt_detection_option = atoi(optarg);
-            break;
-#endif
-#endif
-        case 11:
-            tstart = atof(optarg);
-            break;
-        case 12:
-            tend = atof(optarg);
-            break;
-        case 13:
-            istart = atoi(optarg);
-            break;
-        case 14:
-            iend = atoi(optarg);
-            break;
-        case 15:
-            n_crit_group = atoi(optarg);
-            break;            
-        case 16:
-            n_crit_arti = atoi(optarg);
-            break;
-#ifdef HERMITE_PN
-        case 17:
-            h4_pn_crit = atof(optarg);
-            break;
-#endif
-#ifdef SDAR_PN
-        case 18:
-            ar_pn_crit = atof(optarg);
-            break;
-#endif
-#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
-        case 19:
-            n_kdtree_min = atoi(optarg);
-            break;
-#endif
-        case 20:
-            sym_order_ar = atoi(optarg);
-            break;
-        default:
-            break;
+                default:
+                    break;
+                }
+                break;
+            case 'm':
+                mode.value = atoi(optarg);
+                if (print_flag) mode.print(std::cout);
+                opt_used += 2;
+                break;
+            case 'n':
+                n_crit_ptcl.value = atoi(optarg);
+                if (print_flag) n_crit_ptcl.print(std::cout);
+                opt_used += 2;
+                break;
+            case 'p':
+                fname_par.value = optarg;
+                if (print_flag) fname_par.print(std::cout);
+                opt_used += 2;
+                break;
+            case 'h':
+                if (print_flag) {
+                    std::cout<<"A tool to integrate a dumped cluster of neighbor particles using particle-particle method (Hermite/SDAR)\n"
+                         <<"Usage: petar.hard.debug [options] [hard parameter filename (defaulted: input.par or input.par.hard)] [dumped data filename (defaulted: hard_dump)]\n"
+                         <<"   dumped data file: Hard dump file from petar simulation\n"
+                         <<"---- Main Options---- :\n"
+                         <<"    -h (--help):  help\n";
+                        input_par_store.printHelp(std::cout, true, false);
+                }
+                return -1;
+            case '?':
+                opt_used += 2;
+                break;
+            default:
+                break;
+            }
         }
-        break;
-    case 'm':
-        mode = atoi(optarg);
-        break;
-    case 'n':
-        n_crit_ptcl = atoi(optarg);
-        break;
-    case 'p':
-        fhardpar = optarg;
-        break;
-#ifdef SOFT_PERT
-    case 'S':
-        soft_pert_flag=false;
-        break;
-#endif
-#ifdef BSE_BASE
-    case 'b':
-        fbsepar = optarg;
-        break;
-#endif
-#ifdef EXTERNAL_HARD
-    case 'e':
-        fexthardpar = optarg;
-        break;
-#ifdef GALPY
-    case 'g':
-        fgalpypar = optarg;
-        break;
-#endif
-#ifdef DISK_STAR_MERGER
-    case 'd':
-        fdsmpar = optarg;
-        break;
-#endif
-#endif
-    case 'h':
-        std::cout<<"A tool to integrate a dumped cluster of neighbor particles using particle-particle method (Hermite/SDAR)\n"
-                 <<"Usage: petar.hard.debug [options] [hard parameter filename (defaulted: input.par.hard)] [dumped data filename (defaulted: hard_dump)]\n"
-                 <<"   dumped data file: Hard dump file from petar simulation\n"
-                 <<"options (default values shown at the end):\n"
-                 <<"    -m [int]:     running mode: 0: evolve system to time_end; 1: stability check: "<<mode<<std::endl
-                 <<"    -n [int]:     if >0, only do integration when particle number matches the given value: "<<n_crit_ptcl<<std::endl
-                 <<"    -p [string]:  hard parameter file name: "<<fhardpar<<std::endl
-#ifdef BSE_BASE
-                 <<"    -b [string]:  bse parameter file name: "<<fbsepar<<std::endl
-#endif
-#ifdef EXTERNAL_HARD
-                 <<"    -e [string]:  external hard parameter file name: "<<fexthardpar<<std::endl
-#ifdef GALPY
-                 <<"    -g [string]:  galpy parameter file name: "<<fgalpypar<<std::endl
-#endif
-#endif                 
-#ifdef SOFT_PERT
-                 <<"    -S:           suppress soft perturbation (tidal tensor)\n"
-#endif
-#ifdef DISK_STAR_MERGER
-                 <<"    -d [string]:  disk star merger parameter file name: "<<fdsmpar<<std::endl
-#endif
-                 <<"    -h (--help):  help"<<std::endl
-                 <<"long options (if no default values, use values from input.par.hard):\n"
-                 <<"        --n-crit-group      [int]:     if >0 only do integration when group number matches the given value: "<<n_crit_group<<std::endl 
-                 <<"        --n-crit-arti       [int]:     if >0 only do integration when artificial particle number matches the given value: "<<n_crit_arti<<std::endl
-                 <<"        --tstart            [double]:  if >0 only do integration when physical time >= tstart: "<<tstart<<std::endl
-                 <<"        --tend              [double]:  if >0 only do integration when physical time < tend: "<<tend<<std::endl
-                 <<"        --istart            [int]:     if >0 only do integration when dump index >= istart (counting from 1): "<<istart<<std::endl
-                 <<"        --iend              [int]:     if >0 only do integration when dump index < iend (counting from 1): "<<iend<<std::endl
-#ifdef HARD_CHECK_ENERGY
-                 <<"        --energy-err-hard   [double]:  hard energy limit\n"
-#endif
-                 <<"        --hermite-dt-max    [double]:  hard time step max (should use together with -d)\n"
-                 <<"        --hermite-dt-min-index [int]:  hard time step min power index (should use together with -D)\n"
-                 <<"        --hermite-eta       [double]:  Eta 4th for hermite \n"
-                 <<"        --hermite-eta-init  [double]:  Eta 2nd for hermite \n"
-                 <<"        --ar-max-error      [double]:  AR energy limit \n"
-                 <<"        --ar-slowdown-factor[double]:  change slowdown factor reference\n"
-                 <<"        --ar-sym-order      [int]:     Symplectic order for AR integrator\n"
-                 <<"        --ar-step-limit     [int]:     AR step count limit\n"
-                 <<"        --ar-step-scale     [double]:  AR step scaling factor\n";
-#ifdef HERMITE_PN
-        std::cout<<"        --pn-crit-hermite   [double]:  Hermite speed criterion to switch on PN terms, in unit of radian \n";
-#endif
-#ifdef SDAR_PN
-        std::cout<<"        --pn-crit-ar        [double]:  AR speed criterion to switch on PN terms, in unit of radian \n";
-#endif
-#ifdef STELLAR_EVOLUTION
-#ifdef BSE_BASE
-        std::cout<<"        --stellar-evolution [int]:     Stellar evolution option: \n";
-#else
-        std::cout<<"        --detect-interrupt  [int]:     interrupt detection option: 0: no interrupt; 1: merge; 2: record binary status\n";
-#endif
-#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
-        std::cout<<"        --rand-seed         [int]:     random seed to generate kick velocity\n";
-#endif
-#endif
-#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
-        std::cout<<"        --kdtree-n-particles-min [int]: Minimum number of particles + groups for building kdtree to speed up neighbor search in Hermite-only neighbor force calculation: "<<n_kdtree_min<<std::endl;
-#endif
-        return 0;
-    default:
-        std::cerr<<"Unknown argument. check '-h' for help.\n";
-        abort();
+
+        opt_used++;
+        if (opt_used < argc) {
+            fname_dump.value = argv[argc-1];
+            if (print_flag) std::cout<<"Reading dump data filename: "<<fname_dump.value<<std::endl;
+        }
+        return opt_used-1;
     }
 
-  if (optind<argc) {
-      filename=argv[argc-1];
-  }
+    bool checkParams() {
+        assert(mode.value==0 || mode.value==1);
+        assert(n_crit_ptcl.value >= 0 && n_crit_group.value >= 0 && n_crit_arti.value >= 0);
+        assert(istart.value==-1 || istart.value>=1);
+        assert(iend.value==-1 || iend.value>=1);
+    #ifdef SOFT_PERT
+        assert(soft_perturbation.value==0 || soft_perturbation.value==1);
+    #endif
+        assert(!(istart.value>0 && iend.value>0 && iend.value<istart.value));
+        assert(!(tstart.value>0 && tend.value>0 && tend.value<=tstart.value));
+        return true;
+    }
 
-  std::cerr<<"Reading dump file:"<<filename<<std::endl;
-  std::cerr<<"Hard manager parameter file:"<<fhardpar<<std::endl;
+};
 
-  std::cout<<std::setprecision(WRITE_PRECISION);
+int main(int argc, char **argv){
+    IOParamsHardDebug debug_io;
+    IOParamsHard hard_io;
+#ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
+    IOParamsBSE bse_io;
+    std::string bse_name = BSEManager::getBSEName();
+    std::string fsse_suffix = BSEManager::getSSEOutputFilenameSuffix();
+    std::string fbse_suffix = BSEManager::getBSEOutputFilenameSuffix();
+#elif DISK_STAR_MERGER
+    IOParamsDiskStarMerger dsm_io;
+#endif
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
+    IOParamsRand rand_io;
+    uint64_t seed_override = 0;
+    bool has_rand_seed_option = false;
+#endif
+#endif
+#ifdef EXTERNAL_HARD
+    IOParamsExternalHard ext_hard_io;
+#ifdef GALPY
+    IOParamsGalpy galpy_io;
+#endif
+#endif
 
-  HardManager hard_manager;
-  FILE* fpar_in;
-  if( (fpar_in = fopen(fhardpar.c_str(),"r")) == NULL) {
-      fprintf(stderr,"Error: Cannot open file %s.\n", fhardpar.c_str());
-      abort();
-  }
-  hard_manager.readBinary(fpar_in);
-  fclose(fpar_in);
+    opterr = 0;
+
+    auto has_suffix = [](const std::string& _str, const std::string& _suffix) {
+        return _str.size() >= _suffix.size() && _str.compare(_str.size()-_suffix.size(), _suffix.size(), _suffix) == 0;
+    };
+
+    // put default -p parameters    
+    std::vector<std::string> adjusted_args;
+    adjusted_args.reserve(argc + 2);
+    bool has_p_option = false;
+    for (int i=0; i<argc; i++) adjusted_args.push_back(argv[i]);
+    for (int i=1; i<argc; i++) {
+        if (adjusted_args[i] == "-p" && i+1<argc) {
+            has_p_option = true;
+            if (has_suffix(adjusted_args[i+1], ".hard")) {
+                adjusted_args[i+1] = adjusted_args[i+1].substr(0, adjusted_args[i+1].size()-5);
+            }
+        }
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
+        if (adjusted_args[i] == "--rand-seed" || adjusted_args[i] == "--rand-seedfile") has_rand_seed_option = true;
+#endif
+    }
+    if (!has_p_option) {
+        adjusted_args.push_back("-p");
+        adjusted_args.push_back(debug_io.fname_par.value);
+    }
+    std::vector<char*> adjusted_argv;
+    adjusted_argv.reserve(adjusted_args.size());
+    for (auto& item: adjusted_args) adjusted_argv.push_back(item.data());
+
+    debug_io.print_flag=true;    
+    const bool help_flag = (debug_io.read(adjusted_args.size(), adjusted_argv.data()) == -1);
+    if (!help_flag) debug_io.checkParams();
+
+    hard_io.print_flag = true;
+    hard_io.read(adjusted_args.size(), adjusted_argv.data(), false);
+#ifdef BSE_BASE
+    bse_io.print_flag = true;
+    bse_io.read(adjusted_args.size(), adjusted_argv.data(), false);
+#endif
+#ifdef DISK_STAR_MERGER
+    dsm_io.print_flag = true;
+    dsm_io.read(adjusted_args.size(), adjusted_argv.data(), false);
+#endif
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
+    rand_io.print_flag = true;
+    rand_io.read(adjusted_args.size(), adjusted_argv.data(), false);
+    if (has_rand_seed_option && rand_io.seed.value > 0) seed_override = static_cast<uint64_t>(rand_io.seed.value);
+#endif
+#ifdef EXTERNAL_HARD
+    ext_hard_io.print_flag = true;
+    ext_hard_io.read(adjusted_args.size(), adjusted_argv.data(), false);
+#ifdef GALPY
+    galpy_io.print_flag = true;
+    galpy_io.read(adjusted_args.size(), adjusted_argv.data(), false);
+#endif
+#endif
+
+    if (help_flag) return 0;
+    
+    const std::string filename = debug_io.fname_dump.value;
+    const std::string fhardpar = debug_io.fname_par.value;
+    const std::string fhardpar_ascii = has_suffix(fhardpar, ".hard") ? fhardpar.substr(0, fhardpar.size()-5) : fhardpar;
+    const std::string fhardpar_report = fhardpar_ascii + ".hard";
+
+    std::cerr<<"Reading dump file:"<<filename<<std::endl;
+    std::cerr<<"Hard manager parameter file:"<<fhardpar_report<<std::endl;
+    std::cerr<<"Hard manager read mode:ascii-only"<<std::endl;
+
+    std::cout<<std::setprecision(WRITE_PRECISION);
+
+    std::vector<IOParamsContainer*> all_pars;
+    all_pars.push_back(&debug_io.input_par_store);
+    all_pars.push_back(&hard_io.input_par_store);
+#ifdef BSE_BASE
+    all_pars.push_back(&bse_io.input_par_store);
+#endif
+#ifdef DISK_STAR_MERGER
+    all_pars.push_back(&dsm_io.input_par_store);
+#endif
+#if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
+    all_pars.push_back(&rand_io.input_par_store);
+#endif
+#ifdef GALPY
+    all_pars.push_back(&galpy_io.input_par_store);
+#endif
+#ifdef EXTERNAL_HARD
+    ext_hard_io.appendInputParamStores(all_pars);
+#endif
+    std::vector<std::string> known_options;
+    known_options.push_back("help");
+    known_options.push_back("h");
+    FindUndefinedOptions(all_pars, static_cast<int>(adjusted_argv.size()), adjusted_argv.data(), &known_options);
+
+    HardManager hard_manager;
+    Status stat;
+    hard_manager.status = &stat;
 
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
-  if (stellar_evolution_option>=0) {
-      hard_manager.ar_manager.interaction.stellar_evolution_option = stellar_evolution_option;
-      if (stellar_evolution_option==0) 
-          hard_manager.ar_manager.interaction.stellar_evolution_write_flag = false;
-  }
-  IOParamsBSE bse_io;
-  std::cerr<<bse_name<<" parameter file:"<<fbsepar<<std::endl;
-  if( (fpar_in = fopen(fbsepar.c_str(),"r")) == NULL) {
-      fprintf(stderr,"Error: Cannot open file %s.\n", fbsepar.c_str());
-      abort();
-  }
-  bse_io.input_par_store.readAscii(fpar_in);
-  fclose(fpar_in);
-  hard_manager.ar_manager.interaction.bse_manager.initial(bse_io);
-
-  if (hard_manager.ar_manager.interaction.stellar_evolution_write_flag) {
-      hard_manager.ar_manager.interaction.fout_sse.open((filename+fsse_suffix).c_str(), std::ofstream::out);
-      hard_manager.ar_manager.interaction.fout_bse.open((filename+fbse_suffix).c_str(), std::ofstream::out);
-      hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
-      hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);      
-  }
+    std::cerr<<bse_name<<" parameters source prefix:"<<fhardpar_ascii<<std::endl;
 #else // BSE_BASE
-  if (interrupt_detection_option>=0) {
-      hard_manager.ar_manager.interaction.interrupt_detection_option = interrupt_detection_option;
-  }
-  if (hard_manager.ar_manager.interaction.interrupt_detection_option>0) {
-      hard_manager.ar_manager.interaction.fout_interrupt.open((filename+".interrupt").c_str(), std::ofstream::out);
-      hard_manager.ar_manager.interaction.fout_interrupt<<std::setprecision(WRITE_PRECISION);
-  }
 #endif 
 #ifdef DISK_STAR_MERGER
-  IOParamsDiskStarMerger disk_star_merger_parameters;
-  std::cerr<<"DSM parameter file:"<<fdsmpar<<std::endl;
-  if( (fpar_in = fopen(fdsmpar.c_str(),"r")) == NULL) {
-      fprintf(stderr,"Error: Cannot open file %s.\n", fdsmpar.c_str());
-      abort();
-  }  
-  disk_star_merger_parameters.input_par_store.readAscii(fpar_in);
-  fclose(fpar_in);
-
-  hard_manager.ar_manager.interaction.disk_star_merger_manager.initial(disk_star_merger_parameters);
+    std::cerr<<"DSM parameters source prefix:"<<fhardpar_ascii<<std::endl;
 #endif
 #endif //STELLAR_EVOLUTION
 
 #ifdef EXTERNAL_HARD
-  IOParamsExternalHard external_hard_parameters;
-  std::cerr<<"External hard parameter file:"<<fexthardpar<<std::endl;
-  if( (fpar_in = fopen(fexthardpar.c_str(),"r")) == NULL) {
-      fprintf(stderr,"Error: Cannot open file %s.\n", fexthardpar.c_str());
-      abort();
-  }
-  external_hard_parameters.readModelParamsAscii(fpar_in);
-  fclose(fpar_in);
+    std::cerr<<"External hard parameters source prefix:"<<fhardpar_ascii<<std::endl;
 
 #ifdef GALPY
-  IOParamsGalpy galpy_parameters;
-  std::cerr<<"Galpy parameter file:"<<fgalpypar<<std::endl;
-  if( (fpar_in = fopen(fgalpypar.c_str(),"r")) == NULL) {
-      fprintf(stderr,"Error: Cannot open file %s.\n", fgalpypar.c_str());
-      abort();
-  }
-  galpy_parameters.input_par_store.readAscii(fpar_in);
-  fclose(fpar_in);
+    std::cerr<<"Galpy parameters source prefix:"<<fhardpar_ascii<<std::endl;
 
 #endif
 #endif        
 
+    // Reconstruct hard manager from IO parameters instead of binary state.
+    // With the latest initial() behavior, acc_offset_sq is persisted after first auto-computation.
+    if (hard_io.acc_offset_sq.value < 0.0) {
+        std::cerr<<"Error: hard_io.acc_offset_sq < 0 in ASCII mode. Please provide a hard parameter file with persisted hermite-acc-offset-sq.\n";
+        abort();
+    }
+
+    if (hard_io.dt_max_hermite.value <=0.0) {
+        std::cerr<<"Error: hard_io.dt_max_hermite <= 0 in ASCII mode. Please provide a hard parameter file with proper hermite-dt-max.\n";
+        abort();
+    }
+    stat.time = 0.0;
+    // bse_manager/disk_star_merger_manager are initialized inside HardManager::initial.
+#ifdef BSE_BASE
+    hard_manager.initial(hard_io, bse_io, stat, 1, false);
+#elif DISK_STAR_MERGER
+    hard_manager.initial(hard_io, dsm_io, stat, 1, false);
+#else
+    hard_manager.initial(hard_io, stat, 1, false);
+#endif
+
+#ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
+    if (hard_manager.ar_manager.interaction.stellar_evolution_write_flag) {
+        hard_manager.ar_manager.interaction.fout_sse.open((filename+fsse_suffix).c_str(), std::ofstream::out);
+        hard_manager.ar_manager.interaction.fout_bse.open((filename+fbse_suffix).c_str(), std::ofstream::out);
+        hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
+        hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);
+    }
+#else
+    if (hard_manager.ar_manager.interaction.interrupt_detection_option>0) {
+        hard_manager.ar_manager.interaction.fout_interrupt.open((filename+".interrupt").c_str(), std::ofstream::out);
+        hard_manager.ar_manager.interaction.fout_interrupt<<std::setprecision(WRITE_PRECISION);
+    }
+#endif
+#endif
+
 
 #ifdef ADJUST_GROUP_PRINT
     if (hard_manager.h4_manager.group_info_output.isWriteEnabled()) {
-            hard_manager.h4_manager.group_info_output.setup(filename+".group", false, false, WRITE_PRECISION);
-  }
+        hard_manager.h4_manager.group_info_output.setup(filename+".group", false, false, WRITE_PRECISION);
+    }
 #endif
 
 #ifdef HARD_CHECK_ENERGY
-  // Set hard energy limit
-  if (e_err_hard>0 ) {
-      std::cerr<<"New hard energy error max: "<<e_err_hard<<std::endl;
-      hard_manager.energy_error_max = e_err_hard;
-  }
+    // Hard parameters are parsed from ASCII IOParams.
 #endif
 
-  Status stat;
-  hard_manager.status = &stat;
+    hard_manager.checkParams();
+    hard_manager.print(std::cerr);
 
-  // set Symplectic order for AR manager
-  if (sym_order_ar!=0) {
-      std::cerr<<"New AR symplectic order: "<<sym_order_ar<<std::endl;
-      hard_manager.ar_manager.step.initialSymplecticCofficients(sym_order_ar);
-  }
-  
-  // Set step limit for ARC sym
-  if (step_arc_limit>0) {
-      std::cerr<<"New AR step count max: "<<step_arc_limit<<std::endl;
-      hard_manager.ar_manager.step_count_max = step_arc_limit;
-  }
+    std::FILE* fp = std::fopen(filename.c_str(),"rb");
+    if (fp==NULL) {
+        std::cerr<<"Error: filename "<<filename<<" cannot be open!\n";
+        abort();
+    }
 
-  // set slowdown factor
-  if(slowdown_factor>0) {
-      std::cerr<<"New slowdown perturbation ratio reference: "<<slowdown_factor<<std::endl;
-      hard_manager.ar_manager.slowdown_pert_ratio_ref = slowdown_factor;
-  }
-
-  // set eta
-  if(eta_4th>0) {
-      std::cerr<<"New eta_4th: "<<eta_4th<<std::endl;
-      hard_manager.h4_manager.step.eta_4th = eta_4th;
-  }
-
-  if(eta_2nd>0) {
-      std::cerr<<"New eta_2nd: "<<eta_2nd<<std::endl;
-      hard_manager.h4_manager.step.eta_2nd = eta_2nd;
-  }
-
-  // time step
-  if(dt_min_power>0&&dt_max>0) {
-      std::cerr<<"New time step max: "<<dt_max<<"   min power index: "<<dt_min_power<<std::endl;
-      hard_manager.setDtRange(dt_max, dt_min_power);
-  }
-
-  if(ds_scale>0) {
-      std::cerr<<"New ds scale: "<<ds_scale<<std::endl;
-      hard_manager.ar_manager.ds_scale = ds_scale;
-  }
-
-  if(e_err_ar>0) {
-      std::cerr<<"New AR relative energy error maximum: "<<e_err_ar<<std::endl;
-      hard_manager.ar_manager.energy_error_relative_max = e_err_ar;
-  }
-
-#ifdef HERMITE_PN
-  if(h4_pn_crit>0) {
-      std::cerr<<"New hermite speed criterion: "<<h4_pn_crit<<std::endl;
-      hard_manager.h4_manager.interaction.pn.speed_criterion = h4_pn_crit;
-  }
-#endif
-#ifdef SDAR_PN
-  if(ar_pn_crit>0) {
-      std::cerr<<"New AR speed criterion: "<<ar_pn_crit<<std::endl;
-      hard_manager.ar_manager.interaction.pn.speed_criterion = ar_pn_crit;
-  }
-#endif
-
-#ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
-  if (n_kdtree_min>0) {
-      std::cerr<<"New KDTree minimum particles+groups for Hermite neighbor force calculation: "<<n_kdtree_min<<std::endl;
-      hard_manager.h4_manager.kdtree_n_particles_min = n_kdtree_min;
-  }
-#endif  
-
-  hard_manager.checkParams();
-  hard_manager.print(std::cerr);
-
-  std::FILE* fp = std::fopen(filename.c_str(),"rb");
-  if (fp==NULL) {
-      std::cerr<<"Error: filename "<<filename<<" cannot be open!\n";
-      abort();
-  }
-
-  HardDump hard_dump;
-  int ncount = 0;
-  
-  while (true) {
-      int c = fgetc(fp);
-      if (c == EOF) break;
-      ungetc(c, fp);
-      hard_dump.readOneClusterBinary(fp);
+    HardDump hard_dump;
+    int ncount = 0;
+    
+    while (true) {
+        int c = fgetc(fp);
+        if (c == EOF) break;
+        ungetc(c, fp);
+        hard_dump.readOneClusterBinary(fp);
 #ifdef EXTERNAL_HARD
-      hard_manager.center.readBinary(fp);
+        hard_manager.center.readBinary(fp);
 #endif
 
 #if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
-      if (seed!=0) hard_dump.rand_manager.initialFromSeed(seed, 0);
+        if (seed_override!=0) hard_dump.rand_manager.initialFromSeed(seed_override, 0);
 #endif
 
-      ncount++;
+        ncount++;
 
-      // skip if particle/group/artificial particle number not match n_crit_**
-      if (n_crit_ptcl>0 && hard_dump.n_ptcl != n_crit_ptcl) continue;
-      if (n_crit_group>0 && hard_dump.n_group != n_crit_group) continue;
-      if (n_crit_arti>0 && hard_dump.n_arti != n_crit_arti) continue;
-      // skip if time is out of range
-      if (tstart>0 && hard_dump.time_offset < tstart) continue;
-      if (tend>0 && hard_dump.time_offset >= tend) continue;
-      // skip if dump index is out of range
-      if (ncount < istart) continue;
-      if (iend>0 && ncount>iend) continue;
+        // skip if particle/group/artificial particle number not match n_crit_**
+        if (debug_io.n_crit_ptcl.value>0 && hard_dump.n_ptcl != debug_io.n_crit_ptcl.value) continue;
+        if (debug_io.n_crit_group.value>0 && hard_dump.n_group != debug_io.n_crit_group.value) continue;
+        if (debug_io.n_crit_arti.value>0 && hard_dump.n_arti != debug_io.n_crit_arti.value) continue;
+        // skip if time is out of range
+        if (debug_io.tstart.value>0 && hard_dump.time_offset < debug_io.tstart.value) continue;
+        if (debug_io.tend.value>0 && hard_dump.time_offset >= debug_io.tend.value) continue;
+        // skip if dump index is out of range
+        if (ncount < debug_io.istart.value) continue;
+        if (debug_io.iend.value>0 && ncount>debug_io.iend.value) continue;
 
-      std::cerr<<"Dump "<<ncount<<"\nTime: "<<hard_dump.time_offset<<std::endl;
+        std::cerr<<"Dump "<<ncount<<"\nTime: "<<hard_dump.time_offset<<std::endl;
 #if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
-      hard_dump.rand_manager.printRandSeeds(std::cerr);
+        hard_dump.rand_manager.printRandSeeds(std::cerr);
 #endif
 
-      stat.time = hard_dump.time_offset;
-      stat.pcm.mass = hard_dump.gcm_mass;
-      stat.pcm.pos = hard_dump.gcm_pos;
-      stat.pcm.vel = hard_dump.gcm_vel;
+        stat.time = hard_dump.time_offset;
+        stat.pcm.mass = hard_dump.gcm_mass;
+        stat.pcm.pos = hard_dump.gcm_pos;
+        stat.pcm.vel = hard_dump.gcm_vel;
 
-      std::cerr<<"Global CM: mass="<<stat.pcm.mass<<" pos="<<stat.pcm.pos<<" vel="<<stat.pcm.vel<<std::endl;  
+        std::cerr<<"Global CM: mass="<<stat.pcm.mass<<" pos="<<stat.pcm.pos<<" vel="<<stat.pcm.vel<<std::endl;  
 
 #ifdef SOFT_PERT
-      if (!soft_pert_flag) {
-          std::cerr<<"Suppress soft perturbation\n";
-          if (hard_dump.n_group>0) {
-              // if no artificial particles, continue
-              if (hard_dump.ptcl_arti_bk.getPointer()!=NULL) {
-                  // set all tidal tensor force to zero
-                  for (int i=0; i<hard_dump.n_group; i++) {
-                      int offset= i*hard_manager.ap_manager.getArtificialParticleN();
-                      auto* pi = &(hard_dump.ptcl_arti_bk[offset]);
-                      //auto* pcm = ap_manager.getCMParticles(pi);
-                      auto* ptt = hard_manager.ap_manager.getTidalTensorParticles(pi);
-                      for (int j=0; j<hard_manager.ap_manager.getTidalTensorParticleN(); j++) {
-                          ptt[j].acc = PS::F64vec(0.0);
-                      }
-                  }
-              }
-          }
-      }
+        if (debug_io.soft_perturbation.value==0) {
+            std::cerr<<"Suppress soft perturbation\n";
+            if (hard_dump.n_group>0) {
+                // if no artificial particles, continue
+                if (hard_dump.ptcl_arti_bk.getPointer()!=NULL) {
+                    // set all tidal tensor force to zero
+                    for (int i=0; i<hard_dump.n_group; i++) {
+                        int offset= i*hard_manager.ap_manager.getArtificialParticleN();
+                        auto* pi = &(hard_dump.ptcl_arti_bk[offset]);
+                        //auto* pcm = ap_manager.getCMParticles(pi);
+                        auto* ptt = hard_manager.ap_manager.getTidalTensorParticles(pi);
+                        for (int j=0; j<hard_manager.ap_manager.getTidalTensorParticleN(); j++) {
+                            ptt[j].acc = PS::F64vec(0.0);
+                        }
+                    }
+                }
+            }
+        }
 #endif
 
-      // running mode
-      if (mode==0) {
-          //SystemHard sys;
-          //sys.manager = &hard_manager;
-          //sys.allocateHardIntegrator();
+        // running mode
+        if (debug_io.mode.value==0) {
+            //SystemHard sys;
+            //sys.manager = &hard_manager;
+            //sys.allocateHardIntegrator();
 
-          // change ARC parameters
-          //sys.driveForMultiClusterImpl(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.time_end, 0);
-
+            // change ARC parameters
+            //sys.driveForMultiClusterImpl(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.time_end, 0);
 
 #ifdef EXTERNAL_HARD
 #ifdef GALPY
-          GalpyManager galpy_manager;
-          std::string galpy_conf_filename = filename+".galpy";
-          galpy_manager.initial(galpy_parameters, stat.time, galpy_conf_filename, true, true, false);
-          hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, galpy_manager, stat, hard_manager.center, hard_manager.center_id, true);
+            GalpyManager galpy_manager;
+            std::string galpy_conf_filename = filename+".galpy";
+            galpy_manager.initial(galpy_io, stat.time, galpy_conf_filename, true, true, false);
+            hard_manager.h4_manager.interaction.ext_force.initial(ext_hard_io, galpy_manager, stat, hard_manager.center, hard_manager.center_id, true);
 #else
-          hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, stat.time, hard_manager.center, hard_manager.center_id, true);
+            hard_manager.h4_manager.interaction.ext_force.initial(ext_hard_io, stat.time, hard_manager.center, hard_manager.center_id, true);
 #endif
 #endif
-          HardIntegrator hard_int;
-          hard_int.output_filename_prefix = filename;
-          auto* ptcl_artificial_ptr =  hard_dump.ptcl_arti_bk.getPointer();
-          if (hard_dump.n_arti == 0) ptcl_artificial_ptr = NULL; // if no artificial particle, avoid reading artificial data from last hard_dump
-          hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, ptcl_artificial_ptr, hard_dump.n_group, hard_dump.n_member_in_group.getPointer(), &hard_manager, hard_dump.time_offset, hard_dump.time_end);
+#ifdef STELLAR_EVOLUTION
+            hard_manager.ar_manager.interaction.time_interrupt_max = hard_dump.time_end; // set max interrupt time to integration end time, to avoid unexpected interruption after integration end time due to inaccurate time offset in hard dump
+#endif
+            HardIntegrator hard_int;
+#ifdef HARD_DEBUG_PRINT
+            hard_int.output_filename_prefix = filename;
+#endif
+            auto* ptcl_artificial_ptr =  hard_dump.ptcl_arti_bk.getPointer();
+            if (hard_dump.n_arti == 0) ptcl_artificial_ptr = NULL; // if no artificial particle, avoid reading artificial data from last hard_dump
+            hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, ptcl_artificial_ptr, hard_dump.n_group, hard_dump.n_member_in_group.getPointer(), &hard_manager, hard_dump.time_offset, hard_dump.time_end);
 
-          hard_int.integrateToTime(hard_dump.time_end);
-          hard_int.driftClusterAndArtificialCMAndWriteBack(hard_dump.time_end, ptcl_artificial_ptr, hard_dump.n_group);
+            hard_int.integrateToTime(hard_dump.time_end);
+            hard_int.driftClusterAndArtificialCMAndWriteBack(hard_dump.time_end, ptcl_artificial_ptr, hard_dump.n_group);
 
-      }
-      // test stability
-      else if (mode==1) {
-          typedef H4::ParticleH4<PtclHard> PtclH4;
+        }
+        // test stability
+        else if (debug_io.mode.value==1) {
+            typedef H4::ParticleH4<PtclHard> PtclH4;
 
-          SearchGroupCandidate<PtclH4> group_candidate;
-          auto* ptcl = hard_dump.ptcl_bk.getPointer();
-          PS::S32 n_ptcl = hard_dump.n_ptcl;
+            SearchGroupCandidate<PtclH4> group_candidate;
+            auto* ptcl = hard_dump.ptcl_bk.getPointer();
+            PS::S32 n_ptcl = hard_dump.n_ptcl;
 
-          group_candidate.searchAndMerge(ptcl, n_ptcl);
+            group_candidate.searchAndMerge(ptcl, n_ptcl);
 
-          PS::ReallocatableArray<PtclH4> ptcl_new;
-          PS::S32 n_group_in_cluster;
+            PS::ReallocatableArray<PtclH4> ptcl_new;
+            PS::S32 n_group_in_cluster;
 
-          SystemHard sys;
-          sys.manager = &hard_manager;
+            SystemHard sys;
+            sys.manager = &hard_manager;
 
-          PS::ReallocatableArray<COMM::BinaryTree<PtclH4,COMM::Binary>> binary_table;
-          PS::ReallocatableArray<SystemHard::GroupIndexInfo> n_member_in_group;
-          PS::ReallocatableArray<PS::S32> i_cluster_changeover_update;
-          // generate artificial particles, stability test is included
-          sys.findGroupsAndCreateArtificialParticlesOneCluster(0, ptcl, n_ptcl, ptcl_new, binary_table, n_group_in_cluster, n_member_in_group, i_cluster_changeover_update, group_candidate, hard_dump.time_end);
-      }
-  } 
+            PS::ReallocatableArray<COMM::BinaryTree<PtclH4,COMM::Binary>> binary_table;
+            PS::ReallocatableArray<SystemHard::GroupIndexInfo> n_member_in_group;
+            PS::ReallocatableArray<PS::S32> i_cluster_changeover_update;
+            // generate artificial particles, stability test is included
+            sys.findGroupsAndCreateArtificialParticlesOneCluster(0, ptcl, n_ptcl, ptcl_new, binary_table, n_group_in_cluster, n_member_in_group, i_cluster_changeover_update, group_candidate, hard_dump.time_end);
+        }
+    } 
 
-  fclose(fp);
+    fclose(fp);
 
 #ifdef STELLAR_EVOLUTION
-  auto& interaction = hard_manager.ar_manager.interaction;
+    auto& interaction = hard_manager.ar_manager.interaction;
 #ifdef BSE_BASE
-  if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
-  if (interaction.fout_bse.is_open()) interaction.fout_bse.close();
+    if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
+    if (interaction.fout_bse.is_open()) interaction.fout_bse.close();
 #else
-  if (interaction.fout_interrupt.is_open()) interaction.fout_interrupt.close();
+    if (interaction.fout_interrupt.is_open()) interaction.fout_interrupt.close();
 #endif
 #endif
-  return 0;
+    return 0;
 }

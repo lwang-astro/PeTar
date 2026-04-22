@@ -686,6 +686,7 @@ public:
         if (_input.acc_offset_sq.value<0.0) {
             assert(_mass_average>0.0);
             h4_manager.step.calcAcc0OffsetSq(_mass_average, r_out_base, _input.gravitational_constant.value);
+            _input.acc_offset_sq.value = h4_manager.step.acc0_offset_sq;
         }
         else {
             h4_manager.step.acc0_offset_sq = _input.acc_offset_sq.value;
