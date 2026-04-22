@@ -8,9 +8,12 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <cstdlib>
 
 #define PRINT_WIDTH 15
 #define PRINT_PRECISION 7
+
+// Use C99 hex float text for exact double round-trip in ASCII parameter files.
 
 // print format parameters
 struct IOParamsPrintHelp{
@@ -22,7 +25,7 @@ struct IOParamsPrintHelp{
         offset_short_key(_offset_short_key), offset_long_key(_offset_long_key), width_key(_width_key) {}
 
     static void printTypeShortNameDescription(std::ostream& os) {
-        os<<"I: 64bit integer; F: 64bit floating; S: string\n";
+        os<<"I: 64bit integer; F: 64bit floating (decimal or C99 hex-float text); S: string\n";
     }
 
     static char getValueTypeShortName(const long long int& value) {
@@ -153,7 +156,9 @@ public:
     }
 
     void writeAscii(FILE *_fout) {
-        for(auto iter = d_f64.begin(); iter!=d_f64.end(); iter++) fprintf(_fout, "%c %s %27.16e\n", IOParamsPrintHelp::getValueTypeShortName(iter->second->value), iter->first, iter->second->value);
+        for(auto iter = d_f64.begin(); iter!=d_f64.end(); iter++) {
+            fprintf(_fout, "%c %s %a\n", IOParamsPrintHelp::getValueTypeShortName(iter->second->value), iter->first, iter->second->value);
+        }
         for(auto iter = d_l64.begin(); iter!=d_l64.end(); iter++) fprintf(_fout, "%c %s %ld\n",     IOParamsPrintHelp::getValueTypeShortName(iter->second->value), iter->first, iter->second->value);
         for(auto iter = d_ll64.begin();iter!=d_ll64.end();iter++) fprintf(_fout, "%c %s %lld\n",    IOParamsPrintHelp::getValueTypeShortName(iter->second->value), iter->first, iter->second->value);
         for(auto iter = d_str.begin(); iter!=d_str.end(); iter++) fprintf(_fout, "%c %s %s\n",      IOParamsPrintHelp::getValueTypeShortName(iter->second->value), iter->first, iter->second->value.c_str());
@@ -174,12 +179,21 @@ public:
             switch (type_id) {
             case 'F':
             {
-                double dtmp;
-                rcount=fscanf(_fin, "%s %lf\n", key_name, &dtmp);
+                char dtmp_str[1024];
+                rcount=fscanf(_fin, "%s %1023s\n", key_name, dtmp_str);
                 if (rcount<2) {
                     std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
                     abort();
                 }
+
+                // strtod accepts both decimal and C99 hex float text (e.g. 0x1.999999999999ap-4).
+                char* end_ptr = nullptr;
+                double dtmp = std::strtod(dtmp_str, &end_ptr);
+                if (end_ptr == dtmp_str || *end_ptr != '\0') {
+                    std::cerr<<"Error: floating parameter value '"<<dtmp_str<<"' for key "<<key_name<<" cannot be parsed.\n";
+                    abort();
+                }
+
                 auto search = d_f64.find(key_name);
                 if (search == d_f64.end())
                     std::cerr<<"Warning: parameter name key "<<key_name<<" is not found!\n";

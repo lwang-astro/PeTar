@@ -136,6 +136,7 @@ The subsequent sections provide detailed explanations of the installation proces
          - [Data Removal after a specified time with `petar.data.clear`](#data-removal-after-a-specified-time)
          - [Data Format Conversion](#data-format-conversion)
          - [Update of Input Parameter File Format](#update-of-input-parameter-file-format)
+         - [Reading Input Parameter Files with `petar.read.par`](#reading-input-parameter-files-with-petarreadpar)
          - [Stellar Evolution Tool based on SSE and BSE](#stellar-evolution-tool-based-on-sse-and-bse)
          - [Galpy tool](#galpy-tool)
     - [References](#references)
@@ -1307,6 +1308,29 @@ petar.update.par [options] [input parameter filename]
 By employing options such as `-p`, `-b`, and `-t`, users can update input parameters from PeTar, SSE/BSE, and Galpy, respectively. Additional options cater to different features selected in the configuration.
 
 Post-update, the new input parameter files are more user-friendly. They consist of three columns defined as (1) the data type of the argument, (2) option names, and (3) argument values. The reference for the first two columns can be accessed using the command `petar -h`. Users can directly modify the argument values in the file. Furthermore, it is not necessary to list all options in the file. Consequently, if new options are introduced in future versions, there is no necessity to update the file again unless existing option names undergo changes.
+
+For floating-point arguments (type `F`), PeTar accepts both decimal text and C99 hex-float text (e.g., `0x1.999999999999ap-4`). Generated parameter files use hex-float representation to ensure exact double-precision round-trip when restarting simulations.
+
+### Reading Input Parameter Files with `petar.read.par`
+
+To make hex-float based parameter files easier to inspect in a text workflow, PeTar provides the `petar.read.par` tool. It reads input parameter files in the three-column `input.par` format and prints floating-point arguments (type `F`) in decimal form, while keeping integer (`I`) and string (`S`) entries unchanged.
+
+The basic syntax is:
+```shell
+petar.read.par [options] [input parameter filename]
+```
+
+For example, to display a parameter file on screen:
+```shell
+petar.read.par input.par
+```
+
+To save the converted decimal view to another file:
+```shell
+petar.read.par -o input.par.decimal input.par
+```
+
+This tool accepts both decimal and C99 hex-float input for type `F`, so it can be used for newly generated parameter files as well as older manually edited files.
 
 ### Stellar Evolution Tool based on SSE and BSE
 

@@ -393,6 +393,7 @@ install_script_tool:
 	install -m 755 tools/format_transfer.py @prefix@/bin/petar.format.transfer.post
 	install -m 755 tools/galev_process.py @prefix@/bin/petar.galev.process
 	install -m 755 tools/external_pot_movie.py @prefix@/bin/petar.external.pot.movie
+	install -m 755 tools/read_par.py @prefix@/bin/petar.read.par
 	install -m 755 tools/petar_select.sh @prefix@/bin/petar.select
 	install -d @prefix@/include/
 	install -d @prefix@/include/petar
