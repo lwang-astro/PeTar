@@ -219,6 +219,22 @@ public:
 
         return opt_used;
     }
+
+    //! write disk star merger parameter sets in ASCII format
+    /*! 
+      @param[in] _filename_prefix: output filename prefix; the actual filename will be _filename_prefix.disk_star_merger
+    */
+    void writeModelParamsAscii(const std::string& _filename_prefix) {
+        std::string fdsm_par = _filename_prefix + ".disk_star_merger";
+        if (print_flag) std::cout << "Save disk star merger parameters to file " << fdsm_par << std::endl;
+        FILE* fpar_out;
+        if ((fpar_out = fopen(fdsm_par.c_str(), "w")) == NULL) {
+            fprintf(stderr, "Error: Cannot open file %s.\n", fdsm_par.c_str());
+            abort();
+        }
+        input_par_store.writeAscii(fpar_out);
+        fclose(fpar_out);
+    }
 };
 
 class DiskStarMergerManager {

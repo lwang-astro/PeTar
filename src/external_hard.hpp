@@ -69,37 +69,34 @@ eturn feature name string
 #endif
     }
 
-        //! write external hard parameter sets in ASCII format
-        /*! 
-          @param[in] _fout: output file pointer
-         */
-    void writeModelParamsAscii(FILE* _fout) {
-        input_par_store.writeAscii(_fout);
+    //! write external hard parameter sets in ASCII format
+    /*! 
+      @param[in] _filename_prefix: output filename prefix; the actual filename will be _filename_prefix.exthard
+    */
+    void writeModelParamsAscii(const std::string& _filename_prefix) {
+        std::string fexthard_par = _filename_prefix + ".exthard";
+        if (print_flag) std::cout << "Save external_hard_parameters to file " << fexthard_par << std::endl;
+        FILE* fpar_out;
+        if ((fpar_out = fopen(fexthard_par.c_str(), "w")) == NULL) {
+            fprintf(stderr, "Error: Cannot open file %s.\n", fexthard_par.c_str());
+            abort();
+        }
+        input_par_store.writeAscii(fpar_out);
+        fclose(fpar_out);
 #ifdef GAS_DRAG
-        gas_drag.input_par_store.writeAscii(_fout);
+        gas_drag.writeModelParamsAscii(_filename_prefix);
 #endif
     }
 
-        //! read external hard parameter sets in ASCII format
-        /*! 
-          @param[in] _fin: input file pointer
-         */
-    void readModelParamsAscii(FILE* _fin) {
-        input_par_store.readAscii(_fin);
-#ifdef GAS_DRAG
-        gas_drag.input_par_store.readAscii(_fin);
-#endif
-    }
-
-        //! reading parameters from GNU option API
-        /*! 
-          @param[in] argc: number of options
-          @param[in] argv: string of options
-          @param[in] print_format_info: if true, print the format information
-          @param[in] opt_used_pre: already used option number from previous reading
-          
-eturn -1 if help is used; else the used number of argv
-         */
+    //! reading parameters from GNU option API
+    /*! 
+        @param[in] argc: number of options
+        @param[in] argv: string of options
+        @param[in] print_format_info: if true, print the format information
+        @param[in] opt_used_pre: already used option number from previous reading
+        
+        @return -1 if help is used; else the used number of argv
+    */
     int read(int argc, char* argv[], const bool print_format_info=true, const int opt_used_pre=0) {
         int opt_used = opt_used_pre;
         static int ext_flag=-1;

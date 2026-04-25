@@ -507,6 +507,22 @@ public:
         if(print_flag) std::cout<<"----- Finish reading hard options -----\n";
         return opt_used-1;
     }
+
+    //! write hard parameter sets in ASCII format
+    /*! 
+      @param[in] _filename_prefix: output filename prefix; the actual filename will be _filename_prefix.hard
+    */
+    void writeModelParamsAscii(const std::string& _filename_prefix) {
+        std::string fhard_par = _filename_prefix + ".hard";
+        if (print_flag) std::cout << "Save hard parameters to file " << fhard_par << std::endl;
+        FILE* fpar_out;
+        if ((fpar_out = fopen(fhard_par.c_str(), "w")) == NULL) {
+            fprintf(stderr, "Error: Cannot open file %s.\n", fhard_par.c_str());
+            abort();
+        }
+        input_par_store.writeAscii(fpar_out);
+        fclose(fpar_out);
+    }
 };
 
 //! Hard integrator parameter manager

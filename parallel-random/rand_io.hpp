@@ -101,4 +101,20 @@ public:
         if(print_flag) std::cout<<"----- Finish reading input options of Random generator -----\n";
         return opt_used;
     }    
+
+    //! write random seed parameter sets in ASCII format
+    /*! 
+      @param[in] _filename_prefix: output filename prefix; the actual filename will be _filename_prefix.rand
+    */
+    void writeModelParamsAscii(const std::string& _filename_prefix) {
+        std::string frand_par = _filename_prefix + ".rand";
+        if (print_flag) std::cout << "Save random seed parameters to file " << frand_par << std::endl;
+        FILE* fpar_out;
+        if ((fpar_out = fopen(frand_par.c_str(), "w")) == NULL) {
+            fprintf(stderr, "Error: Cannot open file %s.\n", frand_par.c_str());
+            abort();
+        }
+        input_par_store.writeAscii(fpar_out);
+        fclose(fpar_out);
+    }
 };

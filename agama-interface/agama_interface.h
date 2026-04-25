@@ -108,6 +108,21 @@ public:
         return opt_used;
     }
 
+    //! write Agama parameter sets in ASCII format
+    /*! 
+      @param[in] _filename_prefix: output filename prefix; the actual filename will be _filename_prefix.agama
+    */
+    void writeModelParamsAscii(const std::string& _filename_prefix) {
+        std::string fagama_par = _filename_prefix + ".agama";
+        if (print_flag) std::cout << "Save Agama parameters to file " << fagama_par << std::endl;
+        FILE* fpar_out;
+        if ((fpar_out = fopen(fagama_par.c_str(), "w")) == NULL) {
+            fprintf(stderr, "Error: Cannot open file %s.\n", fagama_par.c_str());
+            abort();
+        }
+        input_par_store.writeAscii(fpar_out);
+        fclose(fpar_out);
+    }
 };
 
 //! A class to manager the API to Agama

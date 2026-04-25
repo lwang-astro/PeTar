@@ -1232,6 +1232,29 @@ public:
 
         return opt_used;
     }    
+
+    //! write BSE parameter sets in ASCII format
+    /*! 
+      @param[in] _filename_prefix: output filename prefix; the actual filename will be _filename_prefix.bse
+    */
+    void writeModelParamsAscii(const std::string& _filename_prefix) {
+#ifdef BSEBBF
+        std::string fbse_par = _filename_prefix+".bse"; 
+#elif MOBSE
+        std::string fbse_par = _filename_prefix+".mobse"; 
+#elif BSEEMP
+        std::string fbse_par = _filename_prefix+".bseEmp"; 
+#endif
+        if (print_flag) std::cout << "Save BSE parameters to file " << fbse_par << std::endl;
+        FILE* fpar_out;
+        if ((fpar_out = fopen(fbse_par.c_str(), "w")) == NULL) {
+            fprintf(stderr, "Error: Cannot open file %s.\n", fbse_par.c_str());
+            abort();
+        }
+        input_par_store.writeAscii(fpar_out);
+        fclose(fpar_out);
+    }
+
 };
 
 //! SSE/BSE interface manager

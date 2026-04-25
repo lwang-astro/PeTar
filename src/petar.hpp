@@ -379,10 +379,10 @@ public:
             case 'p':
                 fname_par.value = optarg;
                 if(print_flag) {
-                    fname_par.print(std::cout);
+                    std::string fpetar_par = fname_par.value;
                     FILE* fpar_in;
-                    if( (fpar_in = fopen(fname_par.value.c_str(),"r")) == NULL) {
-                        fprintf(stderr,"Error: Cannot open file %s.\n", fname_par.value.c_str());
+                    if( (fpar_in = fopen(fpetar_par.c_str(),"r")) == NULL) {
+                        fprintf(stderr,"Error: Cannot open file %s.\n", fpetar_par.c_str());
                         abort();
                     }
                     input_par_store.readAscii(fpar_in);
@@ -441,6 +441,22 @@ public:
         if(print_flag) std::cout<<"----- Finish reading main options -----\n";
 
         return opt_used-1;
+    }
+
+    //! write PeTar parameter sets in ASCII format
+    /*! 
+      @param[in] _filename_prefix: output filename prefix; the actual filename will be _filename_prefix.petar
+    */
+    void writeModelParamsAscii(const std::string& _filename_prefix) {
+        std::string fpetar_par = _filename_prefix;
+        if (print_flag) std::cout << "Save PeTar parameters to file " << fpetar_par << std::endl;
+        FILE* fpar_out;
+        if ((fpar_out = fopen(fpetar_par.c_str(), "w")) == NULL) {
+            fprintf(stderr, "Error: Cannot open file %s.\n", fpetar_par.c_str());
+            abort();
+        }
+        input_par_store.writeAscii(fpar_out);
+        fclose(fpar_out);
     }
 
     //! check paramters
@@ -3514,109 +3530,37 @@ public:
 
         time_kick = stat.time;
 
-        if(write_style>0&&my_rank==0) {
-            if (print_flag) std::cout<<"-----  Dump parameter files -----"<<std::endl;
+        if(write_style > 0 && my_rank == 0) {
+
+            if (print_flag) std::cout<<"-----  Save parameter files -----"<<std::endl;
+
             // save initial parameters
-            std::string& fname_par = input_parameters.fname_par.value;
-            if (print_flag) std::cout<<"Save input parameters to file "<<fname_par<<std::endl;
-            FILE* fpar_out;
-            if( (fpar_out = fopen(fname_par.c_str(),"w")) == NULL) {
-                fprintf(stderr,"Error: Cannot open file %s.\n", fname_par.c_str());
-                abort();
-            }
-            input_parameters.input_par_store.writeAscii(fpar_out);
-            fclose(fpar_out);
-
+            input_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
             // save hard paramters 
-            std::string fhard_par = input_parameters.fname_par.value + ".hard";
-            if (print_flag) std::cout<<"Save hard parameters to file "<<fhard_par<<std::endl;
-            if( (fpar_out = fopen(fhard_par.c_str(),"w")) == NULL) {
-                fprintf(stderr,"Error: Cannot open file %s.\n", fhard_par.c_str());
-                abort();
-            }
-            hard_parameters.input_par_store.writeAscii(fpar_out);
-            fclose(fpar_out);
-
-            // save hard manager parameters in binary format for petar.hard.debug            
-            fhard_par = input_parameters.fname_par.value + ".hard.dump";            
-            if (print_flag) std::cout<<"Save hard_manager parameters to file "<<fhard_par<<" in BINARY format"<<std::endl;
-            if( (fpar_out = fopen(fhard_par.c_str(),"w")) == NULL) {
-                fprintf(stderr,"Error: Cannot open file %s.\n", fhard_par.c_str());
-                abort();
-            }
-            hard_manager.writeBinary(fpar_out);
-            fclose(fpar_out);
-
+            hard_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
 #ifdef BSE_BASE
             // save bse parameters
-            std::string fbse_par = input_parameters.fname_par.value + fbse_par_suffix;
-            if (print_flag) std::cout<<"Save bse_parameters to file "<<fbse_par<<std::endl;
-            if( (fpar_out = fopen(fbse_par.c_str(),"w")) == NULL) {
-                fprintf(stderr,"Error: Cannot open file %s.\n", fbse_par.c_str());
-                abort();
-            }
-            bse_parameters.input_par_store.writeAscii(fpar_out);
-            fclose(fpar_out);
+            bse_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
 #endif
-
 #if (defined BSE_BASE) || defined(DISK_STAR_MERGER)
-            // save random parameters
-            std::string frand_par = input_parameters.fname_par.value + ".rand";
-            if (print_flag) std::cout<<"Save rand_parameters to file "<<frand_par<<std::endl;
-            if( (fpar_out = fopen(frand_par.c_str(),"w")) == NULL) {
-                fprintf(stderr,"Error: Cannot open file %s.\n", frand_par.c_str());
-                abort();
-            }
-            rand_parameters.input_par_store.writeAscii(fpar_out);
-            fclose(fpar_out);
+            // save random seeds parameters
+            rand_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
 #endif
-
 #ifdef DISK_STAR_MERGER
             // save disk_star_merger parameters
-            std::string fdisk_star_merger_par = input_parameters.fname_par.value + ".disk_star_merger";
-            if (print_flag) std::cout<<"Save disk_star_merger_parameters to file "<<fdisk_star_merger_par<<std::endl;
-            if( (fpar_out = fopen(fdisk_star_merger_par.c_str(),"w")) == NULL) {
-                fprintf(stderr,"Error: Cannot open file %s.\n", fdisk_star_merger_par.c_str());
-                abort();
-            }
-            disk_star_merger_parameters.input_par_store.writeAscii(fpar_out);
-            fclose(fpar_out);
+            disk_star_merger_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
 #endif
-
 #ifdef GALPY
             // save galpy parameters
-            std::string fgalpy_par = input_parameters.fname_par.value + ".galpy";
-            if (print_flag) std::cout<<"Save galpy_parameters to file "<<fgalpy_par<<std::endl;
-            if( (fpar_out = fopen(fgalpy_par.c_str(),"w")) == NULL) {
-                fprintf(stderr,"Error: Cannot open file %s.\n", fgalpy_par.c_str());
-                abort();
-            }
-            galpy_parameters.input_par_store.writeAscii(fpar_out);
-            fclose(fpar_out);
+            galpy_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
 #endif
-
 #ifdef AGAMA
             // save agama parameters
-            std::string fagama_par = input_parameters.fname_par.value + ".agama";
-            if (print_flag) std::cout<<"Save agama_parameters to file "<<fagama_par<<std::endl;
-            if( (fpar_out = fopen(fagama_par.c_str(),"w")) == NULL) {
-                fprintf(stderr,"Error: Cannot open file %s.\n", fagama_par.c_str());
-                abort();
-            }
-            agama_parameters.input_par_store.writeAscii(fpar_out);
-            fclose(fpar_out);
+            agama_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
 #endif
-
 #ifdef EXTERNAL_HARD
             // save exthard parameters
-            std::string fexthard_par = input_parameters.fname_par.value + ".exthard";
-            if (print_flag) std::cout<<"Save external_hard_parameters to file "<<fexthard_par<<std::endl;
-            if( (fpar_out = fopen(fexthard_par.c_str(),"w")) == NULL) {
-                fprintf(stderr,"Error: Cannot open file %s.\n", fexthard_par.c_str());
-                abort();
-            }
-            external_hard_parameters.writeModelParamsAscii(fpar_out);
-            fclose(fpar_out);
+            external_hard_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
 #endif
         }
 

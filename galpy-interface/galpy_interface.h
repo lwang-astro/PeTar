@@ -177,6 +177,22 @@ public:
                      <<"GMscale = "<<GMscale<<"  [galpy gravitational constant * mass unit] / [pc^3/Myr^2]\n";
         }
     }
+
+    //! write Galpy parameter sets in ASCII format
+    /*! 
+      @param[in] _filename_prefix: output filename prefix; the actual filename will be _filename_prefix.galpy
+    */
+    void writeModelParamsAscii(const std::string& _filename_prefix) {
+        std::string fgalpy_par = _filename_prefix + ".galpy";
+        if (print_flag) std::cout << "Save Galpy parameters to file " << fgalpy_par << std::endl;
+        FILE* fpar_out;
+        if ((fpar_out = fopen(fgalpy_par.c_str(), "w")) == NULL) {
+            fprintf(stderr, "Error: Cannot open file %s.\n", fgalpy_par.c_str());
+            abort();
+        }
+        input_par_store.writeAscii(fpar_out);
+        fclose(fpar_out);
+    }
 };
 
 //! FRW cosmological model for calculating scale factor (redshift)
@@ -2084,5 +2100,3 @@ public:
         clear();
     }
 };
-
-

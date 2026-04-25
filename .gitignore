@@ -28,12 +28,10 @@ GTAGS
 
 # validation generated artifacts
 test/validation/work/
-test/validation/out_t4_64b/
-test/validation/out_t4_autodt/
-test/validation/out_t4_fixed/
-test/validation/out_t4_outer15/
-test/validation/out_t4_triple/
+test/validation/out/
 test/validation/__pycache__/
+test/functional/__pycache__/
+test/functional/out/
 tools/analysis/__pycache__/
 
 # generated option snapshots for skill assets

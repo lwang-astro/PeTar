@@ -206,6 +206,22 @@ public:
 
         return opt_used;
     }
+
+    //! write gas drag parameter sets in ASCII format
+    /*! 
+      @param[in] _filename_prefix: output filename prefix; the actual filename will be _filename_prefix.gasdrag
+    */
+    void writeModelParamsAscii(const std::string& _filename_prefix) {
+        std::string fgasdrag_par = _filename_prefix + ".gasdrag";
+        if (print_flag) std::cout << "Save gas_drag_parameters to file " << fgasdrag_par << std::endl;
+        FILE* fpar_out;
+        if ((fpar_out = fopen(fgasdrag_par.c_str(), "w")) == NULL) {
+            fprintf(stderr, "Error: Cannot open file %s.\n", fgasdrag_par.c_str());
+            abort();
+        }
+        input_par_store.writeAscii(fpar_out);
+        fclose(fpar_out);
+    }
 };
 
 class GasDragForce{
