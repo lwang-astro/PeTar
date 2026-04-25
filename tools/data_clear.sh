@@ -330,8 +330,8 @@ do
     esac
 done
 
-suffixes=(esc group sse mosse sseEmp bse mobse bseEmp status prof.rank)
-tindices=(1 3 0 0 0 0 0 0 1 2)
+suffixes=(esc group sse mosse sseEmp bse mobse bseEmp interrupt status prof.rank)
+tindices=(1 3 0 0 0 0 0 0 1 1 2)
 nsuffixes=${#suffixes[@]}
 
 if [ ! -e $fname ] | [ -z $fname ] ; then
@@ -398,10 +398,31 @@ do
     file=$fname.$s
     echo $file'; time column: '$tindex
     if [ $s == 'status' ]; then
-	if [ -e $file ]; then
-	    lst=$file
+	# status output is a single file (no rank splitting)
+	if [ -e "$file" ]; then
+	    lst="$file"
 	else
 	    lst=''
+	fi
+    elif [ $s == 'interrupt' ]; then
+	# interrupt output may appear as a single file or rank-suffixed files
+	lst=''
+	if [ -e "$file" ]; then
+	    lst="$file"
+	fi
+	if [ ! -z $nmpi ]; then
+	    nend=`expr $nmpi - 1`
+	    for ir in `seq 0 $nend`
+	    do
+		if [ -e "$file.$ir" ]; then
+		    lst="$lst $file.$ir"
+		fi
+	    done
+	else
+	    for itf in `ls 2>/dev/null | egrep '^'$file'.[0-9]+$'`
+	    do
+		lst="$lst $itf"
+	    done
 	fi
     elif [ $s == 'group' ]; then
 	if [ ! -z $nmpi ]; then
@@ -454,6 +475,13 @@ do
 		continue
 	    fi
 	    awk -v t=$tcrit -v tsn=$tindex_bse_sn_kick -v ttch=$tindex_bse_type_change -v tdyn=$tindex_bse_dyn_merge '{if ($1=="SN_kick") {if ($tsn<=t) print $LINE} else if ($1=="Dynamic_merge:") {if($tdyn<=t) print $LINE} else if ($ttch<=t) print $LINE;}' $f.bk >$f
+	elif [ $s == 'interrupt' ]; then
+	    if is_binary_file $f.bk; then
+		echo 'Warning! unexpected binary interrupt file '$f' detected; interrupt outputs are treated as ASCII. Keep original backup content.'
+		cp $f.bk $f
+		continue
+	    fi
+	    awk -v t=$tcrit -v ti=$tindex '{if ($ti<=t) print $LINE}' $f.bk >$f
 	elif is_binary_file $f.bk; then
 	    if [ $s == 'status' ]; then
 		echo 'binary '$s': use Python parser to clear by time criterion'
