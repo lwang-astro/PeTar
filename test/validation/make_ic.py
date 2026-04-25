@@ -145,9 +145,54 @@ def build_t4_outer15(output: Path) -> None:
     build_t4_with_outer_a(output, outer_a=1.5)
 
 
+def build_functional_smoke(output: Path) -> None:
+    rows: List[Tuple[float, List[float], List[float]]] = []
+
+    # One deterministic close binary first, so binary-capable runs can use -b 1.
+    m1 = 1.0
+    m2 = 0.8
+    semi = 0.01
+    ecc = 0.2
+    peri = semi * (1.0 - ecc)
+    r1, v1, r2, v2 = two_body_peri_state(m1, m2, peri, ecc, G_MSUN_PC_MYR)
+    rows.append((m1, r1, v1))
+    rows.append((m2, r2, v2))
+
+    # Add a small deterministic background cluster with zero net rotation.
+    background = [
+        (0.6, [0.20, 0.00, 0.00], [0.00, 0.10, 0.00]),
+        (0.7, [-0.20, 0.00, 0.00], [0.00, -0.10, 0.00]),
+        (0.5, [0.00, 0.22, 0.00], [-0.10, 0.00, 0.00]),
+        (0.9, [0.00, -0.22, 0.00], [0.10, 0.00, 0.00]),
+        (0.4, [0.00, 0.00, 0.18], [0.00, 0.05, -0.02]),
+        (0.4, [0.00, 0.00, -0.18], [0.00, -0.05, 0.02]),
+        (0.3, [0.15, 0.15, 0.00], [-0.06, 0.04, 0.00]),
+        (0.3, [-0.15, -0.15, 0.00], [0.06, -0.04, 0.00]),
+        (0.35, [0.15, -0.15, 0.00], [0.05, 0.03, 0.00]),
+        (0.35, [-0.15, 0.15, 0.00], [-0.05, -0.03, 0.00]),
+        (0.25, [0.10, 0.00, 0.12], [0.00, 0.04, 0.03]),
+        (0.25, [-0.10, 0.00, -0.12], [0.00, -0.04, -0.03]),
+        (0.20, [0.00, 0.10, -0.12], [-0.03, 0.00, 0.02]),
+        (0.20, [0.00, -0.10, 0.12], [0.03, 0.00, -0.02]),
+    ]
+    rows.extend(background)
+
+    mass_tot = sum(item[0] for item in rows)
+    com_pos = [sum(item[0] * item[1][k] for item in rows) / mass_tot for k in range(3)]
+    com_vel = [sum(item[0] * item[2][k] for item in rows) / mass_tot for k in range(3)]
+
+    recentered: List[Tuple[float, List[float], List[float]]] = []
+    for mass, pos, vel in rows:
+        pos_new = [pos[k] - com_pos[k] for k in range(3)]
+        vel_new = [vel[k] - com_vel[k] for k in range(3)]
+        recentered.append((mass, pos_new, vel_new))
+
+    write_rows(output, recentered)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate deterministic initial conditions for PeTar validation scenarios")
-    parser.add_argument("--case", choices=["t1", "t2", "t3", "t4", "t4_outer15"], required=True)
+    parser.add_argument("--case", choices=["t1", "t2", "t3", "t4", "t4_outer15", "functional_smoke"], required=True)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
@@ -162,6 +207,8 @@ def main() -> int:
         build_t4(out)
     elif args.case == "t4_outer15":
         build_t4_outer15(out)
+    elif args.case == "functional_smoke":
+        build_functional_smoke(out)
     return 0
 
 

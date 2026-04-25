@@ -1,0 +1,61 @@
+{
+  "build": {
+    "script": "install_petar_major_versions.sh",
+    "strict_env": {
+      "STRICT_BUILD": "1"
+    }
+  },
+  "global": {
+    "optional_select": "mpi,omp,avx512,avx2,gpu",
+    "run_env": {
+      "OMP_NUM_THREADS": "1",
+      "OMP_STACKSIZE": "128M"
+    },
+    "t_end": 0.2,
+    "dt_out": 0.1,
+    "ic_case": "functional_smoke"
+  },
+  "cases": [
+    {
+      "name": "base",
+      "require": "",
+      "init_args": ["-v", "1.0"],
+      "run_args": [],
+      "process_args": ["-G", "0.00449830997959438"],
+      "object_snap_args": ["-i", "base"]
+    },
+    {
+      "name": "bse",
+      "require": "bse",
+      "init_args": ["-s", "bse", "-v", "1.0"],
+      "run_args": ["-b", "1", "--bse-metallicity", "0.02"],
+      "process_args": ["-i", "bse"],
+      "object_snap_args": ["-i", "bse"]
+    },
+    {
+      "name": "galpy",
+      "require": "galpy",
+      "init_args": ["-t", "-c", "8000,0,0,0,220,0", "-v", "1.0"],
+      "run_args": ["--galpy-set", "MWPotential2014"],
+      "process_args": ["-t", "galpy", "--r-escape", "tidal", "-G", "0.00449830997959438"],
+      "object_snap_args": ["-t", "galpy"]
+    },
+    {
+      "name": "bse-galpy",
+      "require": "bse,galpy",
+      "init_args": ["-s", "bse", "-t", "-c", "8000,0,0,0,220,0", "-v", "1.0"],
+      "run_args": ["-b", "1", "--bse-metallicity", "0.02", "--galpy-set", "MWPotential2014"],
+      "process_args": ["-i", "bse", "-t", "galpy", "--r-escape", "tidal"],
+      "object_snap_args": ["-i", "bse", "-t", "galpy"]
+    },
+    {
+      "name": "agama",
+      "require": "agama",
+      "optional": true,
+      "skip_if_unresolved": ["AGAMA_CONF_FILE"],
+      "init_args": ["-t", "-c", "8000,0,0,0,-180,0", "-v", "1.0"],
+      "run_args": ["--agama-conf-file", "{AGAMA_CONF_FILE}"],
+      "process_args": ["-t", "agama", "--r-escape", "tidal", "-G", "0.00449830997959438"]
+    }
+  ]
+}
