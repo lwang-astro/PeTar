@@ -236,8 +236,8 @@ extract_opts() {
         "$bin" -h > "$raw_help" 2>&1 || rc=$?
     fi
 
-    awk '{for(i=1;i<=NF;i++){if($i ~ /^-[A-Za-z0-9]$/ || $i ~ /^--[A-Za-z0-9][A-Za-z0-9-]*$/) print $i}}' "$raw_help" \
-      | sed 's/[,:;]$//' \
+        tr '()' '  ' < "$raw_help" \
+            | awk '{for(i=1;i<=NF;i++){tok=$i; gsub(/[,:;]+$/, "", tok); if(tok ~ /^-[A-Za-z0-9]$/ || tok ~ /^--[A-Za-z0-9][A-Za-z0-9-]*$/) print tok}}' \
       | sort -u > "$out" || true
 
     if [[ ! -s "$out" ]]; then
@@ -262,20 +262,36 @@ declare -A other_path_map=()
 for b in "${discovered_bins[@]}"; do
     bn="$(basename "$b")"
     opt_file="$ASSET_DIR/${bn}.options.txt"
-    extract_opts "$b" "$opt_file"
 
     if is_script_tool "$bn"; then
+        extract_opts "$b" "$opt_file"
         script_files+=("$opt_file")
         script_path_map["$bn"]="$b"
     elif is_helper_tool "$bn"; then
+        # Some hard-debug helpers abort on -h; reuse the corresponding solver help instead.
+        if [[ "$bn" == *".hard.debug" ]]; then
+            base_bn="${bn%.hard.debug}"
+            base_bin="$(command -v "$base_bn" 2>/dev/null || true)"
+            if [[ -n "$base_bin" ]]; then
+                extract_opts "$base_bin" "$opt_file"
+            else
+                : > "$opt_file"
+                echo "Warning: cannot infer options for $bn (missing $base_bn in PATH)" >&2
+            fi
+        else
+            extract_opts "$b" "$opt_file"
+        fi
         helper_files+=("$opt_file")
         helper_path_map["$bn"]="$b"
-    elif is_solver_by_options "$opt_file"; then
-        solver_files+=("$opt_file")
-        solver_path_map["$bn"]="$b"
     else
-        other_files+=("$opt_file")
-        other_path_map["$bn"]="$b"
+        extract_opts "$b" "$opt_file"
+        if is_solver_by_options "$opt_file"; then
+            solver_files+=("$opt_file")
+            solver_path_map["$bn"]="$b"
+        else
+            other_files+=("$opt_file")
+            other_path_map["$bn"]="$b"
+        fi
     fi
 done
 

@@ -212,6 +212,7 @@ int main(int argc, char **argv){
     std::vector<std::string> adjusted_args;
     adjusted_args.reserve(argc + 2);
     bool has_p_option = false;
+    bool has_help_option = false;
     adjusted_args.push_back(argv[0]);
     for (int i=1; i<argc; i++) adjusted_args.push_back(argv[i]);
     for (int i=1; i<argc; i++) {
@@ -221,11 +222,12 @@ int main(int argc, char **argv){
                 adjusted_args[i+1] = adjusted_args[i+1].substr(0, adjusted_args[i+1].size()-5);
             }
         }
+        if (adjusted_args[i] == "-h" || adjusted_args[i] == "--help") has_help_option = true;
 #if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
         if (adjusted_args[i] == "--rand-seed" || adjusted_args[i] == "--rand-seedfile") has_rand_seed_option = true;
 #endif
     }
-    if (!has_p_option) {
+    if (!has_help_option && !has_p_option) {
         adjusted_args.insert(adjusted_args.begin()+1, "-p");
         adjusted_args.insert(adjusted_args.begin()+2, debug_io.fname_par.value);
     }
