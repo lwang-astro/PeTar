@@ -392,8 +392,8 @@ struct StarParameter{
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". s_rcore: stellar core radius [Rsun]\n";        
         counter++;
-        _fout<<std::setw(_offset)<<" "<<counter<<". s_spin: stellar rotation [rad/year]\n";        
-        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<"-"<<counter+2<<". s_spin.[x/y/z]: stellar rotation, BH: dimensionless 3D spin; other[x]: 1D spin [rad/day]\n";        
+        counter+=3;
         _fout<<std::setw(_offset)<<" "<<counter<<". s_epoch: time offset at each evolution stage [Myr]\n";
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". s_time: physical time [Myr]\n";
