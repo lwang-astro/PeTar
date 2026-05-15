@@ -473,7 +473,7 @@ public:
         }
         kfit[0][0] = std::pow(4.0, 2) * (0.68646 - sum - std::sqrt(3.0) / 2.0);
 
-        std::tie (theta1, theta2, theta12) = calcAngle(Chi1, Chi1,L,dr);
+        std::tie (theta1, theta2, theta12) = calcAngle(Chi1, Chi2,L,dr);
 
         // Eq. 18
         if (which.find("corr") != std::string::npos) {
