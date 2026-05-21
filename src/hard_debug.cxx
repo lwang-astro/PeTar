@@ -231,9 +231,16 @@ int main(int argc, char **argv){
         adjusted_args.insert(adjusted_args.begin()+1, "-p");
         adjusted_args.insert(adjusted_args.begin()+2, debug_io.fname_par.value);
     }
+    // Build mutable argv storage compatible with C++11 APIs expecting char*.
+    std::vector<std::vector<char> > adjusted_argbuf;
+    adjusted_argbuf.reserve(adjusted_args.size());
     std::vector<char*> adjusted_argv;
     adjusted_argv.reserve(adjusted_args.size());
-    for (auto& item: adjusted_args) adjusted_argv.push_back(item.data());
+    for (const auto& item: adjusted_args) {
+        adjusted_argbuf.emplace_back(item.begin(), item.end());
+        adjusted_argbuf.back().push_back('\0');
+        adjusted_argv.push_back(adjusted_argbuf.back().data());
+    }
 
     debug_io.print_flag=true;    
     const bool help_flag = (debug_io.read(adjusted_args.size(), adjusted_argv.data()) == -1);
