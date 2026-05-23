@@ -9,10 +9,10 @@ until [[ `echo x$1` == 'x' ]]
 do
     case $1 in
 	-h) shift;
-	    echo 'A tool for organizing output files.';
+	    echo 'A tool for organizing petar output files (for version before 1708e).';
 	    echo 'Functionality:';
 	    echo '    1) Combine separated output data from multiple MPI processes with filename suffixes: '$suffixes' group';
-	    echo '    2) Split SSE/BSE output files into different files with suffixes "type_change", "sn_kick", "gw_kick" and "dynamic_merge".';
+	    echo '    2) Split legacy SSE/BSE output files into different files with suffixes "type_change", "sn_kick", "gw_kick" and "dynamic_merge".';
 	    echo '    3) If the option "-g" is used, combine group files from mutliple MPI processes:';
 	    echo '         [prefix].group.[rank].n[N] -> [output].group.n[N]';
 	    echo '       (works for both ASCII and BINARY group files)';
@@ -42,8 +42,10 @@ fi
 
 echo 'data filename prefix: '$fout
 
-flen=`expr ${#fname} + 2`
-ls|egrep '^'$fname'.[0-9]+$' |sort -n -k 1.${flen} >$fout.snap.lst
+if [ ! -e $fout.snap.lst ]; then
+	flen=`expr ${#fname} + 2`
+	ls|egrep '^'$fname'.[0-9]+$' |sort -n -k 1.${flen} >$fout.snap.lst
+fi
 
 [ ! -z $onlylist ] && exit
 

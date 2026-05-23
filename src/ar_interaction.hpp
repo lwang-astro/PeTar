@@ -2,6 +2,8 @@
 #include <iostream>
 #include <cstdlib>
 #include <cmath>
+#include <cctype>
+#include <sstream>
 #include "Common/Float.h"
 #include "Common/binary_tree.h"
 #include "changeover.hpp"
@@ -37,8 +39,17 @@ public:
     bool stellar_evolution_write_flag;
     BSEManager bse_manager;
     TwoBodyTide tide;
-    std::ofstream fout_sse; ///> log file for SSE event
-    std::ofstream fout_bse; ///> log file for BSE event
+    std::ofstream fout_sse_type_change; ///> SSE type change event log
+    std::ofstream fout_sse_sn_kick; ///> SSE SN kick event log
+    std::ofstream fout_bse_type_change; ///> BSE type change event log
+    std::ofstream fout_bse_sn_kick; ///> BSE SN kick event log
+    std::ofstream fout_bse_gw_kick; ///> BSE GW kick event log
+    std::ofstream fout_bse_dynamic_merge; ///> BSE dynamic merge event log
+    std::ofstream fout_bse_binary_merge; ///> BSE binary merge event log
+    std::ofstream fout_bse_hyperbolic_tde; ///> BSE hyperbolic TDE event log
+    std::ofstream fout_bse_binary_tde; ///> BSE binary TDE event log
+    std::ofstream fout_bse_tide; ///> BSE tide event log
+    std::ofstream fout_bse_gw_tide_merge; ///> BSE GW tide merge event log
 #else
 #ifdef DISK_STAR_MERGER
     DiskStarMergerManager disk_star_merger_manager;
@@ -55,11 +66,16 @@ public:
 
 
 
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), interrupt_detection_option(0)
+        ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), interrupt_detection_option(0)
 #ifdef STELLAR_EVOLUTION
                    , time_interrupt_max(NUMERIC_FLOAT_MAX) 
 #ifdef BSE_BASE
-                   , stellar_evolution_option(0), stellar_evolution_write_flag(false), bse_manager(), tide(), fout_sse(), fout_bse()
+                                     , stellar_evolution_option(0), stellar_evolution_write_flag(false), bse_manager(), tide(),
+                                         fout_sse_type_change(), fout_sse_sn_kick(),
+                                         fout_bse_type_change(), fout_bse_sn_kick(), fout_bse_gw_kick(),
+                                         fout_bse_dynamic_merge(), fout_bse_binary_merge(),
+                                         fout_bse_hyperbolic_tde(), fout_bse_binary_tde(),
+                                         fout_bse_tide(), fout_bse_gw_tide_merge()
 #else
 #ifdef DISK_STAR_MERGER
                    , disk_star_merger_manager()
@@ -72,6 +88,33 @@ public:
 #endif
                    
     {}
+
+#ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
+    std::ofstream& getBSEMergeEventStream(const std::string& label) {
+        if (label=="Dynamic_merge" || label=="Dynamic_merge:") return fout_bse_dynamic_merge;
+        if (label=="Binary_merge" || label=="Binary_merge:") return fout_bse_binary_merge;
+        if (label=="Hyperbolic_TDE" || label=="Hyperbolic_TDE:") return fout_bse_hyperbolic_tde;
+        if (label=="Binary_TDE" || label=="Binary_TDE:") return fout_bse_binary_tde;
+        if (label=="GW_tide_merge" || label=="GW_tide_merge:") return fout_bse_gw_tide_merge;
+        return fout_bse_dynamic_merge;
+    }
+
+    void closeStellarEventStreams() {
+        if (fout_sse_type_change.is_open()) fout_sse_type_change.close();
+        if (fout_sse_sn_kick.is_open()) fout_sse_sn_kick.close();
+        if (fout_bse_type_change.is_open()) fout_bse_type_change.close();
+        if (fout_bse_sn_kick.is_open()) fout_bse_sn_kick.close();
+        if (fout_bse_gw_kick.is_open()) fout_bse_gw_kick.close();
+        if (fout_bse_dynamic_merge.is_open()) fout_bse_dynamic_merge.close();
+        if (fout_bse_binary_merge.is_open()) fout_bse_binary_merge.close();
+        if (fout_bse_hyperbolic_tde.is_open()) fout_bse_hyperbolic_tde.close();
+        if (fout_bse_binary_tde.is_open()) fout_bse_binary_tde.close();
+        if (fout_bse_tide.is_open()) fout_bse_tide.close();
+        if (fout_bse_gw_tide_merge.is_open()) fout_bse_gw_tide_merge.close();
+    }
+#endif
+#endif
 
     //! (Necessary) check whether publicly initialized parameters are correctly set
     /*! \return true: all parmeters are correct. In this case no parameters, return true;
@@ -87,8 +130,18 @@ public:
         ASSERT(time_interrupt_max>=0.0);
 #ifdef BSE_BASE
         ASSERT(stellar_evolution_option==0 || (stellar_evolution_option==1 && bse_manager.checkParams()) || (stellar_evolution_option==2 && bse_manager.checkParams() && tide.checkParams()));
-        ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
-        ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
+    ASSERT(!stellar_evolution_write_flag || (stellar_evolution_write_flag
+           && fout_sse_type_change.is_open()
+           && fout_sse_sn_kick.is_open()
+           && fout_bse_type_change.is_open()
+           && fout_bse_sn_kick.is_open()
+           && fout_bse_gw_kick.is_open()
+           && fout_bse_dynamic_merge.is_open()
+           && fout_bse_binary_merge.is_open()
+           && fout_bse_hyperbolic_tde.is_open()
+           && fout_bse_binary_tde.is_open()
+           && fout_bse_tide.is_open()
+           && fout_bse_gw_tide_merge.is_open()));
 #else
 #ifdef DISK_STAR_MERGER
         ASSERT(disk_star_merger_manager.checkParams());
@@ -855,13 +908,10 @@ public:
             if (stellar_evolution_write_flag&&event_flag>=1) {
 #pragma omp critical
                 {
-                    fout_sse<<"Type_change ";
-                    //bse_manager.printTypeChange(fout_sse, _p.star, output);
-                    fout_sse<<std::setw(WRITE_WIDTH)<<_p.id;
-                    star_bk.printColumnAscii(fout_sse, WRITE_WIDTH);
-                    _p.star.printColumnAscii(fout_sse, WRITE_WIDTH);
-                    //output.printColumnAscii(fout_sse, WRITE_WIDTH);
-                    fout_sse<<std::endl;
+                    fout_sse_type_change<<std::setw(WRITE_WIDTH)<<_p.id;
+                    star_bk.printColumnAscii(fout_sse_type_change, WRITE_WIDTH);
+                    _p.star.printColumnAscii(fout_sse_type_change, WRITE_WIDTH);
+                    fout_sse_type_change<<std::endl;
                 }
             }
 
@@ -875,11 +925,10 @@ public:
                 if (stellar_evolution_write_flag) {
 #pragma omp critical
                     {
-                        fout_sse<<"SN_kick "
-                                <<std::setw(WRITE_WIDTH)<<_p.id
-                                <<std::setw(WRITE_WIDTH)<<dvabs*bse_manager.vscale;
-                        _p.star.printColumnAscii(fout_sse, WRITE_WIDTH);
-                        fout_sse<<std::endl;
+                        fout_sse_sn_kick<<std::setw(WRITE_WIDTH)<<_p.id
+                                        <<std::setw(WRITE_WIDTH)<<dvabs*bse_manager.vscale;
+                        _p.star.printColumnAscii(fout_sse_sn_kick, WRITE_WIDTH);
+                        fout_sse_sn_kick<<std::endl;
                     }
                 }
             }
@@ -1258,12 +1307,25 @@ public:
                                     //if (!(binary_type_init==11&&(binary_type==3||binary_type==11))) {// avoid repeating printing Start Roche and BSS
 #pragma omp critical
                                     {
-                                        bse_manager.printBinaryEventColumnOne(fout_bse, bin_event, i, WRITE_WIDTH);
-                                        fout_bse<<std::setw(WRITE_WIDTH)<<p1->id
-                                                <<std::setw(WRITE_WIDTH)<<p2->id
-                                                <<std::setw(WRITE_WIDTH)<<drdv*bse_manager.rscale*bse_manager.vscale
-                                                <<std::setw(WRITE_WIDTH)<<_bin.r*bse_manager.rscale;
-                                        fout_bse<<std::endl;
+                                        bse_manager.printBinaryEventColumnOne(fout_bse_type_change, bin_event, i, WRITE_WIDTH, false);
+                                        fout_bse_type_change
+                                                            <<std::setw(WRITE_WIDTH)<<p1->id
+                                                            <<std::setw(WRITE_WIDTH)<<p2->id
+                                                            <<std::setw(WRITE_WIDTH)<<drdv*bse_manager.rscale*bse_manager.vscale
+                                                            <<std::setw(WRITE_WIDTH)<<_bin.r*bse_manager.rscale
+                                                            <<std::endl;
+
+                                        // Keep merger records in type_change and additionally
+                                        // dump them to the dedicated binary_merge stream.
+                                        if (bse_manager.isMerger(binary_type)) {
+                                            bse_manager.printBinaryEventColumnOne(fout_bse_binary_merge, bin_event, i, WRITE_WIDTH, false);
+                                            fout_bse_binary_merge
+                                                                <<std::setw(WRITE_WIDTH)<<p1->id
+                                                                <<std::setw(WRITE_WIDTH)<<p2->id
+                                                                <<std::setw(WRITE_WIDTH)<<drdv*bse_manager.rscale*bse_manager.vscale
+                                                                <<std::setw(WRITE_WIDTH)<<_bin.r*bse_manager.rscale
+                                                                <<std::endl;
+                                        }
                                     }
                                 }
                             }
@@ -1304,14 +1366,13 @@ public:
                         if (vkick[k][3]>0) {
 #pragma omp critical 
                             {
-                                if (event_flag==6) fout_bse<<"GW_kick ";
-                                else fout_bse<<"SN_kick ";
-                                fout_bse<<std::setw(WRITE_WIDTH)<<p1->id
-                                        <<std::setw(WRITE_WIDTH)<<p2->id
-                                        <<std::setw(WRITE_WIDTH)<<k+1
-                                        <<std::setw(WRITE_WIDTH)<<vkick[k][3]*bse_manager.vscale;
-                                pk->star.printColumnAscii(fout_bse, WRITE_WIDTH);
-                                fout_bse<<std::endl;
+                                std::ofstream& fout_kick = (event_flag==6) ? fout_bse_gw_kick : fout_bse_sn_kick;
+                                fout_kick<<std::setw(WRITE_WIDTH)<<p1->id
+                                         <<std::setw(WRITE_WIDTH)<<p2->id
+                                         <<std::setw(WRITE_WIDTH)<<k+1
+                                         <<std::setw(WRITE_WIDTH)<<vkick[k][3]*bse_manager.vscale;
+                                pk->star.printColumnAscii(fout_kick, WRITE_WIDTH);
+                                fout_kick<<std::endl;
                             }
                         }
                     }
@@ -1396,24 +1457,24 @@ public:
                         if (stellar_evolution_write_flag&&(p1->mass==0.0||p2->mass==0.0)) {
 #pragma omp critical
                             {
-                                fout_bse<<logmessage<<" "
-                     			        <<std::setw(WRITE_WIDTH)<<p1->id
-                                        <<std::setw(WRITE_WIDTH)<<p2->id
-                                        <<std::setw(WRITE_WIDTH)<<_bin.period*bse_manager.tscale*bse_manager.year_to_day
-                                        <<std::setw(WRITE_WIDTH)<<_bin.semi*bse_manager.rscale
-                                        <<std::setw(WRITE_WIDTH)<<_bin.ecc;
+                            std::ofstream& fout_merge = getBSEMergeEventStream(logmessage);
+                            fout_merge<<std::setw(WRITE_WIDTH)<<p1->id
+                                 <<std::setw(WRITE_WIDTH)<<p2->id
+                                 <<std::setw(WRITE_WIDTH)<<_bin.period*bse_manager.tscale*bse_manager.year_to_day
+                                 <<std::setw(WRITE_WIDTH)<<_bin.semi*bse_manager.rscale
+                                 <<std::setw(WRITE_WIDTH)<<_bin.ecc;
 #ifndef DYNAMIC_MERGER_LESS_OUTPUT
-                                fout_bse<<std::setw(WRITE_WIDTH)<<dr*bse_manager.rscale
-                                        <<std::setw(WRITE_WIDTH)<<t_peri*bse_manager.tscale*bse_manager.year_to_day
-                                        <<std::setw(WRITE_WIDTH)<<sd_factor;
+                            fout_merge<<std::setw(WRITE_WIDTH)<<dr*bse_manager.rscale
+                                 <<std::setw(WRITE_WIDTH)<<t_peri*bse_manager.tscale*bse_manager.year_to_day
+                                 <<std::setw(WRITE_WIDTH)<<sd_factor;
 #endif
                                 // before
-                                p1_star_bk.printColumnAscii(fout_bse, WRITE_WIDTH);
-                                p2_star_bk.printColumnAscii(fout_bse, WRITE_WIDTH);
+                            p1_star_bk.printColumnAscii(fout_merge, WRITE_WIDTH);
+                            p2_star_bk.printColumnAscii(fout_merge, WRITE_WIDTH);
                                 // after
-                                p1->star.printColumnAscii(fout_bse, WRITE_WIDTH);
-                                p2->star.printColumnAscii(fout_bse, WRITE_WIDTH);
-                                fout_bse<<std::endl;
+                            p1->star.printColumnAscii(fout_merge, WRITE_WIDTH);
+                            p2->star.printColumnAscii(fout_merge, WRITE_WIDTH);
+                            fout_merge<<std::endl;
 
                                 std::string dump_name = "dump_" + logmessage;
                                 DATADUMP(dump_name.c_str());
@@ -1735,25 +1796,24 @@ public:
 
 #pragma omp critical
                                 {
-                                    fout_bse<<"Tide "
-                                            <<std::setw(WRITE_WIDTH)<<_bin_interrupt.time_now
-                                            <<std::setw(WRITE_WIDTH)<<p1->id
-                                            <<std::setw(WRITE_WIDTH)<<p2->id
-                                            <<std::setw(WRITE_WIDTH)<<pair_id1
-                                            <<std::setw(WRITE_WIDTH)<<pair_id2
-                                            <<std::setw(WRITE_WIDTH)<<binary_type_p1
-                                            <<std::setw(WRITE_WIDTH)<<binary_type_p2
-                                            <<std::setw(WRITE_WIDTH)<<poly_type1
-                                            <<std::setw(WRITE_WIDTH)<<poly_type2
-                                            <<std::setw(WRITE_WIDTH)<<drdv
-                                            <<std::setw(WRITE_WIDTH)<<semi //old
-                                            <<std::setw(WRITE_WIDTH)<<ecc  //old
-                                            <<std::setw(WRITE_WIDTH)<<Etid
-                                            <<std::setw(WRITE_WIDTH)<<Ltid;
-                                    _bin.BinarySlowDown::printColumnAscii(fout_bse, WRITE_WIDTH);
-                                            p1->star.printColumnAscii(fout_bse, WRITE_WIDTH);
-                                            p2->star.printColumnAscii(fout_bse, WRITE_WIDTH);
-                                    fout_bse<<std::endl;
+                    fout_bse_tide<<std::setw(WRITE_WIDTH)<<_bin_interrupt.time_now
+                         <<std::setw(WRITE_WIDTH)<<p1->id
+                         <<std::setw(WRITE_WIDTH)<<p2->id
+                         <<std::setw(WRITE_WIDTH)<<pair_id1
+                         <<std::setw(WRITE_WIDTH)<<pair_id2
+                         <<std::setw(WRITE_WIDTH)<<binary_type_p1
+                         <<std::setw(WRITE_WIDTH)<<binary_type_p2
+                         <<std::setw(WRITE_WIDTH)<<poly_type1
+                         <<std::setw(WRITE_WIDTH)<<poly_type2
+                         <<std::setw(WRITE_WIDTH)<<drdv
+                         <<std::setw(WRITE_WIDTH)<<semi //old
+                         <<std::setw(WRITE_WIDTH)<<ecc  //old
+                         <<std::setw(WRITE_WIDTH)<<Etid
+                         <<std::setw(WRITE_WIDTH)<<Ltid;
+                    _bin.BinarySlowDown::printColumnAscii(fout_bse_tide, WRITE_WIDTH);
+                        p1->star.printColumnAscii(fout_bse_tide, WRITE_WIDTH);
+                        p2->star.printColumnAscii(fout_bse_tide, WRITE_WIDTH);
+                    fout_bse_tide<<std::endl;
                                 }
 
                             }

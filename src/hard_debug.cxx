@@ -353,10 +353,33 @@ int main(int argc, char **argv){
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
     if (hard_manager.ar_manager.interaction.stellar_evolution_write_flag) {
-        hard_manager.ar_manager.interaction.fout_sse.open((filename+fsse_suffix).c_str(), std::ofstream::out);
-        hard_manager.ar_manager.interaction.fout_bse.open((filename+fbse_suffix).c_str(), std::ofstream::out);
-        hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
-        hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);
+        auto& interaction = hard_manager.ar_manager.interaction;
+        interaction.closeStellarEventStreams();
+
+        interaction.fout_sse_type_change.open((filename+fsse_suffix+".type_change").c_str(), std::ofstream::out);
+        interaction.fout_sse_sn_kick.open((filename+fsse_suffix+".sn_kick").c_str(), std::ofstream::out);
+
+        interaction.fout_bse_type_change.open((filename+fbse_suffix+".type_change").c_str(), std::ofstream::out);
+        interaction.fout_bse_sn_kick.open((filename+fbse_suffix+".sn_kick").c_str(), std::ofstream::out);
+        interaction.fout_bse_gw_kick.open((filename+fbse_suffix+".gw_kick").c_str(), std::ofstream::out);
+        interaction.fout_bse_dynamic_merge.open((filename+fbse_suffix+".dynamic_merge").c_str(), std::ofstream::out);
+        interaction.fout_bse_binary_merge.open((filename+fbse_suffix+".binary_merge").c_str(), std::ofstream::out);
+        interaction.fout_bse_hyperbolic_tde.open((filename+fbse_suffix+".hyperbolic_tde").c_str(), std::ofstream::out);
+        interaction.fout_bse_binary_tde.open((filename+fbse_suffix+".binary_tde").c_str(), std::ofstream::out);
+        interaction.fout_bse_tide.open((filename+fbse_suffix+".tide").c_str(), std::ofstream::out);
+        interaction.fout_bse_gw_tide_merge.open((filename+fbse_suffix+".gw_tide_merge").c_str(), std::ofstream::out);
+
+        interaction.fout_sse_type_change<<std::setprecision(WRITE_PRECISION);
+        interaction.fout_sse_sn_kick<<std::setprecision(WRITE_PRECISION);
+        interaction.fout_bse_type_change<<std::setprecision(WRITE_PRECISION);
+        interaction.fout_bse_sn_kick<<std::setprecision(WRITE_PRECISION);
+        interaction.fout_bse_gw_kick<<std::setprecision(WRITE_PRECISION);
+        interaction.fout_bse_dynamic_merge<<std::setprecision(WRITE_PRECISION);
+        interaction.fout_bse_binary_merge<<std::setprecision(WRITE_PRECISION);
+        interaction.fout_bse_hyperbolic_tde<<std::setprecision(WRITE_PRECISION);
+        interaction.fout_bse_binary_tde<<std::setprecision(WRITE_PRECISION);
+        interaction.fout_bse_tide<<std::setprecision(WRITE_PRECISION);
+        interaction.fout_bse_gw_tide_merge<<std::setprecision(WRITE_PRECISION);
     }
 #else
     if (hard_manager.ar_manager.interaction.interrupt_detection_option>0) {
@@ -508,8 +531,7 @@ int main(int argc, char **argv){
 #ifdef STELLAR_EVOLUTION
     auto& interaction = hard_manager.ar_manager.interaction;
 #ifdef BSE_BASE
-    if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
-    if (interaction.fout_bse.is_open()) interaction.fout_bse.close();
+    interaction.closeStellarEventStreams();
 #else
     if (interaction.fout_interrupt.is_open()) interaction.fout_interrupt.close();
 #endif

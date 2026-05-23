@@ -530,7 +530,9 @@ For enabled runtime outputs (`-w > 0`), append-style event files are handled wit
 
 For HARD_DUMP DATADUMP event files (e.g., dump_binary_merger), each event is now also staged to a `*.tmp` file first and only renamed to its final name at the output commit step.
 
-For escaper, group, SSE/BSE, and interrupt outputs, the temporary files are still written per MPI rank, but the committed final files are merged into shared single files without a rank suffix. The records are appended in MPI-rank commit order and are not re-sorted by time during the online commit step.
+For escaper, group, interrupt, and stellar-evolution outputs, the temporary files are still written per MPI rank, but the committed final files are merged into shared single files without a rank suffix. The records are appended in MPI-rank commit order and are not re-sorted by time during the online commit step.
+
+For SSE/BSE, runtime output is now directly split by event type during the simulation (for example, `.type_change`, `.sn_kick`, `.dynamic_merge`, `.gw_kick`, `.tide`, etc.) instead of first mixing all event types into one `.sse`/`.bse` stream.
 
 When a run starts, rank 0 scans for residual `*.tmp` files from previous unfinished runs and prints a warning if found. By default, these residual tmp files are removed automatically before the new run starts (`--keep-tmp-on-startup 0`). They are never merged automatically. If you need to preserve them for debugging, set `--keep-tmp-on-startup 1`. You can still remove stale temporary files manually with `petar.data.clear --clear-tmp [prefix]`, and use `petar.data.clear` (time-based cleanup) when trimming already committed event files.
 
@@ -835,6 +837,7 @@ In addition to the printed information provided by the `petar` commander, there 
 | data.[index]         | Snapshot files for each output time. The format mirrors that of the input data file.                                      |
 |                      | Users can reference the definitions of the first line (header) and columns using `petar -h`.                               |
 |                      | [index] denotes the output order, starting from 0 (initial snapshot). It does not correspond to time unless the output interval is set to 1. |
+| data.snap.lst        | Snapshot filename list generated during runtime output (`-w 1`). It is appended transactionally by rank 0 and can be used directly by `petar.data.process` and `petar.movie`. |
 | data.[index].randseeds| The random seeds for each OpenMP thread, used for restarting purposes. |
 | data.esc             | Contains information on escaped particles. Runtime temporary files are created per MPI rank and then appended into this shared final file. In ASCII mode, the columns match those in snapshot files with an additional escaped-time column at the beginning. In BINARY mode, each record is stored as one escaped time followed by one particle record in the same binary layout as snapshots. |
 | data.group.n[member count] | Provides details on the start and end of multiple systems (e.g., binary, triple ...) identified during SDAR integration. The runtime temporary files are created per MPI rank and committed into the shared final files `data.group.n2`, `data.group.n3`, ... |
@@ -848,8 +851,17 @@ When utilizing the SSE/BSE stellar evolution options (--with-interrupt during co
 
 | File name            | Content                                                                                                                    |
 | :-------------       | ------------------------------------------------------------------------------------------------------------------------   |
-| data.[sse_name] | Contains records of single stellar evolution events, such as type changes and supernovae. Runtime temporary files are created per MPI rank and then appended into this shared final file. Note that if a star evolves rapidly (less than the dynamical integration time step), internal type changes may not be captured. |
-| data.[bse_name] | Records binary stellar evolution events. Runtime temporary files are created per MPI rank and then appended into this shared final file. All binary type changes are logged; however, if 'Warning: BSE event storage overflow!' appears during the simulation, it indicates that binary type changes are too frequent, resulting in some changes not being recorded for the corresponding binary. |
+| data.[sse_name].type_change | Single-star type change events. |
+| data.[sse_name].sn_kick     | Single-star supernova kick events. |
+| data.[bse_name].type_change | Binary type change events. |
+| data.[bse_name].sn_kick     | Binary supernova kick events. |
+| data.[bse_name].gw_kick     | Binary gravitational-wave recoil kick events. |
+| data.[bse_name].dynamic_merge | Dynamical (hyperbolic) merger events. |
+| data.[bse_name].binary_merge  | Binary merger events (also retained in `type_change` for compatibility). |
+| data.[bse_name].hyperbolic_tde | Hyperbolic micro-TDE events. |
+| data.[bse_name].binary_tde     | Binary micro-TDE events. |
+| data.[bse_name].tide           | Dynamical tide events. |
+| data.[bse_name].gw_tide_merge  | GW+tide merger events. |
 | data.interrupt  | When interrupt output is enabled without BSE-based stellar evolution, records interruption events in a shared final file. Runtime temporary files are created per MPI rank and then appended into this file. |
 
 When Galpy is employed (--with-external=galpy), under certain conditions, a galpy parameter file may be generated alongside each snapshot file:
@@ -860,13 +872,13 @@ When Galpy is employed (--with-external=galpy), under certain conditions, a galp
 In this context, 'data' serves as the default prefix for output files, although users have the flexibility to modify it using the `petar` option `-f`. 
 For instance, by specifying `-f output`, the output files will be named 'output.[index]', 'output.esc', 'output.group.n2', and so forth.
 
-The term [MPI rank] denotes the MPI processor responsible for a rank-local runtime stream or temporary file. For instance, with two MPI processors, the escaper temporary files will be labeled 'data.esc.0.tmp' and 'data.esc.1.tmp', while the committed runtime outputs `data.esc`, `data.group.n*`, `data.[sse_name]`, `data.[bse_name]`, and `data.interrupt` are shared final files.
+The term [MPI rank] denotes the MPI processor responsible for a rank-local runtime stream or temporary file. For instance, with two MPI processors, the escaper temporary files will be labeled 'data.esc.0.tmp' and 'data.esc.1.tmp', while the committed runtime outputs `data.esc`, `data.group.n*`, `data.[sse_name].*`, `data.[bse_name].*`, and `data.interrupt` are shared final files.
 
-Prior to accessing snapshot lists, or when working with legacy per-rank event outputs from older runs, it is advisable to execute the `petar.data.gether` tool. For the current transactional runtime outputs, `data.esc`, `data.group.n*`, `data.[sse_name]`, `data.[bse_name]`, and `data.interrupt` are already committed as shared single files.
+For current runs, `data.snap.lst` is already generated at runtime and can be used directly. When working with legacy per-rank event outputs from older runs, users can still use `petar.data.gether` for compatibility processing.
 
 The `petar.data.gether` tool not only consolidates files from various MPI processors but also generates new files accessible by the `petar` Python data analysis tool (refer to [Python Data Analysis Module](#python-data-analysis-module)). 
 - For ".group" files, `petar.data.gether` separates few-body groups with varying member counts into individual files labeled with the suffix ".n[number of members in groups]".
-- In the case of ".[sse\_name]" and ".[bse\_name]" files, this tool segregates type changes, supernova kicks, and dynamical mergers into distinct files (".type\_change", ".sn\_kick", and ".dynamic\_merge").
+- In the case of legacy mixed ".[sse\_name]" and ".[bse\_name]" files, this tool can segregate type changes and event subtypes into distinct files.
 
 For a detailed overview of the files generated by `petar.data.gether` and the corresponding Python reading methods, refer to [Gathering Output Files](#gathering-output-files).
 
@@ -1131,15 +1143,15 @@ petar.find.dt -m 2 -o 4 -a "-p input.par -r 0 --r-search-min 0 --r-bin 0" [resta
 
 ### Gathering Output Files
 
-In MPI usage, snapshot files remain naturally distributed by output index. Current transactional runtime streams such as `data.esc`, `data.group.n*`, `data.[sse_name]`, `data.[bse_name]`, and `data.interrupt` are first staged in rank-local temporary files and then committed into shared single final files. The `petar.data.gether` tool is therefore mainly used for generating snapshot lists, consolidating legacy per-rank event outputs from older runs, and splitting group or stellar-evolution files into analysis-friendly components.
+In MPI usage, snapshot files remain naturally distributed by output index. Current transactional runtime streams such as `data.esc`, `data.group.n*`, `data.[sse_name].*`, `data.[bse_name].*`, and `data.interrupt` are first staged in rank-local temporary files and then committed into shared single final files. The `petar.data.gether` tool is therefore mainly for compatibility with older runs.
 
-Moreover, `petar.data.gether` generates a file named `"[output prefix].snap.lst"` that includes a sorted list of all snapshot files based on their respective timestamps. This file serves as input for both `petar.data.process` and `petar.movie`.
+For current runs, `"[output prefix].snap.lst"` is already generated during simulation runtime. `petar.data.gether` only generates this list as a fallback when the file is absent.
 
 The basic usage of `petar.data.gether` is as follows:
 ```shell
 petar.data.gether [options] [data filename prefix]
 ```
-Here, `[data filename prefix]` represents the prefix of data files specified by the `petar` option `-f` (default is 'data').
+Here, `[data filename prefix]` represents the prefix of data files specified by the `petar` option `-f` (default is 'data'). This tool is mainly intended for output formats from versions before 1708e.
 
 Several options can control the gathered data; use `petar.data.gether -h` to review the details of `[options]`.
 
@@ -1157,11 +1169,9 @@ Below is a table detailing the files generated by the tool and the corresponding
 |                               | data.group.n3                 | triples                                     | petar.GroupInfo(N=3)                      |
 |                               | ...                           | multiple systems...                         | ...                                       |
 | data.esc                      | data.esc                      | escapers                                    | petar.SingleEscaper(interrupt_mode=[\*], external_mode=[\*]) |
-| data.[sse_name]               | data.[sse_name]               | full single stellar evolution records       | None                                      |
-|                               | data.[sse_name].type_change   | single stellar evolution type change events | petar.SSETypeChange()                     |
+| data.[sse_name] (legacy mixed) | data.[sse_name].type_change   | single stellar evolution type change events | petar.SSETypeChange()                     |
 |                               | data.[sse_name].sn_kick       | supernova natal kick of single star         | petar.SSESNKick()                         |
-| data.[bse_name]               | data.[bse_name]               | full binary stellar evolution records       | None                                      |
-|                               | data.[bse_name].type_change   | binary stellar evolution type change events | petar.BSETypeChange()                     |
+| data.[bse_name] (legacy mixed) | data.[bse_name].type_change   | binary stellar evolution type change events | petar.BSETypeChange()                     |
 |                               | data.[bse_name].sn_kick       | supernova natal kick in binaries            | petar.BSESNKick()                         |
 |                               | data.[bse_name].dynamic_merge | dynamical-driven (hyperbolic) mergers       | petar.BSEDynamicMerge(less_output=[\*])   |
 
@@ -1446,7 +1456,7 @@ In certain classes, the list of members may vary depending on the keyword argume
 The table below lists all class names (omit the prefix "petar."), corresponding keyword arguments, and output files.
 For convenience, the output file prefix used in the following filenames is 'data'.
 
-- Reading outputs of `petar` (requires using `petar.data.gether`):
+- Reading outputs of `petar` (for current outputs, `petar.data.gether` is optional; it is mainly needed for legacy formats):
 
 | Class name     | Description                                  | Keyword Arguments (options shown in [])        |           Corresponding file                                |
 | :------------  | :---------------------------------           | :----------------------------------------      | :---------------------------------------------------------- |
@@ -1865,7 +1875,7 @@ Additionally, the `--add-mass-range` option in `petar.data.process` can compute 
 
 ### Reading Stellar Evolution Outputs
 
-When using SSE/BSE-based stellar evolution packages like updated BSE in a simulation with `petar` or isolated stellar evolution with `petar.bse`, files `data.bse.*` and `data.sse.*` are generated (assuming the default filename prefix 'data' is used). After executing `petar.data.gether data`, several new files are created with the suffixes "type\_change", "sn\_kick", and "dynamic\_merge", corresponding to stellar or binary type change, supernova kick and dynamically driven merger events.
+When using SSE/BSE-based stellar evolution packages like updated BSE in a simulation with `petar` or isolated stellar evolution with `petar.bse`, files such as `data.[sse_name].type_change`, `data.[sse_name].sn_kick`, `data.[bse_name].type_change`, `data.[bse_name].sn_kick`, and `data.[bse_name].dynamic_merge` are generated directly during runtime (assuming the default filename prefix `data` is used). For old runs that still have mixed `data.[sse_name]`/`data.[bse_name]` files, `petar.data.gether` can still be used to split them.
 
 To read these files, users can utilize the following command:
 ```python

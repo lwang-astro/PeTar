@@ -550,6 +550,7 @@ public:
 
     Status stat;
     std::ofstream fstatus;
+    std::ofstream fsnaplst;
     PS::F64 time_kick;
     OutputCommitManager output_commit_manager;
 
@@ -757,6 +758,11 @@ public:
             output_commit_manager.registerTmp("escaper", my_rank, makeTmpPath(fname_snp + ".esc." + std::to_string(my_rank)), esc_final, OutputCommitManager::CommitMode::Append);
         }
 
+        if (write_style==1 && my_rank==0) {
+            const std::string snaplst_final = fname_snp + ".snap.lst";
+            output_commit_manager.registerTmp("snap_list", my_rank, makeTmpPath(snaplst_final), snaplst_final, OutputCommitManager::CommitMode::Append);
+        }
+
 #ifdef PROFILE
     if (write_style>0) {
             const std::string profile_final = fname_snp + ".prof.rank." + std::to_string(my_rank);
@@ -768,12 +774,19 @@ public:
 #ifdef BSE_BASE
         if (hard_parameters.stellar_evolution_option.value>0) {
             const std::string my_rank_str = std::to_string(my_rank);
-            const std::string fsse_tmp_final = fname_snp + fsse_par_suffix + "." + my_rank_str;
-            const std::string fbse_tmp_final = fname_snp + fbse_par_suffix + "." + my_rank_str;
-            const std::string fsse_final = fname_snp + fsse_par_suffix;
-            const std::string fbse_final = fname_snp + fbse_par_suffix;
-            output_commit_manager.registerTmp("sse", my_rank, makeTmpPath(fsse_tmp_final), fsse_final, OutputCommitManager::CommitMode::Append);
-            output_commit_manager.registerTmp("bse", my_rank, makeTmpPath(fbse_tmp_final), fbse_final, OutputCommitManager::CommitMode::Append);
+            const char* sse_tags[] = {"type_change", "sn_kick"};
+            for (const auto* tag: sse_tags) {
+                const std::string tmp_base = fname_snp + fsse_par_suffix + "." + tag + "." + my_rank_str;
+                const std::string final_path = fname_snp + fsse_par_suffix + "." + tag;
+                output_commit_manager.registerTmp(std::string("sse_") + tag, my_rank, makeTmpPath(tmp_base), final_path, OutputCommitManager::CommitMode::Append);
+            }
+
+            const char* bse_tags[] = {"type_change", "sn_kick", "gw_kick", "dynamic_merge", "binary_merge", "hyperbolic_tde", "binary_tde", "tide", "gw_tide_merge"};
+            for (const auto* tag: bse_tags) {
+                const std::string tmp_base = fname_snp + fbse_par_suffix + "." + tag + "." + my_rank_str;
+                const std::string final_path = fname_snp + fbse_par_suffix + "." + tag;
+                output_commit_manager.registerTmp(std::string("bse_") + tag, my_rank, makeTmpPath(tmp_base), final_path, OutputCommitManager::CommitMode::Append);
+            }
         }
 #else
         if (hard_parameters.interrupt_detection_option.value>0) {
@@ -845,6 +858,11 @@ public:
             fesc<<std::setprecision(WRITE_PRECISION);
         }
 
+        if (write_style==1 && my_rank==0) {
+            if (fsnaplst.is_open()) fsnaplst.close();
+            fsnaplst.open(makeTmpPath(input_parameters.fname_snp.value + ".snap.lst").c_str(), std::ofstream::out);
+        }
+
 #ifdef PROFILE
         if (write_style>0) {
             const std::string fproname = fname_snp + ".prof.rank." + std::to_string(my_rank);
@@ -875,14 +893,33 @@ public:
 #ifdef BSE_BASE
         if (hard_parameters.stellar_evolution_option.value>0) {
             const std::string my_rank_str = std::to_string(my_rank);
-            const std::string fsse_final = fname_snp + fsse_par_suffix + "." + my_rank_str;
-            const std::string fbse_final = fname_snp + fbse_par_suffix + "." + my_rank_str;
-            if (hard_manager.ar_manager.interaction.fout_sse.is_open()) hard_manager.ar_manager.interaction.fout_sse.close();
-            if (hard_manager.ar_manager.interaction.fout_bse.is_open()) hard_manager.ar_manager.interaction.fout_bse.close();
-            hard_manager.ar_manager.interaction.fout_sse.open(makeTmpPath(fsse_final).c_str(), std::ofstream::out);
-            hard_manager.ar_manager.interaction.fout_bse.open(makeTmpPath(fbse_final).c_str(), std::ofstream::out);
-            hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
-            hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);
+            auto& interaction = hard_manager.ar_manager.interaction;
+            interaction.closeStellarEventStreams();
+
+            interaction.fout_sse_type_change.open(makeTmpPath(fname_snp + fsse_par_suffix + ".type_change." + my_rank_str).c_str(), std::ofstream::out);
+            interaction.fout_sse_sn_kick.open(makeTmpPath(fname_snp + fsse_par_suffix + ".sn_kick." + my_rank_str).c_str(), std::ofstream::out);
+
+            interaction.fout_bse_type_change.open(makeTmpPath(fname_snp + fbse_par_suffix + ".type_change." + my_rank_str).c_str(), std::ofstream::out);
+            interaction.fout_bse_sn_kick.open(makeTmpPath(fname_snp + fbse_par_suffix + ".sn_kick." + my_rank_str).c_str(), std::ofstream::out);
+            interaction.fout_bse_gw_kick.open(makeTmpPath(fname_snp + fbse_par_suffix + ".gw_kick." + my_rank_str).c_str(), std::ofstream::out);
+            interaction.fout_bse_dynamic_merge.open(makeTmpPath(fname_snp + fbse_par_suffix + ".dynamic_merge." + my_rank_str).c_str(), std::ofstream::out);
+            interaction.fout_bse_binary_merge.open(makeTmpPath(fname_snp + fbse_par_suffix + ".binary_merge." + my_rank_str).c_str(), std::ofstream::out);
+            interaction.fout_bse_hyperbolic_tde.open(makeTmpPath(fname_snp + fbse_par_suffix + ".hyperbolic_tde." + my_rank_str).c_str(), std::ofstream::out);
+            interaction.fout_bse_binary_tde.open(makeTmpPath(fname_snp + fbse_par_suffix + ".binary_tde." + my_rank_str).c_str(), std::ofstream::out);
+            interaction.fout_bse_tide.open(makeTmpPath(fname_snp + fbse_par_suffix + ".tide." + my_rank_str).c_str(), std::ofstream::out);
+            interaction.fout_bse_gw_tide_merge.open(makeTmpPath(fname_snp + fbse_par_suffix + ".gw_tide_merge." + my_rank_str).c_str(), std::ofstream::out);
+
+            interaction.fout_sse_type_change<<std::setprecision(WRITE_PRECISION);
+            interaction.fout_sse_sn_kick<<std::setprecision(WRITE_PRECISION);
+            interaction.fout_bse_type_change<<std::setprecision(WRITE_PRECISION);
+            interaction.fout_bse_sn_kick<<std::setprecision(WRITE_PRECISION);
+            interaction.fout_bse_gw_kick<<std::setprecision(WRITE_PRECISION);
+            interaction.fout_bse_dynamic_merge<<std::setprecision(WRITE_PRECISION);
+            interaction.fout_bse_binary_merge<<std::setprecision(WRITE_PRECISION);
+            interaction.fout_bse_hyperbolic_tde<<std::setprecision(WRITE_PRECISION);
+            interaction.fout_bse_binary_tde<<std::setprecision(WRITE_PRECISION);
+            interaction.fout_bse_tide<<std::setprecision(WRITE_PRECISION);
+            interaction.fout_bse_gw_tide_merge<<std::setprecision(WRITE_PRECISION);
         }
 #else
         if (hard_parameters.interrupt_detection_option.value>0) {
@@ -914,6 +951,7 @@ public:
         if (write_style>0) {
             if (fstatus.is_open()) fstatus.close();
             if (fesc.is_open()) fesc.close();
+            if (fsnaplst.is_open()) fsnaplst.close();
         }
 
 #ifdef PROFILE
@@ -923,8 +961,7 @@ public:
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
         if (hard_parameters.stellar_evolution_option.value>0) {
-            if (hard_manager.ar_manager.interaction.fout_sse.is_open()) hard_manager.ar_manager.interaction.fout_sse.close();
-            if (hard_manager.ar_manager.interaction.fout_bse.is_open()) hard_manager.ar_manager.interaction.fout_bse.close();
+            hard_manager.ar_manager.interaction.closeStellarEventStreams();
         }
 #else
         if (hard_parameters.interrupt_detection_option.value>0) {
@@ -2131,12 +2168,13 @@ public:
     }
 
     //! output data
-    void output() {
+    void output(const bool _write_file_flag=true) {
 #ifdef PROFILE
         profile.output.start();
 #endif
         bool print_flag = input_parameters.print_flag;
         int write_style = input_parameters.write_style.value;
+        if (!_write_file_flag) write_style = 0;
 
         std::cout<<std::setprecision(PRINT_PRECISION);
 
@@ -2186,6 +2224,10 @@ public:
                 // for External potential
                 galpy_manager.writePotentialPars(fname+".galpy", stat.time);
 #endif
+
+                if (write_style==1) {
+                    fsnaplst<<fname<<std::endl;
+                }
             }
 #if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
             std::string fname_seed = fname+".randseeds";
@@ -3061,9 +3103,15 @@ public:
         };
         if(write_style>0&&my_rank==0) {
             const std::ofstream::openmode status_mode = isOutputBinary() ? std::ofstream::binary : std::ofstream::openmode(0);
+            if (input_parameters.append_switcher.value!=1) {
+                std::remove((fname_snp + ".snap.lst").c_str());
+            }
             std::string status_path = make_tmp_name(fname_snp+".status");
             fstatus.open(status_path.c_str(),std::ofstream::out|status_mode);
             fstatus<<std::setprecision(WRITE_PRECISION);
+            if (write_style==1) {
+                fsnaplst.open(makeTmpPath(fname_snp + ".snap.lst").c_str(), std::ofstream::out);
+            }
         }
 
         if(write_style>0) {
@@ -3079,16 +3127,33 @@ public:
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
             if (hard_parameters.stellar_evolution_option.value>0) {
-                // open SSE/BSE file
-                std::string fsse_name = fname_snp + fsse_par_suffix + "." + my_rank_str;
-                std::string fbse_name = fname_snp + fbse_par_suffix + "." + my_rank_str;
-                std::string fsse_tmp = makeTmpPath(fsse_name);
-                std::string fbse_tmp = makeTmpPath(fbse_name);
-                // Transactional tmp files are per-window staging buffers; always truncate.
-                hard_manager.ar_manager.interaction.fout_sse.open(fsse_tmp.c_str(), std::ofstream::out);
-                hard_manager.ar_manager.interaction.fout_bse.open(fbse_tmp.c_str(), std::ofstream::out);
-                hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
-                hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);
+                auto& interaction = hard_manager.ar_manager.interaction;
+                interaction.closeStellarEventStreams();
+
+                interaction.fout_sse_type_change.open(makeTmpPath(fname_snp + fsse_par_suffix + ".type_change." + my_rank_str).c_str(), std::ofstream::out);
+                interaction.fout_sse_sn_kick.open(makeTmpPath(fname_snp + fsse_par_suffix + ".sn_kick." + my_rank_str).c_str(), std::ofstream::out);
+
+                interaction.fout_bse_type_change.open(makeTmpPath(fname_snp + fbse_par_suffix + ".type_change." + my_rank_str).c_str(), std::ofstream::out);
+                interaction.fout_bse_sn_kick.open(makeTmpPath(fname_snp + fbse_par_suffix + ".sn_kick." + my_rank_str).c_str(), std::ofstream::out);
+                interaction.fout_bse_gw_kick.open(makeTmpPath(fname_snp + fbse_par_suffix + ".gw_kick." + my_rank_str).c_str(), std::ofstream::out);
+                interaction.fout_bse_dynamic_merge.open(makeTmpPath(fname_snp + fbse_par_suffix + ".dynamic_merge." + my_rank_str).c_str(), std::ofstream::out);
+                interaction.fout_bse_binary_merge.open(makeTmpPath(fname_snp + fbse_par_suffix + ".binary_merge." + my_rank_str).c_str(), std::ofstream::out);
+                interaction.fout_bse_hyperbolic_tde.open(makeTmpPath(fname_snp + fbse_par_suffix + ".hyperbolic_tde." + my_rank_str).c_str(), std::ofstream::out);
+                interaction.fout_bse_binary_tde.open(makeTmpPath(fname_snp + fbse_par_suffix + ".binary_tde." + my_rank_str).c_str(), std::ofstream::out);
+                interaction.fout_bse_tide.open(makeTmpPath(fname_snp + fbse_par_suffix + ".tide." + my_rank_str).c_str(), std::ofstream::out);
+                interaction.fout_bse_gw_tide_merge.open(makeTmpPath(fname_snp + fbse_par_suffix + ".gw_tide_merge." + my_rank_str).c_str(), std::ofstream::out);
+
+                interaction.fout_sse_type_change<<std::setprecision(WRITE_PRECISION);
+                interaction.fout_sse_sn_kick<<std::setprecision(WRITE_PRECISION);
+                interaction.fout_bse_type_change<<std::setprecision(WRITE_PRECISION);
+                interaction.fout_bse_sn_kick<<std::setprecision(WRITE_PRECISION);
+                interaction.fout_bse_gw_kick<<std::setprecision(WRITE_PRECISION);
+                interaction.fout_bse_dynamic_merge<<std::setprecision(WRITE_PRECISION);
+                interaction.fout_bse_binary_merge<<std::setprecision(WRITE_PRECISION);
+                interaction.fout_bse_hyperbolic_tde<<std::setprecision(WRITE_PRECISION);
+                interaction.fout_bse_binary_tde<<std::setprecision(WRITE_PRECISION);
+                interaction.fout_bse_tide<<std::setprecision(WRITE_PRECISION);
+                interaction.fout_bse_gw_tide_merge<<std::setprecision(WRITE_PRECISION);
             }
 #else
             if (hard_parameters.interrupt_detection_option.value>0) {
@@ -3897,6 +3962,8 @@ public:
         assert(initial_parameters_flag);
         if (initial_step_flag) return;
 
+        const bool restart_flag = (file_header.nfile>0);
+
         assert(checkTimeConsistence());
 
         // one particle case
@@ -3911,9 +3978,14 @@ public:
             // initial status and energy
             updateStatus(true);
 
-            // output initial data
-            file_header.nfile--; // avoid repeating files
-            output();
+            if (!restart_flag) {
+                // output initial data
+                file_header.nfile--; // avoid repeating files
+                output();
+            }
+            else {
+                output(false);
+            }
 
 #ifdef PROFILE
             clearProfile();
@@ -3974,9 +4046,14 @@ public:
         // initial status and energy
         updateStatus(true);
 
-        // output initial data
-        file_header.nfile--; // avoid repeating files
-        output();
+        if (!restart_flag) {
+            // output initial data
+            file_header.nfile--; // avoid repeating files
+            output();
+        }
+        else {
+            output(false);
+        }
 
         // remove artificial particles
         system_soft.setNumberOfParticleLocal(stat.n_real_loc);
@@ -4475,6 +4552,7 @@ public:
 
         if (fstatus.is_open()) fstatus.close();
         if (fesc.is_open()) fesc.close();
+        if (fsnaplst.is_open()) fsnaplst.close();
 #ifdef PROFILE
         if (fprofile.is_open()) fprofile.close();
 #endif
@@ -4482,8 +4560,7 @@ public:
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
         auto& interaction = hard_manager.ar_manager.interaction;
-        if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
-        if (interaction.fout_bse.is_open()) interaction.fout_bse.close();
+    interaction.closeStellarEventStreams();
 #else
         auto& interaction = hard_manager.ar_manager.interaction;
         if (interaction.fout_interrupt.is_open()) interaction.fout_interrupt.close();
