@@ -528,6 +528,8 @@ By default, after resuming, the snapshot files with the same name will be replac
 
 For enabled runtime outputs (`-w > 0`), append-style event files are handled with a transactional workflow: each output interval is first written to temporary files (`*.tmp`) and only committed to final files when the full output step succeeds. This avoids partially committed records and significantly reduces duplicate-event risk after an abnormal stop and restart.
 
+For HARD_DUMP DATADUMP event files (e.g., dump_binary_merger), each event is now also staged to a `*.tmp` file first and only renamed to its final name at the output commit step.
+
 For escaper, group, SSE/BSE, and interrupt outputs, the temporary files are still written per MPI rank, but the committed final files are merged into shared single files without a rank suffix. The records are appended in MPI-rank commit order and are not re-sorted by time during the online commit step.
 
 When a run starts, rank 0 scans for residual `*.tmp` files from previous unfinished runs and prints a warning if found. By default, these residual tmp files are removed automatically before the new run starts (`--keep-tmp-on-startup 0`). They are never merged automatically. If you need to preserve them for debugging, set `--keep-tmp-on-startup 1`. You can still remove stale temporary files manually with `petar.data.clear --clear-tmp [prefix]`, and use `petar.data.clear` (time-based cleanup) when trimming already committed event files.

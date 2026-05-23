@@ -806,6 +806,13 @@ public:
         }
 #endif
 
+#ifdef HARD_DUMP
+        const auto hard_dump_records = hard_dump.fetchPendingRenameRecords();
+        for (const auto& record: hard_dump_records) {
+            output_commit_manager.registerTmp("hard_dump", my_rank, record.tmp_path, record.final_path, OutputCommitManager::CommitMode::Rename);
+        }
+#endif
+
         if (hard_manager.record_id_range.getN()>0) {
             const std::string rank_suffix = "." + std::to_string(my_rank);
             const auto register_object_range = [&](const PS::S64 id_start, const PS::S64 id_end) {

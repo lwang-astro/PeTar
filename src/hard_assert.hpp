@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <string>
+#include <vector>
 #include "hard_ptcl.hpp"
 #include "Hermite/hermite_particle.h"
 #include "soft_ptcl.hpp"
@@ -201,6 +202,11 @@ public:
 // a list of hard dump for multi threads
 class HardDumpList{
 public:
+    struct PendingRenameRecord {
+        std::string tmp_path;
+        std::string final_path;
+    };
+
     int size;
     int mpi_rank;
     int omp_level;
@@ -212,6 +218,7 @@ public:
 #endif
 #endif
     HardDump* hard_dump;
+    std::vector<PendingRenameRecord> pending_rename_records;
 
     HardDumpList(): size(0), mpi_rank(0), omp_level(0), dump_number(0), 
 #ifdef EXTERNAL_HARD
@@ -220,20 +227,29 @@ public:
                     galpy_manager(NULL),
 #endif
 #endif
-                    hard_dump(NULL) {}
+                    hard_dump(NULL), pending_rename_records() {}
 
     void initial(const int _nthread, const int _rank=0) {
         size = _nthread;
         mpi_rank = _rank;
+        dump_number = 0;
+        pending_rename_records.clear();
         hard_dump = new HardDump[_nthread];
     }
 
     void clear() {
         size = 0;
+        pending_rename_records.clear();
         if (hard_dump!=NULL) {
             delete[] hard_dump;
             hard_dump=NULL;
         }
+    }
+
+    std::vector<PendingRenameRecord> fetchPendingRenameRecords() {
+        std::vector<PendingRenameRecord> out;
+        out.swap(pending_rename_records);
+        return out;
     }
 
     ~HardDumpList() {
@@ -266,8 +282,24 @@ public:
         if (hard_dump[ith].backup_flag) {
             std::time_t tnow = std::time(nullptr);
             //std::tm *local_time = localtime(&tnow);
-            std::string fname = filename;
-            if (long_suffix_flag) fname += "_t" + std::to_string(hard_dump[ith].time_offset) + "_M" + std::to_string(mpi_rank) + "_O" + std::to_string(ith) + "_c" + std::to_string(dump_number++) + "_s" + std::to_string(tnow);
+            std::string final_fname = filename;
+            if (long_suffix_flag) {
+                int dump_id = 0;
+#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
+#pragma omp critical(HardDumpCounter)
+                {
+                    dump_id = dump_number++;
+                }
+#else
+                dump_id = dump_number++;
+#endif
+                final_fname += "_t" + std::to_string(hard_dump[ith].time_offset) + "_M" + std::to_string(mpi_rank) + "_O" + std::to_string(ith) + "_c" + std::to_string(dump_id) + "_s" + std::to_string(tnow);
+            }
+
+            const bool use_tmp_stage = !append_flag;
+            std::string fname = final_fname;
+            if (use_tmp_stage) fname += ".tmp";
+
             std::FILE* fp;
             if (append_flag) 
                 fp = std::fopen(fname.c_str(),"ab");
@@ -285,8 +317,26 @@ public:
 #endif
 #endif            
             fclose(fp);
+
+            if (use_tmp_stage) {
+#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
+#pragma omp critical(HardDumpPendingRename)
+                {
+                    pending_rename_records.push_back({fname, final_fname});
+#ifdef GALPY
+                    pending_rename_records.push_back({fname+".galpy", final_fname+".galpy"});
+#endif
+                }
+#else
+                pending_rename_records.push_back({fname, final_fname});
+#ifdef GALPY
+                pending_rename_records.push_back({fname+".galpy", final_fname+".galpy"});
+#endif
+#endif
+            }
+
             if (dump_once_flag) hard_dump[ith].backup_flag = false;
-            if (print_flag) std::cerr<<"Thread: "<<ith<<" Dump file: "<<fname.c_str()<<std::endl;
+            if (print_flag) std::cerr<<"Thread: "<<ith<<" Dump file: "<<final_fname.c_str()<<std::endl;
         }
     }
 
