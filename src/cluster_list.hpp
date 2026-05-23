@@ -1296,7 +1296,7 @@ public:
 #endif
 #ifdef STELLAR_EVOLUTION
                 PS::F64 mass_bk = _sys[adr].group_data.artificial.isMember()? _sys[adr].group_data.artificial.getMassBackup(): _sys[adr].mass;
-                assert(mass_bk!=0.0);
+                //assert(mass_bk!=0.0); // Unused particle has mass 0
 #endif
                 _sys[adr].DataCopy(_ptcl_hard[i]);
 #ifdef STELLAR_EVOLUTION

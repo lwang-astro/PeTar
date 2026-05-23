@@ -526,9 +526,11 @@ petar -p input.par -t 10 data.5
 
 By default, after resuming, the snapshot files with the same name will be replaced. However, for other output files, new data will be appended to the existing ones (e.g., filenames with suffixes like esc, group, etc.).
 
-In cases where a previous simulation did not reach completion and terminated abnormally, resuming the simulation from the last snapshot file may result in some events being repeated in the output data files. For instance, the same stellar evolution event might be recorded twice in a file with the '.sse' suffix. Similar behavior may occur when restarting the simulation from a non-final snapshot.
+For enabled runtime outputs (`-w > 0`), append-style event files are handled with a transactional workflow: each output interval is first written to temporary files (`*.tmp`) and only committed to final files when the full output step succeeds. This avoids partially committed records and significantly reduces duplicate-event risk after an abnormal stop and restart.
 
-To prevent duplicate events, users can utilize `petar.data.clear` to remove events with recorded times greater than a specified time criterion before resuming. However, caution should be exercised to avoid deleting useful data inadvertently.
+For escaper, group, SSE/BSE, and interrupt outputs, the temporary files are still written per MPI rank, but the committed final files are merged into shared single files without a rank suffix. The records are appended in MPI-rank commit order and are not re-sorted by time during the online commit step.
+
+When a run starts, rank 0 scans for residual `*.tmp` files from previous unfinished runs and prints a warning if found. By default, these residual tmp files are removed automatically before the new run starts (`--keep-tmp-on-startup 0`). They are never merged automatically. If you need to preserve them for debugging, set `--keep-tmp-on-startup 1`. You can still remove stale temporary files manually with `petar.data.clear --clear-tmp [prefix]`, and use `petar.data.clear` (time-based cleanup) when trimming already committed event files.
 
 To overwrite the output files instead of appending to them, the option `-a 0` can be included in the `petar` command.
 
@@ -552,7 +554,7 @@ Users have the ability to specify various parameters in the options of the `peta
 
 -  `-w`: Sets the output style. With `-w 2`, all particle data is printed in a single line along with system status information per output time, which can be beneficial for data analysis with small N.
 
--  `-i`: Determines the data format for reading input snapshots and writing runtime outputs. The snapshot files, `data.status`, and `data.esc.[MPI rank]` all follow the write mode selected by `-i`: `0` for read/write BINARY, `1` for read/write ASCII, `2` for read ASCII and write BINARY, and `3` for read BINARY and write ASCII.
+-  `-i`: Determines the data format for reading input snapshots and writing runtime outputs. Snapshot files and runtime text/binary streams (including status and escaper outputs) follow the write mode selected by `-i`: `0` for read/write BINARY, `1` for read/write ASCII, `2` for read ASCII and write BINARY, and `3` for read BINARY and write ASCII.
 
 -  `-G`: Specifies the gravitational constant.
 
@@ -832,8 +834,8 @@ In addition to the printed information provided by the `petar` commander, there 
 |                      | Users can reference the definitions of the first line (header) and columns using `petar -h`.                               |
 |                      | [index] denotes the output order, starting from 0 (initial snapshot). It does not correspond to time unless the output interval is set to 1. |
 | data.[index].randseeds| The random seeds for each OpenMP thread, used for restarting purposes. |
-| data.esc.[MPI rank]  | Contains information on escaped particles. In ASCII mode, the columns match those in snapshot files with an additional escaped-time column at the beginning. In BINARY mode, each record is stored as one escaped time followed by one particle record in the same binary layout as snapshots. |
-| data.group.[MPI rank]| Provides details on the start and end of multiple systems (e.g., binary, triple ...) identified during SDAR integration. |
+| data.esc             | Contains information on escaped particles. Runtime temporary files are created per MPI rank and then appended into this shared final file. In ASCII mode, the columns match those in snapshot files with an additional escaped-time column at the beginning. In BINARY mode, each record is stored as one escaped time followed by one particle record in the same binary layout as snapshots. |
+| data.group.n[member count] | Provides details on the start and end of multiple systems (e.g., binary, triple ...) identified during SDAR integration. The runtime temporary files are created per MPI rank and committed into the shared final files `data.group.n2`, `data.group.n3`, ... |
 |                      | The definition of a multiple system is based on the distance criterion specified in the `petar` option `--r-bin`.           |
 |                      | In cases where a multiple system spans multiple tree time steps, the start event may be recorded multiple times during each tree time step, while only one or no end event is recorded. This behavior is a result of the algorithm's design. |
 | data.status          | Includes the evolution of global parameters such as energies, angular momentum, particle count, system center position, and velocity. Its output format is also controlled by `-i`. In ASCII mode, one output step corresponds to one text line. In BINARY mode, one output step corresponds to one binary status record. |
@@ -844,8 +846,9 @@ When utilizing the SSE/BSE stellar evolution options (--with-interrupt during co
 
 | File name            | Content                                                                                                                    |
 | :-------------       | ------------------------------------------------------------------------------------------------------------------------   |
-| data.[sse_name].[MPI rank] | Contains records of single stellar evolution events, such as type changes and supernovae. Note that if a star evolves rapidly (less than the dynamical integration time step), internal type changes may not be captured. |
-| data.[bse_name].[MPI rank] | Records binary stellar evolution events. All binary type changes are logged; however, if 'Warning: BSE event storage overflow!' appears during the simulation, it indicates that binary type changes are too frequent, resulting in some changes not being recorded for the corresponding binary.
+| data.[sse_name] | Contains records of single stellar evolution events, such as type changes and supernovae. Runtime temporary files are created per MPI rank and then appended into this shared final file. Note that if a star evolves rapidly (less than the dynamical integration time step), internal type changes may not be captured. |
+| data.[bse_name] | Records binary stellar evolution events. Runtime temporary files are created per MPI rank and then appended into this shared final file. All binary type changes are logged; however, if 'Warning: BSE event storage overflow!' appears during the simulation, it indicates that binary type changes are too frequent, resulting in some changes not being recorded for the corresponding binary. |
+| data.interrupt  | When interrupt output is enabled without BSE-based stellar evolution, records interruption events in a shared final file. Runtime temporary files are created per MPI rank and then appended into this file. |
 
 When Galpy is employed (--with-external=galpy), under certain conditions, a galpy parameter file may be generated alongside each snapshot file:
 | File name           | Content                                                                                                                     |
@@ -853,11 +856,11 @@ When Galpy is employed (--with-external=galpy), under certain conditions, a galp
 | data.[index].galpy  | Contains the galpy parameter file for each snapshot, which may be necessary for restart purposes.                                                                                   |
 
 In this context, 'data' serves as the default prefix for output files, although users have the flexibility to modify it using the `petar` option `-f`. 
-For instance, by specifying `-f output`, the output files will be named 'output.[index]', 'output.esc.[MPI rank]', and so forth.
+For instance, by specifying `-f output`, the output files will be named 'output.[index]', 'output.esc', 'output.group.n2', and so forth.
 
-The term [MPI rank] denotes the MPI processor responsible for outputting the data. Consequently, the number of data files with this suffix aligns with the count of MPI processors employed in the simulation. For instance, with two MPI processors, the escape data files will be labeled 'data.esc.0' and 'data.esc.1'.
+The term [MPI rank] denotes the MPI processor responsible for a rank-local runtime stream or temporary file. For instance, with two MPI processors, the escaper temporary files will be labeled 'data.esc.0.tmp' and 'data.esc.1.tmp', while the committed runtime outputs `data.esc`, `data.group.n*`, `data.[sse_name]`, `data.[bse_name]`, and `data.interrupt` are shared final files.
 
-Prior to accessing these files, it is advisable to execute the `petar.data.gether` tool to consolidate the individual files generated by different MPI ranks into a single file for ease of use.
+Prior to accessing snapshot lists, or when working with legacy per-rank event outputs from older runs, it is advisable to execute the `petar.data.gether` tool. For the current transactional runtime outputs, `data.esc`, `data.group.n*`, `data.[sse_name]`, `data.[bse_name]`, and `data.interrupt` are already committed as shared single files.
 
 The `petar.data.gether` tool not only consolidates files from various MPI processors but also generates new files accessible by the `petar` Python data analysis tool (refer to [Python Data Analysis Module](#python-data-analysis-module)). 
 - For ".group" files, `petar.data.gether` separates few-body groups with varying member counts into individual files labeled with the suffix ".n[number of members in groups]".
@@ -909,10 +912,11 @@ Below is a table illustrating the corresponding units for various output files, 
 | :-------------------------- | :---------------------------------------------------------  | :---------------------------------------------------------------  |
 | `petar` output log          | Printed information from `petar`                            | PeTar unit                                                         |
 | data.[index]                | Snapshots                                                   | Particle class: PeTar unit + Stellar evolution unit (refer to `petar -h`) |
-| data.esc.[MPI rank]         | Escapers                                                    | Time: PeTar unit; Particle: Particle class                         |
-| data.group.[MPI rank]       | Multiple systems                                            | Binary parameters: PeTar unit; Particle members: Particle class   |
-| data.[bse_name].[MPI rank]  | Binary stellar evolution events                             | Stellar evolution unit                                             |
-| data.[sse_name].[MPI rank]  | Single stellar evolution events                             | Stellar evolution unit                                             |
+| data.esc                    | Escapers                                                    | Time: PeTar unit; Particle: Particle class                         |
+| data.group.n[member count]  | Multiple systems                                            | Binary parameters: PeTar unit; Particle members: Particle class   |
+| data.[bse_name]             | Binary stellar evolution events                             | Stellar evolution unit                                             |
+| data.[sse_name]             | Single stellar evolution events                             | Stellar evolution unit                                             |
+| data.interrupt              | Interruption events                                         | PeTar unit / Stellar evolution unit depending on interrupt mode    |
 | data.status                 | Global parameters                                           | PeTar unit                                                         |
 | data.prof.rank.[MPI rank]   | Performance profiling                                       | Time: Second (per tree time step)                                  |
 
@@ -1125,7 +1129,7 @@ petar.find.dt -m 2 -o 4 -a "-p input.par -r 0 --r-search-min 0 --r-bin 0" [resta
 
 ### Gathering Output Files
 
-In MPI usage, each MPI processor generates individual data files with filenames containing the suffix `[MPI rank]`. To consolidate these output files from different MPI ranks into a single file, the `petar.data.gether` tool is utilized. Additionally, this tool can split the stellar evolution event files and group files into individual components, enabling the use of Python tools for data analysis (refer to [Output files](#output-files)).
+In MPI usage, snapshot files remain naturally distributed by output index. Current transactional runtime streams such as `data.esc`, `data.group.n*`, `data.[sse_name]`, `data.[bse_name]`, and `data.interrupt` are first staged in rank-local temporary files and then committed into shared single final files. The `petar.data.gether` tool is therefore mainly used for generating snapshot lists, consolidating legacy per-rank event outputs from older runs, and splitting group or stellar-evolution files into analysis-friendly components.
 
 Moreover, `petar.data.gether` generates a file named `"[output prefix].snap.lst"` that includes a sorted list of all snapshot files based on their respective timestamps. This file serves as input for both `petar.data.process` and `petar.movie`.
 
@@ -1146,22 +1150,22 @@ Below is a table detailing the files generated by the tool and the corresponding
 
 | Original files                | Output files                  | Content                                     | Python classes initialization for reading |
 | :--------------               | :------------                 | :---------                                  | :-------------------------------------    |
-| data.group.[MPI rank]         | data.group                    | all groups                                  | None                                      |
+| data.group.n[member count]    | data.group                    | all groups                                  | None                                      |
 |                               | data.group.n2                 | binaries, hyperbolic systems                 | petar.GroupInfo(N=2)                      |
 |                               | data.group.n3                 | triples                                     | petar.GroupInfo(N=3)                      |
 |                               | ...                           | multiple systems...                         | ...                                       |
-| data.esc.[MPI_rank]           | data.esc                      | escapers                                    | petar.SingleEscaper(interrupt_mode=[\*], external_mode=[\*]) |
-| data.[sse_name].[MPI rank]    | data.[sse_name]               | full single stellar evolution records       | None                                      |
+| data.esc                      | data.esc                      | escapers                                    | petar.SingleEscaper(interrupt_mode=[\*], external_mode=[\*]) |
+| data.[sse_name]               | data.[sse_name]               | full single stellar evolution records       | None                                      |
 |                               | data.[sse_name].type_change   | single stellar evolution type change events | petar.SSETypeChange()                     |
 |                               | data.[sse_name].sn_kick       | supernova natal kick of single star         | petar.SSESNKick()                         |
-| data.[bse_name].[MPI rank]    | data.[bse_name]               | full binary stellar evolution records       | None                                      |
+| data.[bse_name]               | data.[bse_name]               | full binary stellar evolution records       | None                                      |
 |                               | data.[bse_name].type_change   | binary stellar evolution type change events | petar.BSETypeChange()                     |
 |                               | data.[bse_name].sn_kick       | supernova natal kick in binaries            | petar.BSESNKick()                         |
 |                               | data.[bse_name].dynamic_merge | dynamical-driven (hyperbolic) mergers       | petar.BSEDynamicMerge(less_output=[\*])   |
 
 Here, [\*] represents arguments that depend on the configuration options used for compilation.
 
-The gathered file `data.esc` keeps the same runtime output format selected by the `petar` option `-i`. Therefore, use `loadtxt()` when `data.esc.[MPI rank]` was generated in ASCII mode, and use `fromfile()` when it was generated in BINARY mode.
+The runtime file `data.esc` keeps the same output format selected by the `petar` option `-i`. Therefore, use `loadtxt()` when `data.esc` was generated in ASCII mode, and use `fromfile()` when it was generated in BINARY mode.
 
 Note: 'data.group[.n\*]' files are not generated by default due to their large size. To obtain these files, the `-g` option must be added.
 
@@ -1210,7 +1214,7 @@ The snapshots generated by `petar.data.process` are shifted to the rest frame wh
 
 When snapshot files are in BINARY format, the option `-s binary` can be used for `petar.data.process` to read the snapshots correctly. It's important to note that the data generated by `petar.data.process` are all in ASCII format.
 
-Additionally, the `petar` code can remove escapers and store the data of escapers using energy and distance criteria (in files [data filename prefix].esc.[MPI rank], see [Output files](#output-files)). All escapers during the simulations are not stored in the original snapshot files. The `petar` code only applies a simple constant escape radial criterion. The post-processing by `petar.data.process` can calculate the tidal radius and detect escapers, which are then stored in the post-generated escape files: "data.esc\_single" and "data.esc\_binary". These escapers are not removed from the post-generated snapshot files: data.[index].single and data.[index].binary.
+Additionally, the `petar` code can remove escapers and store the data of escapers using energy and distance criteria (in file [data filename prefix].esc, see [Output files](#output-files)). All escapers during the simulations are not stored in the original snapshot files. The `petar` code only applies a simple constant escape radial criterion. The post-processing by `petar.data.process` can calculate the tidal radius and detect escapers, which are then stored in the post-generated escape files: "data.esc\_single" and "data.esc\_binary". These escapers are not removed from the post-generated snapshot files: data.[index].single and data.[index].binary.
 
 For Lagrangian properties, 'data.lagr' includes radius, average mass, number of objects, different components of velocity, and dispersions within different Lagrangian radii. The mass fractions of Lagrangian radii are 0.1, 0.3, 0.5, 0.7, and 0.9 by default. The core radius property is added at the end. There is an option in `petar.data.process` to define an arbitrary set of mass functions. When using the SSE/BSE-based stellar evolution package, an additional option `--add-star-type` can be used to calculate Lagrangian properties for specific types of stars. When `--add-star-type` is used, the reading function should have consistent keyword arguments. An example of reading 'data.lagr' is provided in [Reading Lagrangian data](#reading-lagrangian-data).
 
@@ -1482,7 +1486,7 @@ For runtime files generated directly by `petar`, the reading method depends on t
 - `data.status`
     - ASCII output: `status.loadtxt('data.status')`
     - BINARY output: `status.fromfile('data.status')`
-- `data.esc` gathered from `data.esc.[MPI rank]`
+- `data.esc`
     - ASCII output: `esc.loadtxt('data.esc')`
     - BINARY output: `esc.fromfile('data.esc')`
 
@@ -1897,7 +1901,7 @@ It's important to note that the initial status from `BSEMerge` pertains to the f
 
 ### Reading Group Information
 
-During a simulation, PeTar records information about the formation and dissolution of various systems, including hyperbolic encounters, binaries, triples, quadruples, and more, during SDAR integration. This information is saved into files named "data.group.[MPI rank]", where "data" serves as the default filename prefix. By utilizing `petar.data.gether -g [filename prefix]`, groups with different member counts are separated into individual files named "data.group.n1", "data.group.n2", and so on, with the number indicating the number of members in the multiple systems. The following example illustrates how to read the groups file and analyze the information:
+During a simulation, PeTar records information about the formation and dissolution of various systems, including hyperbolic encounters, binaries, triples, quadruples, and more, during SDAR integration. The runtime temporary files are created per MPI rank, and the committed final outputs are stored directly in files named "data.group.n2", "data.group.n3", and so on, where "data" serves as the default filename prefix and the suffix number indicates the number of members in the multiple systems. The following example illustrates how to read the groups file and analyze the information:
 
 ```python
 # Load two-body groups (binary, hyperbolic encounters)

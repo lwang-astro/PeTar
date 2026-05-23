@@ -1019,7 +1019,7 @@ public:
         if (manager->record_id_range.getN()>0) {
             for (int i=0; i<_n_ptcl; i++) {
                 if (manager->record_id_range.isIn(ptcl_origin[i].id)) {
-                    DATADUMPAPP((std::string("object_")+std::to_string(ptcl_origin[i].id)).c_str());
+                    DATADUMPAPP((std::string("object_")+std::to_string(ptcl_origin[i].id)+"."+std::to_string(PS::Comm::getRank())+".tmp").c_str());
                 }
             }
         }

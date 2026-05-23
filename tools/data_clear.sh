@@ -27,6 +27,7 @@ auto_mode=1
 ignore_binary_warnings=0
 interrupt_mode_set=0
 external_mode_set=0
+clear_tmp=0
 
 detect_modes_from_petar() {
 	local pbin=$1
@@ -309,6 +310,7 @@ do
 	    echo '  --status-n-particle [I]: particle count for binary status when petar uses -w 2 (default: 0, i.e. no embedded particles)';
 	    echo '  --use-mpfrc: enable mpfrc layout for binary status/group parsing (default: off)';
 	    echo '  --ignore-binary-warnings: continue clearing binary status/group even if Python readers emit layout warnings (default: abort on warnings)';
+	    echo '  --clear-tmp: remove residual transactional tmp files after data clearing (prefix.*.tmp and object_*.tmp)';
 	    echo '  --less-dyn-merge:   reduced output mode for [prefix].*bse*.dynmical_merge (three columns less)';
 	    echo '                      Only applicable for PeTar versions before Sep 10, 2020)';
 	    echo '  --less-type-change: reduced output mode for [prefix].*bse*.type_change (20 columns less)';
@@ -324,6 +326,7 @@ do
 	--status-n-particle) shift; status_n_particle=$1; shift;;
 	--use-mpfrc) use_mpfrc=1; shift;;
 	--ignore-binary-warnings) ignore_binary_warnings=1; shift;;
+	--clear-tmp) clear_tmp=1; shift;;
 	--less-dyn-merge) less_dyn_merge=1; shift;; 
 	--less-type-change) less_type_change=1; shift;;
 	*) fname=$1;shift;;
@@ -515,6 +518,29 @@ do
 done
 
 #
+
+if [ $clear_tmp -eq 1 ]; then
+	echo 'remove transactional tmp files'
+	tmp_list=''
+	for tf in `ls 2>/dev/null | egrep '^'$fname'.*\.tmp$'`
+	do
+		tmp_list="$tmp_list $tf"
+	done
+	for tf in `ls 2>/dev/null | egrep '^object_.*\.tmp$'`
+	do
+		tmp_list="$tmp_list $tf"
+	done
+
+	n_tmp=0
+	for tf in $tmp_list
+	do
+		if [ -e "$tf" ]; then
+			rm -f "$tf"
+			n_tmp=`expr $n_tmp + 1`
+		fi
+	done
+	echo 'removed tmp files: '$n_tmp
+fi
 
 
 

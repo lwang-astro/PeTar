@@ -23,6 +23,8 @@
 #include<fstream>
 #include<string>
 #include<sstream>
+#include<vector>
+#include<filesystem>
 //#include<unistd.h>
 #include<getopt.h>
 
@@ -77,6 +79,7 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #include"domain.hpp"
 #include"cluster_list.hpp"
 #include"kickdriftstep.hpp"
+#include"output_commit_manager.hpp"
 #ifdef PROFILE
 #include"profile.hpp"
 #endif
@@ -120,6 +123,7 @@ public:
     IOParams<PS::S64> data_format;
     IOParams<PS::S64> write_style;
     IOParams<PS::S64> append_switcher;
+    IOParams<PS::S64> keep_tmp_on_startup;
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
     IOParams<PS::S64> domain_weight_mode;
     IOParams<PS::S64> domain_nstep;
@@ -165,6 +169,7 @@ public:
                      data_format      (input_par_store, 2,    "i", "Data file reading and writing format; snapshots, status and escaper outputs follow the write mode selected here; 0: read and write in BINARY; 1: read and write in ASCII; 2: read in ASCII, write in BINARY; 3: read in BINARY, write in ASCII"),
                      write_style      (input_par_store, 1,    "w", "Data file writing style; 0: no output; 1: write all files separately; 2. write snapshots in status files in one line per step (no MPI support); 3. write files except snapshots"),
                      append_switcher  (input_par_store, 1,    "a", "Data file output mode; 0: overwrite files except object dump files, include header lines; 1: append files except snapshots, no header line"),
+                     keep_tmp_on_startup(input_par_store, 0, "keep-tmp-on-startup", "Startup tmp handling for transactional outputs; 0: auto-remove residual tmp files before run (default); 1: keep residual tmp files and only print warning"),
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
                      domain_weight_mode(input_par_store, 0, "domain-weight-mode", "Domain decomposition weight mode for MPI parallel; 0: equal weight for each MPI processor; 1: use force calculation time as weight to obtain better load balance with losing simulation reproducibility"),
                      domain_nstep      (input_par_store, 16, "domain-nstep", "Number of steps between domain decompositions"),
@@ -196,6 +201,7 @@ public:
             {r_search_peri_factor.key,   required_argument, &petar_flag, 9}, 
             {r_search_min.key,         required_argument, &petar_flag, 10},
             {r_escape.key,             required_argument, &petar_flag, 11},
+            {keep_tmp_on_startup.key,  required_argument, &petar_flag, 15},
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             {domain_weight_mode.key,   required_argument, &petar_flag, 12},
             {domain_nstep.key,        required_argument, &petar_flag, 13},
@@ -224,6 +230,12 @@ public:
                     if(print_flag) tree_ngroup_limit.print(std::cout);
                     opt_used += 2;
                     assert(tree_ngroup_limit.value>0);
+                    break;
+                case 15:
+                    keep_tmp_on_startup.value = atoi(optarg);
+                    if(print_flag) keep_tmp_on_startup.print(std::cout);
+                    opt_used += 2;
+                    assert(keep_tmp_on_startup.value==0 || keep_tmp_on_startup.value==1);
                     break;
                 case 3:
                     tree_nstep_mklist.value = atoi(optarg);
@@ -539,6 +551,7 @@ public:
     Status stat;
     std::ofstream fstatus;
     PS::F64 time_kick;
+    OutputCommitManager output_commit_manager;
 
     // escaper
     Escaper escaper;
@@ -617,6 +630,309 @@ public:
         return (input_parameters.data_format.value==0 || input_parameters.data_format.value==2);
     }
 
+    static std::string makeTmpPath(const std::string& path) {
+        return path + ".tmp";
+    }
+
+    static bool hasPrefix(const std::string& text, const std::string& prefix) {
+        return text.size() >= prefix.size() && text.compare(0, prefix.size(), prefix) == 0;
+    }
+
+    static bool hasSuffix(const std::string& text, const std::string& suffix) {
+        return text.size() >= suffix.size() && text.compare(text.size()-suffix.size(), suffix.size(), suffix) == 0;
+    }
+
+    static bool contains(const std::string& text, const std::string& token) {
+        return text.find(token) != std::string::npos;
+    }
+
+    void warnResidualTmpFilesOnStartup() const {
+        if (my_rank != 0) return;
+
+        const std::string& fname_snp = input_parameters.fname_snp.value;
+        std::vector<std::string> tmp_files;
+
+        try {
+            for (const auto& entry: std::filesystem::directory_iterator(std::filesystem::current_path())) {
+                if (!entry.is_regular_file()) continue;
+                const std::string name = entry.path().filename().string();
+                if (!hasSuffix(name, ".tmp") && !contains(name, ".tmp.n")) continue;
+
+                // Restart policy: tmp files are treated as uncommitted residues and never auto-merged.
+                const bool is_output_tmp = hasPrefix(name, fname_snp + ".");
+                const bool is_object_tmp = hasPrefix(name, "object_");
+                if (is_output_tmp || is_object_tmp) tmp_files.push_back(name);
+            }
+        }
+        catch (...) {
+            std::cerr<<"Warning! failed to scan working directory for residual .tmp files.\n";
+            return;
+        }
+
+        if (!tmp_files.empty()) {
+            std::cerr<<"Warning! detected "<<tmp_files.size()<<" residual uncommitted tmp file(s).\n"
+                     <<"         These files are NOT auto-merged on restart.\n"
+                     <<"         Use --keep-tmp-on-startup 0 (default) to auto-remove them, or run petar.data.clear --clear-tmp manually.\n";
+            const size_t n_show = std::min<size_t>(tmp_files.size(), 8);
+            for (size_t i=0; i<n_show; i++) {
+                std::cerr<<"         tmp["<<i<<"]: "<<tmp_files[i]<<"\n";
+            }
+            if (tmp_files.size() > n_show) {
+                std::cerr<<"         ... ("<<(tmp_files.size()-n_show)<<" more)\n";
+            }
+        }
+    }
+
+    void removeResidualTmpFilesOnStartup() const {
+        if (my_rank != 0) return;
+
+        const std::string& fname_snp = input_parameters.fname_snp.value;
+        int n_removed = 0;
+        std::error_code ec;
+
+        for (const auto& entry: std::filesystem::directory_iterator(std::filesystem::current_path(), ec)) {
+            if (ec) break;
+            if (!entry.is_regular_file()) continue;
+
+            const std::string name = entry.path().filename().string();
+            if (!hasSuffix(name, ".tmp") && !contains(name, ".tmp.n")) continue;
+
+            const bool is_output_tmp = hasPrefix(name, fname_snp + ".");
+            const bool is_object_tmp = hasPrefix(name, "object_");
+            if (!(is_output_tmp || is_object_tmp)) continue;
+
+            std::error_code ec_rm;
+            const bool removed = std::filesystem::remove(entry.path(), ec_rm);
+            if (removed && !ec_rm) n_removed++;
+        }
+
+        if (n_removed > 0) {
+            std::cerr<<"Info: removed "<<n_removed<<" residual tmp file(s) on startup."<<std::endl;
+        }
+    }
+
+    void cleanupEmptyTmpFilesOnExit() const {
+        if (my_rank != 0) return;
+
+        const std::string& fname_snp = input_parameters.fname_snp.value;
+        int n_removed = 0;
+        std::error_code ec;
+
+        for (const auto& entry: std::filesystem::directory_iterator(std::filesystem::current_path(), ec)) {
+            if (ec) break;
+            if (!entry.is_regular_file()) continue;
+
+            const std::string name = entry.path().filename().string();
+                if (!hasSuffix(name, ".tmp") && !contains(name, ".tmp.n")) continue;
+
+            const bool is_output_tmp = hasPrefix(name, fname_snp + ".");
+            const bool is_object_tmp = hasPrefix(name, "object_");
+            if (!(is_output_tmp || is_object_tmp)) continue;
+
+            std::error_code ec_size;
+            const auto fsize = std::filesystem::file_size(entry.path(), ec_size);
+            if (ec_size) continue;
+            if (fsize != 0) continue;
+
+            std::error_code ec_rm;
+            const bool removed = std::filesystem::remove(entry.path(), ec_rm);
+            if (removed && !ec_rm) n_removed++;
+        }
+
+        if (n_removed > 0) {
+            std::cerr<<"Info: removed "<<n_removed<<" empty tmp file(s) on exit."<<std::endl;
+        }
+    }
+
+    void registerTransactionalOutputs() {
+        const int write_style = input_parameters.write_style.value;
+        const std::string& fname_snp = input_parameters.fname_snp.value;
+
+        if (write_style>0) {
+            const std::string status_final = fname_snp + ".status";
+            const std::string esc_final = fname_snp + ".esc";
+            if (my_rank==0) {
+                output_commit_manager.registerTmp("status", my_rank, makeTmpPath(status_final), status_final, OutputCommitManager::CommitMode::Append);
+            }
+            output_commit_manager.registerTmp("escaper", my_rank, makeTmpPath(fname_snp + ".esc." + std::to_string(my_rank)), esc_final, OutputCommitManager::CommitMode::Append);
+        }
+
+#ifdef PROFILE
+    if (write_style>0) {
+            const std::string profile_final = fname_snp + ".prof.rank." + std::to_string(my_rank);
+            output_commit_manager.registerTmp("profile", my_rank, makeTmpPath(profile_final), profile_final, OutputCommitManager::CommitMode::Append);
+        }
+#endif
+
+#ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
+        if (hard_parameters.stellar_evolution_option.value>0) {
+            const std::string my_rank_str = std::to_string(my_rank);
+            const std::string fsse_tmp_final = fname_snp + fsse_par_suffix + "." + my_rank_str;
+            const std::string fbse_tmp_final = fname_snp + fbse_par_suffix + "." + my_rank_str;
+            const std::string fsse_final = fname_snp + fsse_par_suffix;
+            const std::string fbse_final = fname_snp + fbse_par_suffix;
+            output_commit_manager.registerTmp("sse", my_rank, makeTmpPath(fsse_tmp_final), fsse_final, OutputCommitManager::CommitMode::Append);
+            output_commit_manager.registerTmp("bse", my_rank, makeTmpPath(fbse_tmp_final), fbse_final, OutputCommitManager::CommitMode::Append);
+        }
+#else
+        if (hard_parameters.interrupt_detection_option.value>0) {
+            const std::string my_rank_str = std::to_string(my_rank);
+            const std::string finterrupt_tmp_final = fname_snp + ".interrupt." + my_rank_str;
+            const std::string finterrupt_final = fname_snp + ".interrupt";
+            output_commit_manager.registerTmp("interrupt", my_rank, makeTmpPath(finterrupt_tmp_final), finterrupt_final, OutputCommitManager::CommitMode::Append);
+        }
+#endif
+#endif
+
+#ifdef ADJUST_GROUP_PRINT
+    if (hard_parameters.adjust_group_write_option.value>0 && write_style>0) {
+            const std::string my_rank_str = std::to_string(my_rank);
+            const std::string group_tmp_prefix = fname_snp + ".group." + my_rank_str + ".tmp.n";
+
+            for (const auto& entry: std::filesystem::directory_iterator(std::filesystem::current_path())) {
+                if (!entry.is_regular_file()) continue;
+                const std::string path = entry.path().filename().string();
+                if (!hasPrefix(path, group_tmp_prefix)) continue;
+
+                std::string final_path = path;
+                const std::string token = ".tmp.n";
+                const auto pos = final_path.find(token);
+                if (pos==std::string::npos) continue;
+                final_path.replace(0, group_tmp_prefix.size(), fname_snp + ".group.n");
+
+                output_commit_manager.registerTmp("group", my_rank, path, final_path, OutputCommitManager::CommitMode::Append);
+            }
+        }
+#endif
+
+        if (hard_manager.record_id_range.getN()>0) {
+            const std::string rank_suffix = "." + std::to_string(my_rank);
+            const auto register_object_range = [&](const PS::S64 id_start, const PS::S64 id_end) {
+                for (PS::S64 id = id_start; id < id_end; ++id) {
+                    const std::string object_final = std::string("object_") + std::to_string(id);
+                    const std::string object_tmp = object_final + rank_suffix + ".tmp";
+                    output_commit_manager.registerTmp("object_id", my_rank, object_tmp, object_final, OutputCommitManager::CommitMode::Append);
+                }
+            };
+
+            register_object_range(hard_manager.record_id_range.id_start_one, hard_manager.record_id_range.id_end_one);
+            register_object_range(hard_manager.record_id_range.id_start_two, hard_manager.record_id_range.id_end_two);
+        }
+    }
+
+    void reopenTransactionalOutputsAfterCommit() {
+        const int write_style = input_parameters.write_style.value;
+        const std::string& fname_snp = input_parameters.fname_snp.value;
+        const std::ofstream::openmode status_mode = isOutputBinary() ? std::ofstream::binary : std::ofstream::openmode(0);
+        const std::ofstream::openmode esc_mode = isOutputBinary() ? std::ofstream::binary : std::ofstream::openmode(0);
+
+        if (write_style>0) {
+            if (fstatus.is_open()) fstatus.close();
+            if (fesc.is_open()) fesc.close();
+            if (my_rank==0) {
+                fstatus.open(makeTmpPath(fname_snp + ".status").c_str(), std::ofstream::out|status_mode);
+                fstatus<<std::setprecision(WRITE_PRECISION);
+            }
+            fesc.open(makeTmpPath(fname_snp + ".esc." + std::to_string(my_rank)).c_str(), std::ofstream::out|esc_mode);
+            fesc<<std::setprecision(WRITE_PRECISION);
+        }
+
+#ifdef PROFILE
+        if (write_style>0) {
+            const std::string fproname = fname_snp + ".prof.rank." + std::to_string(my_rank);
+            if (fprofile.is_open()) fprofile.close();
+            const std::string fproname_tmp = makeTmpPath(fproname);
+            fprofile.open(fproname_tmp.c_str(), std::ofstream::out);
+            if (!OutputCommitManager::fileExists(fproname)) {
+                fprofile<<std::setw(WRITE_WIDTH)<<"my_rank"
+                        <<std::setw(WRITE_WIDTH)<<"Time"
+                        <<std::setw(WRITE_WIDTH)<<"N_steps"
+                        <<std::setw(WRITE_WIDTH)<<"N_real_loc";
+                profile.dumpName(fprofile, WRITE_WIDTH);
+                profile.dumpBarrierName(fprofile, WRITE_WIDTH);
+                tree_soft_profile.dumpName(fprofile, WRITE_WIDTH);
+                tree_nb_profile.dumpName(fprofile, WRITE_WIDTH);
+#if defined(USE_GPU) && defined(GPU_PROFILE)
+                gpu_profile.dumpName(fprofile, WRITE_WIDTH);
+                gpu_counter.dumpName(fprofile, WRITE_WIDTH);
+#endif
+                n_count.dumpName(fprofile, 0, WRITE_WIDTH);
+                fprofile<<std::endl;
+            }
+            fprofile<<std::setprecision(WRITE_PRECISION);
+        }
+#endif
+
+#ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
+        if (hard_parameters.stellar_evolution_option.value>0) {
+            const std::string my_rank_str = std::to_string(my_rank);
+            const std::string fsse_final = fname_snp + fsse_par_suffix + "." + my_rank_str;
+            const std::string fbse_final = fname_snp + fbse_par_suffix + "." + my_rank_str;
+            if (hard_manager.ar_manager.interaction.fout_sse.is_open()) hard_manager.ar_manager.interaction.fout_sse.close();
+            if (hard_manager.ar_manager.interaction.fout_bse.is_open()) hard_manager.ar_manager.interaction.fout_bse.close();
+            hard_manager.ar_manager.interaction.fout_sse.open(makeTmpPath(fsse_final).c_str(), std::ofstream::out);
+            hard_manager.ar_manager.interaction.fout_bse.open(makeTmpPath(fbse_final).c_str(), std::ofstream::out);
+            hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
+            hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);
+        }
+#else
+        if (hard_parameters.interrupt_detection_option.value>0) {
+            const std::string my_rank_str = std::to_string(my_rank);
+            const std::string finterrupt_final = fname_snp + ".interrupt." + my_rank_str;
+            if (hard_manager.ar_manager.interaction.fout_interrupt.is_open()) hard_manager.ar_manager.interaction.fout_interrupt.close();
+            hard_manager.ar_manager.interaction.fout_interrupt.open(makeTmpPath(finterrupt_final).c_str(), std::ofstream::out);
+            hard_manager.ar_manager.interaction.fout_interrupt<<std::setprecision(WRITE_PRECISION);
+        }
+#endif
+#endif
+
+#ifdef ADJUST_GROUP_PRINT
+    if (hard_parameters.adjust_group_write_option.value>0 && write_style>0) {
+            const std::string my_rank_str = std::to_string(my_rank);
+            const std::string fgroup_tmp_base = fname_snp + ".group." + my_rank_str + ".tmp";
+            // Transactional tmp files are per-window staging buffers; always truncate.
+            const bool append_flag = false;
+            const bool binary_flag = (hard_parameters.adjust_group_write_option.value==2);
+            hard_manager.h4_manager.group_info_output.close();
+            hard_manager.h4_manager.group_info_output.setup(fgroup_tmp_base, append_flag, binary_flag, WRITE_PRECISION);
+        }
+#endif
+    }
+
+    void closeTransactionalOutputsBeforeCommit() {
+        const int write_style = input_parameters.write_style.value;
+
+        if (write_style>0) {
+            if (fstatus.is_open()) fstatus.close();
+            if (fesc.is_open()) fesc.close();
+        }
+
+#ifdef PROFILE
+        if (write_style>0 && fprofile.is_open()) fprofile.close();
+#endif
+
+#ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
+        if (hard_parameters.stellar_evolution_option.value>0) {
+            if (hard_manager.ar_manager.interaction.fout_sse.is_open()) hard_manager.ar_manager.interaction.fout_sse.close();
+            if (hard_manager.ar_manager.interaction.fout_bse.is_open()) hard_manager.ar_manager.interaction.fout_bse.close();
+        }
+#else
+        if (hard_parameters.interrupt_detection_option.value>0) {
+            if (hard_manager.ar_manager.interaction.fout_interrupt.is_open()) hard_manager.ar_manager.interaction.fout_interrupt.close();
+        }
+#endif
+#endif
+
+#ifdef ADJUST_GROUP_PRINT
+        if (hard_parameters.adjust_group_write_option.value>0 && write_style>0) {
+            hard_manager.h4_manager.group_info_output.close();
+        }
+#endif
+    }
+
     //! initialization
     PeTar(): 
         input_parameters(),
@@ -643,7 +959,7 @@ public:
         // profile
         dn_loop(0), profile(), n_count(), n_count_sum(), tree_soft_profile(), fprofile(), 
 #endif
-        stat(), fstatus(), time_kick(0.0),
+    stat(), fstatus(), time_kick(0.0), output_commit_manager(),
         escaper(), fesc(),
         file_header(), system_soft(), id_adr_map(),
         n_loop(0), domain_decompose_weight(1.0), dinfo(), pos_domain(NULL), 
@@ -1814,6 +2130,7 @@ public:
 #endif
         bool print_flag = input_parameters.print_flag;
         int write_style = input_parameters.write_style.value;
+
         std::cout<<std::setprecision(PRINT_PRECISION);
 
         // print status
@@ -2629,6 +2946,7 @@ public:
         known_options.push_back("help");
         known_options.push_back("h");
         known_options.push_back("disable-print-info");
+        known_options.push_back("keep-tmp-on-startup");
         FindUndefinedOptions(all_pars, argc, argv, &known_options);
 
         // reading parameters
@@ -2682,6 +3000,14 @@ public:
 
         bool print_flag = input_parameters.print_flag;
         int write_style = input_parameters.write_style.value;
+        warnResidualTmpFilesOnStartup();
+        if (input_parameters.keep_tmp_on_startup.value==0) {
+            removeResidualTmpFilesOnStartup();
+        }
+
+    #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        PS::Comm::barrier();
+    #endif
 
 #ifdef PROFILE
         if(print_flag) {
@@ -2692,11 +3018,15 @@ public:
     
         // open profile file
         if(write_style>0) {
-            std::string fproname=input_parameters.fname_snp.value+".prof.rank."+std::to_string(my_rank);
-            if(input_parameters.append_switcher.value==1) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
-            else  {
-                fprofile.open(fproname.c_str(),std::ofstream::out);
+            std::string fproname_final=input_parameters.fname_snp.value+".prof.rank."+std::to_string(my_rank);
+            std::string fproname_open = makeTmpPath(fproname_final);
 
+            if (input_parameters.append_switcher.value!=1) {
+                std::remove(fproname_final.c_str());
+            }
+
+            fprofile.open(fproname_open.c_str(),std::ofstream::out);
+            if (!OutputCommitManager::fileExists(fproname_final)) {
                 fprofile<<std::setw(WRITE_WIDTH)<<"my_rank"
                         <<std::setw(WRITE_WIDTH)<<"Time"
                         <<std::setw(WRITE_WIDTH)<<"N_steps"
@@ -2719,19 +3049,13 @@ public:
         // open output files
         // status information output
         std::string& fname_snp = input_parameters.fname_snp.value;
+        const auto make_tmp_name = [](const std::string& path) {
+            return path + ".tmp";
+        };
         if(write_style>0&&my_rank==0) {
             const std::ofstream::openmode status_mode = isOutputBinary() ? std::ofstream::binary : std::ofstream::openmode(0);
-            if(input_parameters.append_switcher.value==1) 
-                fstatus.open((fname_snp+".status").c_str(),std::ofstream::out|std::ofstream::app|status_mode);
-            else {
-                fstatus.open((fname_snp+".status").c_str(),std::ofstream::out|status_mode);
-                // write titles of columns
-                //stat.printColumnTitleAscii(fstatus,WRITE_WIDTH);
-                //if (write_style==2) {
-                //    for (int i=0; i<stat.n_real_loc; i++) system_soft[0].printColumnTitleAscii(fstatus, WRITE_WIDTH);
-                //}
-                //fstatus<<std::endl;
-            }
+            std::string status_path = make_tmp_name(fname_snp+".status");
+            fstatus.open(status_path.c_str(),std::ofstream::out|status_mode);
             fstatus<<std::setprecision(WRITE_PRECISION);
         }
 
@@ -2739,16 +3063,10 @@ public:
             // open escaper file
             std::string my_rank_str = std::to_string(my_rank);
             std::string fname_esc = fname_snp + ".esc." + my_rank_str;
+            std::string fname_esc_final = fname_snp + ".esc";
             const std::ofstream::openmode esc_mode = isOutputBinary() ? std::ofstream::binary : std::ofstream::openmode(0);
-            if(input_parameters.append_switcher.value==1) 
-                fesc.open(fname_esc.c_str(), std::ofstream::out|std::ofstream::app|esc_mode);
-            else {
-                fesc.open(fname_esc.c_str(), std::ofstream::out|esc_mode);
-                // write titles of columns, will cause issue when gether different MPI ranks
-                // fesc<<std::setw(WRITE_WIDTH)<<"Time";
-                // FPSoft::printColumnTitleAscii(fesc,WRITE_WIDTH);
-                // fesc<<std::endl;
-            }
+            std::string esc_path = make_tmp_name(fname_esc);
+            fesc.open(esc_path.c_str(), std::ofstream::out|esc_mode);
             fesc<<std::setprecision(WRITE_PRECISION);
 
 #ifdef STELLAR_EVOLUTION
@@ -2757,14 +3075,11 @@ public:
                 // open SSE/BSE file
                 std::string fsse_name = fname_snp + fsse_par_suffix + "." + my_rank_str;
                 std::string fbse_name = fname_snp + fbse_par_suffix + "." + my_rank_str;
-                if(input_parameters.append_switcher.value==1) {
-                    hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out|std::ofstream::app);
-                    hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out|std::ofstream::app);
-                }
-                else {
-                    hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out);
-                    hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out);
-                }
+                std::string fsse_tmp = makeTmpPath(fsse_name);
+                std::string fbse_tmp = makeTmpPath(fbse_name);
+                // Transactional tmp files are per-window staging buffers; always truncate.
+                hard_manager.ar_manager.interaction.fout_sse.open(fsse_tmp.c_str(), std::ofstream::out);
+                hard_manager.ar_manager.interaction.fout_bse.open(fbse_tmp.c_str(), std::ofstream::out);
                 hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
                 hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);
             }
@@ -2772,10 +3087,9 @@ public:
             if (hard_parameters.interrupt_detection_option.value>0) {
                 // open interrupt file
                 std::string finterrupt_name = fname_snp + ".interrupt." + my_rank_str;
-                if(input_parameters.append_switcher.value==1) 
-                    hard_manager.ar_manager.interaction.fout_interrupt.open(finterrupt_name.c_str(), std::ofstream::out|std::ofstream::app);
-                else 
-                    hard_manager.ar_manager.interaction.fout_interrupt.open(finterrupt_name.c_str(), std::ofstream::out);
+                std::string finterrupt_tmp = makeTmpPath(finterrupt_name);
+                // Transactional tmp files are per-window staging buffers; always truncate.
+                hard_manager.ar_manager.interaction.fout_interrupt.open(finterrupt_tmp.c_str(), std::ofstream::out);
                 hard_manager.ar_manager.interaction.fout_interrupt<<std::setprecision(WRITE_PRECISION);
             }
 #endif 
@@ -2785,7 +3099,9 @@ public:
             // open file for new/end group information
             if (hard_parameters.adjust_group_write_option.value>0) {
                 std::string fgroup_name = fname_snp + ".group." + my_rank_str;
-                const bool append_flag = (input_parameters.append_switcher.value==1);
+                fgroup_name += ".tmp";
+                // Transactional tmp files are per-window staging buffers; always truncate.
+                const bool append_flag = false;
                 const bool binary_flag = (hard_parameters.adjust_group_write_option.value==2);
                 hard_manager.h4_manager.group_info_output.setup(fgroup_name, append_flag, binary_flag, WRITE_PRECISION);
             }
@@ -3762,6 +4078,8 @@ public:
                 // output information
                 if(output_flag) {
 
+                    output_commit_manager.beginWindow(std::string("time=") + std::to_string(stat.time) + ",loop=" + std::to_string(n_loop));
+                    registerTransactionalOutputs();
                     updateStatus(false);
                     output();
 #ifdef PROFILE
@@ -3776,6 +4094,15 @@ public:
                     PS::Comm::barrier();
                     profile.total.start();
 #endif
+                    closeTransactionalOutputsBeforeCommit();
+                    for (PS::S32 rank = 0; rank < n_proc; ++rank) {
+                        PS::Comm::barrier();
+                        if (my_rank == rank) {
+                            assert(output_commit_manager.commitWindow());
+                        }
+                    }
+                    PS::Comm::barrier();
+                    reopenTransactionalOutputsAfterCommit();
                 }
 
                 // interrupt
@@ -4011,6 +4338,8 @@ public:
             // output information
             if(output_flag) {
                 // update status
+                output_commit_manager.beginWindow(std::string("time=") + std::to_string(stat.time) + ",loop=" + std::to_string(n_loop));
+                registerTransactionalOutputs();
                 updateStatus(false);
                 output();
 
@@ -4026,6 +4355,15 @@ public:
                 PS::Comm::barrier();
                 profile.total.start();
 #endif
+                closeTransactionalOutputsBeforeCommit();
+                for (PS::S32 rank = 0; rank < n_proc; ++rank) {
+                    PS::Comm::barrier();
+                    if (my_rank == rank) {
+                        assert(output_commit_manager.commitWindow());
+                    }
+                }
+                PS::Comm::barrier();
+                reopenTransactionalOutputsAfterCommit();
             }
 
             // modify the tree step
@@ -4126,6 +4464,8 @@ public:
 
     void clear() {
 
+        output_commit_manager.abandonWindow();
+
         if (fstatus.is_open()) fstatus.close();
         if (fesc.is_open()) fesc.close();
 #ifdef PROFILE
@@ -4145,6 +4485,9 @@ public:
 #ifdef ADJUST_GROUP_PRINT
         hard_manager.h4_manager.group_info_output.close();
 #endif
+
+        cleanupEmptyTmpFilesOnExit();
+
         if (pos_domain) {
             delete[] pos_domain;
             pos_domain=NULL;
