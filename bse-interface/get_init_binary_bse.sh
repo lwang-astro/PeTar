@@ -29,7 +29,7 @@ if [ ! -e $fname ] | [ -z $fname ] ; then
 fi
 
 [ -z $fout ] && fout=$fname.bin0
-[ -z $nbin ] && nbin=0
+[ -z $nbin ] && nbin=1
 
 echo 'generate binary file: '$fout'; number of binaries: '$nbin
 

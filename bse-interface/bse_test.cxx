@@ -84,6 +84,7 @@ int main(int argc, char** argv){
                  <<"            * The files [prefix].["<<sse_prefix<<"/"<<bse_prefix<<"].type_change store single or binary types change; if -o is used, save data every step\n"
                  <<"            * The files [prefix].["<<sse_prefix<<"/"<<bse_prefix<<"].sn_kick store supernovae kick events\n"
                  <<"            * The files [prefix].["<<bse_prefix<<"].gw_kick store gravitational wave kick events\n"
+                 <<"            * The file [prefix].["<<bse_prefix<<"].binary_merge stores binary merger events\n"
                  <<"    -h    : help\n";
     };
 
@@ -375,15 +376,17 @@ int main(int argc, char** argv){
     if (bin.size()>0) {
 
         // open output file
-        std::ofstream fout_bse_type, fout_bse_sn, fout_gw_kick;
+        std::ofstream fout_bse_type, fout_bse_sn, fout_gw_kick, fout_bse_binary_merge;
         if (output_flag) {
             std::string bse_suffix=BSEManager::getBSEOutputFilenameSuffix();
             fout_bse_type.open((fprint_name+bse_suffix+std::string(".type_change")).c_str(), std::ofstream::out);
             fout_bse_sn.open((fprint_name+bse_suffix+std::string(".sn_kick")).c_str(), std::ofstream::out);
             fout_gw_kick.open((fprint_name+bse_suffix+std::string(".gw_kick")).c_str(), std::ofstream::out);
+            fout_bse_binary_merge.open((fprint_name+bse_suffix+std::string(".binary_merge")).c_str(), std::ofstream::out);
             fout_bse_type<<std::setprecision(WRITE_PRECISION);
             fout_bse_sn<<std::setprecision(WRITE_PRECISION);
             fout_gw_kick<<std::setprecision(WRITE_PRECISION);
+            fout_bse_binary_merge<<std::setprecision(WRITE_PRECISION);
         }
 
         int nbin = bin.size();
@@ -419,8 +422,8 @@ int main(int argc, char** argv){
 
                 StarParameter p1_star_bk = bin[i].star[0];
                 StarParameter p2_star_bk = bin[i].star[1];
-                double L[2] = {0,0};
-                double dr[2] = {0,0};
+                double L[3] = {0,0,1};
+                double dr[3] = {1,0,0};
                 // evolve function
                 int event_flag=bse_manager.evolveBinary(bin[i].star[0],bin[i].star[1],bin[i].out[0],bin[i].out[1],bin[i].semi,bin[i].period,bin[i].ecc,L,dr,bin[i].bse_event, bin_type_last, dt);
                     
@@ -447,10 +450,10 @@ int main(int argc, char** argv){
                     abort();
                 }
 
+
                 int nmax = bin[i].bse_event.getEventNMax();
                 int bin_type_init = bin[i].bse_event.getType(bin[i].bse_event.getEventIndexInit());
                 bin_type_last = bin_type_init;
-                int merger_event_index = -1; // record binary event index for merger, if no merger, is -1
                 for (int k=0; k<nmax; k++) {
                     int binary_type = bin[i].bse_event.getType(k);
                     if (binary_type>0) {
@@ -466,6 +469,15 @@ int main(int argc, char** argv){
                                                  <<std::setw(WRITE_WIDTH)<<0
                                                  <<std::setw(WRITE_WIDTH)<<0
                                                  <<std::endl;
+
+                                    if (bse_manager.isMerger(binary_type)) {
+                                        bse_manager.printBinaryEventColumnOne(fout_bse_binary_merge, bin[i].bse_event, k, WRITE_WIDTH, false);
+                                        fout_bse_binary_merge<<std::setw(WRITE_WIDTH)<<2*i+1
+                                                             <<std::setw(WRITE_WIDTH)<<2*i+2
+                                                             <<std::setw(WRITE_WIDTH)<<0
+                                                             <<std::setw(WRITE_WIDTH)<<0
+                                                             <<std::endl;
+                                    }
                                 }
                             }
                             // print data
@@ -476,9 +488,6 @@ int main(int argc, char** argv){
                             }
                         }
                         bin_type_last = binary_type;
-                        if (bse_manager.isMerger(binary_type)) {
-                            if (merger_event_index==-1) merger_event_index = i; // avoid save index twice
-                        }
                     }
                     else if (binary_type<0) {
                         if (always_output_flag) {
@@ -488,24 +497,37 @@ int main(int argc, char** argv){
                         }
                         break;
                     }
+                    
+                    if (binary_type>0) event_flag = std::max(event_flag, 1); // type change
+                    if (bse_manager.isMassTransfer(binary_type)) event_flag = std::max(event_flag, 2); // orbit change
+                    else if (bse_manager.isDisrupt(binary_type)) event_flag = std::max(event_flag, 3); // disrupt
+                    else if (bse_manager.isMerger(binary_type)) {
+                        event_flag = std::max(event_flag, 4); // Merger
+                        if (bse_manager.isGWMerger(binary_type)) event_flag = std::max(event_flag, 6); // GW Merger
+                    }
+                    else if (bse_manager.isNoRemnant(binary_type)) event_flag = std::max(event_flag, 5); // no Remnant
                 }
 
-                // check SN event
+                // check SN and GW kick event
                 for (int k=0; k<2; k++) {
                     double dv[4];
                     dv[3] = bse_manager.getVelocityChange(dv,bin[i].out[k]);
                     if (dv[3]>0&&!kick_print_flag[k]) {
 #pragma omp critical 
                         {
-                            fout_bse_sn<<std::setw(WRITE_WIDTH)<<2*i+1
-                                       <<std::setw(WRITE_WIDTH)<<2*i+2
-                                       <<std::setw(WRITE_WIDTH)<<k+1
-                                       <<std::setw(WRITE_WIDTH)<<dv[3]*bse_manager.vscale;
-                            bin[i].star[k].printColumnAscii(fout_bse_sn, WRITE_WIDTH);
-                            fout_bse_sn<<std::endl;
+                            std::ofstream& fout_kick = (event_flag==6) ? fout_gw_kick : fout_bse_sn;
+                            fout_kick<<std::setw(WRITE_WIDTH)<<2*i+1
+                                     <<std::setw(WRITE_WIDTH)<<2*i+2
+                                     <<std::setw(WRITE_WIDTH)<<k+1
+                                     <<std::setw(WRITE_WIDTH)<<dv[3]*bse_manager.vscale;
+                            bin[i].star[k].printColumnAscii(fout_kick, WRITE_WIDTH);
+                            fout_kick<<std::endl;
                         }
                         if (nbin==1) {
-                            std::cout<<"SN kick, BID="<<i+1<<" Member="<<k+1<<" vkick[IN]="<<dv[3]<<" ";
+                            std::cout<<((event_flag==6) ? "GW kick" : "SN kick")
+                                     <<", BID="<<i+1
+                                     <<" Member="<<k+1
+                                     <<" vkick[IN]="<<dv[3]<<" ";
                             bin[i].star[k].print(std::cout);
                             std::cout<<std::endl;
                         }
@@ -519,21 +541,30 @@ int main(int argc, char** argv){
                 if (dt_miss!=0.0&&bin[i].star[0].kw>=15&&bin[i].star[1].kw>=15) break;
                 
                 if (bin[i].star[0].kw>=15) {
-                    mass0.push_back(bin[i].star[1].m0/bse_manager.mscale);
-                    star.push_back(bin[i].star[1]);
+#pragma omp critical
+                    {
+                        mass0.push_back(bin[i].star[1].m0/bse_manager.mscale);
+                        star.push_back(bin[i].star[1]);
+                    }
                     break;
                 }
                 if (bin[i].star[1].kw>=15) {
-                    mass0.push_back(bin[i].star[0].m0/bse_manager.mscale);
-                    star.push_back(bin[i].star[0]);
+#pragma omp critical
+                    {
+                        mass0.push_back(bin[i].star[0].m0/bse_manager.mscale);
+                        star.push_back(bin[i].star[0]);
+                    }
                     break;
                 }
                  
                 if (bse_manager.isDisrupt(bin_type_last)) {
-                    mass0.push_back(bin[i].star[0].m0/bse_manager.mscale);
-                    star.push_back(bin[i].star[0]);
-                    mass0.push_back(bin[i].star[1].m0/bse_manager.mscale);
-                    star.push_back(bin[i].star[1]);
+#pragma omp critical
+                    {
+                        mass0.push_back(bin[i].star[0].m0/bse_manager.mscale);
+                        star.push_back(bin[i].star[0]);
+                        mass0.push_back(bin[i].star[1].m0/bse_manager.mscale);
+                        star.push_back(bin[i].star[1]);
+                    }
                     break;
                 }
             }
@@ -546,6 +577,7 @@ int main(int argc, char** argv){
             fout_bse_type.close();
             fout_bse_sn.close();
             fout_gw_kick.close();
+            fout_bse_binary_merge.close();
         }
     }
 

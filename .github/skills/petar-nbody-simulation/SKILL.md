@@ -9,6 +9,33 @@ description: "Use when: setting up or running PeTar N-body simulations, includin
 
 Provide reliable, command-level guidance for running PeTar simulations with patterns already used in this repository.
 Support multiple installed executables and only suggest options confirmed by the selected binary help output.
+Treat the guardrails in this file as mandatory, not advisory.
+
+## Hard Constraints
+
+- Before any simulation run, first infer the required physics and runtime features from the user description, then select the matching PeTar binary family with `petar.select`.
+- Do not directly execute whatever `petar` currently resolves to unless it was chosen through the selection step for the requested simulation.
+- Before execution, ensure all scenario-required inputs are present; if any required input is missing, ask for it explicitly instead of guessing defaults.
+- After required inputs are complete, provide a parameter summary and the exact command(s), then ask user confirmation before executing any run command.
+- If output prefix/model name is not provided, default to PeTar prefix `data`.
+- If unit mode is not provided, default to astrophysical unit mode `-u 1` (Msun, pc, pc/Myr).
+- If the user requests stellar evolution, confirm the exact interruption module (`bse`, `bseEmp`, `mobse`/`moBSE`, or `dsm`) before selection, and use that module as a required token in `petar.select`.
+- If the user requests external potential, confirm `galpy` or `agama` before selection, and use the confirmed mode as a required token in `petar.select`.
+- For star-cluster simulations that require IC generation, do not proceed until the star-cluster IC parameter set is complete.
+- For star-cluster IC generation, verify generator availability first: prefer `mcluster_gpu` when available, otherwise use `mcluster`.
+- If neither `mcluster_gpu` nor `mcluster` is available, stop and ask the user to install one before proceeding.
+- For BSE-related stellar-evolution runs (`bse`, `bseEmp`, `mobse`), metallicity is mandatory and must be confirmed before execution.
+- For external-potential runs, the potential model and the simulation-object center phase-space coordinates in that potential are mandatory; do not pick a potential model on behalf of the user.
+- If the user does not explicitly request debug mode, selected solver candidates must exclude debug families (for example suffix token `g` or assert-debug builds).
+- If the user does not explicitly request GPU, selected solver candidates must exclude `gpu` families.
+- Do not emit a runnable solver command until the selected binary has been capability-checked with `-h`.
+- Do not pass through custom user options unless they are validated against the selected binary help output.
+- Do not use helper binaries such as `*.hard.debug` or `*.format.transfer` as the main simulation executable.
+- Do not recommend manual symlink edits when `petar.select` can perform the family switch.
+- Do not skip `petar.data.gether` after MPI runs when downstream tools need merged outputs or a snapshot list.
+- Do not emit `petar.init` for restart or resume workflows.
+- Do not treat analysis, conversion, movie generation, or restart cleanup as abstract guidance when an installed PeTar tool exists for the task; use the tool command pattern.
+- For post-processing tools (`petar.data.process`, `petar.movie`, `petar.format.transfer.post`, `petar.galev.process`, `petar.get.object.snap`), required mode parameters must match the currently selected solver family and data format settings.
 
 ## Sources In This Repository
 
@@ -64,6 +91,12 @@ Use these tools proactively when the user intent matches the task.
   switch installed symlinks `petar`, `petar.hard.debug`, and `petar.format.transfer` to a selected installed binary family.
   Support direct target mode (`petar.select <suffix|binary-name>`), feature auto-select mode (`petar.select --require ... [--optional ...]`), and listing (`petar.select --list`).
   In feature mode, all required tokens must match; optional tokens are used for ranking.
+  Module disambiguation is mandatory before feature mode selection:
+  - stellar evolution request: ask or infer one of `bse`, `bseEmp`, `mobse` (accept user wording `moBSE` as `mobse`), `dsm`;
+  - external potential request: ask or infer one of `galpy`, `agama`.
+  Then pass the confirmed module tokens in `--require`.
+  For every simulation request, determine the needed feature set first, then use `petar.select` to choose the matching family before generating any run command.
+  For every binary-family request, prefer `petar.select` over manual symlink edits, and always stop with configure hints if no feature-matched family exists.
   Treat physics/structure-sensitive families as require-only: interrupt (`base`, `bse`, `mobse`, `bseEmp`, `dsm`), external (`galpy`, `agama`), external-hard (`gasdrag`), `pn*`, and `mpfrc` (suffix token `mp`).
   In other words, candidates containing these tokens are excluded unless explicitly requested in `--require`.
   If no match exists, surface configure hints mapped from required features (for example, `bse -> --with-interrupt=bse`, `galpy -> --with-external=galpy`).
@@ -74,6 +107,7 @@ Use these tools proactively when the user intent matches the task.
   update legacy parameter files from older PeTar versions.
 - `petar.data.gether`:
   merge MPI outputs and generate snapshot path lists.
+  If the workflow used MPI and any downstream post-processing, movie, or extraction step needs consolidated outputs, `petar.data.gether` is mandatory before those steps.
   By default, do not assume group files should be gathered.
   If the user explicitly wants merged group outputs, use `petar.data.gether -g <prefix>`.
   This matters because MPI ranks may write separate `data.group.*.nX` files and merged group outputs can be large.
@@ -126,8 +160,14 @@ Requirement-driven selection rule:
   - `--with-pn` controls post-Newtonian relativistic corrections (`pn*`).
   - `--enable-mpfrc` changes position representation precision and affects snapshot structure compatibility (`mp` suffix token).
 3. Filter binaries by required feature suffixes first using `assets/option-matrix.md` section `Requirement-Driven Solver Filters`.
-4. After filtering, rank candidates by performance suffix priority: `gpu` > `avx512` > `avx2` > `omp` > `mpi`.
-5. Still validate requested options against `<selected_binary> -h` before emitting commands.
+4. Apply mandatory pre-filters before ranking:
+  - if user did not explicitly request debug mode, exclude debug families (`g`, assert-debug variants);
+  - if user did not explicitly request GPU, exclude `gpu` families.
+5. After filtering, rank candidates by performance suffix priority:
+  - if GPU is explicitly requested: `gpu` > `avx512` > `avx2` > `omp` > `mpi`;
+  - otherwise: `avx512` > `avx2` > `omp` > `mpi`.
+6. If no candidate remains, do not emit a run command. Ask whether to proceed with `./configure` + `make install`, provide the exact suggested commands, and execute only after explicit user confirmation.
+7. Still validate requested options against `<selected_binary> -h` before emitting commands.
 
 Special-purpose modules (on-demand, not part of default recommendation ranking):
 
@@ -250,15 +290,45 @@ Do not proactively suggest options from families that the binary cannot support.
 
 Ask for the minimum set before generating commands:
 
-1. Simulation type: isolated | BSE binaries | DSM mode | galactic tidal field (Galpy) | external potential (Agama) | restart.
-2. Unit choice: Henon (`-u 0` default) or astrophysical (`-u 1`).
-3. End time (`-t`) and output interval (`-o`).
-4. Parallel mode: serial | OpenMP | MPI+OpenMP | GPU.
-5. Whether initial data already exists in PeTar snapshot format.
-6. Target binary name (for example `petar.mpi.omp.avx2.bse.galpy`).
-7. Extra custom options to pass through verbatim after validation.
+1. Simulation execution path (working directory where command will run).
+2. Simulation type: isolated | BSE binaries | DSM mode | galactic tidal field (Galpy) | external potential (Agama) | restart.
+3. Unit choice: Henon (`-u 0`) or astrophysical (`-u 1`, default when omitted).
+4. End time (`-t`) and output interval (`-o`).
+5. Parallel mode: serial | OpenMP | MPI+OpenMP | GPU.
+6. Whether initial data already exists in PeTar snapshot format.
+7. Target binary name (for example `petar.mpi.omp.avx2.bse.galpy`).
+8. Extra custom options to pass through verbatim after validation.
 
 If the binary name is already given, infer item 1 when possible instead of asking again.
+
+Default fill-ins when omitted:
+
+- output prefix/model name: `data`.
+- unit mode: `-u 1` (Msun, pc, pc/Myr).
+
+### Star-Cluster IC Parameters (Required When IC Must Be Generated)
+
+If the simulation object is a star cluster and IC is not already an existing PeTar snapshot, collect all of the following before emitting the run command:
+
+1. One size scale for the stellar system:
+  total mass or total star count.
+2. Half-mass radius.
+3. Density profile model:
+  for example Plummer or King; if a model requires extra parameters (for example King W0), collect them explicitly.
+4. IMF model.
+5. Binary fraction and binary distribution model.
+
+Do not assume defaults for these items when the user requests a generated star-cluster setup.
+
+### Star-Cluster Generator Availability Rule
+
+When the workflow needs generator-based star-cluster IC creation:
+
+1. Check generator availability in this order:
+  `command -v mcluster_gpu` then `command -v mcluster`.
+2. If `mcluster_gpu` exists, use it by default for faster generation.
+3. If `mcluster_gpu` is unavailable but `mcluster` exists, use `mcluster`.
+4. If both are unavailable, do not continue with generation commands; inform the user that generator installation is required and ask whether to proceed with installation guidance.
 
 ## Minimal Required Question Sets
 
@@ -270,8 +340,9 @@ Required if not already provided:
 
 1. Initial condition source:
   existing PeTar snapshot | raw particle table | generator command such as `mcluster`.
+1a. Execution path (working directory).
 2. Unit mode:
-  `-u 0` or `-u 1`.
+  `-u 0` or `-u 1` (if omitted, use `-u 1`).
 3. End time `-t`.
 4. Output interval `-o`.
 5. Parallel launch mode:
@@ -279,12 +350,16 @@ Required if not already provided:
 
 Do not ask about BSE, Galpy, or Agama.
 
+If the source is raw/generator and object is a star cluster, also require `Star-Cluster IC Parameters` before emitting run commands.
+
 ### BSE / SSE Scenario
 
 Required if not already provided:
 
 1. Initial condition source.
+1a. Execution path.
 2. Unit mode.
+  If omitted, use `-u 1`.
 3. End time `-t`.
 4. Output interval `-o`.
 5. Number of primordial binaries for `-b`.
@@ -305,7 +380,9 @@ Primordial-binary counting rule (avoid a common misunderstanding):
 Required if not already provided:
 
 1. Initial condition source.
+1a. Execution path.
 2. Unit mode.
+  If omitted, use `-u 1`.
 3. End time `-t`.
 4. Output interval `-o`.
 5. DSM key controls to override (only those requested), for example `--dsm-seed-mass`, `--dsm-he-disk`, `--dsm-lambda0`, `--dsm-dt-factor`.
@@ -320,7 +397,9 @@ If raw input is converted with `petar.init`, use `-s dsm` for DSM-compatible ste
 Required if not already provided:
 
 1. Initial condition source.
+1a. Execution path.
 2. Unit mode.
+  If omitted, use `-u 1`.
 3. End time `-t`.
 4. Output interval `-o`.
 5. Cluster center phase-space coordinates for `petar.init -c x,y,z,vx,vy,vz` if starting from raw input.
@@ -334,16 +413,20 @@ If the binary is also `.bse`, additionally ask for:
 9. Number of primordial binaries.
 10. BSE metallicity.
 
+Do not select a Galpy potential model implicitly; require user-provided model choice.
+
 ### Agama Scenario
 
 Required if not already provided:
 
 1. Initial condition source.
+1a. Execution path.
 2. Unit mode.
+  If omitted, use `-u 1`.
 3. End time `-t`.
 4. Output interval `-o`.
 5. Cluster center phase-space coordinates for `petar.init -c x,y,z,vx,vy,vz` if starting from raw input.
-6. Agama configuration file for `--agama-conf-file`.
+6. Agama potential model/configuration for `--agama-conf-file`.
 7. If using custom scaling, `--agama-rscale` and `--agama-vscale`.
 8. Parallel launch mode.
 
@@ -352,11 +435,14 @@ If the binary is also `.bse`, additionally ask for:
 9. Number of primordial binaries.
 10. BSE metallicity.
 
+Do not select an Agama potential model implicitly; require user-provided model choice.
+
 ### Restart Scenario
 
 Required if not already provided:
 
 1. Restart snapshot filename.
+1a. Execution path.
 2. Parameter file path, usually `input.par`.
 3. Any overridden options after `-p`.
 4. Whether outputs should append or overwrite (`-a 1` vs `-a 0`).
@@ -370,16 +456,25 @@ When invoked:
 2. Build the minimal required input set for that scenario.
 3. Compare it against information already present in the user request.
 4. Ask only for missing fields.
-5. If enough information is already present, skip questions and emit the command directly.
+5. If enough information is already present, output a parameter summary and runnable command block first, then ask for execution confirmation before running.
+
+## Pre-Execution Confirmation Rule
+
+Before any actual run execution:
+
+1. Present a compact parameter summary (scenario, binary family, execution path, key physics toggles, unit mode, output prefix/model name, end time/output interval, and critical module inputs).
+2. Present the exact command block(s) to run.
+3. Ask for explicit user confirmation.
+4. Execute only after confirmation.
 
 ## Output Prefix Selection Rule (`-f`)
 
-Choose output prefix conservatively to avoid unnecessary renaming while preventing collisions.
+Choose output prefix with the default-first rule.
 
 1. If user explicitly provides `-f <prefix>`, use it unchanged.
 2. If workflow is a restart/resume from previous outputs, do not force default `data`; keep the restart context and choose prefix explicitly if needed.
-3. If user does not specify a prefix, workflow is not restart, and current working directory has no existing `data*` outputs, use default prefix `data`.
-4. If user does not specify a prefix and existing `data*` outputs are present, choose a distinct prefix (for example `data.<tag>`) and explain why.
+3. If user does not specify a prefix and workflow is not restart, default to prefix `data`.
+4. If user does not specify a prefix and existing `data*` outputs are present, keep default `data` and explicitly warn about overwrite/append behavior; if user asks to avoid collisions, propose an alternative prefix (for example `data.<tag>`) and confirm.
 
 Downstream commands must use the same chosen prefix consistently, for example:
 
@@ -419,8 +514,9 @@ Interpretation:
 Recovery procedure:
 
 1. Stop the current processing command first if it is still running.
-2. Re-check the tool help output before retrying.
-3. Retry by correcting reader parameters rather than ignoring the warning.
+2. Re-check the selected solver family and the producing command parameters (`interrupt mode`, `external mode`, `snapshot format`) before retrying.
+3. Re-check the tool help output before retrying.
+4. Retry by correcting reader parameters rather than ignoring the warning.
 
 Most common fixes to try:
 
@@ -438,6 +534,7 @@ Decision rule:
 
 - If the warning disappears after parameter correction, continue with the corrected command only.
 - If warnings persist after reasonable parameter corrections, stop and warn the user explicitly that snapshot reading is likely misaligned and downstream products may be invalid.
+- If warnings persist, abort downstream analysis/conversion/movie generation in this turn and report the unresolved mismatch to the user; do not continue with partial outputs.
 - Do not present movies, post-processing results, extracted objects, or converted files as trustworthy when these warnings remain unresolved.
 
 ## Input-Source Driven Workflow Selection
@@ -454,6 +551,7 @@ Definition:
 Workflow:
 
 1. Generate or identify the raw file.
+  If generation is required, apply `Star-Cluster Generator Availability Rule` first and prefer `mcluster_gpu` when available.
 2. Use `petar.init` to convert it into a PeTar snapshot.
 3. Run the selected solver binary on the generated snapshot.
 4. Run scenario-appropriate post-processing.
@@ -489,6 +587,7 @@ Workflow:
 2. Pass any new options after `-p`.
 3. Use the restart snapshot as the final positional argument.
 4. If requested, set `-a 0` to overwrite outputs instead of appending.
+5. If the restart starts from a non-final snapshot and duplicate events are possible, recommend `petar.data.clear` before the restart command.
 
 Canonical pattern:
 
@@ -506,7 +605,8 @@ Workflow:
 
 1. Prefer repository sample script structure.
 2. Replace only the scenario-specific placeholders.
-3. Preserve repository flag conventions unless the user explicitly overrides them.
+3. If generator command is part of the script, prefer `mcluster_gpu` over `mcluster` when available.
+4. Preserve repository flag conventions unless the user explicitly overrides them.
 
 ## Tool-Driven Workflow Extensions
 
@@ -746,9 +846,11 @@ plt.colorbar(pt, ax=ax, label='mass ratio')
 ### Python Analysis Guardrails
 
 - Always match `interrupt_mode`, `external_mode`, `snapshot_format`, and `G` to the simulation/data-processing setup.
+- For any Python read path, ensure these settings are consistent with the currently selected `petar` binary family (for example `.bse`, `.galpy`, `.agama`, `.dsm`) and the actual producer command used to write the files.
 - For original snapshots (`data.*`), use header offset (`petar.HEADER_OFFSET` or `petar.HEADER_OFFSET_WITH_CM` for external-mode snapshots).
 - For `petar.data.process` outputs (`*.single`, `*.binary`, `data.lagr`, `data.core`), read directly without header offset.
 - When reading outputs from `petar.get.object.snap`, add a `time` member before `fromfile`.
+- If column-mismatch or decode warnings appear during Python reading and cannot be resolved by parameter correction, stop the workflow and report the issue instead of continuing.
 - If user asks for “give me Python code for this analysis”, return directly runnable snippet(s) using these templates and the user’s path/filename choices.
 
 ## Workflow
@@ -955,6 +1057,8 @@ For restart workflows, do not emit `petar.init`.
 
 If restarting from a non-final snapshot, recommend `petar.data.clear` before the restart command when duplicate events are a concern.
 
+If restart or resume is requested, do not propose `petar.init` as a fallback.
+
 ## Parallel And Performance Safety Notes
 
 Always include these reminders when applicable:
@@ -1047,6 +1151,7 @@ If all checklist items are already inferable from user input and selected binary
 
 - Do not invent unsupported PeTar options.
 - If user intent conflicts with current build (for example, asks for Galpy but binary lacks it), provide reconfigure command first.
+- If `petar.select` has no match, explicitly ask user whether to run configure/install, show the exact commands, and wait for confirmation before executing them.
 - Prefer repository sample scripts and README wording over generic N-body advice.
 - Never pass through user-provided extra options without checking `<selected_binary> -h` first.
 - If the user selects a helper tool binary, explicitly switch to the nearest matching solver binary before generating the run command.

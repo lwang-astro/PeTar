@@ -17,7 +17,7 @@ CXXFLAGS = -D BSEEMP -D BSE_BASE
 endif
 
 
-TARGET: $(BSE_LIB) $(BSE_TEST) petar.get.init.binary
+TARGET: $(BSE_LIB) $(BSE_TEST) petar.get.init.binary.bse
 
 FC=@FC@
 CXX=@CXX@
@@ -67,12 +67,12 @@ $(BSE_TEST): bse_test.cxx $(BSE_LIB) bse_interface.h $(RAND_INCLUDE)
 ../parallel-random/librand.a: ../parallel-random
 	$(MAKE) -C ../parallel-random librand.a
 
-petar.get.init.binary: get_init_binary_bse.sh
+petar.get.init.binary.bse: get_init_binary_bse.sh
 	ln -sf $< $@
 
 install:
 	install -d @prefix@/bin/
-	install -m 755 $(BSE_TEST) petar.get.init.binary @prefix@/bin/
+	install -m 755 $(BSE_TEST) petar.get.init.binary.bse @prefix@/bin/
 
 clean:
 	rm -f $(BSE_PATH)/*.o *.o $(BSE_TEST) $(BSE_LIB)
