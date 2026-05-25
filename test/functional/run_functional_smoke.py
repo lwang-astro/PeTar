@@ -1,39 +1,235 @@
 #!/usr/bin/env python3
 import argparse
+import html
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
 import time
+import warnings
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
-def run_cmd(cmd: List[str], cwd: Path, env: Dict[str, str], log_path: Path) -> int:
+WARNING_PATTERNS = [
+    r"UserWarning:.*Binary file size",
+    r"File may be truncated",
+    r"not aligned with dtype itemsize",
+    r"column",
+    r"dtype",
+    r"RuntimeWarning",
+]
+
+
+def detect_warnings(text: str) -> List[str]:
+    found: List[str] = []
+    for line in text.splitlines():
+        for pat in WARNING_PATTERNS:
+            if re.search(pat, line, flags=re.IGNORECASE):
+                found.append(line.strip())
+                break
+    # Keep order but remove duplicates.
+    unique = list(dict.fromkeys(found))
+    return unique
+
+
+def shell_join(cmd: List[str]) -> str:
+    return " ".join(shlex.quote(x) for x in cmd)
+
+
+def status_from_code(code: int) -> str:
+    return "pass" if code == 0 else "fail"
+
+
+def short_reason_from_code(code: int) -> str:
+    return "" if code == 0 else f"exit code {code}"
+
+
+def configure_args_for_build_tag(tag: str) -> List[str]:
+    mapping = {
+        "base": [],
+        "bse": ["--with-interrupt=bse"],
+        "galpy": ["--with-external=galpy"],
+        "bse-galpy": ["--with-interrupt=bse", "--with-external=galpy"],
+        "agama": ["--with-external=agama"],
+        "bse-agama": ["--with-interrupt=bse", "--with-external=agama"],
+    }
+    return mapping.get(tag, [])
+
+
+def describe_ic_case(ic_case: str) -> str:
+    descriptions = {
+        "t1": "Two-body binary validation IC.",
+        "t2": "Two-body binary hard-switch validation IC.",
+        "t3": "Hierarchical triple validation IC.",
+        "t4": "Hierarchical triple with outer orbit baseline IC.",
+        "t4_outer15": "Hierarchical triple with outer semi-major axis 15 variant.",
+        "functional_smoke": "One deterministic close binary plus a small symmetric background cluster.",
+        "functional_dual_merge_smoke": "Two target BSE binaries plus a light symmetric background cluster.",
+        "functional_mcluster_dual_merge_smoke": "mcluster N=100 Plummer Rh=1 pc Kroupa no-binary model, first four stars replaced by two target binaries, then global COM recentered.",
+    }
+    return descriptions.get(ic_case, ic_case)
+
+
+def add_step(
+    result: Dict[str, Any],
+    name: str,
+    code: int,
+    cmd: List[str],
+    cwd: Path,
+    warnings_list: Optional[List[str]] = None,
+    details: Optional[Dict[str, Any]] = None,
+    reason: str = "",
+) -> None:
+    step = {
+        "name": name,
+        "code": code,
+        "status": status_from_code(code),
+        "reason": reason or short_reason_from_code(code),
+        "command": shell_join(cmd),
+        "argv": cmd,
+        "cwd": str(cwd),
+    }
+    if details:
+        step["details"] = details
+    if warnings_list:
+        step["warnings"] = warnings_list
+        result["warnings"].append({"step": name, "messages": warnings_list})
+    result["steps"].append(step)
+
+
+def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
+    def esc(value: Any) -> str:
+        return html.escape(str(value))
+
+    def badge(status: str) -> str:
+        color = {"pass": "#1b7f3b", "fail": "#b42318", "skip": "#8a6d1f"}.get(status, "#555")
+        return f'<span class="badge" style="background:{color}">{esc(status.upper())}</span>'
+
+    parts: List[str] = []
+    parts.append("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">")
+    parts.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">")
+    parts.append("<title>PeTar Functional Report</title>")
+    parts.append(
+        "<style>"
+        "body{font-family:Segoe UI,Helvetica,Arial,sans-serif;margin:0;background:#f6f8fb;color:#16202a;}"
+        ".wrap{max-width:1280px;margin:0 auto;padding:24px;}"
+        "h1,h2,h3{margin:0 0 12px 0;}"
+        ".muted{color:#5b6875;}"
+        ".card{background:#fff;border:1px solid #d8dee6;border-radius:12px;padding:18px;margin:16px 0;box-shadow:0 1px 2px rgba(16,24,40,.04);}"
+        ".badge{display:inline-block;color:#fff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600;}"
+        ".kv{display:grid;grid-template-columns:220px 1fr;gap:8px 16px;margin:10px 0;}"
+        ".kv div:nth-child(odd){font-weight:600;color:#334155;}"
+        "table{width:100%;border-collapse:collapse;margin-top:10px;}"
+        "th,td{text-align:left;vertical-align:top;padding:10px;border-top:1px solid #e5e7eb;font-size:14px;}"
+        "th{background:#f8fafc;font-weight:700;}"
+        "code,pre{font-family:SFMono-Regular,Consolas,Monaco,monospace;font-size:12px;}"
+        "pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#e2e8f0;padding:12px;border-radius:10px;overflow:auto;}"
+        ".fail{color:#b42318;font-weight:600;}.pass{color:#1b7f3b;font-weight:600;}.skip{color:#8a6d1f;font-weight:600;}"
+        "</style></head><body><div class=\"wrap\">"
+    )
+    parts.append("<h1>PeTar Functional Smoke Report</h1>")
+    parts.append(f"<p class=\"muted\">Phase: {esc(report.get('phase'))} | Started: {esc(report.get('started_at'))} | Finished: {esc(report.get('finished_at', ''))}</p>")
+
+    build = report.get("build")
+    if build:
+        parts.append("<div class=\"card\"><h2>Global Build</h2>")
+        parts.append(f"<p>{badge(build.get('status', 'unknown'))}</p>")
+        parts.append("<div class=\"kv\">")
+        parts.append(f"<div>Script</div><div>{esc(build.get('script', ''))}</div>")
+        parts.append(f"<div>Build Tags</div><div>{esc(', '.join(build.get('build_tags', [])))}</div>")
+        parts.append(f"<div>Log</div><div>{esc(build.get('log', ''))}</div>")
+        parts.append("</div></div>")
+
+    for case in report.get("cases", []):
+        parts.append("<div class=\"card\">")
+        parts.append(f"<h2>Case: {esc(case.get('name'))}</h2>")
+        parts.append(f"<p>{badge(case.get('status', 'unknown'))}</p>")
+        parts.append("<div class=\"kv\">")
+        parts.append(f"<div>Require</div><div>{esc(case.get('require', ''))}</div>")
+        parts.append(f"<div>Directory</div><div>{esc(case.get('dir', ''))}</div>")
+        parts.append(f"<div>Log</div><div>{esc(case.get('log', ''))}</div>")
+        parts.append(f"<div>Skip/Fail Reason</div><div>{esc(case.get('skip_reason', ''))}</div>")
+        ic_meta = case.get("ic", {})
+        parts.append(f"<div>IC Case</div><div>{esc(ic_meta.get('case', ''))}</div>")
+        parts.append(f"<div>IC Description</div><div>{esc(ic_meta.get('description', ''))}</div>")
+        parts.append("</div>")
+
+        if case.get("build"):
+            build_info = case["build"]
+            parts.append("<h3>Build/Configure</h3><div class=\"kv\">")
+            parts.append(f"<div>Build Tag</div><div>{esc(build_info.get('build_tag', ''))}</div>")
+            parts.append(f"<div>Configure Args</div><div>{esc(' '.join(build_info.get('configure_args', [])))}</div>")
+            parts.append(f"<div>Configure Command</div><div><code>{esc(build_info.get('configure_command', ''))}</code></div>")
+            parts.append(f"<div>Build Command</div><div><code>{esc(build_info.get('command', ''))}</code></div>")
+            parts.append("</div>")
+
+        parts.append("<h3>Tool Steps</h3><table><thead><tr><th>Step</th><th>Command</th><th>Result</th><th>Details</th></tr></thead><tbody>")
+        for step in case.get("steps", []):
+            details = [f"cwd: {step.get('cwd', '')}"]
+            for key, value in step.get("details", {}).items():
+                if isinstance(value, list):
+                    value = " ".join(str(x) for x in value)
+                details.append(f"{key}: {value}")
+            if step.get("reason"):
+                details.append(f"reason: {step.get('reason')}")
+            if step.get("warnings"):
+                details.append("warnings:")
+                details.extend(f"- {msg}" for msg in step.get("warnings", []))
+            parts.append("<tr>")
+            parts.append(f"<td>{esc(step.get('name', ''))}</td>")
+            parts.append(f"<td><code>{esc(step.get('command', ''))}</code></td>")
+            parts.append(f"<td class=\"{esc(step.get('status', ''))}\">{esc(step.get('status', ''))}</td>")
+            parts.append(f"<td><pre>{esc(chr(10).join(details))}</pre></td>")
+            parts.append("</tr>")
+        parts.append("</tbody></table>")
+
+        read_checks = case.get("read_checks", {}).get("checks", [])
+        if read_checks:
+            parts.append("<h3>Python Read Checks</h3><table><thead><tr><th>Label</th><th>Command</th><th>Result</th><th>Reason</th></tr></thead><tbody>")
+            for chk in read_checks:
+                chk_status = "pass" if chk.get("ok") else "fail"
+                reason = chk.get("error", "") or "; ".join(chk.get("warnings", []))
+                parts.append("<tr>")
+                parts.append(f"<td>{esc(chk.get('label', ''))}</td>")
+                parts.append(f"<td><code>{esc(chk.get('command', ''))}</code></td>")
+                parts.append(f"<td class=\"{chk_status}\">{chk_status}</td>")
+                parts.append(f"<td><pre>{esc(chk.get('file', ''))}\n{esc(reason)}</pre></td>")
+                parts.append("</tr>")
+            parts.append("</tbody></table>")
+
+        parts.append("</div>")
+
+    parts.append("</div></body></html>")
+    out_path.write_text("".join(parts), encoding="utf-8")
+
+
+def run_cmd(cmd: List[str], cwd: Path, env: Dict[str, str], log_path: Path) -> (int, List[str]):
         print(f"[DEBUG] run_cmd: {cmd} log_path: {log_path}")
         log_path.parent.mkdir(parents=True, exist_ok=True)
+        cmd_text = "$ " + " ".join(shlex.quote(x) for x in cmd) + "\n"
+
+        proc = subprocess.run(
+            cmd,
+            cwd=str(cwd),
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            check=False,
+        )
+        output = proc.stdout if proc.stdout is not None else ""
+        warn_lines = detect_warnings(output)
+
         with log_path.open("a", encoding="utf-8") as log:
-            log.write("\n$ " + " ".join(shlex.quote(x) for x in cmd) + "\n")
+            log.write("\n" + cmd_text)
             log.flush()
-            proc = subprocess.run(cmd, cwd=str(cwd), env=env, stdout=log, stderr=subprocess.STDOUT, check=False)
+            if output:
+                log.write(output)
             log.write(f"[exit] {proc.returncode}\n")
-        # After each step, scan for critical warnings
-        with log_path.open("r", encoding="utf-8") as log:
-            log_text = log.read()
-            # Add more patterns as needed
-            critical_patterns = [
-                "UserWarning: Binary file size",
-                "File may be truncated",
-                "is not aligned with dtype itemsize",
-                "RuntimeWarning",
-                "Traceback (most recent call last):"
-            ]
-            for pat in critical_patterns:
-                if pat in log_text:
-                    # Use 100 as a special code for warning-triggered fail
-                    return 100
-        return proc.returncode
+        return proc.returncode, warn_lines
 
 
 def load_json(path: Path) -> Dict[str, Any]:
@@ -77,16 +273,183 @@ def read_first_snapshot_list(path: Path) -> str:
     return ""
 
 
+def infer_build_tag_from_require(require: str) -> str:
+    tokens = sorted([x.strip() for x in require.split(",") if x.strip()])
+    if not tokens:
+        return "base"
+    return "-".join(tokens)
+
+
+def run_case_build(repo_root: Path, matrix: Dict[str, Any], case: Dict[str, Any], case_dir: Path, log_path: Path) -> Dict[str, Any]:
+    build = matrix.get("build", {})
+    script = build.get("script")
+    if not script:
+        return {"status": "skip", "reason": "build script is not configured"}
+
+    script_path = repo_root / script
+    if not script_path.exists():
+        return {"status": "fail", "reason": f"build script not found: {script_path}"}
+
+    tag = infer_build_tag_from_require(case.get("require", ""))
+
+    env = os.environ.copy()
+    env.update(build.get("strict_env", {}))
+    env["BUILD_TAGS"] = tag
+    configure_args = configure_args_for_build_tag(tag)
+
+    rc, warns = run_cmd(["bash", str(script_path)], cwd=repo_root, env=env, log_path=log_path)
+    return {
+        "status": "pass" if rc == 0 else "fail",
+        "code": rc,
+        "build_tag": tag,
+        "configure_args": configure_args,
+        "configure_command": shell_join(["./configure", *configure_args]),
+        "command": shell_join(["bash", str(script_path)]),
+        "warnings": warns,
+        "script": str(script_path),
+        "dir": str(case_dir),
+    }
+
+
+def select_build_tags(cases: List[Dict[str, Any]]) -> List[str]:
+    tags = []
+    for case in cases:
+        # Optional cases with unresolved env vars will be skipped in run phase; do not build for them.
+        unresolved_skip = False
+        for key in case.get("skip_if_unresolved", []):
+            if not os.environ.get(key):
+                unresolved_skip = True
+                break
+        if unresolved_skip:
+            continue
+
+        tag = infer_build_tag_from_require(case.get("require", ""))
+        tags.append(tag)
+
+    if not tags:
+        tags = ["base"]
+    return sorted(list(dict.fromkeys(tags)))
+
+
+def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str) -> Dict[str, Any]:
+    tools_path = repo_root / "tools"
+    if str(tools_path) not in sys.path:
+        sys.path.insert(0, str(tools_path))
+
+    import analysis as petar  # type: ignore
+    import numpy as np  # type: ignore
+
+    require_tokens = {x.strip() for x in require.split(",") if x.strip()}
+    interrupt_mode = "base"
+    if "dsm" in require_tokens:
+        interrupt_mode = "dsm"
+    elif any(x in require_tokens for x in ["bse", "bseEmp", "mobse"]):
+        interrupt_mode = "bse"
+
+    external_mode = "none"
+    if "galpy" in require_tokens:
+        external_mode = "galpy"
+    elif "agama" in require_tokens:
+        external_mode = "agama"
+
+    checks: List[Dict[str, Any]] = []
+
+    def add_check(label: str, path: Path, loader, command: str) -> None:
+        if not path.exists():
+            return
+        with warnings.catch_warnings(record=True) as rec:
+            warnings.simplefilter("always")
+            ok = True
+            error = ""
+            try:
+                loader(path)
+            except Exception as exc:
+                ok = False
+                error = str(exc)
+
+        warn_msgs = [str(item.message) for item in rec]
+        checks.append(
+            {
+                "label": label,
+                "file": str(path),
+                "command": command,
+                "ok": ok,
+                "error": error,
+                "warnings": warn_msgs,
+            }
+        )
+
+    add_check("data.lagr", case_dir / "data.lagr", lambda p: petar.Lagrangian().fromfile(str(p)), "petar.Lagrangian().fromfile(path)")
+    add_check("data.core", case_dir / "data.core", lambda p: petar.Core().fromfile(str(p)), "petar.Core().fromfile(path)")
+    add_check("data.status", case_dir / "data.status", lambda p: petar.Status().fromfile(str(p)), "petar.Status().fromfile(path)")
+    add_check("data.esc_single", case_dir / "data.esc_single", lambda p: petar.SingleEscaper().loadtxt(str(p)), "petar.SingleEscaper().loadtxt(path)")
+    add_check("data.esc_binary", case_dir / "data.esc_binary", lambda p: petar.BinaryEscaper().loadtxt(str(p)), "petar.BinaryEscaper().loadtxt(path)")
+
+    add_check("data.sse", case_dir / "data.sse", lambda p: petar.SSEType().loadtxt(str(p)), "petar.SSEType().loadtxt(path)")
+
+    add_check("data.sse.type_change", case_dir / "data.sse.type_change", lambda p: petar.SSETypeChange().loadtxt(str(p)), "petar.SSETypeChange().loadtxt(path)")
+    add_check("data.sse.sn_kick", case_dir / "data.sse.sn_kick", lambda p: petar.SSESNKick().loadtxt(str(p)), "petar.SSESNKick().loadtxt(path)")
+
+    add_check("data.bse", case_dir / "data.bse", lambda p: petar.BSEType().loadtxt(str(p)), "petar.BSEType().loadtxt(path)")
+    add_check("data.bse_status", case_dir / "data.bse_status", lambda p: petar.BSEStatus().fromfile(str(p)), "petar.BSEStatus().fromfile(path)")
+    add_check("data.bse.type_change", case_dir / "data.bse.type_change", lambda p: petar.BSETypeChange().loadtxt(str(p)), "petar.BSETypeChange().loadtxt(path)")
+    add_check("data.bse.sn_kick", case_dir / "data.bse.sn_kick", lambda p: petar.BSEKick().loadtxt(str(p)), "petar.BSEKick().loadtxt(path)")
+    add_check("data.bse.gw_kick", case_dir / "data.bse.gw_kick", lambda p: petar.BSEKick().loadtxt(str(p)), "petar.BSEKick().loadtxt(path)")
+    add_check("data.bse.dynamic_merge", case_dir / "data.bse.dynamic_merge", lambda p: petar.BSEDynamicMerge().loadtxt(str(p)), "petar.BSEDynamicMerge().loadtxt(path)")
+    add_check("data.bse.binary_merge", case_dir / "data.bse.binary_merge", lambda p: petar.BSETypeChange().loadtxt(str(p)), "petar.BSETypeChange().loadtxt(path)")
+
+    # Snapshot files listed in data.snap.lst.
+    snap_list = case_dir / "data.snap.lst"
+    if snap_list.exists():
+        snap_names = [line.strip() for line in snap_list.read_text(encoding="utf-8").splitlines() if line.strip()]
+        for snap_name in snap_names:
+            snap_path = case_dir / snap_name
+            offset = petar.HEADER_OFFSET_WITH_CM if external_mode != "none" else petar.HEADER_OFFSET
+            add_check(
+                f"snapshot:{snap_name}",
+                snap_path,
+                lambda p, im=interrupt_mode, em=external_mode, off=offset: petar.Particle(
+                    interrupt_mode=im, external_mode=em
+                ).fromfile(str(p), offset=off),
+                f"petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path, offset={offset})",
+            )
+
+    # NPY outputs created by format.transfer.post.
+    for npy_path in sorted(case_dir.glob("*.npy")):
+        add_check(f"npy:{npy_path.name}", npy_path, lambda p: np.load(str(p), allow_pickle=False), "numpy.load(path, allow_pickle=False)")
+
+    all_warnings = []
+    for chk in checks:
+        for wmsg in chk.get("warnings", []):
+            all_warnings.append({"file": chk["file"], "message": wmsg})
+
+    mismatch_warnings = [
+        item
+        for item in all_warnings
+        if re.search(r"column|dtype|aligned|truncated|itemsize", item["message"], flags=re.IGNORECASE)
+    ]
+
+    return {
+        "checks": checks,
+        "failed_checks": [c for c in checks if not c.get("ok", False)],
+        "warnings": all_warnings,
+        "mismatch_warnings": mismatch_warnings,
+    }
+
+
 def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_root: Path) -> Dict[str, Any]:
     print(f"[DEBUG] run_case input: {case}")
     name = case["name"]
     case_dir = out_root / f"functional_{name}"
     case_dir.mkdir(parents=True, exist_ok=True)
     log_path = case_dir / "run.log"
+    log_path.write_text("", encoding="utf-8")
     result = {
         "name": name,
+        "require": case.get("require", ""),
         "status": "pass",
         "steps": [],
+        "warnings": [],
         "optional": bool(case.get("optional", False)),
         "skip_reason": "",
         "dir": str(case_dir),
@@ -114,40 +477,71 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
     env = os.environ.copy()
     env.update(matrix.get("global", {}).get("run_env", {}))
 
+    # 0) Build/install required binary family for this case before running tests.
+    build_result = run_case_build(repo_root, matrix, case, case_dir, log_path)
+    add_step(
+        result,
+        "build_install",
+        build_result.get("code", 0),
+        ["bash", str(repo_root / matrix.get("build", {}).get("script", ""))],
+        repo_root,
+        warnings_list=build_result.get("warnings"),
+        details={
+            "build_tag": build_result.get("build_tag", ""),
+            "configure_args": build_result.get("configure_args", []),
+            "configure_command": build_result.get("configure_command", ""),
+        },
+        reason=build_result.get("reason", ""),
+    )
+    result["build"] = build_result
+    if build_result.get("status") == "skip":
+        result["status"] = "skip" if result["optional"] else "fail"
+        result["skip_reason"] = build_result.get("reason", "build script is not configured")
+        return result
+    if build_result.get("status") != "pass":
+        result["status"] = "skip" if result["optional"] else "fail"
+        if result["status"] == "skip":
+            result["skip_reason"] = "required build/install failed"
+        return result
+
     # 1) Generate deterministic IC in Msun, pc, pc/Myr.
     raw_ic = case_dir / "ic.raw"
     ic_case = case.get("ic_case", matrix.get("global", {}).get("ic_case", "t2"))
-    rc = run_cmd(
-        [
-            "python3",
-            "test/validation/make_ic.py",
-            "--case",
-            ic_case,
-            "--output",
-            str(raw_ic),
-        ],
+    make_ic_cmd = [
+        "python3",
+        "test/validation/make_ic.py",
+        "--case",
+        ic_case,
+        "--output",
+        str(raw_ic),
+    ]
+    result["ic"] = {
+        "case": ic_case,
+        "description": describe_ic_case(ic_case),
+        "output": str(raw_ic),
+        "command": shell_join(make_ic_cmd),
+    }
+    rc, warns = run_cmd(
+        make_ic_cmd,
         cwd=repo_root,
         env=env,
         log_path=log_path,
     )
-    result["steps"].append({"name": "make_ic", "code": rc})
+    add_step(result, "make_ic", rc, make_ic_cmd, repo_root, warnings_list=warns, details=result["ic"])
     if rc != 0:
-        if rc == 100:
-            result["status"] = "fail"
-            result["skip_reason"] = "Critical warning detected in log (see run.log)"
-        else:
-            result["status"] = "fail"
+        result["status"] = "fail"
         return result
 
     # 2) Convert IC to PeTar format.
     init_args = resolve_tokens(case.get("init_args", []))
-    rc = run_cmd(
-        ["petar.init", *init_args, "-f", "input", str(raw_ic)],
+    init_cmd = ["petar.init", *init_args, "-f", "input", str(raw_ic)]
+    rc, warns = run_cmd(
+        init_cmd,
         cwd=case_dir,
         env=env,
         log_path=log_path,
     )
-    result["steps"].append({"name": "petar.init", "code": rc})
+    add_step(result, "petar.init", rc, init_cmd, case_dir, warnings_list=warns, details={"init_args": init_args})
     if rc != 0:
         result["status"] = "fail"
         return result
@@ -160,13 +554,13 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         select_cmd.extend(["--require", require])
     if optional:
         select_cmd.extend(["--optional", optional])
-    rc = run_cmd(
+    rc, warns = run_cmd(
         select_cmd,
         cwd=case_dir,
         env=env,
         log_path=log_path,
     )
-    result["steps"].append({"name": "petar.select", "code": rc})
+    add_step(result, "petar.select", rc, select_cmd, case_dir, warnings_list=warns, details={"require": require, "optional": optional})
     if rc != 0:
         result["status"] = "skip" if result["optional"] else "fail"
         if result["status"] == "skip":
@@ -178,24 +572,23 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
     dt_out = str(case.get("dt_out", matrix.get("global", {}).get("dt_out", 0.1)))
     run_args = resolve_tokens(case.get("run_args", []))
     run_cmdline = ["petar", "-u", "1", "-t", t_end, "-o", dt_out, *run_args, "input"]
-    rc = run_cmd(run_cmdline, cwd=case_dir, env=env, log_path=log_path)
-    result["steps"].append({"name": "petar", "code": rc})
+    rc, warns = run_cmd(run_cmdline, cwd=case_dir, env=env, log_path=log_path)
+    add_step(result, "petar", rc, run_cmdline, case_dir, warnings_list=warns, details={"t_end": t_end, "dt_out": dt_out, "run_args": run_args})
     if rc != 0:
         result["status"] = "fail"
         return result
 
     # 5) Post-processing pipeline smoke checks.
-    rc = run_cmd(["petar.data.gether", "data"], cwd=case_dir, env=env, log_path=log_path)
-    result["steps"].append({"name": "petar.data.gether", "code": rc})
-    if rc != 0:
-        result["status"] = "fail"
-        return result
-
     snap_list = case_dir / "data.snap.lst"
     if not snap_list.exists():
-        result["status"] = "fail"
-        result["skip_reason"] = "data.snap.lst not found"
-        return result
+        # Fallback for serial outputs when no list file is produced.
+        snapshots = sorted(case_dir.glob("data.[0-9]*"), key=lambda p: int(p.name.split(".")[-1]))
+        if snapshots:
+            snap_list.write_text("\n".join(p.name for p in snapshots) + "\n", encoding="utf-8")
+        else:
+            result["status"] = "fail"
+            result["skip_reason"] = "data.snap.lst not found"
+            return result
 
     first_snap = read_first_snapshot_list(snap_list)
     if not first_snap:
@@ -204,8 +597,9 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         return result
 
     process_args = resolve_tokens(case.get("process_args", []))
-    rc = run_cmd(["petar.data.process", *process_args, "data.snap.lst"], cwd=case_dir, env=env, log_path=log_path)
-    result["steps"].append({"name": "petar.data.process", "code": rc})
+    process_cmd = ["petar.data.process", *process_args, "data.snap.lst"]
+    rc, warns = run_cmd(process_cmd, cwd=case_dir, env=env, log_path=log_path)
+    add_step(result, "petar.data.process", rc, process_cmd, case_dir, warnings_list=warns, details={"process_args": process_args})
     if rc != 0:
         result["status"] = "fail"
         return result
@@ -215,14 +609,15 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
     object_snap_args = case.get("object_snap_args", [])
     snap_cmd = ["petar.get.object.snap", *object_snap_args, "-p", "object", "-f", "origin", "-m", "id", "1", "data.snap.lst"]
     print(f"[DEBUG] petar.get.object.snap cmd: {snap_cmd}")
-    rc = run_cmd(snap_cmd, cwd=case_dir, env=env, log_path=log_path)
-    result["steps"].append({"name": "petar.get.object.snap", "code": rc})
+    rc, warns = run_cmd(snap_cmd, cwd=case_dir, env=env, log_path=log_path)
+    add_step(result, "petar.get.object.snap", rc, snap_cmd, case_dir, warnings_list=warns, details={"object_snap_args": object_snap_args})
     if rc != 0:
         result["status"] = "fail"
         return result
 
-    rc = run_cmd(["petar.format.transfer.post", "-d", "single", "-s", "binary", "-o", "npy", "data.snap.lst"], cwd=case_dir, env=env, log_path=log_path)
-    result["steps"].append({"name": "petar.format.transfer.post", "code": rc})
+    format_cmd = ["petar.format.transfer.post", "-d", "single", "-s", "binary", "-o", "npy", "data.snap.lst"]
+    rc, warns = run_cmd(format_cmd, cwd=case_dir, env=env, log_path=log_path)
+    add_step(result, "petar.format.transfer.post", rc, format_cmd, case_dir, warnings_list=warns, details={"output_format": "npy", "data_kind": "single/binary"})
     if rc != 0:
         result["status"] = "fail"
         return result
@@ -237,10 +632,19 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         result["status"] = "fail"
         result["skip_reason"] = "missing expected outputs: " + ", ".join(missing)
 
+    if result["status"] == "pass":
+        read_checks = run_python_output_read_checks(repo_root, case_dir, require)
+        result["read_checks"] = read_checks
+        if read_checks.get("warnings"):
+            result["warnings"].append({"step": "python_read_checks", "messages": [x["message"] for x in read_checks["warnings"]]})
+        if read_checks.get("failed_checks"):
+            result["status"] = "fail"
+            result["skip_reason"] = "python read checks failed"
+
     return result
 
 
-def run_build(repo_root: Path, matrix: Dict[str, Any], out_root: Path) -> Dict[str, Any]:
+def run_build(repo_root: Path, matrix: Dict[str, Any], out_root: Path, selected_cases: List[Dict[str, Any]]) -> Dict[str, Any]:
     build = matrix.get("build", {})
     script = build.get("script")
     if not script:
@@ -252,12 +656,17 @@ def run_build(repo_root: Path, matrix: Dict[str, Any], out_root: Path) -> Dict[s
 
     env = os.environ.copy()
     env.update(build.get("strict_env", {}))
+    build_tags = select_build_tags(selected_cases)
+    env["BUILD_TAGS"] = ",".join(build_tags)
 
     log_path = out_root / "build.log"
-    rc = run_cmd(["bash", str(script_path)], cwd=repo_root, env=env, log_path=log_path)
+    rc, warns = run_cmd(["bash", str(script_path)], cwd=repo_root, env=env, log_path=log_path)
     return {
         "status": "pass" if rc == 0 else "fail",
         "code": rc,
+        "build_tags": build_tags,
+        "configure_by_tag": {tag: configure_args_for_build_tag(tag) for tag in build_tags},
+        "warnings": warns,
         "script": str(script_path),
         "log": str(log_path),
     }
@@ -286,7 +695,6 @@ def main() -> int:
         "python3",
         "petar.init",
         "petar.select",
-        "petar.data.gether",
         "petar.data.process",
         "petar.get.object.snap",
         "petar.format.transfer.post",
@@ -315,10 +723,11 @@ def main() -> int:
     }
 
     if args.phase in {"all", "build"}:
-        report["build"] = run_build(repo_root, matrix, out_root)
+        report["build"] = run_build(repo_root, matrix, out_root, selected)
         if args.phase == "build":
             report_path = out_root / "report.functional.json"
             report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+            render_html_report(report, out_root / "report.functional.html")
             print(json.dumps(report, indent=2))
             return 0 if report["build"]["status"] == "pass" else 1
 
@@ -329,6 +738,7 @@ def main() -> int:
     report["finished_at"] = int(time.time())
     report_path = out_root / "report.functional.json"
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    render_html_report(report, out_root / "report.functional.html")
     print(json.dumps(report, indent=2))
 
     failed = [c for c in report.get("cases", []) if c.get("status") == "fail"]

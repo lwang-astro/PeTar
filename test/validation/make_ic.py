@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 import argparse
 import math
+import subprocess
+import tempfile
 from pathlib import Path
 from typing import List, Tuple
 
 
 G_MSUN_PC_MYR = 0.00449830997959438
+KM_S_TO_PC_MYR = 1.022712165045695
 
 
 def two_body_peri_state(m1: float, m2: float, peri: float, ecc: float, g_const: float) -> Tuple[List[float], List[float], List[float], List[float]]:
@@ -190,9 +193,223 @@ def build_functional_smoke(output: Path) -> None:
     write_rows(output, recentered)
 
 
+def build_functional_bse_period_binary(output: Path, m1: float, m2: float, period_myr: float, ecc: float) -> None:
+    """Build a two-body IC from BSE test-table parameters.
+
+    The b0.dat binary table stores period in Myr and eccentricity.
+    We reconstruct semi-major axis via Kepler's law in Msun/pc/Myr units,
+    then place the binary at peri-center using the same deterministic setup
+    as other two-body test builders.
+    """
+    semi = (G_MSUN_PC_MYR * (m1 + m2) * (period_myr / (2.0 * math.pi)) ** 2) ** (1.0 / 3.0)
+    peri = semi * (1.0 - ecc)
+    r1, v1, r2, v2 = two_body_peri_state(m1, m2, peri, ecc, G_MSUN_PC_MYR)
+    rows = [(m1, r1, v1), (m2, r2, v2)]
+    write_rows(output, rows)
+
+
+def build_functional_dual_merge_smoke(output: Path) -> None:
+    """Two selected BSE binaries in one shared tiny model for all functional cases.
+
+    Binary A (non-BH-BH merger candidate from data.bse.binary_merge):
+      ids (17,18), m1=85.294690901635846, m2=23.528452122895846,
+      period=4.594336e-09 Myr, ecc=0.499774915487773
+
+    Binary B (GW-kick candidate from data.bse.gw_kick):
+      ids (61,62), m1=35.947378474297203, m2=48.425671915280390,
+      period=8.3652155e-08 Myr, ecc=0.427779218694198
+    """
+    rows: List[Tuple[float, List[float], List[float]]] = []
+
+    # Build two binaries from period/ecc and place them apart in x to avoid overlap.
+    # Binary A center offset
+    b1_m1 = 85.294690901635846
+    b1_m2 = 23.528452122895846
+    b1_period = 4.594336e-09
+    b1_ecc = 0.499774915487773
+    b1_r1, b1_v1, b1_r2, b1_v2 = two_body_peri_state(
+        b1_m1,
+        b1_m2,
+        (G_MSUN_PC_MYR * (b1_m1 + b1_m2) * (b1_period / (2.0 * math.pi)) ** 2) ** (1.0 / 3.0) * (1.0 - b1_ecc),
+        b1_ecc,
+        G_MSUN_PC_MYR,
+    )
+    c1 = [-0.03, 0.0, 0.0]
+    rows.append((b1_m1, [b1_r1[0] + c1[0], b1_r1[1] + c1[1], b1_r1[2] + c1[2]], b1_v1))
+    rows.append((b1_m2, [b1_r2[0] + c1[0], b1_r2[1] + c1[1], b1_r2[2] + c1[2]], b1_v2))
+
+    # Binary B center offset
+    b2_m1 = 35.947378474297203
+    b2_m2 = 48.425671915280390
+    b2_period = 8.3652155e-08
+    b2_ecc = 0.427779218694198
+    b2_r1, b2_v1, b2_r2, b2_v2 = two_body_peri_state(
+        b2_m1,
+        b2_m2,
+        (G_MSUN_PC_MYR * (b2_m1 + b2_m2) * (b2_period / (2.0 * math.pi)) ** 2) ** (1.0 / 3.0) * (1.0 - b2_ecc),
+        b2_ecc,
+        G_MSUN_PC_MYR,
+    )
+    c2 = [0.03, 0.0, 0.0]
+    rows.append((b2_m1, [b2_r1[0] + c2[0], b2_r1[1] + c2[1], b2_r1[2] + c2[2]], b2_v1))
+    rows.append((b2_m2, [b2_r2[0] + c2[0], b2_r2[1] + c2[1], b2_r2[2] + c2[2]], b2_v2))
+
+    # Add a light symmetric background so base/galpy smoke remains robust.
+    background = [
+        (0.5, [0.20, 0.00, 0.00], [0.00, 0.06, 0.00]),
+        (0.5, [-0.20, 0.00, 0.00], [0.00, -0.06, 0.00]),
+        (0.4, [0.00, 0.20, 0.00], [-0.06, 0.00, 0.00]),
+        (0.4, [0.00, -0.20, 0.00], [0.06, 0.00, 0.00]),
+    ]
+    rows.extend(background)
+
+    # Recenter to zero COM position/velocity.
+    mass_tot = sum(item[0] for item in rows)
+    com_pos = [sum(item[0] * item[1][k] for item in rows) / mass_tot for k in range(3)]
+    com_vel = [sum(item[0] * item[2][k] for item in rows) / mass_tot for k in range(3)]
+
+    recentered: List[Tuple[float, List[float], List[float]]] = []
+    for mass, pos, vel in rows:
+        pos_new = [pos[k] - com_pos[k] for k in range(3)]
+        vel_new = [vel[k] - com_vel[k] for k in range(3)]
+        recentered.append((mass, pos_new, vel_new))
+
+    write_rows(output, recentered)
+
+
+def build_functional_mcluster_dual_merge_smoke(output: Path) -> None:
+    """Generate a physical background with mcluster and inject two target binaries.
+
+    Steps:
+    1) Use mcluster to generate N=100, Plummer, Rh=1 pc, Kroupa IMF, no binaries.
+    2) Replace the first four stars by two binaries (4 stars total).
+    3) Align each binary center of mass with one of the first two 2-star pair COMs.
+    4) Recenter to zero net COM position/velocity in Msun/pc/pc-Myr units.
+    """
+    with tempfile.TemporaryDirectory(prefix="petar_make_ic_") as tmpdir:
+        tmp_prefix_name = "mcluster_seed"
+        cmd = [
+            "mcluster",
+            "-N",
+            "100",
+            "-P",
+            "0",
+            "-R",
+            "1",
+            "-f",
+            "1",
+            "-b",
+            "0",
+            "-u",
+            "1",
+            "-C",
+            "3",
+            "-s",
+            "42",
+            "-o",
+            tmp_prefix_name,
+        ]
+        subprocess.run(
+            cmd,
+            cwd=tmpdir,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+        table_path = Path(tmpdir) / f"{tmp_prefix_name}.txt"
+        rows: List[Tuple[float, List[float], List[float]]] = []
+        with table_path.open("r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split()
+                if len(parts) < 7:
+                    continue
+                mass = float(parts[0])
+                pos = [float(parts[1]), float(parts[2]), float(parts[3])]
+                vel = [
+                    float(parts[4]) * KM_S_TO_PC_MYR,
+                    float(parts[5]) * KM_S_TO_PC_MYR,
+                    float(parts[6]) * KM_S_TO_PC_MYR,
+                ]
+                rows.append((mass, pos, vel))
+
+    if len(rows) < 4:
+        raise RuntimeError("mcluster returned fewer than 4 stars; cannot inject two binaries")
+
+    # Two selected binaries from sample outcomes.
+    b1_m1 = 85.294690901635846
+    b1_m2 = 23.528452122895846
+    b1_period = 4.594336e-09
+    b1_ecc = 0.499774915487773
+
+    b2_m1 = 35.947378474297203
+    b2_m2 = 48.425671915280390
+    b2_period = 8.3652155e-08
+    b2_ecc = 0.427779218694198
+
+    def binary_rel_state(m1: float, m2: float, period_myr: float, ecc: float) -> Tuple[List[float], List[float], List[float], List[float]]:
+        semi = (G_MSUN_PC_MYR * (m1 + m2) * (period_myr / (2.0 * math.pi)) ** 2) ** (1.0 / 3.0)
+        peri = semi * (1.0 - ecc)
+        return two_body_peri_state(m1, m2, peri, ecc, G_MSUN_PC_MYR)
+
+    b1_r1, b1_v1, b1_r2, b1_v2 = binary_rel_state(b1_m1, b1_m2, b1_period, b1_ecc)
+    b2_r1, b2_v1, b2_r2, b2_v2 = binary_rel_state(b2_m1, b2_m2, b2_period, b2_ecc)
+
+    # Anchor binary COMs to COMs of the first two star pairs: (0,1) and (2,3).
+    def pair_com(row_a: Tuple[float, List[float], List[float]], row_b: Tuple[float, List[float], List[float]]) -> Tuple[List[float], List[float]]:
+        ma, pa, va = row_a
+        mb, pb, vb = row_b
+        mt = ma + mb
+        pcom = [(ma * pa[k] + mb * pb[k]) / mt for k in range(3)]
+        vcom = [(ma * va[k] + mb * vb[k]) / mt for k in range(3)]
+        return pcom, vcom
+
+    pcom1, vcom1 = pair_com(rows[0], rows[1])
+    pcom2, vcom2 = pair_com(rows[2], rows[3])
+
+    rows[0] = (b1_m1, [pcom1[k] + b1_r1[k] for k in range(3)], [vcom1[k] + b1_v1[k] for k in range(3)])
+    rows[1] = (b1_m2, [pcom1[k] + b1_r2[k] for k in range(3)], [vcom1[k] + b1_v2[k] for k in range(3)])
+    rows[2] = (b2_m1, [pcom2[k] + b2_r1[k] for k in range(3)], [vcom2[k] + b2_v1[k] for k in range(3)])
+    rows[3] = (b2_m2, [pcom2[k] + b2_r2[k] for k in range(3)], [vcom2[k] + b2_v2[k] for k in range(3)])
+
+    # Global recenter.
+    mass_tot = sum(item[0] for item in rows)
+    com_pos = [sum(item[0] * item[1][k] for item in rows) / mass_tot for k in range(3)]
+    com_vel = [sum(item[0] * item[2][k] for item in rows) / mass_tot for k in range(3)]
+
+    recentered: List[Tuple[float, List[float], List[float]]] = []
+    for mass, pos, vel in rows:
+        recentered.append(
+            (
+                mass,
+                [pos[k] - com_pos[k] for k in range(3)],
+                [vel[k] - com_vel[k] for k in range(3)],
+            )
+        )
+
+    write_rows(output, recentered)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate deterministic initial conditions for PeTar validation scenarios")
-    parser.add_argument("--case", choices=["t1", "t2", "t3", "t4", "t4_outer15", "functional_smoke"], required=True)
+    parser.add_argument(
+        "--case",
+        choices=[
+            "t1",
+            "t2",
+            "t3",
+            "t4",
+            "t4_outer15",
+            "functional_smoke",
+            "functional_dual_merge_smoke",
+            "functional_mcluster_dual_merge_smoke",
+        ],
+        required=True,
+    )
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
@@ -209,6 +426,10 @@ def main() -> int:
         build_t4_outer15(out)
     elif args.case == "functional_smoke":
         build_functional_smoke(out)
+    elif args.case == "functional_dual_merge_smoke":
+        build_functional_dual_merge_smoke(out)
+    elif args.case == "functional_mcluster_dual_merge_smoke":
+        build_functional_mcluster_dual_merge_smoke(out)
     return 0
 
 

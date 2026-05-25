@@ -3750,11 +3750,16 @@ public:
         // calculate v_max based on r_search_max, tree time step and r_search_vel_factor
         //vel_max = (r_search_max - r_out) / dt_soft / r_search_vel_factor;
 
-        // regularize output time to be integer times of dt_soft
-        if (dt_snap<dt_soft) 
+        // regularize output time to be integer times of dt_soft.
+        // Use floor in floating-point space to avoid 32-bit integer overflow
+        // when dt_soft is very small (dt_snap/dt_soft can exceed INT_MAX).
+        if (dt_snap<dt_soft) {
             dt_snap = dt_soft;
-        else
-            dt_snap = int(dt_snap/dt_soft)*dt_soft;
+        }
+        else {
+            const PS::F64 snap_ratio = std::floor(dt_snap/dt_soft);
+            dt_snap = std::max(snap_ratio, PS::F64(1.0))*dt_soft;
+        }
 
         EPISoft::eps   = hard_parameters.eps.value;
         EPISoft::r_out = r_out;
