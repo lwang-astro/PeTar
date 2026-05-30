@@ -161,14 +161,19 @@ public:
      */
     void writeBinary(FILE* _fout) const{
         ParticleBase::writeBinary(_fout);
-        fwrite(&(this->r_search), sizeof(PS::F64), 4, _fout);
-        //group_data.artificial.writeBinary(_fout);
+        fwrite(&(this->r_search), sizeof(PS::F64), 1, _fout);
+        fwrite(&(this->id), sizeof(PS::S64), 1, _fout);
+        fwrite(&(this->group_data.data_int64.data1), sizeof(PS::S64), 1, _fout);
+        fwrite(&(this->group_data.data_int64.data2), sizeof(PS::S64), 1, _fout);
         changeover.writeBinary(_fout);
     }
 
     void printColumnBinary(std::ostream& _fout) const{
         ParticleBase::printColumnBinary(_fout);
-        _fout.write(reinterpret_cast<const char*>(&(this->r_search)), sizeof(PS::F64)*4);
+        _fout.write(reinterpret_cast<const char*>(&(this->r_search)), sizeof(PS::F64));
+        _fout.write(reinterpret_cast<const char*>(&(this->id)), sizeof(PS::S64));
+        _fout.write(reinterpret_cast<const char*>(&(this->group_data.data_int64.data1)), sizeof(PS::S64));
+        _fout.write(reinterpret_cast<const char*>(&(this->group_data.data_int64.data2)), sizeof(PS::S64));
         changeover.printColumnBinary(_fout);
     }
 
@@ -203,7 +208,10 @@ public:
      */
     void readBinary(FILE* _fin) {
         ParticleBase::readBinary(_fin);
-        size_t rcount = fread(&(this->r_search), sizeof(PS::F64), 4, _fin);
+        size_t rcount = fread(&(this->r_search), sizeof(PS::F64), 1, _fin);
+        rcount += fread(&(this->id), sizeof(PS::S64), 1, _fin);
+        rcount += fread(&(this->group_data.data_int64.data1), sizeof(PS::S64), 1, _fin);
+        rcount += fread(&(this->group_data.data_int64.data2), sizeof(PS::S64), 1, _fin);
         if (rcount<4) {
             std::cerr<<"Error: Ptcl data reading r_search, id, and group_data fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
@@ -215,7 +223,10 @@ public:
 
     void readBinary(std::istream& _fin) {
         ParticleBase::readBinary(_fin);
-        _fin.read(reinterpret_cast<char*>(&(this->r_search)), sizeof(PS::F64)*4);
+        _fin.read(reinterpret_cast<char*>(&(this->r_search)), sizeof(PS::F64));
+        _fin.read(reinterpret_cast<char*>(&(this->id)), sizeof(PS::S64));
+        _fin.read(reinterpret_cast<char*>(&(this->group_data.data_int64.data1)), sizeof(PS::S64));
+        _fin.read(reinterpret_cast<char*>(&(this->group_data.data_int64.data2)), sizeof(PS::S64));
         if (!_fin) {
             std::cerr<<"Error: Ptcl data reading r_search, id, and group_data fails! requiring data number is 4.\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";

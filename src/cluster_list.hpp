@@ -145,11 +145,12 @@ public:
 
 class PtclComm: public Ptcl{
 public:
+    PS::F64vec acc;
     PS::S32 id_cluster;
 
     template <class Tp>
-    PtclComm(const Tp &p): Ptcl(p), id_cluster(-1) {}
-    PtclComm() {}
+    PtclComm(const Tp &p): Ptcl(p), acc(p.acc), id_cluster(-1) {}
+    PtclComm(): Ptcl(), acc(0.0), id_cluster(-1) {}
 
     void print(std::ostream & fout){
         Ptcl::print(fout);

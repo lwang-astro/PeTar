@@ -2198,6 +2198,7 @@ private:
     PS::F64 time_write_back_; // time of writing back data
     
     PS::ReallocatableArray<PtclH4> ptcl_hard_;                        // particle data
+    PS::ReallocatableArray<PS::F64vec> ptcl_soft_acc_cache_;          // soft acceleration cache aligned with ptcl_hard_
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_;               // number of particles in one cluster
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_disp_;          // boundary of particle cluster
     PS::ReallocatableArray<PS::S32> n_group_in_cluster_;              // number of groups in one cluster
@@ -2595,7 +2596,15 @@ private:
 #ifdef KDKDK_4TH
                     if(_acorr_flag) {
                         PS::S64 adr_kj = _ptcl_local[kj].adr_org;
-                        calcAcorrShortWithLinearCutoff(pj[k], _sys[adr_kj]);
+                        if (adr_kj>=0) {
+                            calcAcorrShortWithLinearCutoff(pj[k], _sys[adr_kj]);
+                        }
+                        else {
+                            FPSoft pj_loc;
+                            pj_loc.DataCopy(_ptcl_local[kj]);
+                            pj_loc.acc = ptcl_soft_acc_cache_[kj];
+                            calcAcorrShortWithLinearCutoff(pj[k], pj_loc);
+                        }
                     }
                     else
 #endif
@@ -2696,6 +2705,7 @@ public:
                                     const PS::ReallocatableArray<Tmediator> & med,
                                     const PS::ReallocatableArray<Tptcl> & ptcl_recv){
         ptcl_hard_.clearSize();
+        ptcl_soft_acc_cache_.clearSize();
         n_ptcl_in_cluster_.clearSize(); // clear befor break this function
         for(PS::S32 i=0; i<med.size(); i++){
             if(med[i].adr_sys_ < 0) continue;
@@ -2726,6 +2736,12 @@ public:
         std::sort(ptcl_hard_.getPointer(), ptcl_hard_.getPointer(ptcl_hard_.size()), 
                   OPLessIDCluster());
         PS::S32 n_tot = ptcl_hard_.size();
+        ptcl_soft_acc_cache_.resizeNoInitialize(n_tot);
+        for(PS::S32 i=0; i<n_tot; i++) {
+            const PS::S64 adr = ptcl_hard_[i].adr_org;
+            if (adr>=0) ptcl_soft_acc_cache_[i] = sys[adr].acc;
+            else        ptcl_soft_acc_cache_[i] = ptcl_recv[-(adr+1)].acc;
+        }
         PS::S32 id_cluster_ref = -999;
         for(PS::S32 i=0; i<n_tot; i++){
             if(id_cluster_ref != ptcl_hard_[i].id_cluster){
@@ -4169,6 +4185,7 @@ public:
             // obtain correction for real particles in clusters
             for (int j=adr_real_start; j<adr_real_end; j++) {
                 PS::S64 adr = ptcl_local[j].adr_org;
+                assert(adr>=0);
 #ifdef HARD_DEBUG
                 assert(_sys[adr].id==ptcl_local[j].id);
 #endif
@@ -4187,6 +4204,7 @@ public:
 #ifdef KDKDK_4TH
                     if(_acorr_flag) {
                         PS::S64 adr_k = ptcl_local[k].adr_org;
+                        assert(adr_k>=0);
                         calcAcorrShortWithLinearCutoff(_sys[adr], _sys[adr_k]);
                     }
                     else

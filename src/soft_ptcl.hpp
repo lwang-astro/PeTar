@@ -34,7 +34,7 @@ public:
 
 class FPSoft: public Ptcl{
 public:
-    PS::F64vec acc; // soft
+    PS::F64vec acc; // soft acceleration
 #ifdef COLLECT_SP_ACC    
     PS::F64vec acc_sp; // superparticle acceleration (only used when superparticle is enabled)
 #endif
