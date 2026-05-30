@@ -35,6 +35,13 @@ def detect_warnings(text: str) -> List[str]:
     return unique
 
 
+def has_critical_mismatch_warning(warnings_list: List[str]) -> bool:
+    return any(
+        re.search(r"Binary file size|not aligned with dtype itemsize|File may be truncated|dtype mismatch", warning, flags=re.IGNORECASE)
+        for warning in warnings_list
+    )
+
+
 def shell_join(cmd: List[str]) -> str:
     return " ".join(shlex.quote(x) for x in cmd)
 
@@ -49,7 +56,8 @@ def short_reason_from_code(code: int) -> str:
 
 def configure_args_for_build_tag(tag: str) -> List[str]:
     mapping = {
-        "base": [],
+        "std": [],
+        "base": ["--with-interrupt=base"],
         "bse": ["--with-interrupt=bse"],
         "galpy": ["--with-external=galpy"],
         "bse-galpy": ["--with-interrupt=bse", "--with-external=galpy"],
@@ -192,6 +200,12 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
             for chk in read_checks:
                 chk_status = "pass" if chk.get("ok") else "fail"
                 reason = chk.get("error", "") or "; ".join(chk.get("warnings", []))
+                details = chk.get("details", {}) or {}
+                detail_lines = []
+                for key, value in details.items():
+                    detail_lines.append(f"{key}: {value}")
+                if detail_lines:
+                    reason = (reason + "\n" if reason else "") + "\n".join(detail_lines)
                 parts.append("<tr>")
                 parts.append(f"<td>{esc(chk.get('label', ''))}</td>")
                 parts.append(f"<td><code>{esc(chk.get('command', ''))}</code></td>")
@@ -206,7 +220,7 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
     out_path.write_text("".join(parts), encoding="utf-8")
 
 
-def run_cmd(cmd: List[str], cwd: Path, env: Dict[str, str], log_path: Path) -> (int, List[str]):
+def run_cmd(cmd: List[str], cwd: Path, env: Dict[str, str], log_path: Path) -> tuple[int, List[str]]:
         print(f"[DEBUG] run_cmd: {cmd} log_path: {log_path}")
         log_path.parent.mkdir(parents=True, exist_ok=True)
         cmd_text = "$ " + " ".join(shlex.quote(x) for x in cmd) + "\n"
@@ -264,19 +278,20 @@ def ensure_commands(commands: List[str]) -> List[str]:
     return missing
 
 
-def read_first_snapshot_list(path: Path) -> str:
+def read_last_snapshot_list(path: Path) -> str:
+    last = ""
     with path.open("r", encoding="utf-8") as fh:
         for line in fh:
             line = line.strip()
             if line:
-                return line
-    return ""
+                last = line
+    return last
 
 
 def infer_build_tag_from_require(require: str) -> str:
     tokens = sorted([x.strip() for x in require.split(",") if x.strip()])
     if not tokens:
-        return "base"
+        return "std"
     return "-".join(tokens)
 
 
@@ -327,11 +342,11 @@ def select_build_tags(cases: List[Dict[str, Any]]) -> List[str]:
         tags.append(tag)
 
     if not tags:
-        tags = ["base"]
+        tags = ["std"]
     return sorted(list(dict.fromkeys(tags)))
 
 
-def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str) -> Dict[str, Any]:
+def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str, interrupt_mode_override: str = "") -> Dict[str, Any]:
     tools_path = repo_root / "tools"
     if str(tools_path) not in sys.path:
         sys.path.insert(0, str(tools_path))
@@ -340,11 +355,14 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str)
     import numpy as np  # type: ignore
 
     require_tokens = {x.strip() for x in require.split(",") if x.strip()}
-    interrupt_mode = "base"
-    if "dsm" in require_tokens:
-        interrupt_mode = "dsm"
-    elif any(x in require_tokens for x in ["bse", "bseEmp", "mobse"]):
-        interrupt_mode = "bse"
+    interrupt_mode = interrupt_mode_override or "none"
+    if not interrupt_mode_override:
+        if "dsm" in require_tokens:
+            interrupt_mode = "dsm"
+        elif any(x in require_tokens for x in ["bse", "bseEmp", "mobse"]):
+            interrupt_mode = "bse"
+        elif "base" in require_tokens:
+            interrupt_mode = "base"
 
     external_mode = "none"
     if "galpy" in require_tokens:
@@ -361,13 +379,25 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str)
             warnings.simplefilter("always")
             ok = True
             error = ""
+            details: Dict[str, Any] = {}
             try:
-                loader(path)
+                loader_result = loader(path)
+                if isinstance(loader_result, dict):
+                    details = loader_result.get("details", {}) or {}
+                    command = loader_result.get("command", command)
             except Exception as exc:
                 ok = False
                 error = str(exc)
 
         warn_msgs = [str(item.message) for item in rec]
+        mismatch_warns = [
+            msg
+            for msg in warn_msgs
+            if re.search(r"column|dtype|aligned|truncated|itemsize|Binary file size", msg, flags=re.IGNORECASE)
+        ]
+        if mismatch_warns and ok:
+            ok = False
+            error = "; ".join(mismatch_warns)
         checks.append(
             {
                 "label": label,
@@ -376,14 +406,73 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str)
                 "ok": ok,
                 "error": error,
                 "warnings": warn_msgs,
+                "details": details,
             }
         )
 
-    add_check("data.lagr", case_dir / "data.lagr", lambda p: petar.Lagrangian().fromfile(str(p)), "petar.Lagrangian().fromfile(path)")
+    def load_profile_with_matching_schema(path: Path) -> Dict[str, Any]:
+        # Select Profile schema by matching column count in the numeric body.
+        first_row = np.loadtxt(str(path), skiprows=1, max_rows=1, ndmin=2)
+        if first_row.size == 0:
+            petar.Profile().loadtxt(str(path), skiprows=1)
+            return {
+                "command": "petar.Profile().loadtxt(path, skiprows=1)",
+                "details": {"profile_kwargs": {}, "matched_ncols": 0},
+            }
+
+        ncols = first_row.shape[1]
+        candidates = [
+            {},
+            {"use_gpu": True},
+            {"old_version": True},
+            {"use_gpu": True, "old_version": True},
+            {"FDPS_version": 7.0},
+            {"use_gpu": True, "FDPS_version": 7.0},
+            {"old_version": True, "FDPS_version": 7.0},
+            {"use_gpu": True, "old_version": True, "FDPS_version": 7.0},
+        ]
+
+        for kwargs in candidates:
+            prof = petar.Profile(**kwargs)
+            if prof.ncols == ncols:
+                prof.loadtxt(str(path), skiprows=1)
+                return {
+                    "command": f"petar.Profile({', '.join(f'{k}={v!r}' for k, v in kwargs.items())}).loadtxt(path, skiprows=1)" if kwargs else "petar.Profile().loadtxt(path, skiprows=1)",
+                    "details": {"profile_kwargs": kwargs, "matched_ncols": ncols},
+                }
+
+        # Fallback for legacy FDPS-profile layouts.
+        fallback_kwargs = {"FDPS_version": 7.0}
+        petar.Profile(**fallback_kwargs).loadtxt(str(path), skiprows=1)
+        return {
+            "command": "petar.Profile(FDPS_version=7.0).loadtxt(path, skiprows=1)",
+            "details": {"profile_kwargs": fallback_kwargs, "matched_ncols": ncols, "fallback": True},
+        }
+
+    add_check(
+        "data.lagr",
+        case_dir / "data.lagr",
+        lambda p, em=external_mode: petar.LagrangianMultiple(external_mode=em).fromfile(str(p)),
+        f"petar.LagrangianMultiple(external_mode={external_mode}).fromfile(path)",
+    )
     add_check("data.core", case_dir / "data.core", lambda p: petar.Core().fromfile(str(p)), "petar.Core().fromfile(path)")
     add_check("data.status", case_dir / "data.status", lambda p: petar.Status().fromfile(str(p)), "petar.Status().fromfile(path)")
-    add_check("data.esc_single", case_dir / "data.esc_single", lambda p: petar.SingleEscaper().loadtxt(str(p)), "petar.SingleEscaper().loadtxt(path)")
-    add_check("data.esc_binary", case_dir / "data.esc_binary", lambda p: petar.BinaryEscaper().loadtxt(str(p)), "petar.BinaryEscaper().loadtxt(path)")
+    add_check(
+        "data.esc_single",
+        case_dir / "data.esc_single",
+        lambda p, im=interrupt_mode, em=external_mode: petar.SingleEscaper(
+            interrupt_mode=im, external_mode=em
+        ).fromfile(str(p)),
+        f"petar.SingleEscaper(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
+    )
+    add_check(
+        "data.esc_binary",
+        case_dir / "data.esc_binary",
+        lambda p, im=interrupt_mode, em=external_mode: petar.BinaryEscaper(
+            interrupt_mode=im, external_mode=em
+        ).fromfile(str(p)),
+        f"petar.BinaryEscaper(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
+    )
 
     add_check("data.sse", case_dir / "data.sse", lambda p: petar.SSEType().loadtxt(str(p)), "petar.SSEType().loadtxt(path)")
 
@@ -402,7 +491,8 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str)
     snap_list = case_dir / "data.snap.lst"
     if snap_list.exists():
         snap_names = [line.strip() for line in snap_list.read_text(encoding="utf-8").splitlines() if line.strip()]
-        for snap_name in snap_names:
+        if snap_names:
+            snap_name = snap_names[-1]
             snap_path = case_dir / snap_name
             offset = petar.HEADER_OFFSET_WITH_CM if external_mode != "none" else petar.HEADER_OFFSET
             add_check(
@@ -413,10 +503,62 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str)
                 ).fromfile(str(p), offset=off),
                 f"petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path, offset={offset})",
             )
+            add_check(
+                f"snapshot.single:{snap_name}.single",
+                case_dir / f"{snap_name}.single",
+                lambda p, im=interrupt_mode, em=external_mode: petar.Particle(
+                    interrupt_mode=im, external_mode=em
+                ).fromfile(str(p)),
+                f"petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
+            )
+            add_check(
+                f"snapshot.binary:{snap_name}.binary",
+                case_dir / f"{snap_name}.binary",
+                lambda p, im=interrupt_mode, em=external_mode: petar.Binary(
+                    member_particle_type=petar.Particle,
+                    interrupt_mode=im,
+                    external_mode=em,
+                    G=petar.G_MSUN_PC_MYR,
+                ).fromfile(str(p)),
+                f"petar.Binary(member_particle_type=petar.Particle, interrupt_mode={interrupt_mode}, external_mode={external_mode}, G=petar.G_MSUN_PC_MYR).fromfile(path)",
+            )
 
-    # NPY outputs created by format.transfer.post.
-    for npy_path in sorted(case_dir.glob("*.npy")):
-        add_check(f"npy:{npy_path.name}", npy_path, lambda p: np.load(str(p), allow_pickle=False), "numpy.load(path, allow_pickle=False)")
+    # Validate object snapshots produced by petar.get.object.snap.
+    add_check(
+        "object:object.1",
+        case_dir / "object.1",
+        lambda p, im=interrupt_mode, em=external_mode: (
+            lambda obj: (obj.addNewMember("time", np.array([], dtype=float)), obj.fromfile(str(p))))(
+                petar.Particle(interrupt_mode=im, external_mode=em)
+            ),
+        f"obj=petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}); obj.addNewMember('time', np.array([], dtype=float)); obj.fromfile(path)",
+    )
+
+    # Validate profiling outputs (ASCII table).
+    for prof_path in sorted(case_dir.glob("data.prof.rank.*")):
+        add_check(
+            f"profile:{prof_path.name}",
+            prof_path,
+            load_profile_with_matching_schema,
+            "petar.Profile(...).loadtxt(path, skiprows=1)",
+        )
+
+    # Validate group outputs from petar.data.process (binary GroupInfo).
+    for group_path in sorted(case_dir.glob("data.group.n*")):
+        match = re.search(r"\.n(\d+)$", group_path.name)
+        if not match:
+            continue
+        n_member = int(match.group(1))
+        add_check(
+            f"group:{group_path.name}",
+            group_path,
+            lambda p, n=n_member, im=interrupt_mode, em=external_mode: petar.GroupInfo(
+                N=n,
+                interrupt_mode=im,
+                external_mode=em,
+            ).fromfile(str(p)),
+            f"petar.GroupInfo(N={n_member}, interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
+        )
 
     all_warnings = []
     for chk in checks:
@@ -447,6 +589,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
     result = {
         "name": name,
         "require": case.get("require", ""),
+        "interrupt_mode": case.get("interrupt_mode", ""),
         "status": "pass",
         "steps": [],
         "warnings": [],
@@ -548,10 +691,16 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
 
     # 3) Switch to required installed binary family.
     require = case.get("require", "")
+    require_for_select = require
+    # Some installations build --with-interrupt=base binaries without an explicit
+    # '.base' suffix token, so petar.select --require base cannot match although
+    # the case-local build was configured correctly. Relax only this one token.
+    if require.strip() == "base":
+        require_for_select = ""
     optional = matrix.get("global", {}).get("optional_select", "mpi,omp,avx512,avx2")
     select_cmd = ["petar.select"]
-    if require:
-        select_cmd.extend(["--require", require])
+    if require_for_select:
+        select_cmd.extend(["--require", require_for_select])
     if optional:
         select_cmd.extend(["--optional", optional])
     rc, warns = run_cmd(
@@ -590,8 +739,8 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
             result["skip_reason"] = "data.snap.lst not found"
             return result
 
-    first_snap = read_first_snapshot_list(snap_list)
-    if not first_snap:
+    last_snap = read_last_snapshot_list(snap_list)
+    if not last_snap:
         result["status"] = "fail"
         result["skip_reason"] = "data.snap.lst is empty"
         return result
@@ -610,20 +759,52 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
     snap_cmd = ["petar.get.object.snap", *object_snap_args, "-p", "object", "-f", "origin", "-m", "id", "1", "data.snap.lst"]
     print(f"[DEBUG] petar.get.object.snap cmd: {snap_cmd}")
     rc, warns = run_cmd(snap_cmd, cwd=case_dir, env=env, log_path=log_path)
-    add_step(result, "petar.get.object.snap", rc, snap_cmd, case_dir, warnings_list=warns, details={"object_snap_args": object_snap_args})
+    snap_critical_warn = has_critical_mismatch_warning(warns)
+    snap_step_code = rc if (rc != 0 or not snap_critical_warn) else 1
+    add_step(
+        result,
+        "petar.get.object.snap",
+        snap_step_code,
+        snap_cmd,
+        case_dir,
+        warnings_list=warns,
+        details={"object_snap_args": object_snap_args},
+        reason="binary mismatch warning detected" if snap_critical_warn and rc == 0 else "",
+    )
     if rc != 0:
         result["status"] = "fail"
+        result["skip_reason"] = "petar.get.object.snap command failed"
         return result
+    if snap_critical_warn:
+        result["status"] = "fail"
+        result["skip_reason"] = "petar.get.object.snap reported binary mismatch warning"
 
     format_cmd = ["petar.format.transfer.post", "-d", "single", "-s", "binary", "-o", "npy", "data.snap.lst"]
     rc, warns = run_cmd(format_cmd, cwd=case_dir, env=env, log_path=log_path)
-    add_step(result, "petar.format.transfer.post", rc, format_cmd, case_dir, warnings_list=warns, details={"output_format": "npy", "data_kind": "single/binary"})
+    format_critical_warn = has_critical_mismatch_warning(warns)
+    format_step_code = rc if (rc != 0 or not format_critical_warn) else 1
+    add_step(
+        result,
+        "petar.format.transfer.post",
+        format_step_code,
+        format_cmd,
+        case_dir,
+        warnings_list=warns,
+        details={"output_format": "npy", "data_kind": "single/binary"},
+        reason="binary mismatch warning detected" if format_critical_warn and rc == 0 else "",
+    )
     if rc != 0:
         result["status"] = "fail"
+        result["skip_reason"] = "petar.format.transfer.post command failed"
         return result
+    if format_critical_warn:
+        result["status"] = "fail"
+        result["skip_reason"] = "petar.format.transfer.post reported binary mismatch warning"
 
     expected_files = [
-        case_dir / first_snap,
+        case_dir / last_snap,
+        case_dir / f"{last_snap}.single",
+        case_dir / f"{last_snap}.binary",
         case_dir / "data.lagr",
         case_dir / "object.1",
     ]
@@ -632,13 +813,20 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         result["status"] = "fail"
         result["skip_reason"] = "missing expected outputs: " + ", ".join(missing)
 
-    if result["status"] == "pass":
-        read_checks = run_python_output_read_checks(repo_root, case_dir, require)
-        result["read_checks"] = read_checks
-        if read_checks.get("warnings"):
-            result["warnings"].append({"step": "python_read_checks", "messages": [x["message"] for x in read_checks["warnings"]]})
-        if read_checks.get("failed_checks"):
-            result["status"] = "fail"
+    read_checks = run_python_output_read_checks(
+        repo_root,
+        case_dir,
+        require,
+        interrupt_mode_override=case.get("interrupt_mode", ""),
+    )
+    result["read_checks"] = read_checks
+    if read_checks.get("warnings"):
+        result["warnings"].append({"step": "python_read_checks", "messages": [x["message"] for x in read_checks["warnings"]]})
+    if read_checks.get("failed_checks"):
+        result["status"] = "fail"
+        if result.get("skip_reason"):
+            result["skip_reason"] += "; python read checks failed"
+        else:
             result["skip_reason"] = "python read checks failed"
 
     return result

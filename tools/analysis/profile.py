@@ -172,7 +172,7 @@ class Profile(DictNpArrayMix):
         comp_bar (PeTarProfile): MPI barrier waiting time of each components of PeTar
         tree_soft (FDPSProfile): FDPS long-range force particle-tree profile
         tree_nb  (FDPSProfile): FDPS particle-tree for neighbor searching
-        if keyword arguments "use_gpu" == True:
+        if keyword arguments "use_gpu" == False:
             gpu (GPUProfile): GPU profile for tree force calculation
         count (PeTarCount): number counts
     """
@@ -182,12 +182,12 @@ class Profile(DictNpArrayMix):
         Parameters
         ----------
         keyword arguments:
-            use_gpu: bool (True)
+            use_gpu: bool (False)
                 whether cuda is used 
             FDPS_version: float (8.0)
                 FDPS version for FDPSProfile initialization (see FDPSProfile.__init__ for details)
         """
-        use_gpu=True
+        use_gpu=False
         if ('use_gpu' in kwargs.keys()): use_gpu=kwargs['use_gpu']
         if (use_gpu):
             keys = [['rank',np.int64], ['time',np.float64], ['nstep',np.int64], ['n_loc',np.int64], ['comp',PeTarProfile], ['comp_bar', PeTarProfile], ['tree_soft', FDPSProfile], ['tree_nb', FDPSProfile], ['gpu',GPUProfile],['count',PeTarCount]]

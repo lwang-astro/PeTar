@@ -19,11 +19,14 @@ Treat the guardrails in this file as mandatory, not advisory.
 - After required inputs are complete, provide a parameter summary and the exact command(s), then ask user confirmation before executing any run command.
 - If output prefix/model name is not provided, default to PeTar prefix `data`.
 - If unit mode is not provided, default to astrophysical unit mode `-u 1` (Msun, pc, pc/Myr).
+- Unit-system self-consistency is mandatory: PeTar runtime does not independently re-scale mass/length/time/velocity; only `G` changes with the selected unit mode, so IC units must be mutually consistent with the chosen `G`.
 - If the user requests stellar evolution, confirm the exact interruption module (`bse`, `bseEmp`, `mobse`/`moBSE`, or `dsm`) before selection, and use that module as a required token in `petar.select`.
 - If the user requests external potential, confirm `galpy` or `agama` before selection, and use the confirmed mode as a required token in `petar.select`.
 - For star-cluster simulations that require IC generation, do not proceed until the star-cluster IC parameter set is complete.
 - For star-cluster IC generation, verify generator availability first: prefer `mcluster_gpu` when available, otherwise use `mcluster`.
 - If neither `mcluster_gpu` nor `mcluster` is available, stop and ask the user to install one before proceeding.
+- For IC produced by `mcluster`, do not assume a fixed unit system independent of generator options: `mcluster` output depends on its own `-u` setting. In the common `mcluster -u 1` case, the output is astrophysical-style data with mass in `Msun`, position in `pc`, and velocity in `km/s`; if this IC is later used with `petar -u 1` (target unit: `Msun`, `pc`, `pc/Myr`), `petar.init -v 1.022712165045695` must be applied to convert `km/s -> pc/Myr`.
+- For any raw IC source (including `mcluster`), explicitly confirm or infer source mass/length/velocity units before `petar.init`. Recommended path unless the user explicitly requests otherwise: normalize the IC into the target PeTar unit system during `petar.init` using conversion options such as `-r` and `-v` so that, for `petar -u 1`, the final IC is in `Msun`, `pc`, `pc/Myr` and uses the standard astrophysical `G`. Advanced path: keep the native length scale (for example `kpc`) and convert velocity consistently (for example `km/s -> kpc/Myr`), but then you must also provide the matching `G` via `petar -G` and ensure every unit-sensitive physics module and post-processing option is converted consistently as well (for example BSE, Galpy, Agama scaling options). Because this path is error-prone, do not recommend it unless the user explicitly asks to preserve the native units.
 - For BSE-related stellar-evolution runs (`bse`, `bseEmp`, `mobse`), metallicity is mandatory and must be confirmed before execution.
 - For external-potential runs, the potential model and the simulation-object center phase-space coordinates in that potential are mandatory; do not pick a potential model on behalf of the user.
 - If the user does not explicitly request debug mode, selected solver candidates must exclude debug families (for example suffix token `g` or assert-debug builds).
@@ -507,6 +510,8 @@ Treat the following messages as evidence that snapshot reading is misconfigured 
    `The reading data shape or the number of columns mismatches the number of columns`
 3. Text decoding errors such as `utf-8` decode failures.
 
+Apply the same rule to `data.lagr` and other `petar.data.process` outputs when the reader reports binary size, dtype, or alignment mismatches: those are read failures, not harmless warnings.
+
 Interpretation:
 
 - binary misalignment:
@@ -854,6 +859,7 @@ plt.colorbar(pt, ax=ax, label='mass ratio')
 - For any Python read path, ensure these settings are consistent with the currently selected `petar` binary family (for example `.bse`, `.galpy`, `.agama`, `.dsm`) and the actual producer command used to write the files.
 - For original snapshots (`data.*`), use header offset (`petar.HEADER_OFFSET` or `petar.HEADER_OFFSET_WITH_CM` for external-mode snapshots).
 - For `petar.data.process` outputs (`*.single`, `*.binary`, `data.lagr`, `data.core`), read directly without header offset.
+- For `data.lagr`, use `petar.LagrangianMultiple()`; do not use `petar.Lagrangian()` for functional post-processing outputs.
 - When reading outputs from `petar.get.object.snap`, add a `time` member before `fromfile`.
 - If column-mismatch or decode warnings appear during Python reading and cannot be resolved by parameter correction, stop the workflow and report the issue instead of continuing.
 - If user asks for “give me Python code for this analysis”, return directly runnable snippet(s) using these templates and the user’s path/filename choices.

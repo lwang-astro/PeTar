@@ -9,6 +9,10 @@ from typing import List, Tuple
 
 G_MSUN_PC_MYR = 0.00449830997959438
 KM_S_TO_PC_MYR = 1.022712165045695
+PC_MYR_TO_KM_S = 1.0 / KM_S_TO_PC_MYR
+FUNCTIONAL_SELECT_DAT = Path("/home/lwang/localdata/petar_sample/bse/select.dat")
+MCLUSTER_SEED = 42
+MCLUSTER_OUTPUT_VELOCITY_UNIT = "km/s"
 
 
 def two_body_peri_state(m1: float, m2: float, peri: float, ecc: float, g_const: float) -> Tuple[List[float], List[float], List[float], List[float]]:
@@ -42,6 +46,40 @@ def write_rows(output: Path, rows: List[Tuple[float, List[float], List[float]]])
                     vel[2],
                 )
             )
+
+
+def load_bse_select_dat(path: Path) -> List[Tuple[float, float, float, float]]:
+    """Load two-binary parameters from petar.bse -b table.
+
+    The expected format is:
+      line-1: integer number of binaries
+      next lines: m1 m2 k1 k2 period[Myr] ecc ...
+    """
+    text = path.read_text(encoding="utf-8").splitlines()
+    lines = [line.strip() for line in text if line.strip()]
+    if not lines:
+        raise ValueError(f"Empty select.dat: {path}")
+
+    try:
+        nbin = int(lines[0].split()[0])
+    except Exception as exc:
+        raise ValueError(f"Invalid first line in select.dat: {lines[0]}") from exc
+
+    if len(lines) - 1 < nbin:
+        raise ValueError(f"select.dat expects {nbin} binaries but only {len(lines)-1} rows found: {path}")
+
+    binaries: List[Tuple[float, float, float, float]] = []
+    for i in range(nbin):
+        parts = lines[i + 1].split()
+        if len(parts) < 6:
+            raise ValueError(f"Invalid binary row in select.dat (need >=6 columns): {lines[i+1]}")
+        m1 = float(parts[0])
+        m2 = float(parts[1])
+        period_myr = float(parts[4])
+        ecc = float(parts[5])
+        binaries.append((m1, m2, period_myr, ecc))
+
+    return binaries
 
 
 def build_t1(output: Path) -> None:
@@ -281,11 +319,23 @@ def build_functional_mcluster_dual_merge_smoke(output: Path) -> None:
     """Generate a physical background with mcluster and inject two target binaries.
 
     Steps:
-    1) Use mcluster to generate N=100, Plummer, Rh=1 pc, Kroupa IMF, no binaries.
+     1) Use mcluster to generate N=100, Plummer, Rh=1 pc, Kroupa IMF, no binaries (fixed seed).
     2) Replace the first four stars by two binaries (4 stars total).
+         Binary masses/period/ecc are loaded from /home/lwang/localdata/petar_sample/bse/select.dat.
     3) Align each binary center of mass with one of the first two 2-star pair COMs.
-    4) Recenter to zero net COM position/velocity in Msun/pc/pc-Myr units.
+     4) Recenter to zero net COM position/velocity.
+
+    Output convention for this builder:
+     - position: pc
+    - velocity: km/s (configurable only via MCLUSTER_OUTPUT_VELOCITY_UNIT)
+     so that petar.init should use -v=KM_S_TO_PC_MYR under -u 1.
     """
+    if MCLUSTER_OUTPUT_VELOCITY_UNIT not in {"km/s", "pc/Myr"}:
+        raise ValueError(
+            f"Unsupported MCLUSTER_OUTPUT_VELOCITY_UNIT={MCLUSTER_OUTPUT_VELOCITY_UNIT}; "
+            "expected 'km/s' or 'pc/Myr'"
+        )
+
     with tempfile.TemporaryDirectory(prefix="petar_make_ic_") as tmpdir:
         tmp_prefix_name = "mcluster_seed"
         cmd = [
@@ -305,7 +355,7 @@ def build_functional_mcluster_dual_merge_smoke(output: Path) -> None:
             "-C",
             "3",
             "-s",
-            "42",
+            str(MCLUSTER_SEED),
             "-o",
             tmp_prefix_name,
         ]
@@ -330,26 +380,21 @@ def build_functional_mcluster_dual_merge_smoke(output: Path) -> None:
                     continue
                 mass = float(parts[0])
                 pos = [float(parts[1]), float(parts[2]), float(parts[3])]
-                vel = [
-                    float(parts[4]) * KM_S_TO_PC_MYR,
-                    float(parts[5]) * KM_S_TO_PC_MYR,
-                    float(parts[6]) * KM_S_TO_PC_MYR,
-                ]
+                vel_raw = [float(parts[4]), float(parts[5]), float(parts[6])]
+                if MCLUSTER_OUTPUT_VELOCITY_UNIT == "km/s":
+                    vel = vel_raw
+                else:
+                    vel = [x * KM_S_TO_PC_MYR for x in vel_raw]
                 rows.append((mass, pos, vel))
 
     if len(rows) < 4:
         raise RuntimeError("mcluster returned fewer than 4 stars; cannot inject two binaries")
 
-    # Two selected binaries from sample outcomes.
-    b1_m1 = 85.294690901635846
-    b1_m2 = 23.528452122895846
-    b1_period = 4.594336e-09
-    b1_ecc = 0.499774915487773
-
-    b2_m1 = 35.947378474297203
-    b2_m2 = 48.425671915280390
-    b2_period = 8.3652155e-08
-    b2_ecc = 0.427779218694198
+    selected = load_bse_select_dat(FUNCTIONAL_SELECT_DAT)
+    if len(selected) < 2:
+        raise ValueError(f"Need at least two binaries in {FUNCTIONAL_SELECT_DAT}, got {len(selected)}")
+    b1_m1, b1_m2, b1_period, b1_ecc = selected[0]
+    b2_m1, b2_m2, b2_period, b2_ecc = selected[1]
 
     def binary_rel_state(m1: float, m2: float, period_myr: float, ecc: float) -> Tuple[List[float], List[float], List[float], List[float]]:
         semi = (G_MSUN_PC_MYR * (m1 + m2) * (period_myr / (2.0 * math.pi)) ** 2) ** (1.0 / 3.0)
@@ -358,6 +403,13 @@ def build_functional_mcluster_dual_merge_smoke(output: Path) -> None:
 
     b1_r1, b1_v1, b1_r2, b1_v2 = binary_rel_state(b1_m1, b1_m2, b1_period, b1_ecc)
     b2_r1, b2_v1, b2_r2, b2_v2 = binary_rel_state(b2_m1, b2_m2, b2_period, b2_ecc)
+
+    if MCLUSTER_OUTPUT_VELOCITY_UNIT == "km/s":
+        # Convert binary velocities to km/s to match mcluster output unit.
+        b1_v1 = [v * PC_MYR_TO_KM_S for v in b1_v1]
+        b1_v2 = [v * PC_MYR_TO_KM_S for v in b1_v2]
+        b2_v1 = [v * PC_MYR_TO_KM_S for v in b2_v1]
+        b2_v2 = [v * PC_MYR_TO_KM_S for v in b2_v2]
 
     # Anchor binary COMs to COMs of the first two star pairs: (0,1) and (2,3).
     def pair_com(row_a: Tuple[float, List[float], List[float]], row_b: Tuple[float, List[float], List[float]]) -> Tuple[List[float], List[float]]:
