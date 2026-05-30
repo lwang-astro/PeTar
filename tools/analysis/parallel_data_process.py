@@ -95,7 +95,7 @@ def dataProcessOne(file_path, result, time_profile,
             G: float (1.0)
                gravitational constant (1.0)
             interrupt_mode: string (none)
-               PeTar interrupt mode (set in configure): base, bse, mobse, bseEmp, none
+               PeTar interrupt mode (set in configure): merger, base, bse, mobse, bseEmp, none
                This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
                PeTar external mode (set in configure): galpy, agama, none 

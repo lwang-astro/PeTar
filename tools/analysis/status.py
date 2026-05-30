@@ -49,7 +49,7 @@ class SoftParticleGroup(DictNpArrayMix):
         ----------
         keyword arguments:
             interrupt_mode: string (none)
-                Interrupt mode, base, bse, none
+                Interrupt mode, merger, base, bse, none
             external_mode: string (none)
                 PeTar external mode (set in configure): galpy, agama, none 
             N_particle int (0)
@@ -87,7 +87,7 @@ class Status(DictNpArrayMix):
         ----------
         keyword arguments:
             interrupt_mode: string (none)
-                Interrupt mode, base, bse, none
+                Interrupt mode, merger, base, bse, none
             external_mode: string (none)
                 PeTar external mode (set in configure): galpy, agama, none 
             use_mpfrc: bool (False)

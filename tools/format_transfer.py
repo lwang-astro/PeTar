@@ -28,7 +28,7 @@ if __name__ == '__main__':
         print("  Please ensure that the stellar evolution method (-i), external mode (-t), and binary information (-B) used in petar.data.process are the same here.")
         print("Options (default arguments shown in parentheses at the end):")
         print("  -h(--help)                Display help information.")
-        print("  -i(--interrupt-mode)  [S] The interruption mode used in petar; choices: no, base, bse, mobse (default: no).")
+        print("  -i(--interrupt-mode)  [S] The interruption mode used in petar; choices: no, merger, base, bse, mobse (default: no).")
         print("  -t(--external-mode)   [S] External mode used in petar; choices: galpy, no (default: no).")
         print("  -B(--full-binary)         If petar.data.process uses the -B option to obtain full (physical) binary orbital parameters, ")
         print("                            this option is needed to correctly read (physical) binary snapshots.")

@@ -303,7 +303,7 @@ do
 	    echo '  -t [F]: time criterion for clearing up data, must be provided (default: none)';
 	    echo '  -n [I]: number of MPI processes (default: auto)';
 	    echo '  -b    : use previous backup files instead of replacing (default: replacing)';
-	    echo '  --interrupt-mode [S]: mode for binary status/group parsing: none, base, bse, bseEmp, mobse, dsm (default: auto-detect from active petar binary)';
+	    echo '  --interrupt-mode [S]: mode for binary status/group parsing: none, merger, base, bse, bseEmp, mobse, dsm (default: auto-detect from active petar binary)';
 	    echo '  --external-mode [S]: mode for binary status/group parsing: none, galpy, agama (default: auto-detect from active petar binary)';
 	    echo '  --petar-binary [S]: petar command name/path used for auto-detection (default: petar)';
 	    echo '  --no-auto-mode: disable auto-detection and keep user-provided/default mode values';

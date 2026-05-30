@@ -171,8 +171,8 @@ if [[ $seflag != 'no' ]]; then
     #       radius,  dm, t_record, t_interrupt
     se_col=$radius', 0,  0,        0,' 
 
-    if [[ $seflag == 'base' ]]; then
-	echo "Interrupt mode: base"
+    if [[ $seflag == 'base' || $seflag == 'merger' ]]; then
+	echo "Interrupt mode: merger"
 	echo "Stellar radius (0): " $radius
 	awk '{OFMT="%.15g"; print '"$base_col$se_col$soft_col"'}' $fout.scale__ >>$fout
     elif [[ "$seflag" == *"bse"* ]]; then

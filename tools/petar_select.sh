@@ -29,7 +29,7 @@ Examples:
 	petar.select --require bse,agama --optional mpi,omp,avx2
 
 Feature tokens and related configure options:
-	base|bse|mobse|bseEmp|dsm -> --with-interrupt=<token>
+	merger|base|bse|mobse|bseEmp|dsm -> --with-interrupt=<token>
 	galpy|agama           -> --with-external=<token>
 	gasdrag               -> --with-external-hard=gasdrag
 	mpi                   -> --with-mpi=yes
@@ -73,8 +73,9 @@ split_csv_to_array() {
 feature_to_configure_hint() {
 	local token="$1"
 	case "$token" in
-		base|bse|mobse|bseEmp|dsm)
-			printf '%s\n' "  - $token -> ./configure --with-interrupt=$token"
+		base|merger|bse|mobse|bseEmp|dsm)
+			canonical_interrupt_token="$(canonical_feature_token "$token")"
+			printf '%s\n' "  - $token -> ./configure --with-interrupt=$canonical_interrupt_token"
 			return 0
 			;;
 		galpy|agama)
@@ -135,7 +136,7 @@ feature_to_configure_hint() {
 is_supported_feature_token() {
 	local token="$1"
 	case "$token" in
-		base|bse|mobse|bseEmp|dsm|galpy|agama|gasdrag|mpi|omp|avx|avx2|avx512|gpu|64b|mp|mpfrc|g|d)
+		base|merger|bse|mobse|bseEmp|dsm|galpy|agama|gasdrag|mpi|omp|avx|avx2|avx512|gpu|64b|mp|mpfrc|g|d)
 			return 0
 			;;
 		pn*)
@@ -150,6 +151,9 @@ is_supported_feature_token() {
 canonical_feature_token() {
 	local token="$1"
 	case "$token" in
+		base)
+			printf '%s\n' "merger"
+			;;
 		mpfrc)
 			printf '%s\n' "mp"
 			;;
@@ -162,7 +166,7 @@ canonical_feature_token() {
 is_interrupt_feature_token() {
 	local token="$1"
 	case "$token" in
-		base|bse|mobse|bseEmp|dsm)
+		base|merger|bse|mobse|bseEmp|dsm)
 			return 0
 			;;
 		*)
@@ -174,7 +178,7 @@ is_interrupt_feature_token() {
 is_require_only_feature_token() {
 	local token="$1"
 	case "$token" in
-		base|bse|mobse|bseEmp|dsm|galpy|agama|gasdrag|mp)
+		base|merger|bse|mobse|bseEmp|dsm|galpy|agama|gasdrag|mp)
 			return 0
 			;;
 		pn*)
@@ -223,7 +227,7 @@ is_performance_feature_token() {
 }
 
 print_supported_features() {
-	echo "Supported features: base,bse,mobse,bseEmp,dsm,galpy,agama,gasdrag,mpi,omp,avx,avx2,avx512,gpu,64b,mp,mpfrc,pn*,g,d" >&2
+	echo "Supported features: merger,base,bse,mobse,bseEmp,dsm,galpy,agama,gasdrag,mpi,omp,avx,avx2,avx512,gpu,64b,mp,mpfrc,pn*,g,d" >&2
 }
 
 validate_feature_csv() {

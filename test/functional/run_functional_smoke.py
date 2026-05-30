@@ -57,7 +57,8 @@ def short_reason_from_code(code: int) -> str:
 def configure_args_for_build_tag(tag: str) -> List[str]:
     mapping = {
         "std": [],
-        "base": ["--with-interrupt=base"],
+        "merger": ["--with-interrupt=merger"],
+        "base": ["--with-interrupt=merger"],
         "bse": ["--with-interrupt=bse"],
         "galpy": ["--with-external=galpy"],
         "bse-galpy": ["--with-interrupt=bse", "--with-external=galpy"],
@@ -289,7 +290,7 @@ def read_last_snapshot_list(path: Path) -> str:
 
 
 def infer_build_tag_from_require(require: str) -> str:
-    tokens = sorted([x.strip() for x in require.split(",") if x.strip()])
+    tokens = sorted({"merger" if x.strip() == "base" else x.strip() for x in require.split(",") if x.strip()})
     if not tokens:
         return "std"
     return "-".join(tokens)
@@ -361,8 +362,8 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
             interrupt_mode = "dsm"
         elif any(x in require_tokens for x in ["bse", "bseEmp", "mobse"]):
             interrupt_mode = "bse"
-        elif "base" in require_tokens:
-            interrupt_mode = "base"
+        elif any(x in require_tokens for x in ["base", "merger"]):
+            interrupt_mode = "merger"
 
     external_mode = "none"
     if "galpy" in require_tokens:
@@ -691,16 +692,10 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
 
     # 3) Switch to required installed binary family.
     require = case.get("require", "")
-    require_for_select = require
-    # Some installations build --with-interrupt=base binaries without an explicit
-    # '.base' suffix token, so petar.select --require base cannot match although
-    # the case-local build was configured correctly. Relax only this one token.
-    if require.strip() == "base":
-        require_for_select = ""
     optional = matrix.get("global", {}).get("optional_select", "mpi,omp,avx512,avx2")
     select_cmd = ["petar.select"]
-    if require_for_select:
-        select_cmd.extend(["--require", require_for_select])
+    if require:
+        select_cmd.extend(["--require", require])
     if optional:
         select_cmd.extend(["--optional", optional])
     rc, warns = run_cmd(

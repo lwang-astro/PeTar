@@ -19,7 +19,7 @@ class SingleEscaper(Particle):
                 Basic particle type: hermite, hard, soft
                 When read PeTar data, do not change this
             interrupt_mode: string (none)
-                PeTar interrupt mode: base, bse, mobse, none
+                PeTar interrupt mode: merger, base, bse, mobse, none
                 This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
                PeTar external mode (set in configure): galpy, agama, none 
@@ -88,7 +88,7 @@ class BinaryEscaper(Binary):
             particle_type: string (soft)
                 Basic particle type: hermite, hard, soft
             interrupt_mode: string (none)
-                PeTar interrupt mode: base, bse, mobse, none
+                PeTar interrupt mode: merger, base, bse, mobse, none
             external_mode: string (none)
                PeTar external mode (set in configure): galpy, agama, none 
                This option indicates whether the column of externa potential exist

@@ -1188,7 +1188,7 @@ if __name__ == '__main__':
         print("          When reading data, the path and the prefix will be added in front of the filenames.")
         print("          For example, path'./'; prefix'data'; reading file'./data.[0-9*'.")
         print("          The number of snapshots should be the same for all models.")
-        print("  -i [S]  Interrupt mode used in petar: none, base, bse, mobse: ", data.interrupt_mode)
+        print("  -i [S]  Interrupt mode used in petar: none, merger, base, bse, mobse: ", data.interrupt_mode)
         print("  -t [S]  External mode used in petar: none, galpy, agama: ", data.external_mode)
         print("  -c [S]  Color type for particles: loglum, logtemp, ekin, pot, etot, white: ", pxy.color_mode)
         print("              loglum: log(luminosity).")

@@ -407,7 +407,7 @@ AC_ARG_WITH([step-mode],
 FCFLAGS_BK=$FCFLAGS
 AC_ARG_WITH([interrupt],
             [AS_HELP_STRING([--with-interrupt],
-                            [Interruption detection mode (base, bse, mobse, bseEmp, dsm). Default: off])],
+                            [Interruption detection mode (merger, bse, mobse, bseEmp, dsm). Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_interrupt
              AS_IF([[test x"$with_interrupt" == xbse] || [test x"$with_interrupt" == xmobse] || [test x"$with_interrupt" == xbseEmp]],
                    [use_fortran=yes

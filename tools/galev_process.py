@@ -35,7 +35,7 @@ if __name__ == '__main__':
         print("           binary: (physical) binary snapshots from petar.data.process")
         print("       For multiple types, combine the names by ',' such as 'origin,single,binary'")
         print("  -s(--snapshot-format): the reading snapshot format for both modes, ascii, binary, npy: ",snapshot_format)
-        print("  -i(--interrupt-mode): the interruption mode used in petar, choices: none, base, bse, mobse: ", interrupt_mode)
+        print("  -i(--interrupt-mode): the interruption mode used in petar, choices: none, merger, base, bse, mobse: ", interrupt_mode)
         print("  -t(--external-mode): external mode used in petar, choices: galpy, none:", external_mode)
         print("  -o(--output-format): output data format for galev snapshot for convert mode:", output_format)
         print("  -f(--filter)       : galev filter list, seperate by comma:",",".join(galev_filter))

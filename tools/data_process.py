@@ -233,7 +233,7 @@ if __name__ == '__main__':
         print("     --e-escape       [S|F] Energy criterion for escaper when objects are outside distance criterion; only works when --r-escape is used; if the value is 'bound_noext', calculate bound energy without external potential and remove etot > 0; otherwise etot > mass * e-escape (default: 0.0).")
         print("     --m-ext            [S] Read a table of masses of external potential for each time, used for the calculation of tidal radius (default: not used).")
         print("                            The argument is the filename of the table. The file contains two columns: time, mass.")
-        print("  -i(--interrupt-mode)  [S] The interruption mode used in petar; choices: no, base, bse, mobse, bseEmp (default: no).")
+        print("  -i(--interrupt-mode)  [S] The interruption mode used in petar; choices: no, merger, base, bse, mobse, bseEmp (default: no).")
         print("  -t(--external-mode)   [S] External mode used in petar; choices: galpy, no (default: no).")
         print("  -P(--use_mpfrc)           Include three columns of high-precision parts of particle position x, y, z.")
         print(f"  -s(--snapshot-format) [S] Input snapshot data format: binary, ascii (default: binary).")

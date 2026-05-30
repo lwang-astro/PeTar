@@ -26,13 +26,13 @@
       "object_snap_args": []
     },
     {
-      "name": "base",
-      "require": "base",
-      "interrupt_mode": "base",
-      "init_args": ["-s", "base", "-v", "1.022712165045695"],
+      "name": "merger",
+      "require": "merger",
+      "interrupt_mode": "merger",
+      "init_args": ["-s", "merger", "-v", "1.022712165045695"],
       "run_args": ["-b", "2"],
-      "process_args": ["-i", "base", "-G", "0.00449830997959438"],
-      "object_snap_args": ["-i", "base"]
+      "process_args": ["-i", "merger", "-G", "0.00449830997959438"],
+      "object_snap_args": ["-i", "merger"]
     },
     {
       "name": "bse",

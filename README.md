@@ -1087,7 +1087,7 @@ Feature mode behavior:
 - All tokens in `--require` must match an installed binary; otherwise the command exits with an error.
 - Tokens in `--optional` are used only for ranking candidates.
 - Require-only feature families are included only when explicitly listed in `--require`.
-- This require-only policy applies to `interrupt` (`base`, `bse`, `mobse`, `bseEmp`), `external` (`galpy`, `agama`), `external-hard` (`gasdrag`), `pn*`, and `mpfrc` (`mp`).
+- This require-only policy applies to `interrupt` (`merger`, `base`, `bse`, `mobse`, `bseEmp`), `external` (`galpy`, `agama`), `external-hard` (`gasdrag`), `pn*`, and `mpfrc` (`mp`).
 - Unsupported tokens in `--require` cause an immediate error.
 - Unsupported tokens in `--optional` are reported as warnings and ignored.
 

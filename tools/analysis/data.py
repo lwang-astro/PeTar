@@ -257,7 +257,7 @@ class BaseParticle(SimpleParticle):
         ----------
         keyword arguments:
             interrupt_mode: string (none)
-               PeTar interrupt mode (set in configure): base, bse, mobse, none, dsm
+               PeTar interrupt mode (set in configure): merger, base, bse, mobse, none, dsm
                This option indicates whether columns of stellar evolution exist
             use_mpfrc: bool (False)
                 if true, add three columns of pos_high indicating the high-precision parts of position
@@ -272,7 +272,7 @@ class BaseParticle(SimpleParticle):
         
         keys = keys_bstat
         if ('interrupt_mode' in kwargs.keys()):
-            if (kwargs['interrupt_mode']=='base'):
+            if (kwargs['interrupt_mode'] in ('base', 'merger')):
                 keys = keys_bstat+keys_se
             elif ('bse' in kwargs['interrupt_mode']):
                 keys = keys_bstat+keys_se+[['star',SSEStarParameter]]
@@ -302,7 +302,7 @@ class HardParticle(BaseParticle):
 
         keyword arguments:
             interrupt_mode: string (none)
-               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               PeTar interrupt mode (set in configure): merger, base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
             use_mpfrc: bool (False)
                 if true, add three columns of pos_high indicating the high-precision parts of position
@@ -336,7 +336,7 @@ class HermiteParticle(HardParticle):
 
         keyword arguments:
             interrupt_mode: string (none)
-               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               PeTar interrupt mode (set in configure): merger, base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
             use_mpfrc: bool (False)
                 if true, add three columns of pos_high indicating the high-precision parts of position
@@ -378,7 +378,7 @@ class Particle(HardParticle):
         ----------
         keyword arguments:
             interrupt_mode: string (none)
-               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               PeTar interrupt mode (set in configure): merger, base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
                PeTar external mode (set in configure): galpy, agama, none 
@@ -484,7 +484,7 @@ class Binary(sdar_Binary):
             G: float (1.0)
                 Gravitational constant
             interrupt_mode: string (none)
-                PeTar interrupt mode (set in configure): base, bse, mobse, none
+                PeTar interrupt mode (set in configure): merger, base, bse, mobse, none
                 This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
                 PeTar external mode (set in configure): galpy, agama, none 
@@ -570,7 +570,7 @@ class GroupInfo(hermite_group.GroupInfo):
                 member_particle_type: type (HardParticle)
                     Type of component particle, do not change this!
                 interrupt_mode: string (none)
-                    PeTar interrupt mode (set in configure): base, bse, mobse, none
+                    PeTar interrupt mode (set in configure): merger, base, bse, mobse, none
                     This option indicates whether columns of stellar evolution exist
                 external_mode: string (none)
                     PeTar external mode (set in configure): galpy, agama, none 
@@ -643,7 +643,7 @@ class SDARData(sdar_SDARData):
                 include_H_approx: bool (False)
                     if True, add H_approx key
                 interrupt_mode: string (none)
-                    PeTar interrupt mode (set in configure): base, bse, mobse, none
+                    PeTar interrupt mode (set in configure): merger, base, bse, mobse, none
                     This option indicates whether columns of stellar evolution exist
                 external_mode: string (none)
                     PeTar external mode (set in configure): galpy, agama, none 
@@ -686,7 +686,7 @@ class HermiteData(hermite_HermiteData):
                 time_measure: bool (False)
                     if True, add time measure keys in profile
                 interrupt_mode: string (none)
-                    PeTar interrupt mode (set in configure): base, bse, mobse, none
+                    PeTar interrupt mode (set in configure): merger, base, bse, mobse, none
                     This option indicates whether columns of stellar evolution exist
                 external_mode: string (none)
                     PeTar external mode (set in configure): galpy, agama, none 

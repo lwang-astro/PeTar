@@ -103,8 +103,8 @@ want_tag() {
 	return 1
 }
 
-# Base + major physics families
-if want_tag base; then build_install base; fi
+# Merger + major physics families
+if want_tag merger || want_tag base; then build_install merger --with-interrupt=merger; fi
 if want_tag bse; then build_install bse --with-interrupt=bse; fi
 if want_tag galpy; then build_install galpy --with-external=galpy; fi
 if want_tag bse-galpy; then build_install bse-galpy --with-interrupt=bse --with-external=galpy; fi
