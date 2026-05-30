@@ -31,6 +31,7 @@ Treat the guardrails in this file as mandatory, not advisory.
 - Do not emit a runnable solver command until the selected binary has been capability-checked with `-h`.
 - Do not pass through custom user options unless they are validated against the selected binary help output.
 - Do not use helper binaries such as `*.hard.debug` or `*.format.transfer` as the main simulation executable.
+- If source-level debugging is requested (for example, gdb backtrace with file/line symbols), require a rebuild with `--with-debug=g`; do not treat `petar.hard.debug` as a substitute for debug-symbol builds.
 - Do not recommend manual symlink edits when `petar.select` can perform the family switch.
 - Do not skip `petar.data.gether` after MPI runs when downstream tools need merged outputs or a snapshot list.
 - Do not emit `petar.init` for restart or resume workflows.
@@ -101,6 +102,8 @@ Use these tools proactively when the user intent matches the task.
   In other words, candidates containing these tokens are excluded unless explicitly requested in `--require`.
   If no match exists, surface configure hints mapped from required features (for example, `bse -> --with-interrupt=bse`, `galpy -> --with-external=galpy`).
   Unknown feature handling: `--require` must fail fast; `--optional` should warn and ignore unsupported tokens.
+- `petar.hard.debug`:
+  helper tool for replaying and diagnosing hard-integrator dump files (`hard_dump`), not a full N-body production solver.
 - `petar.find.dt`:
   find a suitable tree time step for a given snapshot and launch configuration.
 - `petar.update.par`:
@@ -232,7 +235,9 @@ command -v <petar_binary>
 - explain which binary does not support it;
 - suggest feature-matched binaries (for example, options with `--bse-` require a `.bse` build; `--galpy-*` requires `.galpy`; `--agama-*` requires `.agama`).
 
-4a. If the requested binary name ends with `.hard.debug` or `.format.transfer`, stop and explain that it is a helper tool rather than a simulation executable. Then switch validation to the matching solver binary without that suffix.
+4a. If the requested binary name ends with `.hard.debug` or `.format.transfer`, stop and explain that it is a helper tool rather than a simulation executable. Then switch validation to the matching solver binary without that suffix for production-run command generation.
+
+4b. If source-level debugging is requested and the current binary is not built with `--with-debug=g`, stop and request reconfigure + rebuild with `--with-debug=g` before running debugger workflows.
 
 5. Only emit final runnable command after validation passes.
 
@@ -1068,9 +1073,10 @@ Always include these reminders when applicable:
   `OMP_STACKSIZE=128M OMP_NUM_THREADS=<threads> mpiexec -n <n_mpi> petar [options] <snapshot>`
 - If MPI binds one core per rank, try `mpiexec --bind-to none`.
 - GPU: one MPI rank typically drives one GPU job; tune ranks/threads to avoid CUDA OOM.
-- `*.hard.debug` binaries are diagnostic tools.
+- `*.hard.debug` binaries are helper tools for hard-dump diagnostics (`hard_dump` replay), not full simulation drivers.
 - `*.format.transfer` binaries are format-conversion helpers.
 - Neither `*.hard.debug` nor `*.format.transfer` should be used as the main simulation executable.
+- For source-level debugging, reconfigure with `--with-debug=g` and rebuild before launching debugger workflows.
 
 ### Parallel Sizing Heuristic (N and Primordial Binaries)
 

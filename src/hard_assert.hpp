@@ -211,6 +211,7 @@ public:
     int mpi_rank;
     int omp_level;
     int dump_number;
+    std::string output_prefix;
 #ifdef EXTERNAL_HARD
     FPSoft* center;
 #ifdef GALPY
@@ -220,7 +221,7 @@ public:
     HardDump* hard_dump;
     std::vector<PendingRenameRecord> pending_rename_records;
 
-    HardDumpList(): size(0), mpi_rank(0), omp_level(0), dump_number(0), 
+    HardDumpList(): size(0), mpi_rank(0), omp_level(0), dump_number(0), output_prefix(), 
 #ifdef EXTERNAL_HARD
                     center(NULL),
 #ifdef GALPY
@@ -229,10 +230,11 @@ public:
 #endif
                     hard_dump(NULL), pending_rename_records() {}
 
-    void initial(const int _nthread, const int _rank=0) {
+    void initial(const int _nthread, const int _rank=0, const std::string& _output_prefix=std::string()) {
         size = _nthread;
         mpi_rank = _rank;
         dump_number = 0;
+        output_prefix = _output_prefix;
         pending_rename_records.clear();
         hard_dump = new HardDump[_nthread];
     }
@@ -282,7 +284,9 @@ public:
         if (hard_dump[ith].backup_flag) {
             std::time_t tnow = std::time(nullptr);
             //std::tm *local_time = localtime(&tnow);
-            std::string final_fname = filename;
+            std::string final_fname;
+            if (!output_prefix.empty()) final_fname = output_prefix + ".";
+            final_fname += filename;
             if (long_suffix_flag) {
                 int dump_id = 0;
 #ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL

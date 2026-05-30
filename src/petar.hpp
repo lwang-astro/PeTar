@@ -24,7 +24,9 @@
 #include<string>
 #include<sstream>
 #include<vector>
-#include<filesystem>
+#include<dirent.h>
+#include<sys/stat.h>
+#include<cstdio>
 //#include<unistd.h>
 #include<getopt.h>
 
@@ -653,22 +655,28 @@ public:
         const std::string& fname_snp = input_parameters.fname_snp.value;
         std::vector<std::string> tmp_files;
 
-        try {
-            for (const auto& entry: std::filesystem::directory_iterator(std::filesystem::current_path())) {
-                if (!entry.is_regular_file()) continue;
-                const std::string name = entry.path().filename().string();
-                if (!hasSuffix(name, ".tmp") && !contains(name, ".tmp.n")) continue;
-
-                // Restart policy: tmp files are treated as uncommitted residues and never auto-merged.
-                const bool is_output_tmp = hasPrefix(name, fname_snp + ".");
-                const bool is_object_tmp = hasPrefix(name, "object_");
-                if (is_output_tmp || is_object_tmp) tmp_files.push_back(name);
-            }
-        }
-        catch (...) {
+        DIR* dir = opendir(".");
+        if (dir==NULL) {
             std::cerr<<"Warning! failed to scan working directory for residual .tmp files.\n";
             return;
         }
+
+        struct dirent* ent = NULL;
+        while ((ent = readdir(dir)) != NULL) {
+            const std::string name = ent->d_name;
+            if (name=="." || name=="..") continue;
+
+            struct stat st;
+            if (::stat(name.c_str(), &st)!=0) continue;
+            if (!S_ISREG(st.st_mode)) continue;
+            if (!hasSuffix(name, ".tmp") && !contains(name, ".tmp.n")) continue;
+
+            // Restart policy: tmp files are treated as uncommitted residues and never auto-merged.
+            const bool is_output_tmp = hasPrefix(name, fname_snp + ".");
+            const bool is_object_tmp = hasPrefix(name, "object_");
+            if (is_output_tmp || is_object_tmp) tmp_files.push_back(name);
+        }
+        closedir(dir);
 
         if (!tmp_files.empty()) {
             std::cerr<<"Warning! detected "<<tmp_files.size()<<" residual uncommitted tmp file(s).\n"
@@ -689,23 +697,26 @@ public:
 
         const std::string& fname_snp = input_parameters.fname_snp.value;
         int n_removed = 0;
-        std::error_code ec;
+        DIR* dir = opendir(".");
+        if (dir==NULL) return;
 
-        for (const auto& entry: std::filesystem::directory_iterator(std::filesystem::current_path(), ec)) {
-            if (ec) break;
-            if (!entry.is_regular_file()) continue;
+        struct dirent* ent = NULL;
+        while ((ent = readdir(dir)) != NULL) {
+            const std::string name = ent->d_name;
+            if (name=="." || name=="..") continue;
 
-            const std::string name = entry.path().filename().string();
+            struct stat st;
+            if (::stat(name.c_str(), &st)!=0) continue;
+            if (!S_ISREG(st.st_mode)) continue;
             if (!hasSuffix(name, ".tmp") && !contains(name, ".tmp.n")) continue;
 
             const bool is_output_tmp = hasPrefix(name, fname_snp + ".");
             const bool is_object_tmp = hasPrefix(name, "object_");
             if (!(is_output_tmp || is_object_tmp)) continue;
 
-            std::error_code ec_rm;
-            const bool removed = std::filesystem::remove(entry.path(), ec_rm);
-            if (removed && !ec_rm) n_removed++;
+            if (std::remove(name.c_str())==0) n_removed++;
         }
+        closedir(dir);
 
         if (n_removed > 0) {
             std::cerr<<"Info: removed "<<n_removed<<" residual tmp file(s) on startup."<<std::endl;
@@ -717,28 +728,27 @@ public:
 
         const std::string& fname_snp = input_parameters.fname_snp.value;
         int n_removed = 0;
-        std::error_code ec;
+        DIR* dir = opendir(".");
+        if (dir==NULL) return;
 
-        for (const auto& entry: std::filesystem::directory_iterator(std::filesystem::current_path(), ec)) {
-            if (ec) break;
-            if (!entry.is_regular_file()) continue;
+        struct dirent* ent = NULL;
+        while ((ent = readdir(dir)) != NULL) {
+            const std::string name = ent->d_name;
+            if (name=="." || name=="..") continue;
 
-            const std::string name = entry.path().filename().string();
-                if (!hasSuffix(name, ".tmp") && !contains(name, ".tmp.n")) continue;
+            struct stat st;
+            if (::stat(name.c_str(), &st)!=0) continue;
+            if (!S_ISREG(st.st_mode)) continue;
+            if (!hasSuffix(name, ".tmp") && !contains(name, ".tmp.n")) continue;
 
             const bool is_output_tmp = hasPrefix(name, fname_snp + ".");
             const bool is_object_tmp = hasPrefix(name, "object_");
             if (!(is_output_tmp || is_object_tmp)) continue;
+            if (st.st_size != 0) continue;
 
-            std::error_code ec_size;
-            const auto fsize = std::filesystem::file_size(entry.path(), ec_size);
-            if (ec_size) continue;
-            if (fsize != 0) continue;
-
-            std::error_code ec_rm;
-            const bool removed = std::filesystem::remove(entry.path(), ec_rm);
-            if (removed && !ec_rm) n_removed++;
+            if (std::remove(name.c_str())==0) n_removed++;
         }
+        closedir(dir);
 
         if (n_removed > 0) {
             std::cerr<<"Info: removed "<<n_removed<<" empty tmp file(s) on exit."<<std::endl;
@@ -803,18 +813,27 @@ public:
             const std::string my_rank_str = std::to_string(my_rank);
             const std::string group_tmp_prefix = fname_snp + ".group." + my_rank_str + ".tmp.n";
 
-            for (const auto& entry: std::filesystem::directory_iterator(std::filesystem::current_path())) {
-                if (!entry.is_regular_file()) continue;
-                const std::string path = entry.path().filename().string();
-                if (!hasPrefix(path, group_tmp_prefix)) continue;
+            DIR* dir = opendir(".");
+            if (dir!=NULL) {
+                struct dirent* ent = NULL;
+                while ((ent = readdir(dir)) != NULL) {
+                    const std::string path = ent->d_name;
+                    if (path=="." || path=="..") continue;
 
-                std::string final_path = path;
-                const std::string token = ".tmp.n";
-                const auto pos = final_path.find(token);
-                if (pos==std::string::npos) continue;
-                final_path.replace(0, group_tmp_prefix.size(), fname_snp + ".group.n");
+                    struct stat st;
+                    if (::stat(path.c_str(), &st)!=0) continue;
+                    if (!S_ISREG(st.st_mode)) continue;
+                    if (!hasPrefix(path, group_tmp_prefix)) continue;
 
-                output_commit_manager.registerTmp("group", my_rank, path, final_path, OutputCommitManager::CommitMode::Append);
+                    std::string final_path = path;
+                    const std::string token = ".tmp.n";
+                    const auto pos = final_path.find(token);
+                    if (pos==std::string::npos) continue;
+                    final_path.replace(0, group_tmp_prefix.size(), fname_snp + ".group.n");
+
+                    output_commit_manager.registerTmp("group", my_rank, path, final_path, OutputCommitManager::CommitMode::Append);
+                }
+                closedir(dir);
             }
         }
 #endif
@@ -3183,7 +3202,7 @@ public:
 #ifdef HARD_DUMP
         // initial hard_dump 
         const PS::S32 num_thread = PS::Comm::getNumberOfThread();
-        hard_dump.initial(num_thread, my_rank);
+        hard_dump.initial(num_thread, my_rank, input_parameters.fname_snp.value);
 #ifdef EXTERNAL_HARD
         hard_dump.center = &hard_manager.center;
 #endif        
