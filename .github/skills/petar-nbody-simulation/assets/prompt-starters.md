@@ -101,7 +101,7 @@
 ```text
 请给我一个 Agama（或 Galpy）外势可视化完整链路：
 1) 生成 pot_conf（说明每列含义）
-2) 运行 petar.external.agama（或 petar.external.galpy）: -p input.par -m pot_conf
+2) 运行 petar.external.agama（或 petar.external.galpy）: -p data.par -m pot_conf
 3) 用 petar.external.pot.movie 生成势场演化视频
 4) 如果要叠加到粒子演化图，给 petar.movie --ext-pot 的示例
 要求：命令可直接复制执行，并说明输入输出文件对应关系。

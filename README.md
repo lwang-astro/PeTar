@@ -515,20 +515,20 @@ This command will utilize the second GPU in the system (indexing starts from 0).
 
 Any snapshot of particle data generated during a simulation can be utilized to resume the simulation at a specific time. To resume the simulation with the same parameter configuration as before, use the following command:
 ```shell
-petar -p input.par [options] [snapshot filename]
+petar -p [output prefix].par [options] [snapshot filename]
 ```
-Here, _input.par_ stores the previous parameter choices used in a simulation, automatically generated from the prior simulation. 
+Here,  _[output prefix].par_ stores the previous parameter choices used in a simulation, automatically generated from the prior simulation. In default, the output prefix is set to _data_, so the parameter file is named _data.par_. If a different output prefix was specified in the previous simulation, the corresponding parameter file should be used. For example, if the output prefix was set to _test_, the parameter file would be _test.par_.
 
-It is possible to modify the options for resumed simulations in two ways. Users can either directly modify _input.par_ to adjust parameters before resuming or specify new parameters in `[options]` within the `petar` command mentioned earlier. It is crucial to place `[options]` after `-p input.par` to prevent them from being overwritten by the parameters stored in _input.par_. For instance, to update the end time of the simulation to 10 after resuming simulations from the snapshot file `data.5`, use the following command:
+It is possible to modify the options for resumed simulations in two ways. Users can either directly modify _[output prefix].par_ to adjust parameters before resuming or specify new parameters in `[options]` within the `petar` command mentioned earlier. It is crucial to place `[options]` after `-p data.par` to prevent them from being overwritten by the parameters stored in the parameter file. For instance, to update the end time of the simulation to 10 after resuming simulations from the snapshot file `data.5`, use the following command:
 ```shell
-petar -p input.par -t 10 data.5 
+petar -p data.par -t 10 data.5 
 ```
 
 By default, after resuming, the snapshot files with the same name will be replaced. However, for other output files, new data will be appended to the existing ones (e.g., filenames with suffixes like esc, group, etc.).
 
 For enabled runtime outputs (`-w > 0`), append-style event files are handled with a transactional workflow: each output interval is first written to temporary files (`*.tmp`) and only committed to final files when the full output step succeeds. This avoids partially committed records and significantly reduces duplicate-event risk after an abnormal stop and restart.
 
-For HARD_DUMP DATADUMP event files (e.g., dump_binary_merger), each event is now also staged to a `*.tmp` file first and only renamed to its final name at the output commit step.
+For HARD_DUMP DATADUMP event files (e.g., `data.dump_binary_merger*`), each event is now also staged to a `*.tmp` file first and only renamed to its final name at the output commit step.
 
 For escaper, group, interrupt, and stellar-evolution outputs, the temporary files are still written per MPI rank, but the committed final files are merged into shared single files without a rank suffix. The records are appended in MPI-rank commit order and are not re-sorted by time during the online commit step.
 
@@ -610,7 +610,7 @@ When initiating a new simulation, the automatically determined tree time step an
 
 In cases where the structure of the particle system undergoes significant evolution over an extended period, users may wish to adjust the tree time step and radii mentioned earlier to enhance performance. If users prefer to modify only the tree time step while allowing `petar` to determine the radii automatically, the options in the following example are necessary to restart the simulation:
 ```shell
-petar -p input.par -s [new tree_time_step] -r 0 --r-search-min 0 --r-bin 0 [other options] [snapshot filename for restart]
+petar -p data.par -s [new tree_time_step] -r 0 --r-search-min 0 --r-bin 0 [other options] [snapshot filename for restart]
 ```
 Here, `-r 0 --r-search-min 0 --r-bin 0` are employed to reset all three radii and activate autodetermination based on the new tree time step. Users can also employ `petar.find.dt` to select the optimal restart tree time step (refer to [Determining the tree time step](#determining-the-tree-time-step)).
 
@@ -700,14 +700,15 @@ When `petar` is running, several pieces of information are displayed at the begi
 8. Filenames for dumped input parameters are specified.
     ```
     -----  Dump parameter files -----
-    Save input parameters to file input.par
+    Save input parameters to file data.par
     ...
     ```
     By default, these include:
-    - `input.par`: Input parameters of `petar`, useful for restarting the simulation from a snapshot.
-    - `input.par.hard`: Input parameters of the hard component (short-range interaction part; Hermite + SDAR), utilized for testing the dumped hard cluster with `_petar.hard.debug_`.
-    - `input.par.[bse_name]`: Parameters for the SSE/BSE-based package, necessary for restarting the simulation and for `petar.hard.debug` if an SSE/BSE-based package is used.
-    - `input.par.galpy`: Galpy parameters for simulation restart purposes.
+    - `data.par`: Input parameters of `petar`, useful for restarting the simulation from a snapshot.
+    - `data.par.hard`: Input parameters of the hard component (short-range interaction part; Hermite + SDAR), utilized for testing the dumped hard cluster with `_petar.hard.debug_`.
+    - `data.par.[bse_name]`: Parameters for the SSE/BSE-based package, necessary for restarting the simulation and for `petar.hard.debug` if an SSE/BSE-based package is used.
+    - `data.par.galpy`: Galpy parameters for simulation restart purposes.
+    Here, `data` is the default output prefix set by `-f`; if another prefix is used, replace `data` with that prefix.
 
     After the "Finish parameter initialization" line, the simulation status is updated at each output time interval (defined by the `-o` option). The status content follows a format similar to the example provided below:
 
@@ -964,9 +965,9 @@ Should the stable system persist even after restarting, terminating parallel com
 
 ### Hard Dump with Errors
 
-When errors manifest during the Hermite-SDAR integration, an error message is displayed, and the simulation is halted, triggering the creation of a file named "hard_dump.*". This occurrence typically signifies the presence of a bug within the code.
+When errors manifest during the Hermite-SDAR integration, an error message is displayed, and the simulation is halted, triggering the creation of a file named "[output prefix].hard_dump.*" (for example, "data.hard_dump.*"). This occurrence typically signifies the presence of a bug within the code.
 
-Users encountering this issue are encouraged to report it by contacting the developer either through GitHub or email. In the report, users should provide essential details such as the version of PeTar, the configuration options, the initial simulation conditions, and include the "hard_dump.\*" file and the input parameter files (prefixed with "input.par.\*").
+Users encountering this issue are encouraged to report it by contacting the developer either through GitHub or email. In the report, users should provide essential details such as the version of PeTar, the configuration options, the initial simulation conditions, and include the "[output prefix].hard_dump.*" file and the input parameter files (prefixed with "[output prefix].par.*").
 
 For those inclined to investigate the issue independently, the debug tool `petar.hard.debug` in conjunction with the GDB tool can be utilized. However, a comprehension of the source codes of SDAR is necessary to interpret the messages generated by the debug tool effectively.
 
@@ -978,7 +979,7 @@ The basic usage of the tool is as follows:
 ```shell
 petar.hard.debug [dump_file_name] > debug.log 
 ```
-Here, `[dump_file_name]` refers to the name of the dump files discussed in earlier sections, such as "hard\_large\_energy.\*" and "dump\_large\_step.\*". By executing the command above, the `petar.hard.debug` tool will display snapshots of particle data per line in the primary output file (debug.log) along with additional information in the printed messages.
+Here, `[dump_file_name]` refers to the name of the dump files discussed in earlier sections, such as "data.hard\_large\_energy.*" and "data.dump\_large\_step.*" (or generally "[output prefix].*"). By executing the command above, the `petar.hard.debug` tool will display snapshots of particle data per line in the primary output file (debug.log) along with additional information in the printed messages.
 
 To interpret the debug.log file, users can utilize the Python analysis tool `petar.HardData`. Below is a sample script that reads the debug.log file, converts the first two particles into a binary system, and plots the evolution of the semi-major axis:
 ```python
@@ -1138,7 +1139,7 @@ It is worth noting that `petar` only accepts tree time steps that are integer po
 
 For users looking to restart a simulation and automatically determine the new tree time step along with other parameters (radii), the following command can be used:
 ```shell
-petar.find.dt -m 2 -o 4 -a "-p input.par -r 0 --r-search-min 0 --r-bin 0" [restart snapshot filename]
+petar.find.dt -m 2 -o 4 -a "-p data.par -r 0 --r-search-min 0 --r-bin 0" [restart snapshot filename]
 ```
 
 ### Gathering Output Files
@@ -1329,7 +1330,7 @@ For floating-point arguments (type `F`), PeTar accepts both decimal text and C99
 
 ### Reading Input Parameter Files with `petar.read.par`
 
-To make hex-float based parameter files easier to inspect in a text workflow, PeTar provides the `petar.read.par` tool. It reads input parameter files in the three-column `input.par` format and prints floating-point arguments (type `F`) in decimal form, while keeping integer (`I`) and string (`S`) entries unchanged.
+To make hex-float based parameter files easier to inspect in a text workflow, PeTar provides the `petar.read.par` tool. It reads input parameter files in the three-column `*.par` format (for example, `data.par`) and prints floating-point arguments (type `F`) in decimal form, while keeping integer (`I`) and string (`S`) entries unchanged.
 
 The basic syntax is:
 ```shell
@@ -1338,12 +1339,12 @@ petar.read.par [options] [input parameter filename]
 
 For example, to display a parameter file on screen:
 ```shell
-petar.read.par input.par
+petar.read.par data.par
 ```
 
 To save the converted decimal view to another file:
 ```shell
-petar.read.par -o input.par.decimal input.par
+petar.read.par -o data.par.decimal data.par
 ```
 
 This tool accepts both decimal and C99 hex-float input for type `F`, so it can be used for newly generated parameter files as well as older manually edited files.

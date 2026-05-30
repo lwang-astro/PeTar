@@ -103,7 +103,7 @@ Use these tools proactively when the user intent matches the task.
   If no match exists, surface configure hints mapped from required features (for example, `bse -> --with-interrupt=bse`, `galpy -> --with-external=galpy`).
   Unknown feature handling: `--require` must fail fast; `--optional` should warn and ignore unsupported tokens.
 - `petar.hard.debug`:
-  helper tool for replaying and diagnosing hard-integrator dump files (`hard_dump`), not a full N-body production solver.
+  helper tool for replaying and diagnosing hard-integrator dump files (for example, `[output_prefix].hard_dump.*`), not a full N-body production solver.
 - `petar.find.dt`:
   find a suitable tree time step for a given snapshot and launch configuration.
 - `petar.update.par`:
@@ -448,7 +448,7 @@ Required if not already provided:
 
 1. Restart snapshot filename.
 1a. Execution path.
-2. Parameter file path, usually `input.par`.
+2. Parameter file path, usually `<output_prefix>.par` (default `data.par`).
 3. Any overridden options after `-p`.
 4. Whether outputs should append or overwrite (`-a 1` vs `-a 0`).
 5. Parallel launch mode.
@@ -597,7 +597,7 @@ Workflow:
 Canonical pattern:
 
 ```bash
-<launcher> <petar_binary> -p input.par [override options] <restart_snapshot>
+<launcher> <petar_binary> -p data.par [override options] <restart_snapshot>
 ```
 
 ### Case D: Existing Generator Script In Repository
@@ -703,7 +703,7 @@ petar.external.pot.movie [options] <petar.external_parameter_file>
 If the user asks to generate potential maps from runtime parameters before visualization:
 
 ```bash
-petar.external.<galpy|agama> -p <input.par> -m <pot_conf>
+petar.external.<galpy|agama> -p <output_prefix>.par -m <pot_conf>
 ```
 
 Typical use:
@@ -1052,8 +1052,8 @@ If the input is already a PeTar snapshot with external-potential context prepare
 ### 4) Restart / Resume
 
 ```bash
-# Keep old parameters from input.par, override selected options after -p
-petar -p input.par -t <new_end_time> <snapshot_file>
+# Keep old parameters from <output_prefix>.par, override selected options after -p
+petar -p data.par -t <new_end_time> <snapshot_file>
 ```
 
 To overwrite instead of append on restart, include `-a 0`.
@@ -1073,7 +1073,7 @@ Always include these reminders when applicable:
   `OMP_STACKSIZE=128M OMP_NUM_THREADS=<threads> mpiexec -n <n_mpi> petar [options] <snapshot>`
 - If MPI binds one core per rank, try `mpiexec --bind-to none`.
 - GPU: one MPI rank typically drives one GPU job; tune ranks/threads to avoid CUDA OOM.
-- `*.hard.debug` binaries are helper tools for hard-dump diagnostics (`hard_dump` replay), not full simulation drivers.
+- `*.hard.debug` binaries are helper tools for hard-dump diagnostics (`[output_prefix].hard_dump.*` replay), not full simulation drivers.
 - `*.format.transfer` binaries are format-conversion helpers.
 - Neither `*.hard.debug` nor `*.format.transfer` should be used as the main simulation executable.
 - For source-level debugging, reconfigure with `--with-debug=g` and rebuild before launching debugger workflows.

@@ -208,6 +208,32 @@ int main(int argc, char **argv){
         return _str.size() >= _suffix.size() && _str.compare(_str.size()-_suffix.size(), _suffix.size(), _suffix) == 0;
     };
 
+    auto infer_par_from_dump = [](const std::string& _dump_name, std::string& _par_prefix) {
+        const std::string marker_hard_dump = ".hard_dump";
+        const std::string marker_object = ".object_";
+        const std::string marker_dump = ".dump_";
+
+        std::size_t pos = _dump_name.find(marker_hard_dump);
+        if (pos != std::string::npos && pos > 0) {
+            _par_prefix = _dump_name.substr(0, pos) + ".par";
+            return true;
+        }
+
+        pos = _dump_name.find(marker_object);
+        if (pos != std::string::npos && pos > 0) {
+            _par_prefix = _dump_name.substr(0, pos) + ".par";
+            return true;
+        }
+
+        pos = _dump_name.find(marker_dump);
+        if (pos != std::string::npos && pos > 0) {
+            _par_prefix = _dump_name.substr(0, pos) + ".par";
+            return true;
+        }
+
+        return false;
+    };
+
     // Inject default -p early so explicit CLI options that appear later keep precedence.
     std::vector<std::string> adjusted_args;
     adjusted_args.reserve(argc + 2);
@@ -228,8 +254,18 @@ int main(int argc, char **argv){
 #endif
     }
     if (!has_help_option && !has_p_option) {
+        std::string par_prefix = debug_io.fname_par.value;
+        if (adjusted_args.size()>1) {
+            const std::string& dump_candidate = adjusted_args.back();
+            if (!dump_candidate.empty() && dump_candidate[0] != '-') {
+                std::string inferred_par_prefix;
+                if (infer_par_from_dump(dump_candidate, inferred_par_prefix)) {
+                    par_prefix = inferred_par_prefix;
+                }
+            }
+        }
         adjusted_args.insert(adjusted_args.begin()+1, "-p");
-        adjusted_args.insert(adjusted_args.begin()+2, debug_io.fname_par.value);
+        adjusted_args.insert(adjusted_args.begin()+2, par_prefix);
     }
     // Build mutable argv storage compatible with C++11 APIs expecting char*.
     std::vector<std::vector<char> > adjusted_argbuf;

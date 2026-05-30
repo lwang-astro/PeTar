@@ -68,8 +68,8 @@ When users ask to generate external potential maps before movies/overlays:
 
 1. Create a map config file (for example `pot_conf`) describing time and grid ranges.
 2. Generate map snapshots:
-  - `petar.external.galpy -p input.par -m pot_conf`
-  - `petar.external.agama -p input.par -m pot_conf`
+  - `petar.external.galpy -p data.par -m pot_conf`
+  - `petar.external.agama -p data.par -m pot_conf`
 3. Visualize with `petar.external.pot.movie` or overlay with `petar.movie --ext-pot`.
 
 ## Parallel sizing quick rule

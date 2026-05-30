@@ -42,7 +42,7 @@ Workflow:
 4. optionally use `-a 0` to overwrite outputs
 
 Canonical form:
-`<launcher> <petar_binary> -p input.par [overrides] <restart_snapshot>`
+`<launcher> <petar_binary> -p <output_prefix>.par [overrides] <restart_snapshot>` (default: `data.par`)
 
 ## Repository sample workflow
 

@@ -3945,34 +3945,35 @@ public:
         if(write_style > 0 && my_rank == 0) {
 
             if (print_flag) std::cout<<"-----  Save parameter files -----"<<std::endl;
+            const std::string model_par_prefix = input_parameters.fname_snp.value + ".par";
 
             // save initial parameters
-            input_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
+            input_parameters.writeModelParamsAscii(model_par_prefix);
             // save hard paramters 
-            hard_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
+            hard_parameters.writeModelParamsAscii(model_par_prefix);
 #ifdef BSE_BASE
             // save bse parameters
-            bse_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
+            bse_parameters.writeModelParamsAscii(model_par_prefix);
 #endif
 #if (defined BSE_BASE) || defined(DISK_STAR_MERGER)
             // save random seeds parameters
-            rand_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
+            rand_parameters.writeModelParamsAscii(model_par_prefix);
 #endif
 #ifdef DISK_STAR_MERGER
             // save disk_star_merger parameters
-            disk_star_merger_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
+            disk_star_merger_parameters.writeModelParamsAscii(model_par_prefix);
 #endif
 #ifdef GALPY
             // save galpy parameters
-            galpy_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
+            galpy_parameters.writeModelParamsAscii(model_par_prefix);
 #endif
 #ifdef AGAMA
             // save agama parameters
-            agama_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
+            agama_parameters.writeModelParamsAscii(model_par_prefix);
 #endif
 #ifdef EXTERNAL_HARD
             // save exthard parameters
-            external_hard_parameters.writeModelParamsAscii(input_parameters.fname_par.value);
+            external_hard_parameters.writeModelParamsAscii(model_par_prefix);
 #endif
         }
 
