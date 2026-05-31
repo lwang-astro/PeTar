@@ -1,18 +1,88 @@
 #!/usr/bin/env python3
 import argparse
 import math
+import os
+import re
 import subprocess
 import tempfile
 from pathlib import Path
 from typing import List, Tuple
 
 
-G_MSUN_PC_MYR = 0.00449830997959438
-KM_S_TO_PC_MYR = 1.022712165045695
+def load_astro_units_constants() -> Tuple[float, float]:
+    """Load G_ASTRO and KMS_TO_PCMYR from PeTar src/astro_units.hpp.
+
+    Fallback defaults are used by caller if header is missing or malformed.
+    """
+    header = Path(__file__).resolve().parents[2] / "src" / "astro_units.hpp"
+    text = header.read_text(encoding="utf-8")
+
+    pattern = re.compile(r"^\s*#define\s+(\w+)\s+([+\-]?(?:\d+\.?\d*|\d*\.\d+)(?:[eE][+\-]?\d+)?)")
+    constants = {}
+    for line in text.splitlines():
+        m = pattern.match(line)
+        if m is not None:
+            constants[m.group(1)] = float(m.group(2))
+
+    return constants["G_ASTRO"], constants["KMS_TO_PCMYR"]
+
+
+try:
+    G_MSUN_PC_MYR, KM_S_TO_PC_MYR = load_astro_units_constants()
+except Exception:
+    # Conservative fallback in case repository layout changes.
+    G_MSUN_PC_MYR = 0.00449830997959438
+    KM_S_TO_PC_MYR = 1.022712165045695
+
 PC_MYR_TO_KM_S = 1.0 / KM_S_TO_PC_MYR
-FUNCTIONAL_SELECT_DAT = Path("/home/lwang/localdata/petar_sample/bse/select.dat")
 MCLUSTER_SEED = 42
 MCLUSTER_OUTPUT_VELOCITY_UNIT = "km/s"
+FUNCTIONAL_RECENTER_AFTER_INJECTION = os.environ.get("FUNCTIONAL_RECENTER_AFTER_INJECTION", "0").strip().lower() in {"1", "true", "yes", "on"}
+
+# Fixed binary parameters for functional_mcluster_dual_merge_smoke.
+# Format per entry: (m1, m2, period_myr, ecc)
+FUNCTIONAL_FIXED_BINARIES: List[Tuple[float, float, float, float]] = [
+    (43.95648895255284, 59.062621526994754, 2.1688326622265456e-08, 0.7090993394052765),
+    (120.80378755706538, 124.43730278955712, 9.475226105745696e-09, 0.02203162007734072),
+    (19.069022579079945, 23.77114358019302, 2.0531407662661103e-08, 0.5909878636500059),
+]
+
+
+def env_float(name: str, default: float) -> float:
+    value = os.environ.get(name)
+    return float(value) if value is not None else default
+
+
+def resolve_functional_binary_params() -> List[Tuple[float, float, float, float]]:
+    """Resolve binary parameters for functional IC generation.
+
+    The default is fully script-fixed values to avoid external file dependency.
+    Optional env overrides are provided for controlled tuning experiments.
+    """
+    b1 = FUNCTIONAL_FIXED_BINARIES[0]
+    b2 = FUNCTIONAL_FIXED_BINARIES[1]
+
+    resolved = [
+        (
+            env_float("FUNCTIONAL_B1_M1", b1[0]),
+            env_float("FUNCTIONAL_B1_M2", b1[1]),
+            env_float("FUNCTIONAL_B1_PERIOD_MYR", b1[2]),
+            env_float("FUNCTIONAL_B1_ECC", b1[3]),
+        ),
+        (
+            env_float("FUNCTIONAL_B2_M1", b2[0]),
+            env_float("FUNCTIONAL_B2_M2", b2[1]),
+            env_float("FUNCTIONAL_B2_PERIOD_MYR", b2[2]),
+            env_float("FUNCTIONAL_B2_ECC", b2[3]),
+        ),
+        (
+            env_float("FUNCTIONAL_B3_M1", FUNCTIONAL_FIXED_BINARIES[2][0]),
+            env_float("FUNCTIONAL_B3_M2", FUNCTIONAL_FIXED_BINARIES[2][1]),
+            env_float("FUNCTIONAL_B3_PERIOD_MYR", FUNCTIONAL_FIXED_BINARIES[2][2]),
+            env_float("FUNCTIONAL_B3_ECC", FUNCTIONAL_FIXED_BINARIES[2][3]),
+        ),
+    ]
+    return resolved
 
 
 def two_body_peri_state(m1: float, m2: float, peri: float, ecc: float, g_const: float) -> Tuple[List[float], List[float], List[float], List[float]]:
@@ -31,6 +101,143 @@ def two_body_peri_state(m1: float, m2: float, peri: float, ecc: float, g_const: 
     return r1, v1, r2, v2
 
 
+def two_body_apo_state(m1: float, m2: float, semi: float, ecc: float, g_const: float) -> Tuple[List[float], List[float], List[float], List[float]]:
+    """Construct a two-body state at apo-center (true anomaly = pi)."""
+    mass_sum = m1 + m2
+    apo = semi * (1.0 + ecc)
+    rel_r = [-apo, 0.0, 0.0]
+    rel_vy = math.sqrt(g_const * mass_sum * (1.0 - ecc) / apo)
+    rel_v = [0.0, -rel_vy, 0.0]
+
+    factor1 = -m2 / mass_sum
+    factor2 = m1 / mass_sum
+
+    r1 = [factor1 * x for x in rel_r]
+    r2 = [factor2 * x for x in rel_r]
+    v1 = [factor1 * x for x in rel_v]
+    v2 = [factor2 * x for x in rel_v]
+    return r1, v1, r2, v2
+
+
+def two_body_hyperbolic_inbound_state(
+    m1: float,
+    m2: float,
+    semi: float,
+    ecc: float,
+    true_anomaly: float,
+    g_const: float,
+) -> Tuple[List[float], List[float], List[float], List[float]]:
+    """Construct a hyperbolic two-body state with inbound relative motion.
+
+    semi must be negative and ecc > 1. true_anomaly should be in
+    (-arccos(-1/ecc), 0) for inbound motion before peri-center.
+    """
+    if semi >= 0.0:
+        raise ValueError(f"Hyperbolic orbit requires negative semi-major axis, got {semi}")
+    if ecc <= 1.0:
+        raise ValueError(f"Hyperbolic orbit requires ecc>1, got {ecc}")
+
+    f_inf = math.acos(-1.0 / ecc)
+    if not (-f_inf < true_anomaly < 0.0):
+        raise ValueError(
+            f"Inbound true anomaly must be in (-acos(-1/e), 0), got {true_anomaly} for ecc={ecc}"
+        )
+
+    mu = g_const * (m1 + m2)
+    p = semi * (1.0 - ecc * ecc)
+    r = p / (1.0 + ecc * math.cos(true_anomaly))
+    h = math.sqrt(mu * p)
+
+    vr = mu / h * ecc * math.sin(true_anomaly)
+    vt = mu / h * (1.0 + ecc * math.cos(true_anomaly))
+
+    cosf = math.cos(true_anomaly)
+    sinf = math.sin(true_anomaly)
+    rel_r = [r * cosf, r * sinf, 0.0]
+    rel_v = [vr * cosf - vt * sinf, vr * sinf + vt * cosf, 0.0]
+
+    mass_sum = m1 + m2
+    factor1 = -m2 / mass_sum
+    factor2 = m1 / mass_sum
+
+    r1 = [factor1 * x for x in rel_r]
+    r2 = [factor2 * x for x in rel_r]
+    v1 = [factor1 * x for x in rel_v]
+    v2 = [factor2 * x for x in rel_v]
+    return r1, v1, r2, v2
+
+
+def orbital_elements_from_rel_state(
+    rel_r: List[float],
+    rel_v: List[float],
+    m1: float,
+    m2: float,
+    g_const: float,
+) -> Tuple[float, float]:
+    """Return (period, ecc) from relative two-body phase-space state."""
+    mu = g_const * (m1 + m2)
+    rx, ry, rz = rel_r
+    vx, vy, vz = rel_v
+    r2 = rx * rx + ry * ry + rz * rz
+    v2 = vx * vx + vy * vy + vz * vz
+    r = math.sqrt(r2)
+
+    hx = ry * vz - rz * vy
+    hy = rz * vx - rx * vz
+    hz = rx * vy - ry * vx
+
+    ex = (vy * hz - vz * hy) / mu - rx / r
+    ey = (vz * hx - vx * hz) / mu - ry / r
+    ez = (vx * hy - vy * hx) / mu - rz / r
+    ecc = math.sqrt(ex * ex + ey * ey + ez * ez)
+
+    energy = 0.5 * v2 - mu / r
+    semi = -mu / (2.0 * energy)
+    period = 2.0 * math.pi * math.sqrt(semi * semi * semi / mu)
+    return period, ecc
+
+
+def validate_functional_binary_roundtrip(
+    rows: List[Tuple[float, List[float], List[float]]],
+    selected: List[Tuple[float, float, float, float]],
+    velocity_unit: str,
+) -> None:
+    """Round-trip check from generated rows back to Kepler period/ecc.
+
+    This guards against conversion drift when generating ic.raw.
+    """
+    if len(rows) < 6:
+        raise ValueError("Need at least 6 rows to validate the first three binaries")
+
+    def _to_pc_myr(vel: List[float]) -> List[float]:
+        if velocity_unit == "km/s":
+            return [x * KM_S_TO_PC_MYR for x in vel]
+        return vel
+
+    pair_indices = [(0, 1), (2, 3), (4, 5)]
+    for pair_i, (ia, ib) in enumerate(pair_indices):
+        m1, p_ref, e_ref = selected[pair_i][0], selected[pair_i][2], selected[pair_i][3]
+        m2 = selected[pair_i][1]
+        _, pa, va = rows[ia]
+        _, pb, vb = rows[ib]
+
+        rel_r = [pb[k] - pa[k] for k in range(3)]
+        rel_v = [_to_pc_myr(vb)[k] - _to_pc_myr(va)[k] for k in range(3)]
+        p_calc, e_calc = orbital_elements_from_rel_state(rel_r, rel_v, m1, m2, G_MSUN_PC_MYR)
+
+        # Keep tolerance tight enough to catch real conversion mistakes, while
+        # allowing tiny floating-point rounding differences.
+        p_tol = max(1.0e-12, abs(p_ref) * 2.0e-4)
+        e_tol = 2.0e-4
+        if abs(p_calc - p_ref) > p_tol or abs(e_calc - e_ref) > e_tol:
+            raise ValueError(
+                "Binary round-trip check failed for pair "
+                f"{pair_i + 1}: period(ref={p_ref:.16e}, calc={p_calc:.16e}), "
+                f"ecc(ref={e_ref:.16e}, calc={e_calc:.16e}), "
+                f"velocity_unit={velocity_unit}"
+            )
+
+
 def write_rows(output: Path, rows: List[Tuple[float, List[float], List[float]]]) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", encoding="utf-8") as fh:
@@ -46,40 +253,6 @@ def write_rows(output: Path, rows: List[Tuple[float, List[float], List[float]]])
                     vel[2],
                 )
             )
-
-
-def load_bse_select_dat(path: Path) -> List[Tuple[float, float, float, float]]:
-    """Load two-binary parameters from petar.bse -b table.
-
-    The expected format is:
-      line-1: integer number of binaries
-      next lines: m1 m2 k1 k2 period[Myr] ecc ...
-    """
-    text = path.read_text(encoding="utf-8").splitlines()
-    lines = [line.strip() for line in text if line.strip()]
-    if not lines:
-        raise ValueError(f"Empty select.dat: {path}")
-
-    try:
-        nbin = int(lines[0].split()[0])
-    except Exception as exc:
-        raise ValueError(f"Invalid first line in select.dat: {lines[0]}") from exc
-
-    if len(lines) - 1 < nbin:
-        raise ValueError(f"select.dat expects {nbin} binaries but only {len(lines)-1} rows found: {path}")
-
-    binaries: List[Tuple[float, float, float, float]] = []
-    for i in range(nbin):
-        parts = lines[i + 1].split()
-        if len(parts) < 6:
-            raise ValueError(f"Invalid binary row in select.dat (need >=6 columns): {lines[i+1]}")
-        m1 = float(parts[0])
-        m2 = float(parts[1])
-        period_myr = float(parts[4])
-        ecc = float(parts[5])
-        binaries.append((m1, m2, period_myr, ecc))
-
-    return binaries
 
 
 def build_t1(output: Path) -> None:
@@ -316,14 +489,17 @@ def build_functional_dual_merge_smoke(output: Path) -> None:
 
 
 def build_functional_mcluster_dual_merge_smoke(output: Path) -> None:
-    """Generate a physical background with mcluster and inject two target binaries.
+    """Generate a physical background with mcluster and inject target binaries.
 
     Steps:
      1) Use mcluster to generate N=100, Plummer, Rh=1 pc, Kroupa IMF, no binaries (fixed seed).
-    2) Replace the first four stars by two binaries (4 stars total).
-         Binary masses/period/ecc are loaded from /home/lwang/localdata/petar_sample/bse/select.dat.
-    3) Align each binary center of mass with one of the first two 2-star pair COMs.
-     4) Recenter to zero net COM position/velocity.
+    2) Replace the first six stars by three binaries (6 stars total).
+        Binary masses/period/ecc are script-fixed (with optional env overrides).
+     3) Replace stars #7/#8 with a hyperbolic merger pair (m=10,10; a=-1e-8 pc; e=1.001)
+         in inbound configuration so the relative distance is shrinking.
+     4) Force the ninth star mass to 27 Msun for single-star SN-kick coverage.
+     5) Align each injected pair center of mass with one of the outermost stars.
+     6) Optionally recenter to zero net COM position/velocity (disabled by default).
 
     Output convention for this builder:
      - position: pc
@@ -387,22 +563,46 @@ def build_functional_mcluster_dual_merge_smoke(output: Path) -> None:
                     vel = [x * KM_S_TO_PC_MYR for x in vel_raw]
                 rows.append((mass, pos, vel))
 
-    if len(rows) < 4:
-        raise RuntimeError("mcluster returned fewer than 4 stars; cannot inject two binaries")
+    if len(rows) < 9:
+        raise RuntimeError(
+            "mcluster returned fewer than 9 stars; cannot inject three binaries, "
+            "one hyperbolic merger pair, and one single-star mass override"
+        )
 
-    selected = load_bse_select_dat(FUNCTIONAL_SELECT_DAT)
-    if len(selected) < 2:
-        raise ValueError(f"Need at least two binaries in {FUNCTIONAL_SELECT_DAT}, got {len(selected)}")
+    # Replace the outermost stars first so the injected binaries start in the
+    # weak-field outskirts rather than near the cluster center.
+    rows.sort(key=lambda item: math.sqrt(sum(coord * coord for coord in item[1])), reverse=True)
+
+    selected = resolve_functional_binary_params()
+    if len(selected) < 3:
+        raise ValueError(f"Need at least three binaries in FUNCTIONAL_FIXED_BINARIES, got {len(selected)}")
     b1_m1, b1_m2, b1_period, b1_ecc = selected[0]
     b2_m1, b2_m2, b2_period, b2_ecc = selected[1]
+    b3_m1, b3_m2, b3_period, b3_ecc = selected[2]
 
     def binary_rel_state(m1: float, m2: float, period_myr: float, ecc: float) -> Tuple[List[float], List[float], List[float], List[float]]:
         semi = (G_MSUN_PC_MYR * (m1 + m2) * (period_myr / (2.0 * math.pi)) ** 2) ** (1.0 / 3.0)
-        peri = semi * (1.0 - ecc)
-        return two_body_peri_state(m1, m2, peri, ecc, G_MSUN_PC_MYR)
+        return two_body_apo_state(m1, m2, semi, ecc, G_MSUN_PC_MYR)
 
     b1_r1, b1_v1, b1_r2, b1_v2 = binary_rel_state(b1_m1, b1_m2, b1_period, b1_ecc)
     b2_r1, b2_v1, b2_r2, b2_v2 = binary_rel_state(b2_m1, b2_m2, b2_period, b2_ecc)
+    b3_r1, b3_v1, b3_r2, b3_v2 = binary_rel_state(b3_m1, b3_m2, b3_period, b3_ecc)
+
+    h_m1 = 10.0
+    h_m2 = 10.0
+    h_semi = -1.0e-8
+    h_ecc = 1.001
+    # Start far on inbound branch (near asymptote) to keep initial separation
+    # larger while maintaining dr/dt < 0 and the same (a, e).
+    h_true_anomaly = -3.0955
+    h_r1, h_v1, h_r2, h_v2 = two_body_hyperbolic_inbound_state(
+        h_m1,
+        h_m2,
+        h_semi,
+        h_ecc,
+        h_true_anomaly,
+        G_MSUN_PC_MYR,
+    )
 
     if MCLUSTER_OUTPUT_VELOCITY_UNIT == "km/s":
         # Convert binary velocities to km/s to match mcluster output unit.
@@ -410,40 +610,48 @@ def build_functional_mcluster_dual_merge_smoke(output: Path) -> None:
         b1_v2 = [v * PC_MYR_TO_KM_S for v in b1_v2]
         b2_v1 = [v * PC_MYR_TO_KM_S for v in b2_v1]
         b2_v2 = [v * PC_MYR_TO_KM_S for v in b2_v2]
+        b3_v1 = [v * PC_MYR_TO_KM_S for v in b3_v1]
+        b3_v2 = [v * PC_MYR_TO_KM_S for v in b3_v2]
+        h_v1 = [v * PC_MYR_TO_KM_S for v in h_v1]
+        h_v2 = [v * PC_MYR_TO_KM_S for v in h_v2]
 
-    # Anchor binary COMs to COMs of the first two star pairs: (0,1) and (2,3).
-    def pair_com(row_a: Tuple[float, List[float], List[float]], row_b: Tuple[float, List[float], List[float]]) -> Tuple[List[float], List[float]]:
-        ma, pa, va = row_a
-        mb, pb, vb = row_b
-        mt = ma + mb
-        pcom = [(ma * pa[k] + mb * pb[k]) / mt for k in range(3)]
-        vcom = [(ma * va[k] + mb * vb[k]) / mt for k in range(3)]
-        return pcom, vcom
-
-    pcom1, vcom1 = pair_com(rows[0], rows[1])
-    pcom2, vcom2 = pair_com(rows[2], rows[3])
+    # Anchor binary COMs to three outermost stars directly.
+    # Using pair COM can place a binary near the center when the anchors
+    # are on opposite sides of the cluster.
+    pcom1, vcom1 = list(rows[0][1]), list(rows[0][2])
+    pcom2, vcom2 = list(rows[1][1]), list(rows[1][2])
+    pcom3, vcom3 = list(rows[4][1]), list(rows[4][2])
+    pcom4, vcom4 = list(rows[7][1]), list(rows[7][2])
 
     rows[0] = (b1_m1, [pcom1[k] + b1_r1[k] for k in range(3)], [vcom1[k] + b1_v1[k] for k in range(3)])
     rows[1] = (b1_m2, [pcom1[k] + b1_r2[k] for k in range(3)], [vcom1[k] + b1_v2[k] for k in range(3)])
     rows[2] = (b2_m1, [pcom2[k] + b2_r1[k] for k in range(3)], [vcom2[k] + b2_v1[k] for k in range(3)])
     rows[3] = (b2_m2, [pcom2[k] + b2_r2[k] for k in range(3)], [vcom2[k] + b2_v2[k] for k in range(3)])
+    rows[4] = (b3_m1, [pcom3[k] + b3_r1[k] for k in range(3)], [vcom3[k] + b3_v1[k] for k in range(3)])
+    rows[5] = (b3_m2, [pcom3[k] + b3_r2[k] for k in range(3)], [vcom3[k] + b3_v2[k] for k in range(3)])
+    rows[6] = (h_m1, [pcom4[k] + h_r1[k] for k in range(3)], [vcom4[k] + h_v1[k] for k in range(3)])
+    rows[7] = (h_m2, [pcom4[k] + h_r2[k] for k in range(3)], [vcom4[k] + h_v2[k] for k in range(3)])
+    rows[8] = (27.0, list(rows[8][1]), list(rows[8][2]))
 
-    # Global recenter.
-    mass_tot = sum(item[0] for item in rows)
-    com_pos = [sum(item[0] * item[1][k] for item in rows) / mass_tot for k in range(3)]
-    com_vel = [sum(item[0] * item[2][k] for item in rows) / mass_tot for k in range(3)]
+    rows_out = rows
+    if FUNCTIONAL_RECENTER_AFTER_INJECTION:
+        mass_tot = sum(item[0] for item in rows)
+        com_pos = [sum(item[0] * item[1][k] for item in rows) / mass_tot for k in range(3)]
+        com_vel = [sum(item[0] * item[2][k] for item in rows) / mass_tot for k in range(3)]
 
-    recentered: List[Tuple[float, List[float], List[float]]] = []
-    for mass, pos, vel in rows:
-        recentered.append(
-            (
-                mass,
-                [pos[k] - com_pos[k] for k in range(3)],
-                [vel[k] - com_vel[k] for k in range(3)],
+        recentered: List[Tuple[float, List[float], List[float]]] = []
+        for mass, pos, vel in rows:
+            recentered.append(
+                (
+                    mass,
+                    [pos[k] - com_pos[k] for k in range(3)],
+                    [vel[k] - com_vel[k] for k in range(3)],
+                )
             )
-        )
+        rows_out = recentered
 
-    write_rows(output, recentered)
+    validate_functional_binary_roundtrip(rows_out, selected, MCLUSTER_OUTPUT_VELOCITY_UNIT)
+    write_rows(output, rows_out)
 
 
 def main() -> int:

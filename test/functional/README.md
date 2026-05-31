@@ -71,6 +71,10 @@ export AGAMA_CONF_FILE=/path/to/MWpotentialHunter24_rotspiral.ini
 python3 test/functional/run_functional_smoke.py --phase run --cases agama
 ```
 
+If `AGAMA_CONF_FILE` is not set, the runner now defaults to
+`sample/MWPotentialHunter24_rotspiral.ini` automatically.
+Set `AGAMA_CONF_FILE` explicitly only when you want to override that default.
+
 ## What Is Checked Per Case
 
 1. `petar.init` IC conversion works for the mode (std/merger/BSE/external).

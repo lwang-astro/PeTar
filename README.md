@@ -52,6 +52,63 @@ Additional external-potential examples (previously not covered in this quick-sta
 
 Furthermore, users can access a Jupyter Notebook titled [data\_analysis.ipynb](https://github.com/lwang-astro/PeTar/blob/master/sample/data_analysis.ipynb), which provides examples of data analysis in Python. By running one of the sample scripts, users can subsequently refer to the demonstrations in this notebook to analyze the simulation results. The data analysis module in PeTar offers greater convenience compared to manually parsing the output files. It is advisable to leverage this module instead of crafting reading code from scratch.
 
+## Automated Test Layers
+
+PeTar includes two complementary automated test layers under `test/`:
+
+- `test/functional`: fast smoke tests for build/select/run/post-process pipelines across major runtime modes.
+- `test/validation`: physics-oriented validation scenarios (T1-T4 and related checks).
+
+Recommended order:
+
+1. Run functional smoke tests first to confirm toolchain and workflow continuity.
+2. Run validation scenarios next to check numerical/physical behavior.
+
+### Functional smoke tests
+
+Entry point:
+
+```bash
+python3 test/functional/run_functional_smoke.py --phase run --out-dir test/functional/out
+```
+
+Current functional coverage per case includes:
+
+- `petar.init`, `petar.select`, short `petar` run
+- `petar.data.process`, `petar.get.object.snap`, `petar.format.transfer.post`
+- Python readback checks of generated files
+- `petar.movie` smoke checks for all cases
+
+To make warning exposure deterministic, functional movie checks are run with `--n-cpu 1`.
+
+Agama behavior in functional tests:
+
+- If `AGAMA_CONF_FILE` is not set, the runner defaults to `sample/MWPotentialHunter24_rotspiral.ini`.
+- Users can still override this by explicitly setting `AGAMA_CONF_FILE`.
+
+Useful outputs:
+
+- `test/functional/out/report.functional.json`
+- `test/functional/out/report.functional.html`
+- `test/functional/out/functional_<case>/run.log`
+
+Detailed functional design and matrix configuration:
+
+- `test/functional/README.md`
+- `test/functional/functional_matrix.json`
+
+### Validation scenarios
+
+Validation scenarios, thresholds, and runner usage are documented in:
+
+- `test/validation/README.md`
+
+Quick help command:
+
+```bash
+python3 test/validation/run_validation.py --help
+```
+
 # About the version
 
 PeTar code is maintained across multiple branches, and for users seeking stability, it is advisable to obtain the released version. The master branch undergoes regular updates to introduce new features and address bugs. Users can opt for this version if they find the new features beneficial.
@@ -95,6 +152,7 @@ The subsequent sections provide detailed explanations of the installation proces
         - [Combining Multiple options](#combining-multiple-options)
     - [Compilation and Installation](#compilation-and-installation)
 - [Sample Scripts](#sample-scripts)
+- [Automated Test Layers](#automated-test-layers)
 - [Usage](#usage)
     - [Preparing the initial condition](#preparing-the-initial-condition)
     - [Starting a Simulation](#starting-a-simulation)

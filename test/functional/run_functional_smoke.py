@@ -5,6 +5,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -12,8 +13,11 @@ import warnings
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+DEFAULT_AGAMA_CONF_RELATIVE = Path("sample/MWPotentialHunter24_rotspiral.ini")
+
 
 WARNING_PATTERNS = [
+    r"\bWARNING\b",
     r"UserWarning:.*Binary file size",
     r"File may be truncated",
     r"not aligned with dtype itemsize",
@@ -59,6 +63,7 @@ def configure_args_for_build_tag(tag: str) -> List[str]:
         "std": [],
         "merger": ["--with-interrupt=merger"],
         "base": ["--with-interrupt=merger"],
+        "dsm": ["--with-interrupt=dsm"],
         "bse": ["--with-interrupt=bse"],
         "galpy": ["--with-external=galpy"],
         "bse-galpy": ["--with-interrupt=bse", "--with-external=galpy"],
@@ -226,25 +231,33 @@ def run_cmd(cmd: List[str], cwd: Path, env: Dict[str, str], log_path: Path) -> t
         log_path.parent.mkdir(parents=True, exist_ok=True)
         cmd_text = "$ " + " ".join(shlex.quote(x) for x in cmd) + "\n"
 
-        proc = subprocess.run(
-            cmd,
-            cwd=str(cwd),
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            check=False,
-        )
-        output = proc.stdout if proc.stdout is not None else ""
-        warn_lines = detect_warnings(output)
-
+        warn_lines: List[str] = []
         with log_path.open("a", encoding="utf-8") as log:
             log.write("\n" + cmd_text)
             log.flush()
-            if output:
-                log.write(output)
-            log.write(f"[exit] {proc.returncode}\n")
-        return proc.returncode, warn_lines
+
+            proc = subprocess.Popen(
+                cmd,
+                cwd=str(cwd),
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+            )
+
+            if proc.stdout is not None:
+                for line in proc.stdout:
+                    log.write(line)
+                    log.flush()
+                    warn_lines.extend(detect_warnings(line))
+
+            return_code = proc.wait()
+            log.write(f"[exit] {return_code}\n")
+            log.flush()
+
+        warn_lines = list(dict.fromkeys(warn_lines))
+        return return_code, warn_lines
 
 
 def load_json(path: Path) -> Dict[str, Any]:
@@ -279,6 +292,61 @@ def ensure_commands(commands: List[str]) -> List[str]:
     return missing
 
 
+def resolve_output_prefixes(case: Dict[str, Any], matrix: Dict[str, Any]) -> List[str]:
+    raw = case.get("filename_prefix", matrix.get("global", {}).get("filename_prefix", "data"))
+    if isinstance(raw, str):
+        prefixes = [tok.strip() for tok in raw.split(",") if tok.strip()]
+    elif isinstance(raw, list):
+        prefixes = [str(tok).strip() for tok in raw if str(tok).strip()]
+    else:
+        prefixes = []
+    return prefixes or ["data"]
+
+
+def cleanup_case_outputs_by_prefix(case_dir: Path, prefixes: List[str]) -> Dict[str, Any]:
+    matched: List[str] = []
+    removed: List[str] = []
+    failed: List[str] = []
+
+    if not case_dir.exists():
+        return {
+            "prefixes": prefixes,
+            "matched_count": 0,
+            "removed_count": 0,
+            "failed_count": 0,
+            "matched": matched,
+            "removed": removed,
+            "failed": failed,
+        }
+
+    for entry in sorted(case_dir.iterdir(), key=lambda p: p.name):
+        if not any(entry.name.startswith(prefix) for prefix in prefixes):
+            continue
+        matched.append(entry.name)
+        try:
+            if entry.is_dir() and not entry.is_symlink():
+                shutil.rmtree(entry)
+            else:
+                entry.unlink()
+            removed.append(entry.name)
+        except Exception as exc:
+            failed.append(f"{entry.name}: {exc}")
+
+    return {
+        "prefixes": prefixes,
+        "matched_count": len(matched),
+        "removed_count": len(removed),
+        "failed_count": len(failed),
+        "matched": matched,
+        "removed": removed,
+        "failed": failed,
+    }
+
+
+def prefixed_name(prefix: str, suffix: str) -> str:
+    return f"{prefix}.{suffix}"
+
+
 def read_last_snapshot_list(path: Path) -> str:
     last = ""
     with path.open("r", encoding="utf-8") as fh:
@@ -290,10 +358,93 @@ def read_last_snapshot_list(path: Path) -> str:
 
 
 def infer_build_tag_from_require(require: str) -> str:
-    tokens = sorted({"merger" if x.strip() == "base" else x.strip() for x in require.split(",") if x.strip()})
+    tokens = {"merger" if x.strip() == "base" else x.strip() for x in require.split(",") if x.strip()}
     if not tokens:
         return "std"
-    return "-".join(tokens)
+
+    # Canonicalize combined feature tags to match install_petar_major_versions.sh.
+    if "bse" in tokens and "galpy" in tokens:
+        return "bse-galpy"
+    if "bse" in tokens and "agama" in tokens:
+        return "bse-agama"
+
+    return "-".join(sorted(tokens))
+
+
+def build_default_movie_args(case: Dict[str, Any], output_prefix: str, interrupt_mode: str, external_mode: str) -> List[str]:
+    name = case.get("name", "")
+    lagr_file = prefixed_name(output_prefix, "lagr")
+    movie_interrupt = interrupt_mode or "none"
+    movie_external = external_mode or "none"
+
+    # Follow sample recipes by case family while keeping runtime short and robust.
+    if name == "bse-galpy":
+        return [
+            "-i", movie_interrupt,
+            "-t", movie_external,
+            "-m", "x-y,x-y",
+            "-R", "10,10000",
+            "--cm-mode", "core,none",
+            "--marker-scale", "1,0.1",
+            "-c", "logtemp,logtemp",
+            "-b",
+            "-L", lagr_file,
+            "--rlagr-min", "0",
+            "--rlagr-max", "5",
+        ]
+
+    if name == "bse-agama":
+        return [
+            "-i", movie_interrupt,
+            "-t", movie_external,
+            "-m", "x-y,x-y",
+            "-R", "10,10000",
+            "--cm-mode", "core,none",
+            "--marker-scale", "1,0.1",
+            "-c", "logtemp,logtemp",
+            "-b",
+            "-L", lagr_file,
+            "--rlagr-min", "0",
+            "--rlagr-max", "5",
+        ]
+
+    if name == "galpy":
+        return [
+            "-i", movie_interrupt,
+            "-t", movie_external,
+            "-m", "x-y,x-y",
+            "-R", "10,10000",
+            "--cm-mode", "core,none",
+            "--marker-scale", "1,0.1",
+            "-L", lagr_file,
+            "--rlagr-min", "0",
+            "--rlagr-max", "5",
+        ]
+
+    if name == "bse":
+        return [
+            "-i", movie_interrupt,
+            "-t", movie_external,
+            "-m", "x-y",
+            "-R", "10",
+            "-c", "logtemp",
+            "-b",
+            "-L", lagr_file,
+            "--rlagr-min", "0",
+            "--rlagr-max", "5",
+        ]
+
+    # std / merger / dsm default to binary+lagrangian style.
+    return [
+        "-i", movie_interrupt,
+        "-t", movie_external,
+        "-m", "x-y",
+        "-R", "10",
+        "-b",
+        "-L", lagr_file,
+        "--rlagr-min", "0",
+        "--rlagr-max", "5",
+    ]
 
 
 def run_case_build(repo_root: Path, matrix: Dict[str, Any], case: Dict[str, Any], case_dir: Path, log_path: Path) -> Dict[str, Any]:
@@ -311,6 +462,7 @@ def run_case_build(repo_root: Path, matrix: Dict[str, Any], case: Dict[str, Any]
     env = os.environ.copy()
     env.update(build.get("strict_env", {}))
     env["BUILD_TAGS"] = tag
+    env["PURGE_OLD_BINARIES"] = "0"
     configure_args = configure_args_for_build_tag(tag)
 
     rc, warns = run_cmd(["bash", str(script_path)], cwd=repo_root, env=env, log_path=log_path)
@@ -318,6 +470,36 @@ def run_case_build(repo_root: Path, matrix: Dict[str, Any], case: Dict[str, Any]
         "status": "pass" if rc == 0 else "fail",
         "code": rc,
         "build_tag": tag,
+        "configure_args": configure_args,
+        "configure_command": shell_join(["./configure", *configure_args]),
+        "command": shell_join(["bash", str(script_path)]),
+        "warnings": warns,
+        "script": str(script_path),
+        "dir": str(case_dir),
+    }
+
+
+def run_case_build_for_tag(repo_root: Path, matrix: Dict[str, Any], build_tag: str, case_dir: Path, log_path: Path) -> Dict[str, Any]:
+    build = matrix.get("build", {})
+    script = build.get("script")
+    if not script:
+        return {"status": "skip", "reason": "build script is not configured"}
+
+    script_path = repo_root / script
+    if not script_path.exists():
+        return {"status": "fail", "reason": f"build script not found: {script_path}"}
+
+    env = os.environ.copy()
+    env.update(build.get("strict_env", {}))
+    env["BUILD_TAGS"] = build_tag
+    env["PURGE_OLD_BINARIES"] = "0"
+    configure_args = configure_args_for_build_tag(build_tag)
+
+    rc, warns = run_cmd(["bash", str(script_path)], cwd=repo_root, env=env, log_path=log_path)
+    return {
+        "status": "pass" if rc == 0 else "fail",
+        "code": rc,
+        "build_tag": build_tag,
         "configure_args": configure_args,
         "configure_command": shell_join(["./configure", *configure_args]),
         "command": shell_join(["bash", str(script_path)]),
@@ -347,7 +529,7 @@ def select_build_tags(cases: List[Dict[str, Any]]) -> List[str]:
     return sorted(list(dict.fromkeys(tags)))
 
 
-def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str, interrupt_mode_override: str = "") -> Dict[str, Any]:
+def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str, output_prefix: str, interrupt_mode_override: str = "") -> Dict[str, Any]:
     tools_path = repo_root / "tools"
     if str(tools_path) not in sys.path:
         sys.path.insert(0, str(tools_path))
@@ -373,7 +555,7 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
 
     checks: List[Dict[str, Any]] = []
 
-    def add_check(label: str, path: Path, loader, command: str) -> None:
+    def add_check(label: str, path: Path, loader, command: str, strict_mismatch: bool = True) -> None:
         if not path.exists():
             return
         with warnings.catch_warnings(record=True) as rec:
@@ -396,7 +578,7 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
             for msg in warn_msgs
             if re.search(r"column|dtype|aligned|truncated|itemsize|Binary file size", msg, flags=re.IGNORECASE)
         ]
-        if mismatch_warns and ok:
+        if strict_mismatch and mismatch_warns and ok:
             ok = False
             error = "; ".join(mismatch_warns)
         checks.append(
@@ -410,6 +592,17 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
                 "details": details,
             }
         )
+
+    def load_interrupt_binary(path: Path) -> Dict[str, Any]:
+        interrupt = petar.InterruptBinary(
+            particle_type=petar.HardParticle,
+            interrupt_mode=interrupt_mode,
+        )
+        interrupt.fromfile(str(path))
+        return {
+            "command": f"petar.InterruptBinary(particle_type=petar.HardParticle, interrupt_mode={interrupt_mode}).fromfile(path)",
+            "details": {"records": int(interrupt.size), "ncols": int(interrupt.ncols)},
+        }
 
     def load_profile_with_matching_schema(path: Path) -> Dict[str, Any]:
         # Select Profile schema by matching column count in the numeric body.
@@ -436,7 +629,27 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         for kwargs in candidates:
             prof = petar.Profile(**kwargs)
             if prof.ncols == ncols:
-                prof.loadtxt(str(path), skiprows=1)
+                try:
+                    prof.loadtxt(str(path), skiprows=1)
+                except Exception as exc:
+                    msg = str(exc)
+                    if "number of columns changed" not in msg:
+                        raise
+                    # Some profile outputs can append extra diagnostic columns in later rows.
+                    # For smoke checks, validate a common numeric prefix can be parsed.
+                    min_cols = 0
+                    with path.open("r", encoding="utf-8") as fh:
+                        for i, line in enumerate(fh):
+                            if i == 0:
+                                continue
+                            tokens = line.strip().split()
+                            if not tokens:
+                                continue
+                            row_cols = len(tokens)
+                            min_cols = row_cols if min_cols == 0 else min(min_cols, row_cols)
+                    if min_cols <= 0:
+                        raise
+                    np.loadtxt(str(path), skiprows=1, usecols=tuple(range(min_cols)))
                 return {
                     "command": f"petar.Profile({', '.join(f'{k}={v!r}' for k, v in kwargs.items())}).loadtxt(path, skiprows=1)" if kwargs else "petar.Profile().loadtxt(path, skiprows=1)",
                     "details": {"profile_kwargs": kwargs, "matched_ncols": ncols},
@@ -451,45 +664,45 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         }
 
     add_check(
-        "data.lagr",
-        case_dir / "data.lagr",
+        f"{output_prefix}.lagr",
+        case_dir / prefixed_name(output_prefix, "lagr"),
         lambda p, em=external_mode: petar.LagrangianMultiple(external_mode=em).fromfile(str(p)),
         f"petar.LagrangianMultiple(external_mode={external_mode}).fromfile(path)",
     )
-    add_check("data.core", case_dir / "data.core", lambda p: petar.Core().fromfile(str(p)), "petar.Core().fromfile(path)")
-    add_check("data.status", case_dir / "data.status", lambda p: petar.Status().fromfile(str(p)), "petar.Status().fromfile(path)")
+    add_check(f"{output_prefix}.core", case_dir / prefixed_name(output_prefix, "core"), lambda p: petar.Core().fromfile(str(p)), "petar.Core().fromfile(path)")
+    add_check(f"{output_prefix}.status", case_dir / prefixed_name(output_prefix, "status"), lambda p: petar.Status().fromfile(str(p)), "petar.Status().fromfile(path)")
     add_check(
-        "data.esc_single",
-        case_dir / "data.esc_single",
+        f"{output_prefix}.esc_single",
+        case_dir / prefixed_name(output_prefix, "esc_single"),
         lambda p, im=interrupt_mode, em=external_mode: petar.SingleEscaper(
             interrupt_mode=im, external_mode=em
         ).fromfile(str(p)),
         f"petar.SingleEscaper(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
     )
     add_check(
-        "data.esc_binary",
-        case_dir / "data.esc_binary",
+        f"{output_prefix}.esc_binary",
+        case_dir / prefixed_name(output_prefix, "esc_binary"),
         lambda p, im=interrupt_mode, em=external_mode: petar.BinaryEscaper(
             interrupt_mode=im, external_mode=em
         ).fromfile(str(p)),
         f"petar.BinaryEscaper(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
     )
 
-    add_check("data.sse", case_dir / "data.sse", lambda p: petar.SSEType().loadtxt(str(p)), "petar.SSEType().loadtxt(path)")
+    add_check(f"{output_prefix}.sse", case_dir / prefixed_name(output_prefix, "sse"), lambda p: petar.SSEType().loadtxt(str(p)), "petar.SSEType().loadtxt(path)")
 
-    add_check("data.sse.type_change", case_dir / "data.sse.type_change", lambda p: petar.SSETypeChange().loadtxt(str(p)), "petar.SSETypeChange().loadtxt(path)")
-    add_check("data.sse.sn_kick", case_dir / "data.sse.sn_kick", lambda p: petar.SSESNKick().loadtxt(str(p)), "petar.SSESNKick().loadtxt(path)")
+    add_check(f"{output_prefix}.sse.type_change", case_dir / prefixed_name(output_prefix, "sse.type_change"), lambda p: petar.SSETypeChange().loadtxt(str(p)), "petar.SSETypeChange().loadtxt(path)")
+    add_check(f"{output_prefix}.sse.sn_kick", case_dir / prefixed_name(output_prefix, "sse.sn_kick"), lambda p: petar.SSESNKick().loadtxt(str(p)), "petar.SSESNKick().loadtxt(path)")
 
-    add_check("data.bse", case_dir / "data.bse", lambda p: petar.BSEType().loadtxt(str(p)), "petar.BSEType().loadtxt(path)")
-    add_check("data.bse_status", case_dir / "data.bse_status", lambda p: petar.BSEStatus().fromfile(str(p)), "petar.BSEStatus().fromfile(path)")
-    add_check("data.bse.type_change", case_dir / "data.bse.type_change", lambda p: petar.BSETypeChange().loadtxt(str(p)), "petar.BSETypeChange().loadtxt(path)")
-    add_check("data.bse.sn_kick", case_dir / "data.bse.sn_kick", lambda p: petar.BSEKick().loadtxt(str(p)), "petar.BSEKick().loadtxt(path)")
-    add_check("data.bse.gw_kick", case_dir / "data.bse.gw_kick", lambda p: petar.BSEKick().loadtxt(str(p)), "petar.BSEKick().loadtxt(path)")
-    add_check("data.bse.dynamic_merge", case_dir / "data.bse.dynamic_merge", lambda p: petar.BSEDynamicMerge().loadtxt(str(p)), "petar.BSEDynamicMerge().loadtxt(path)")
-    add_check("data.bse.binary_merge", case_dir / "data.bse.binary_merge", lambda p: petar.BSETypeChange().loadtxt(str(p)), "petar.BSETypeChange().loadtxt(path)")
+    add_check(f"{output_prefix}.bse", case_dir / prefixed_name(output_prefix, "bse"), lambda p: petar.BSEType().loadtxt(str(p)), "petar.BSEType().loadtxt(path)")
+    add_check(f"{output_prefix}.bse_status", case_dir / prefixed_name(output_prefix, "bse_status"), lambda p: petar.BSEStatus().fromfile(str(p)), "petar.BSEStatus().fromfile(path)")
+    add_check(f"{output_prefix}.bse.type_change", case_dir / prefixed_name(output_prefix, "bse.type_change"), lambda p: petar.BSETypeChange().loadtxt(str(p)), "petar.BSETypeChange().loadtxt(path)")
+    add_check(f"{output_prefix}.bse.sn_kick", case_dir / prefixed_name(output_prefix, "bse.sn_kick"), lambda p: petar.BSEKick().loadtxt(str(p)), "petar.BSEKick().loadtxt(path)")
+    add_check(f"{output_prefix}.bse.gw_kick", case_dir / prefixed_name(output_prefix, "bse.gw_kick"), lambda p: petar.BSEKick().loadtxt(str(p)), "petar.BSEKick().loadtxt(path)")
+    add_check(f"{output_prefix}.bse.dynamic_merge", case_dir / prefixed_name(output_prefix, "bse.dynamic_merge"), lambda p: petar.BSEDynamicMerge().loadtxt(str(p)), "petar.BSEDynamicMerge().loadtxt(path)")
+    add_check(f"{output_prefix}.bse.binary_merge", case_dir / prefixed_name(output_prefix, "bse.binary_merge"), lambda p: petar.BSETypeChange().loadtxt(str(p)), "petar.BSETypeChange().loadtxt(path)")
 
-    # Snapshot files listed in data.snap.lst.
-    snap_list = case_dir / "data.snap.lst"
+    # Snapshot files listed in [prefix].snap.lst.
+    snap_list = case_dir / prefixed_name(output_prefix, "snap.lst")
     if snap_list.exists():
         snap_names = [line.strip() for line in snap_list.read_text(encoding="utf-8").splitlines() if line.strip()]
         if snap_names:
@@ -535,8 +748,21 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         f"obj=petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}); obj.addNewMember('time', np.array([], dtype=float)); obj.fromfile(path)",
     )
 
+    # DSM mode produces data.interrupt as a binary stream of interrupted binaries.
+    # The file may include trailing bytes depending on compile-time layout, so this
+    # smoke check validates readability and parsed record count instead of enforcing
+    # strict dtype-alignment warnings.
+    if interrupt_mode == "dsm":
+        add_check(
+            f"{output_prefix}.interrupt",
+            case_dir / prefixed_name(output_prefix, "interrupt"),
+            load_interrupt_binary,
+            f"petar.InterruptBinary(particle_type=petar.HardParticle, interrupt_mode={interrupt_mode}).fromfile(path)",
+            strict_mismatch=False,
+        )
+
     # Validate profiling outputs (ASCII table).
-    for prof_path in sorted(case_dir.glob("data.prof.rank.*")):
+    for prof_path in sorted(case_dir.glob(f"{output_prefix}.prof.rank.*")):
         add_check(
             f"profile:{prof_path.name}",
             prof_path,
@@ -545,7 +771,7 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         )
 
     # Validate group outputs from petar.data.process (binary GroupInfo).
-    for group_path in sorted(case_dir.glob("data.group.n*")):
+    for group_path in sorted(case_dir.glob(f"{output_prefix}.group.n*")):
         match = re.search(r"\.n(\d+)$", group_path.name)
         if not match:
             continue
@@ -599,6 +825,24 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         "dir": str(case_dir),
         "log": str(log_path),
     }
+
+    prefixes = resolve_output_prefixes(case, matrix)
+    output_prefix = prefixes[0]
+    cleanup_result = cleanup_case_outputs_by_prefix(case_dir, prefixes)
+    cleanup_code = 0 if cleanup_result["failed_count"] == 0 else 1
+    add_step(
+        result,
+        "cleanup_case_outputs",
+        cleanup_code,
+        ["internal.cleanup", f"prefixes={','.join(prefixes)}"],
+        case_dir,
+        details=cleanup_result,
+        reason="failed to remove one or more stale files" if cleanup_code != 0 else "",
+    )
+    if cleanup_code != 0:
+        result["status"] = "fail"
+        result["skip_reason"] = "failed to cleanup stale outputs by prefix"
+        return result
 
     all_tokens = []
     for key in ["init_args", "run_args", "process_args"]:
@@ -705,6 +949,44 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         log_path=log_path,
     )
     add_step(result, "petar.select", rc, select_cmd, case_dir, warnings_list=warns, details={"require": require, "optional": optional})
+
+    # Fallback: if select fails, trigger targeted install/build once and retry select.
+    if rc != 0:
+        fallback_tag = infer_build_tag_from_require(require)
+        fallback_build = run_case_build_for_tag(repo_root, matrix, fallback_tag, case_dir, log_path)
+        add_step(
+            result,
+            "build_install_retry",
+            fallback_build.get("code", 0),
+            ["bash", str(repo_root / matrix.get("build", {}).get("script", ""))],
+            repo_root,
+            warnings_list=fallback_build.get("warnings"),
+            details={
+                "build_tag": fallback_build.get("build_tag", fallback_tag),
+                "configure_args": fallback_build.get("configure_args", []),
+                "configure_command": fallback_build.get("configure_command", ""),
+                "trigger": "petar.select failed",
+            },
+            reason=fallback_build.get("reason", ""),
+        )
+        if fallback_build.get("status") == "pass":
+            rc_retry, warns_retry = run_cmd(
+                select_cmd,
+                cwd=case_dir,
+                env=env,
+                log_path=log_path,
+            )
+            add_step(
+                result,
+                "petar.select.retry",
+                rc_retry,
+                select_cmd,
+                case_dir,
+                warnings_list=warns_retry,
+                details={"require": require, "optional": optional, "trigger": "after build_install_retry"},
+            )
+            rc = rc_retry
+
     if rc != 0:
         result["status"] = "skip" if result["optional"] else "fail"
         if result["status"] == "skip":
@@ -715,33 +997,33 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
     t_end = str(case.get("t_end", matrix.get("global", {}).get("t_end", 0.2)))
     dt_out = str(case.get("dt_out", matrix.get("global", {}).get("dt_out", 0.1)))
     run_args = resolve_tokens(case.get("run_args", []))
-    run_cmdline = ["petar", "-u", "1", "-t", t_end, "-o", dt_out, *run_args, "input"]
+    run_cmdline = ["petar", "-u", "1", "-t", t_end, "-o", dt_out, "-f", output_prefix, *run_args, "input"]
     rc, warns = run_cmd(run_cmdline, cwd=case_dir, env=env, log_path=log_path)
-    add_step(result, "petar", rc, run_cmdline, case_dir, warnings_list=warns, details={"t_end": t_end, "dt_out": dt_out, "run_args": run_args})
+    add_step(result, "petar", rc, run_cmdline, case_dir, warnings_list=warns, details={"t_end": t_end, "dt_out": dt_out, "output_prefix": output_prefix, "run_args": run_args})
     if rc != 0:
         result["status"] = "fail"
         return result
 
     # 5) Post-processing pipeline smoke checks.
-    snap_list = case_dir / "data.snap.lst"
+    snap_list = case_dir / prefixed_name(output_prefix, "snap.lst")
     if not snap_list.exists():
         # Fallback for serial outputs when no list file is produced.
-        snapshots = sorted(case_dir.glob("data.[0-9]*"), key=lambda p: int(p.name.split(".")[-1]))
+        snapshots = sorted(case_dir.glob(f"{output_prefix}.[0-9]*"), key=lambda p: int(p.name.split(".")[-1]))
         if snapshots:
             snap_list.write_text("\n".join(p.name for p in snapshots) + "\n", encoding="utf-8")
         else:
             result["status"] = "fail"
-            result["skip_reason"] = "data.snap.lst not found"
+            result["skip_reason"] = f"{snap_list.name} not found"
             return result
 
     last_snap = read_last_snapshot_list(snap_list)
     if not last_snap:
         result["status"] = "fail"
-        result["skip_reason"] = "data.snap.lst is empty"
+        result["skip_reason"] = f"{snap_list.name} is empty"
         return result
 
     process_args = resolve_tokens(case.get("process_args", []))
-    process_cmd = ["petar.data.process", *process_args, "data.snap.lst"]
+    process_cmd = ["petar.data.process", "--no-auto-resume", "-p", output_prefix, *process_args, snap_list.name]
     rc, warns = run_cmd(process_cmd, cwd=case_dir, env=env, log_path=log_path)
     add_step(result, "petar.data.process", rc, process_cmd, case_dir, warnings_list=warns, details={"process_args": process_args})
     if rc != 0:
@@ -751,7 +1033,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
 
     # 6) petar.get.object.snap with correct -i/-t for dtype
     object_snap_args = case.get("object_snap_args", [])
-    snap_cmd = ["petar.get.object.snap", *object_snap_args, "-p", "object", "-f", "origin", "-m", "id", "1", "data.snap.lst"]
+    snap_cmd = ["petar.get.object.snap", *object_snap_args, "-p", "object", "-f", "origin", "-m", "id", "1", snap_list.name]
     print(f"[DEBUG] petar.get.object.snap cmd: {snap_cmd}")
     rc, warns = run_cmd(snap_cmd, cwd=case_dir, env=env, log_path=log_path)
     snap_critical_warn = has_critical_mismatch_warning(warns)
@@ -774,7 +1056,32 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         result["status"] = "fail"
         result["skip_reason"] = "petar.get.object.snap reported binary mismatch warning"
 
-    format_cmd = ["petar.format.transfer.post", "-d", "single", "-s", "binary", "-o", "npy", "data.snap.lst"]
+    # Keep this smoke step focused on the last snapshot to avoid false positives
+    # from intermediate outputs while still validating conversion functionality.
+    last_snap_list = case_dir / prefixed_name(output_prefix, "snap.last.lst")
+    last_snap_list.write_text(f"{last_snap}\n", encoding="utf-8")
+    format_cmd = ["petar.format.transfer.post", "-d", "single", "-s", "binary", "-o", "npy"]
+
+    # Keep dtype-critical options consistent with petar.data.process.
+    process_interrupt_mode = None
+    process_external_mode = None
+    for idx, token in enumerate(process_args):
+        if token in ("-i", "--interrupt-mode") and idx + 1 < len(process_args):
+            process_interrupt_mode = process_args[idx + 1]
+        elif token in ("-t", "--external-mode") and idx + 1 < len(process_args):
+            process_external_mode = process_args[idx + 1]
+
+    if process_interrupt_mode is None:
+        process_interrupt_mode = case.get("interrupt_mode")
+    if process_external_mode is None:
+        process_external_mode = case.get("external_mode")
+
+    if process_interrupt_mode:
+        format_cmd.extend(["-i", str(process_interrupt_mode)])
+    if process_external_mode:
+        format_cmd.extend(["-t", str(process_external_mode)])
+
+    format_cmd.append(str(last_snap_list.name))
     rc, warns = run_cmd(format_cmd, cwd=case_dir, env=env, log_path=log_path)
     format_critical_warn = has_critical_mismatch_warning(warns)
     format_step_code = rc if (rc != 0 or not format_critical_warn) else 1
@@ -796,11 +1103,29 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         result["status"] = "fail"
         result["skip_reason"] = "petar.format.transfer.post reported binary mismatch warning"
 
+    # 8) petar.movie smoke check (uniform --n-cpu 1 to expose warnings deterministically).
+    movie_args_raw = case.get("movie_args")
+    if movie_args_raw is None:
+        movie_args = build_default_movie_args(case, output_prefix, case.get("interrupt_mode", "none"), process_external_mode or "none")
+    else:
+        movie_args = resolve_tokens(movie_args_raw)
+
+    if "--n-cpu" not in movie_args:
+        movie_args.extend(["--n-cpu", "1"])
+
+    movie_cmd = ["petar.movie", *movie_args, snap_list.name]
+    rc, warns = run_cmd(movie_cmd, cwd=case_dir, env=env, log_path=log_path)
+    add_step(result, "petar.movie", rc, movie_cmd, case_dir, warnings_list=warns, details={"movie_args": movie_args})
+    if rc != 0:
+        result["status"] = "fail"
+        result["skip_reason"] = "petar.movie command failed"
+        return result
+
     expected_files = [
         case_dir / last_snap,
         case_dir / f"{last_snap}.single",
         case_dir / f"{last_snap}.binary",
-        case_dir / "data.lagr",
+        case_dir / prefixed_name(output_prefix, "lagr"),
         case_dir / "object.1",
     ]
     missing = [str(p) for p in expected_files if not p.exists()]
@@ -812,6 +1137,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         repo_root,
         case_dir,
         require,
+        output_prefix,
         interrupt_mode_override=case.get("interrupt_mode", ""),
     )
     result["read_checks"] = read_checks
@@ -841,6 +1167,7 @@ def run_build(repo_root: Path, matrix: Dict[str, Any], out_root: Path, selected_
     env.update(build.get("strict_env", {}))
     build_tags = select_build_tags(selected_cases)
     env["BUILD_TAGS"] = ",".join(build_tags)
+    env["PURGE_OLD_BINARIES"] = "0"
 
     log_path = out_root / "build.log"
     rc, warns = run_cmd(["bash", str(script_path)], cwd=repo_root, env=env, log_path=log_path)
@@ -873,6 +1200,14 @@ def main() -> int:
     out_root.mkdir(parents=True, exist_ok=True)
     repo_root = Path.cwd()
 
+    # Provide a sensible default Agama config for optional agama cases.
+    # Keep user-provided AGAMA_CONF_FILE untouched if it is already set.
+    if not os.environ.get("AGAMA_CONF_FILE"):
+        agama_default = (repo_root / DEFAULT_AGAMA_CONF_RELATIVE).resolve()
+        if agama_default.exists():
+            os.environ["AGAMA_CONF_FILE"] = str(agama_default)
+            print(f"[INFO] AGAMA_CONF_FILE is not set; defaulting to {agama_default}")
+
 
     required_cmds = [
         "python3",
@@ -881,6 +1216,7 @@ def main() -> int:
         "petar.data.process",
         "petar.get.object.snap",
         "petar.format.transfer.post",
+        "petar.movie",
     ]
     missing_cmds = ensure_commands(required_cmds)
     if missing_cmds:

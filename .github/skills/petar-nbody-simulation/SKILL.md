@@ -109,6 +109,12 @@ Use these tools proactively when the user intent matches the task.
   helper tool for replaying and diagnosing hard-integrator dump files (for example, `[output_prefix].hard_dump.*`), not a full N-body production solver.
 - `petar.find.dt`:
   find a suitable tree time step for a given snapshot and launch configuration.
+  This is useful for star-cluster scale systems, but for very small-N setups
+  (for example isolated binaries or a few-body test) do not trust the automatic
+  estimate blindly: the tree time step can be badly misjudged when the system
+  contains only a few particles. In that regime, choose the tree time step
+  manually from the orbital timescale and make sure the binary orbit is still
+  resolved with several steps per orbit.
 - `petar.update.par`:
   update legacy parameter files from older PeTar versions.
 - `petar.data.gether`:

@@ -303,6 +303,12 @@ public:
             const bool use_tmp_stage = !append_flag;
             std::string fname = final_fname;
             if (use_tmp_stage) fname += ".tmp";
+#ifdef GALPY
+            std::string galpy_final_fname = final_fname + ".galpy";
+            std::string galpy_fname = galpy_final_fname;
+            if (use_tmp_stage) galpy_fname += ".tmp";
+            bool galpy_sidecar_ready = false;
+#endif
 
             std::FILE* fp;
             if (append_flag) 
@@ -317,7 +323,12 @@ public:
 #ifdef EXTERNAL_HARD
             center->writeBinary(fp);
 #ifdef GALPY
-            galpy_manager->writePotentialPars((fname+".galpy").c_str(), hard_dump[ith].time_offset, false);
+            galpy_manager->writePotentialPars(galpy_fname.c_str(), hard_dump[ith].time_offset, false);
+            std::FILE* fp_galpy_sidecar = std::fopen(galpy_fname.c_str(), "rb");
+            if (fp_galpy_sidecar!=NULL) {
+                galpy_sidecar_ready = true;
+                std::fclose(fp_galpy_sidecar);
+            }
 #endif
 #endif            
             fclose(fp);
@@ -328,13 +339,17 @@ public:
                 {
                     pending_rename_records.push_back({fname, final_fname});
 #ifdef GALPY
-                    pending_rename_records.push_back({fname+".galpy", final_fname+".galpy"});
+                    if (galpy_sidecar_ready) {
+                        pending_rename_records.push_back({galpy_fname, galpy_final_fname});
+                    }
 #endif
                 }
 #else
                 pending_rename_records.push_back({fname, final_fname});
 #ifdef GALPY
-                pending_rename_records.push_back({fname+".galpy", final_fname+".galpy"});
+                if (galpy_sidecar_ready) {
+                    pending_rename_records.push_back({galpy_fname, galpy_final_fname});
+                }
 #endif
 #endif
             }

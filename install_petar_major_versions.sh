@@ -8,7 +8,7 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT_DIR"
 
 JOBS="${JOBS:-$(nproc)}"
-PURGE_OLD_BINARIES="${PURGE_OLD_BINARIES:-1}"
+PURGE_OLD_BINARIES="${PURGE_OLD_BINARIES:-0}"
 BIN_DIR="${BIN_DIR:-$HOME/bin}"
 INSTALL_PREFIX="${INSTALL_PREFIX:-$HOME}"
 STRICT_BUILD="${STRICT_BUILD:-0}"
@@ -38,6 +38,109 @@ FAILED_TAGS=()
 SKIPPED_TAGS=()
 REQUESTED_TAGS=()
 
+current_source_version() {
+	local petar_version=""
+	local sdar_version=""
+
+	if [[ -f "$ROOT_DIR/VERSION" ]]; then
+		petar_version="$(tr -d '[:space:]' < "$ROOT_DIR/VERSION")"
+	fi
+	if [[ -f "$ROOT_DIR/../SDAR/VERSION" ]]; then
+		sdar_version="$(tr -d '[:space:]' < "$ROOT_DIR/../SDAR/VERSION")"
+	fi
+
+	if [[ -z "$petar_version" || -z "$sdar_version" ]]; then
+		return 1
+	fi
+
+	printf '%s_%s\n' "$petar_version" "$sdar_version"
+}
+
+solver_matches_tag() {
+	local solver_name="$1"
+	local tag="$2"
+	local token
+	local core
+	local parts_csv
+	local parts_str
+	local core_tokens=" merger dsm bse galpy agama "
+
+	if [[ -z "$tag" || "$tag" == "std" ]]; then
+		# For std, require a solver without any core physics tags.
+		parts_csv="${solver_name#petar}"
+		parts_csv="${parts_csv#.}"
+		parts_str=" ${parts_csv//./ } "
+		for core in merger dsm bse galpy agama; do
+			if [[ "$parts_str" == *" $core "* ]]; then
+				return 1
+			fi
+		done
+		return 0
+	fi
+
+	# Parse solver features from dot-separated executable suffixes.
+	# Example: petar.mpi.omp.avx2.bse.agama -> " mpi omp avx2 bse agama "
+	parts_csv="${solver_name#petar}"
+	parts_csv="${parts_csv#.}"
+	parts_str=" ${parts_csv//./ } "
+
+	IFS='-' read -r -a tokens <<< "$tag"
+	for token in "${tokens[@]}"; do
+		[[ -z "$token" ]] && continue
+		if [[ "$parts_str" != *" $token "* ]]; then
+			return 1
+		fi
+	done
+
+	# Prevent mixed-physics false matches, e.g. treat bse-agama as NOT matching bse.
+	for core in merger dsm bse galpy agama; do
+		if [[ "$parts_str" == *" $core "* && "$tag" != *"$core"* ]]; then
+			return 1
+		fi
+	done
+
+	return 0
+}
+
+extract_solver_version() {
+	local solver_path="$1"
+	"$solver_path" -h 2>&1 | sed -n 's/^Version:[[:space:]]*//p' | head -n 1
+}
+
+has_matching_installed_version() {
+	local tag="$1"
+	local expected_version="$2"
+	local solver_path=""
+	local solver_name=""
+	local installed_version=""
+
+	shopt -s nullglob
+	for solver_path in "$BIN_DIR"/petar.*; do
+		solver_name="$(basename "$solver_path")"
+
+		if [[ "$solver_name" == *.hard.debug || "$solver_name" == *.format.transfer ]]; then
+			continue
+		fi
+		if [[ ! -x "$solver_path" ]]; then
+			continue
+		fi
+		if [[ ! -f "$BIN_DIR/$solver_name.hard.debug" || ! -f "$BIN_DIR/$solver_name.format.transfer" ]]; then
+			continue
+		fi
+		if ! solver_matches_tag "$solver_name" "$tag"; then
+			continue
+		fi
+
+		installed_version="$(extract_solver_version "$solver_path")"
+		if [[ "$installed_version" == "$expected_version" ]]; then
+			shopt -u nullglob
+			return 0
+		fi
+		done
+	shopt -u nullglob
+	return 1
+}
+
 if [[ "$PURGE_OLD_BINARIES" == "1" ]]; then
 	if [[ -d "$BIN_DIR" ]]; then
 		echo "[INFO] removing previous petar* executables in $BIN_DIR"
@@ -49,9 +152,21 @@ fi
 build_install() {
 	local tag="$1"
 	shift
+	local source_version=""
 
 	echo "[INFO] ===== build: $tag ====="
 	echo "[INFO] configure args: $*"
+
+	if source_version="$(current_source_version)"; then
+		echo "[INFO] source version: $source_version"
+		if has_matching_installed_version "$tag" "$source_version"; then
+			echo "[INFO] skip rebuild for $tag: installed version matches source version $source_version"
+			return 0
+		fi
+		echo "[INFO] rebuild $tag: no installed solver with matching version $source_version"
+	else
+		echo "[WARN] source version detection failed; continue with rebuild for $tag"
+	fi
 
 	if ! ./configure --prefix="$INSTALL_PREFIX" "$@"; then
 		echo "[WARN] configure failed for $tag"
@@ -104,7 +219,9 @@ want_tag() {
 }
 
 # Merger + major physics families
+if want_tag std; then build_install std; fi
 if want_tag merger || want_tag base; then build_install merger --with-interrupt=merger; fi
+if want_tag dsm; then build_install dsm --with-interrupt=dsm; fi
 if want_tag bse; then build_install bse --with-interrupt=bse; fi
 if want_tag galpy; then build_install galpy --with-external=galpy; fi
 if want_tag bse-galpy; then build_install bse-galpy --with-interrupt=bse --with-external=galpy; fi

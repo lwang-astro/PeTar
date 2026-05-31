@@ -7,6 +7,7 @@
   },
   "global": {
     "optional_select": "mpi,omp,avx512,avx2",
+    "filename_prefix": "data",
     "run_env": {
       "OMP_NUM_THREADS": "1",
       "OMP_STACKSIZE": "128M"
@@ -21,7 +22,7 @@
       "require": "",
       "interrupt_mode": "none",
       "init_args": ["-v", "1.022712165045695"],
-      "run_args": ["-b", "2"],
+      "run_args": ["-b", "4"],
       "process_args": ["-G", "0.00449830997959438"],
       "object_snap_args": []
     },
@@ -30,16 +31,25 @@
       "require": "merger",
       "interrupt_mode": "merger",
       "init_args": ["-s", "merger", "-v", "1.022712165045695"],
-      "run_args": ["-b", "2"],
+      "run_args": ["-b", "4"],
       "process_args": ["-i", "merger", "-G", "0.00449830997959438"],
       "object_snap_args": ["-i", "merger"]
+    },
+    {
+      "name": "dsm",
+      "require": "dsm",
+      "interrupt_mode": "dsm",
+      "init_args": ["-s", "dsm", "--type", "2", "--radius", "4.5092203040509496e-08", "-v", "1.022712165045695"],
+      "run_args": ["-b", "4", "--detect-interrupt", "1", "--dsm-new-star-mode", "0"],
+      "process_args": ["-i", "dsm", "-G", "0.00449830997959438"],
+      "object_snap_args": ["-i", "dsm"]
     },
     {
       "name": "bse",
       "require": "bse",
       "interrupt_mode": "bse",
       "init_args": ["-s", "bse", "-v", "1.022712165045695"],
-      "run_args": ["-b", "2", "--bse-metallicity", "0.02"],
+      "run_args": ["-b", "4"],
       "process_args": ["-i", "bse"],
       "object_snap_args": ["-i", "bse"]
     },
@@ -48,28 +58,30 @@
       "require": "galpy",
       "interrupt_mode": "none",
       "init_args": ["-t", "-c", "8000,0,0,0,220,0", "-v", "1.022712165045695"],
-      "run_args": ["-b", "2", "--galpy-set", "MWPotential2014"],
+      "run_args": ["-b", "4", "--galpy-set", "MWPotential2014"],
       "process_args": ["-t", "galpy", "--r-escape", "tidal", "-G", "0.00449830997959438"],
       "object_snap_args": ["-t", "galpy"]
     },
     {
       "name": "bse-galpy",
       "require": "bse,galpy",
+      "filename_prefix": "out",
       "interrupt_mode": "bse",
       "init_args": ["-s", "bse", "-t", "-c", "8000,0,0,0,220,0", "-v", "1.022712165045695"],
-      "run_args": ["-b", "2", "--bse-metallicity", "0.02", "--galpy-set", "MWPotential2014"],
+      "run_args": ["-b", "4", "--galpy-set", "MWPotential2014"],
       "process_args": ["-i", "bse", "-t", "galpy", "--r-escape", "tidal"],
       "object_snap_args": ["-i", "bse", "-t", "galpy"]
     },
     {
-      "name": "agama",
-      "require": "agama",
-      "interrupt_mode": "none",
+      "name": "bse-agama",
+      "require": "bse,agama",
+      "interrupt_mode": "bse",
       "optional": true,
       "skip_if_unresolved": ["AGAMA_CONF_FILE"],
-      "init_args": ["-t", "-c", "8000,0,0,0,-180,0", "-v", "1.022712165045695"],
-      "run_args": ["-b", "2", "--agama-conf-file", "{AGAMA_CONF_FILE}"],
-      "process_args": ["-t", "agama", "--r-escape", "tidal", "-G", "0.00449830997959438"]
+      "init_args": ["-s", "bse", "-t", "-c", "8000,0,0,0,-180,0", "-v", "1.022712165045695"],
+      "run_args": ["-b", "4", "--agama-conf-file", "{AGAMA_CONF_FILE}"],
+      "process_args": ["-i", "bse", "-t", "agama", "--r-escape", "tidal"],
+      "object_snap_args": ["-i", "bse", "-t", "agama"]
     }
   ]
 }

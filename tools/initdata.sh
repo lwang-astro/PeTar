@@ -20,7 +20,7 @@ do
 	    echo '  -u     Calculate the velocity scaling factor based on the mass and radius scaling, then convert the data unit to (Msun, pc, pc/myr).';
 	    echo '          The input data should use the Henon unit (total mass=1, G=1).';
 	    echo '          The mass and radius scaling can be modified using -m and -r, respectively.';
-	    echo '  -s [S] Add stellar evolution columns: base | bse | dsm | no (default: no)';
+	    echo '  -s [S] Add stellar evolution columns: merger | bse | dsm | no (default: no)';
 	    echo '  -t     Add an external potential column and the position and velocity offsets to all particles in the header line.';
 	    echo '         This is required when the external potential (e.g., Galpy) is enabled (--with-external in configure).';
 		echo '  -S     Add a column to collect the superparticle acceleration from the soft part.';
@@ -171,7 +171,7 @@ if [[ $seflag != 'no' ]]; then
     #       radius,  dm, t_record, t_interrupt
     se_col=$radius', 0,  0,        0,' 
 
-    if [[ $seflag == 'base' || $seflag == 'merger' ]]; then
+    if [[ $seflag == 'merger' ]]; then
 	echo "Interrupt mode: merger"
 	echo "Stellar radius (0): " $radius
 	awk '{OFMT="%.15g"; print '"$base_col$se_col$soft_col"'}' $fout.scale__ >>$fout

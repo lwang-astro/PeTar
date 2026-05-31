@@ -63,6 +63,7 @@
 61. Add TDE treatment from Rastello S. et al. (2026).
 62. Add tmp mode for output data to avoid repeating after restart simulations, no need to use petar.data.gether 
 63. Change interrupt mode 'base' to 'merger' to avoid naming confusion.
+64. Add functional test script to check a star cluster simulations with binaries for different cases, including reading test.
 **Some existing issues include**
 
 2. In cases where a high-eccentric binary system transitions from a binary to a hyperbolic orbit temporarily due to significant perturbations at a large separation, the BSE code may incorrectly identify it as an immediate merger, even though the binary system does not actually merge. It is essential to establish a more precise criterion for invoking binary evolution codes in such scenarios.
