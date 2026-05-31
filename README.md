@@ -79,12 +79,27 @@ Current functional coverage per case includes:
 - Python readback checks of generated files
 - `petar.movie` smoke checks for all cases
 
+DSM behavior in functional tests:
+
+- DSM smoke runs use `--detect-interrupt 1 --dsm-new-star-mode 0` by default for stability.
+- DSM post-run readback includes `data.interrupt` parsing checks.
+
 To make warning exposure deterministic, functional movie checks are run with `--n-cpu 1`.
+
+Warning grading in functional reports:
+
+- Snapshot structure and dtype/alignment mismatches are treated as blocking failures.
+- Common ffmpeg macro-block resize warnings from `petar.movie` are treated as non-blocking warnings and still recorded in reports.
 
 Agama behavior in functional tests:
 
 - If `AGAMA_CONF_FILE` is not set, the runner defaults to `sample/MWPotentialHunter24_rotspiral.ini`.
 - Users can still override this by explicitly setting `AGAMA_CONF_FILE`.
+
+Portability guard for functional tests:
+
+- Required test input files should be repository-tracked files.
+- Generated artifacts under output directories such as `test/functional/out*` are runtime products, not required input assets.
 
 Useful outputs:
 
@@ -96,12 +111,14 @@ Detailed functional design and matrix configuration:
 
 - `test/functional/README.md`
 - `test/functional/functional_matrix.json`
+- `.github/skills/petar-nbody-simulation/SKILL_CONTENT_INDEX.md` (mapping of compact skill coverage to detailed docs)
 
 ### Validation scenarios
 
 Validation scenarios, thresholds, and runner usage are documented in:
 
 - `test/validation/README.md`
+- `.github/skills/petar-nbody-simulation/SKILL_CONTENT_INDEX.md`
 
 Quick help command:
 

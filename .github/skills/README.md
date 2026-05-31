@@ -1,10 +1,28 @@
-请读取 .github/skills/petar-nbody-simulation/HANDOFF-2026-03-27.md，
-并基于 .github/skills/petar-nbody-simulation/SKILL.md 继续维护。
-先执行 assets/update_option_inventory.sh 与 assets/update_script_tool_help.sh，
-然后告诉我当前机器上 solver/helper 划分与下一步建议。
+# Skills Directory Guide
 
-新增内容是“最短恢复提示词”章节，包含：
+This directory stores repository-specific skill definitions, assets, and maintenance notes.
 
-新机器一条消息即可恢复上下文并自动执行基础检查
-指定 kdk/kdkdk4 二进制做 T1 强制对照的模板消息
-如果你需要，我还可以再加一个“英文版最短恢复提示词”小节，便于和国外合作者共享。
+## Primary Entry Points
+
+- `petar-nbody-simulation/SKILL.md`: compact, execution-focused skill rules.
+- `petar-nbody-simulation/SKILL_CONTENT_INDEX.md`: coverage map showing where detailed content lives after skill compaction.
+- `petar-nbody-simulation/HANDOFF.md`: cross-session maintenance and recovery notes.
+
+## Assets (Detailed References)
+
+- `petar-nbody-simulation/assets/option-matrix.md`
+- `petar-nbody-simulation/assets/script-tools.md`
+- `petar-nbody-simulation/assets/minimal-question-sets.md`
+- `petar-nbody-simulation/assets/input-source-workflows.md`
+- `petar-nbody-simulation/assets/default-postprocessing.md`
+- `petar-nbody-simulation/assets/prompt-starters.md`
+
+## Maintenance Scripts
+
+- `petar-nbody-simulation/assets/update_option_inventory.sh`
+- `petar-nbody-simulation/assets/update_script_tool_help.sh`
+- `petar-nbody-simulation/assets/check_skill_consistency.sh`
+
+## Maintenance Rule
+
+When compacting or reorganizing `SKILL.md`, update `SKILL_CONTENT_INDEX.md` in the same change so deleted detail remains traceable.

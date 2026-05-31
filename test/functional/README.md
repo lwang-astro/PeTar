@@ -15,6 +15,10 @@ Goals:
 
 Use this layer first, then run T1-T4.
 
+If you need to trace where compact `SKILL.md` content moved, see:
+
+- `.github/skills/petar-nbody-simulation/SKILL_CONTENT_INDEX.md`
+
 ## Case Matrix
 
 Case definitions are stored in [test/functional/functional_matrix.json](test/functional/functional_matrix.json).
