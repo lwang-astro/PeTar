@@ -108,8 +108,8 @@ python3 test/validation/run_validation.py \
 
 ## 3) Outputs
 
-- Run logs: `test/validation/out/<scenario_name>/*.log`
-- Final report: `test/validation/out/report.json`
+- Run logs: `test/out/validation_<scenario_name>/*.log`
+- Final report: `test/out/report.json`
 
 The report includes:
 
@@ -133,8 +133,8 @@ Generate T1 HTML report (after running T1 scenario):
 
 ```bash
 python3 test/validation/t1_kdkdk4_report.py \
-  --report test/validation/out/report.t1.json \
-  --output test/validation/out/t1_kdkdk4_report.html
+  --report test/out/report.t1.json \
+  --output test/out/t1_kdkdk4_report.html
 ```
 
 One-command T1 pipeline (64b + non64b + merged summary HTML):
@@ -147,16 +147,16 @@ test/validation/t1_kdkdk4_pipeline.sh \
 
 This generates:
 
-- `test/validation/out/report.t1.64b.overlay.json`
-- `test/validation/out/report.t1.non64b.overlay.json`
-- `test/validation/out/t1_kdkdk4_summary.html`
+- `test/out/report.t1.64b.overlay.json`
+- `test/out/report.t1.non64b.overlay.json`
+- `test/out/t1_kdkdk4_summary.html`
 
 Generate T2 HTML report (after running T2 scenario):
 
 ```bash
 python3 test/validation/t2_binary_conservation_report.py \
-  --report test/validation/out/report.t2.binary.json \
-  --output test/validation/out/t2_binary_conservation_summary.html
+  --report test/out/report.t2.binary.json \
+  --output test/out/t2_binary_conservation_summary.html
 ```
 
 One-command T2 pipeline (non64b long-term binary run + HTML):
@@ -168,15 +168,15 @@ test/validation/t2_binary_pipeline.sh \
 
 This generates:
 
-- `test/validation/out/report.t2.binary.json`
-- `test/validation/out/t2_binary_conservation_summary.html`
+- `test/out/report.t2.binary.json`
+- `test/out/t2_binary_conservation_summary.html`
 
 Generate T3 HTML report (after running T3 scenario):
 
 ```bash
 python3 test/validation/t3_binary_hard_switch_report.py \
-  --report test/validation/out/report.t3.binary.json \
-  --output test/validation/out/t3_binary_hard_switch_summary.html
+  --report test/out/report.t3.binary.json \
+  --output test/out/t3_binary_hard_switch_summary.html
 ```
 
 One-command T3 pipeline (non64b long-term three-regime run + HTML):
@@ -188,15 +188,15 @@ test/validation/t3_binary_pipeline.sh \
 
 This generates:
 
-- `test/validation/out/report.t3.binary.json`
-- `test/validation/out/t3_binary_hard_switch_summary.html`
+- `test/out/report.t3.binary.json`
+- `test/out/t3_binary_hard_switch_summary.html`
 
 Generate T4 HTML report (after running T4 scenario):
 
 ```bash
 python3 test/validation/t4_triple_mode_report.py \
-  --report test/validation/out/report.t4.triple.json \
-  --output test/validation/out/t4_triple_mode_summary.html
+  --report test/out/report.t4.triple.json \
+  --output test/out/t4_triple_mode_summary.html
 ```
 
 One-command T4 pipeline (five-mode triple comparison + tidal tensor activation checks + HTML):
@@ -208,8 +208,8 @@ test/validation/t4_triple_pipeline.sh \
 
 This generates:
 
-- `test/validation/out/report.t4.triple.json`
-- `test/validation/out/t4_triple_mode_summary.html`
+- `test/out/report.t4.triple.json`
+- `test/out/t4_triple_mode_summary.html`
 
 ## 4) Next extension targets
 

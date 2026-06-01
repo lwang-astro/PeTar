@@ -92,9 +92,9 @@ Set `AGAMA_CONF_FILE` explicitly only when you want to override that default.
 
 ## Outputs
 
-- Global report: [test/functional/out/report.functional.json](test/functional/out/report.functional.json)
-- Build log: [test/functional/out/build.log](test/functional/out/build.log)
-- Per-case log: [test/functional/out/<case>/run.log](test/functional/out)
+- Global report: [test/out/report.functional.json](test/out/report.functional.json)
+- Build log: [test/out/build.log](test/out/build.log)
+- Per-case log: [test/out/functional\_\<case\>/run.log](test/out/)
 
 ## Suggested Next Iterations
 

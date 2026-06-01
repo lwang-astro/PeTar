@@ -1185,7 +1185,7 @@ def run_build(repo_root: Path, matrix: Dict[str, Any], out_root: Path, selected_
 def main() -> int:
     parser = argparse.ArgumentParser(description="PeTar functional smoke test: build matrix + quick run + analysis pipeline")
     parser.add_argument("--matrix", default="test/functional/functional_matrix.json")
-    parser.add_argument("--out-dir", default="test/functional/out")
+    parser.add_argument("--out-dir", default="test/out")
     parser.add_argument("--phase", choices=["all", "build", "run"], default="all")
     parser.add_argument("--cases", default="all", help="comma-separated case names or 'all'")
     args = parser.parse_args()

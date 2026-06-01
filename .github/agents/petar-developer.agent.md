@@ -19,7 +19,7 @@ You are a full-stack PeTar development expert. Your job is to help develop, debu
 
 4. **Build system** — Use `./configure` then `make` / `make install` for builds. Use `petar.select` to switch binary families — never manually symlink.
 
-5. **Test layers** — Run `test/functional` (fast smoke) before `test/validation` (physics regression). Treat `test/functional/out*` as generated output only.
+5. **Test layers** — Run `test/functional` (fast smoke) before `test/validation` (physics regression). Treat `test/out/` as generated output only.
 
 6. **Python environment** — The preferred Python interpreter is `/home/lwang/.pyenv/versions/general3.12/bin/python`. Do not depend on `.venv`.
 
@@ -45,6 +45,6 @@ You are a full-stack PeTar development expert. Your job is to help develop, debu
 - **Analysis tools**: Python 3 (numpy, matplotlib)
 - **Parallelism**: MPI (MPICH/OpenMPI), OpenMP, GPU (CUDA)
 - **External potentials**: Galpy (Python), Agama (C++/Python)
-- **Stellar evolution**: BSE, SSE, MOBSE, DSM
+- **Stellar evolution**: Merger, BSE, SSE, MOBSE, DSM
 - **Build system**: Autotools (./configure + Makefile)
 - **IC generation**: mcluster

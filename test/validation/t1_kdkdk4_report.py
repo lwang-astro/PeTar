@@ -313,14 +313,14 @@ def svg_multi_plot(series_map: Dict[str, List[Point]], title: str, x_label: str,
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate T1 KDKDK4 HTML report")
-    parser.add_argument("--report", default="test/validation/out/report.t1.json")
+    parser.add_argument("--report", default="test/out/report.t1.json")
     parser.add_argument("--primary-tag", default="primary")
     parser.add_argument("--compare-report", default="")
     parser.add_argument("--compare-tag", default="compare")
     parser.add_argument("--scenario", default="t1_high_ecc_changeover")
     parser.add_argument("--scenario-file", default="")
     parser.add_argument("--ic", default="test/validation/work/t1/input.base")
-    parser.add_argument("--output", default="test/validation/out/t1_kdkdk4_report.html")
+    parser.add_argument("--output", default="test/out/t1_kdkdk4_report.html")
     args = parser.parse_args()
 
     report = load_json(Path(args.report))

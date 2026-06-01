@@ -26,12 +26,11 @@ GPATH
 GRTAGS
 GTAGS
 
-# validation generated artifacts
+# test generated artifacts
+test/out/
 test/validation/work/
-test/validation/out/
 test/validation/__pycache__/
 test/functional/__pycache__/
-test/functional/out/
 tools/analysis/__pycache__/
 
 # generated option snapshots for skill assets

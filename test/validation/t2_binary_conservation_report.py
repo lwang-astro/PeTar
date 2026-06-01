@@ -320,11 +320,11 @@ def scenario_file_from_name(scenario: str) -> Path:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate T2 long-term binary conservation HTML report")
-    parser.add_argument("--report", default="test/validation/out/report.t2.binary.json")
+    parser.add_argument("--report", default="test/out/report.t2.binary.json")
     parser.add_argument("--scenario", default="t2_binary_conservation_longterm")
     parser.add_argument("--scenario-file", default="")
     parser.add_argument("--ic", default="test/validation/work/t2/input.base")
-    parser.add_argument("--output", default="test/validation/out/t2_binary_conservation_report.html")
+    parser.add_argument("--output", default="test/out/t2_binary_conservation_report.html")
     args = parser.parse_args()
 
     report = load_json(Path(args.report))

@@ -5,9 +5,9 @@ ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 SCENARIO="test/validation/scenarios/t4_tree_hard_from_triple.json"
-REPORT="test/validation/out/report.t4.triple.json"
-OUTDIR="test/validation/out_t4_triple"
-FINAL_HTML="test/validation/out/t4_triple_mode_summary.html"
+REPORT="test/out/report.t4.triple.json"
+OUTDIR="test/out/validation_t4_triple"
+FINAL_HTML="test/out/t4_triple_mode_summary.html"
 
 BIN_NON64="${1:-petar}"
 

@@ -537,11 +537,11 @@ def build_orbit_figure_section(title_prefix: str, figure_offset: int, series: Di
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate T4 triple mode comparison HTML report")
-    parser.add_argument("--report", default="test/validation/out/report.t4.triple.json")
+    parser.add_argument("--report", default="test/out/report.t4.triple.json")
     parser.add_argument("--report-control", default="", help="Optional control-group report (e.g. outer a=1.5)")
     parser.add_argument("--scenario", default="t4_tree_hard_from_triple")
     parser.add_argument("--scenario-file", default="")
-    parser.add_argument("--output", default="test/validation/out/t4_triple_mode_summary.html")
+    parser.add_argument("--output", default="test/out/t4_triple_mode_summary.html")
     args = parser.parse_args()
 
     report = load_json(Path(args.report))

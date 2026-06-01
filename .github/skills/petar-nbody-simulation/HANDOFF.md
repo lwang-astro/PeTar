@@ -223,10 +223,10 @@ make skill-check
 - Dry-run（T1-T4）通过：
 	- `python3 test/validation/run_validation.py --dry-run`
 - 实跑通过：
-	- `test/validation/out/report.t1.json`
-	- `test/validation/out/report.t2.json`
-	- `test/validation/out/report.t3.json`
-	- `test/validation/out/report.t4.json`
+	- `test/out/report.t1.json`
+	- `test/out/report.t2.json`
+	- `test/out/report.t3.json`
+	- `test/out/report.t4.json`
 
 关键实现说明：
 
@@ -249,8 +249,8 @@ python3 -m py_compile test/validation/run_validation.py test/validation/make_ic.
 python3 test/validation/run_validation.py --dry-run
 
 # 3) 轻量 smoke
-python3 test/validation/run_validation.py --scenario test/validation/scenarios/t2_hermite_sdar_switch.json --report test/validation/out/report.t2.json
-python3 test/validation/run_validation.py --scenario test/validation/scenarios/t3_hierarchical_triple.json --report test/validation/out/report.t3.json
+python3 test/validation/run_validation.py --scenario test/validation/scenarios/t2_hermite_sdar_switch.json --report test/out/report.t2.json
+python3 test/validation/run_validation.py --scenario test/validation/scenarios/t3_hierarchical_triple.json --report test/out/report.t3.json
 
 # 4) 全量
 python3 test/validation/run_validation.py
@@ -291,7 +291,7 @@ python3 test/validation/run_validation.py \
 先执行：
 1) python3 -m py_compile test/validation/run_validation.py test/validation/make_ic.py test/validation/metrics.py
 2) python3 test/validation/run_validation.py --dry-run
-3) python3 test/validation/run_validation.py --scenario test/validation/scenarios/t2_hermite_sdar_switch.json --report test/validation/out/report.t2.json
+3) python3 test/validation/run_validation.py --scenario test/validation/scenarios/t2_hermite_sdar_switch.json --report test/out/report.t2.json
 然后汇报当前机器可用的 petar 二进制家族，并继续实现下一步：blogh A/B 占位场景。
 ```
 
@@ -317,7 +317,7 @@ python3 test/validation/run_validation.py \
 	--var petar_bin_order2=<kdk_binary> \
 	--var petar_bin_order4=<kdkdk4_binary> \
 	--var petar_bin_switch=<switch_test_binary> \
-	--report test/validation/out/report.t1.json
+	--report test/out/report.t1.json
 最后输出：
 1) 实际使用的 order2/order4/switch 二进制名
 2) report.t1.json 的 PASS/FAIL 摘要
@@ -331,7 +331,7 @@ Please read .github/skills/petar-nbody-simulation/HANDOFF.md and continue from t
 Run the following first:
 1) python3 -m py_compile test/validation/run_validation.py test/validation/make_ic.py test/validation/metrics.py
 2) python3 test/validation/run_validation.py --dry-run
-3) python3 test/validation/run_validation.py --scenario test/validation/scenarios/t2_hermite_sdar_switch.json --report test/validation/out/report.t2.json
+3) python3 test/validation/run_validation.py --scenario test/validation/scenarios/t2_hermite_sdar_switch.json --report test/out/report.t2.json
 Then summarize the available petar binary families on this machine and continue with the next planned task.
 ```
 
@@ -346,7 +346,7 @@ python3 test/validation/run_validation.py \
 	--var petar_bin_order2=<kdk_binary> \
 	--var petar_bin_order4=<kdkdk4_binary> \
 	--var petar_bin_switch=<switch_test_binary> \
-	--report test/validation/out/report.t1.json
+	--report test/out/report.t1.json
 If kdkdk4 is unavailable, you may temporarily fall back to a kdkdk binary, but you must state the comparability risk explicitly.
 Finally report:
 1) the actual order2/order4/switch binaries used

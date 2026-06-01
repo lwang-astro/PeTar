@@ -69,7 +69,7 @@ Recommended order:
 Entry point:
 
 ```bash
-python3 test/functional/run_functional_smoke.py --phase run --out-dir test/functional/out
+python3 test/functional/run_functional_smoke.py --phase run --out-dir test/out
 ```
 
 Current functional coverage per case includes:
@@ -99,13 +99,13 @@ Agama behavior in functional tests:
 Portability guard for functional tests:
 
 - Required test input files should be repository-tracked files.
-- Generated artifacts under output directories such as `test/functional/out*` are runtime products, not required input assets.
+- Generated artifacts under output directories such as `test/out/` are runtime products, not required input assets.
 
 Useful outputs:
 
-- `test/functional/out/report.functional.json`
-- `test/functional/out/report.functional.html`
-- `test/functional/out/functional_<case>/run.log`
+- `test/out/report.functional.json`
+- `test/out/report.functional.html`
+- `test/out/functional_<case>/run.log`
 
 Detailed functional design and matrix configuration:
 

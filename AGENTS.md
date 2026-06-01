@@ -23,7 +23,7 @@ This file is the root entry point for agents working in this repository. Keep it
 
 - Prefer repository-relative tracked files as inputs.
 - Do not depend on untracked local files for committed test logic.
-- Treat `test/functional/out*` as generated output only.
+- Treat `test/out/` as generated output only.
 - Use `petar.select` before generating any run command that depends on a specific binary family.
 - Validate custom options against the selected binary help output before using them.
 - Keep restart/resume workflows separate from fresh IC generation.

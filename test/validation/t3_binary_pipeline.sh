@@ -5,9 +5,9 @@ ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 SCENARIO="test/validation/scenarios/t3_binary_hard_switch_longterm.json"
-REPORT="test/validation/out/report.t3.binary.json"
-OUTDIR="test/validation/out_t3_binary"
-FINAL_HTML="test/validation/out/t3_binary_hard_switch_summary.html"
+REPORT="test/out/report.t3.binary.json"
+OUTDIR="test/out/validation_t3_binary"
+FINAL_HTML="test/out/t3_binary_hard_switch_summary.html"
 
 BIN_NON64="${1:-/home/lwang/bin/petar.mpi.omp.avx2.kdkdk4}"
 

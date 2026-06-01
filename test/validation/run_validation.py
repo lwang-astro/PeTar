@@ -437,7 +437,7 @@ def execute_scenario(
     if not workdir.is_absolute():
         workdir = (base_dir / workdir).resolve()
 
-    scenario_out = out_dir / scenario_name
+    scenario_out = out_dir / f"validation_{scenario_name}"
     scenario_out.mkdir(parents=True, exist_ok=True)
 
     setup_cmds = scenario.get("setup_commands", [])
@@ -640,10 +640,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="PeTar validation runner (minimal framework)")
     parser.add_argument("--scenario", action="append", help="Scenario JSON path (can be repeated)")
     parser.add_argument("--scenario-dir", default="test/validation/scenarios", help="Default scenario directory")
-    parser.add_argument("--out-dir", default="test/validation/out", help="Output directory")
+    parser.add_argument("--out-dir", default="test/out", help="Output directory")
     parser.add_argument("--var", action="append", default=[], help="Template variables key=value")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without running")
-    parser.add_argument("--report", default="test/validation/out/report.json", help="Report JSON path")
+    parser.add_argument("--report", default="test/out/report.json", help="Report JSON path")
     parser.add_argument("--criteria", default="test/validation/criteria.json", help="Criteria JSON path")
     args = parser.parse_args()
 

@@ -330,11 +330,11 @@ def classify_group(r_group: float, peri: float, apo: float) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate T3 binary hard-switching HTML report")
-    parser.add_argument("--report", default="test/validation/out/report.t3.binary.json")
+    parser.add_argument("--report", default="test/out/report.t3.binary.json")
     parser.add_argument("--scenario", default="t3_binary_hard_switch_longterm")
     parser.add_argument("--scenario-file", default="")
     parser.add_argument("--ic", default="test/validation/work/t3/input.base")
-    parser.add_argument("--output", default="test/validation/out/t3_binary_hard_switch_summary.html")
+    parser.add_argument("--output", default="test/out/t3_binary_hard_switch_summary.html")
     args = parser.parse_args()
 
     report = load_json(Path(args.report))
