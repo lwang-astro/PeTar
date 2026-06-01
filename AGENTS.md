@@ -35,6 +35,10 @@ This file is the root entry point for agents working in this repository. Keep it
 - Use `test/validation` for physics-oriented scenarios and regression thresholds.
 - Keep functional smoke defaults documented in [README.md](README.md) and [test/functional/README.md](test/functional/README.md) rather than duplicating them here.
 
+## Custom Agents
+
+- [PeTar Developer](.github/agents/petar-developer.agent.md): Full-stack PeTar development agent. Use for C++ core development, build system changes, physics modules, Python analysis tools, test creation, interface integration, and documentation maintenance.
+
 ## If You Need More Detail
 
 - Scenario and command templates: [README.md](README.md)

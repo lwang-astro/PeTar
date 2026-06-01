@@ -1,4 +1,0 @@
-dump_wrong_tt3rd:  when 3rd tt is used, the c.m. velocity has drifted. The additional kinetic energy correction is needed to keep Hard part energy conserve (2020-12-30; external-mode=galpy; with-interrupt=bse; par_version:1)
-*dump_double_merge: when double merge happen in a triple AR group, the energy conservation broken, may due to some energy correction problem, not solved yet (2020-12-30; external-mode=galpy; with-interrupt=bse; par_version:1)
-*dump_lagre_step_triple_ce: a common envelope binary inside a triple, AR steps become very small, calling frequency of BSE is limited to one period does not help (2021-1-26; external-mode=galpy; with-interrupt=bse; par_version:1)
-*dump_negative_step: after stellar evolution, a triple system form with negative step whatever ds is (2021-5-4; external-mode=galy; with-interrupt=bse; par_version:1)
