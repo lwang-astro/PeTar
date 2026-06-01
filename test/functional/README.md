@@ -90,6 +90,32 @@ Set `AGAMA_CONF_FILE` explicitly only when you want to override that default.
    - `petar.format.transfer.post`
 5. Expected output artifacts exist (snapshot file, `data.lagr`, object extraction file).
 
+## Runtime Behavior Notes
+
+### DSM mode
+
+- DSM smoke runs use `--detect-interrupt 1 --dsm-new-star-mode 0` by default for stability.
+- DSM post-run readback includes `data.interrupt` parsing checks.
+
+### Movie checks
+
+To make warning exposure deterministic, functional movie checks are run with `--n-cpu 1`.
+
+### Warning grading in reports
+
+- Snapshot structure and dtype/alignment mismatches are treated as blocking failures.
+- Common ffmpeg macro-block resize warnings from `petar.movie` are treated as non-blocking warnings and still recorded in reports.
+
+### Agama behavior
+
+- If `AGAMA_CONF_FILE` is not set, the runner defaults to `sample/MWPotentialHunter24_rotspiral.ini`.
+- Users can override this by explicitly setting `AGAMA_CONF_FILE`.
+
+### Portability guard
+
+- Required test input files should be repository-tracked files.
+- Generated artifacts under output directories such as `test/out/` are runtime products, not required input assets.
+
 ## Outputs
 
 - Global report: [test/out/report.functional.json](test/out/report.functional.json)
