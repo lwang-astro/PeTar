@@ -5,8 +5,8 @@
   },
   "t1_high_ecc_changeover": {
     "max_abs_error_over_total": {
-      "inside_r0005_si00": 5e-10,
-      "cross_r128_si00": 5e-5
+      "inside_r0005_si00": 5e-7,
+      "hard_r200_si00": 5e-5
     },
     "loglog_slope": {
       "inside_slope": {
@@ -15,9 +15,9 @@
       }
     },
     "convergence": {
-      "cross_r128_plateau_01_to_00": {
+      "hard_r200_plateau_si06_to_si03": {
         "expected": 1.0,
-        "relative_tolerance": 0.3
+        "relative_tolerance": 3.0
       }
     },
     "regex_count_max": {

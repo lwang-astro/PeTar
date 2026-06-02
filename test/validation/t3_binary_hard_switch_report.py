@@ -256,8 +256,7 @@ def resolve_status_path(run_record: Dict) -> Path:
     cmd = run_record["command"]
     args_map = parse_command_args(cmd)
     prefix = args_map.get("-f", run_record["run_id"])
-    log_path = Path(run_record["output"])
-    return log_path.parent / ".." / ".." / "work" / "t3" / f"{prefix}.status"
+    return Path("test/out/work/t3") / f"{prefix}.status"
 
 
 def extract_binary_from_command(command: str) -> str:
@@ -316,6 +315,33 @@ def derive_orbital_drift(status_path: Path) -> Dict[str, object]:
     }
 
 
+def _detect_petar() -> str:
+    """Auto-detect the active petar binary via petar.select or command -v."""
+    import shutil, subprocess as _sp
+    sel = shutil.which("petar.select")
+    if sel:
+        r = _sp.run([sel, "--optional", "avx2,omp"], capture_output=True, text=True)
+        if r.returncode == 0:
+            return shutil.which("petar") or "petar"
+    return shutil.which("petar") or "petar"
+
+
+def _run_scenario(scenario_file: str, report_path: str, out_dir: str, petar_bin: str) -> None:
+    """Invoke run_validation.py for a single scenario."""
+    import subprocess as _sp
+    cmd = [
+        sys.executable, "test/validation/run_validation.py",
+        "--scenario", scenario_file,
+        "--out-dir", out_dir,
+        "--report", report_path,
+        "--var", f"petar_bin_switch={petar_bin}",
+    ]
+    print(f"[T3] Running: {' '.join(cmd)}")
+    r = _sp.run(cmd, check=True)
+    if r.returncode != 0:
+        raise RuntimeError(f"run_validation.py failed with code {r.returncode}")
+
+
 def scenario_file_from_name(scenario: str) -> Path:
     return Path("test/validation/scenarios") / f"{scenario}.json"
 
@@ -329,13 +355,22 @@ def classify_group(r_group: float, peri: float, apo: float) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate T3 binary hard-switching HTML report")
+    parser = argparse.ArgumentParser(description="T3 binary hard-switching: run + HTML report")
+    parser.add_argument("--run", action="store_true", help="Run the scenario before generating the report")
     parser.add_argument("--report", default="test/out/report.t3.binary.json")
     parser.add_argument("--scenario", default="t3_binary_hard_switch_longterm")
     parser.add_argument("--scenario-file", default="")
-    parser.add_argument("--ic", default="test/validation/work/t3/input.base")
+    parser.add_argument("--out-dir", default="test/out/validation_t3_binary", help="Output directory for run logs")
+    parser.add_argument("--petar", default="", help="Petar binary (auto-detected if empty)")
+    parser.add_argument("--ic", default="test/out/work/t3/input.base")
     parser.add_argument("--output", default="test/out/t3_binary_hard_switch_summary.html")
     args = parser.parse_args()
+
+    # --run: execute the scenario via run_validation.py
+    if args.run:
+        petar = args.petar or _detect_petar()
+        sfile = args.scenario_file or str(scenario_file_from_name(args.scenario))
+        _run_scenario(sfile, args.report, args.out_dir, petar)
 
     report = load_json(Path(args.report))
     scenario_path = Path(args.scenario_file) if args.scenario_file else scenario_file_from_name(args.scenario)
@@ -411,8 +446,36 @@ def main() -> int:
         for r in rows
     )
 
+    check_descriptions = {
+        "semi_drift_order_outside_to_inside": (
+            "max |Δa/a0| across the three r_group regimes (outside_apo → between → inside_peri). "
+            "Should be nondecreasing: smaller r_group → tighter SDAR clustering → lower semi-major-axis drift."
+        ),
+        "ecc_drift_order_outside_to_inside": (
+            "max |Δe| across the three r_group regimes. "
+            "Should be nondecreasing: smaller r_group gives better eccentricity conservation."
+        ),
+        "sum_period_error_order_outside_to_inside": (
+            "Sum of per-period |Error/Total| maxima over 100 periods across the three regimes. "
+            "Should be nondecreasing: smaller r_group → better energy conservation."
+        ),
+        "outside_apo_no_large_step_warning": (
+            "Count of 'Large step' warnings in outside_apo regime. Should be zero."
+        ),
+        "between_peri_apo_no_large_step_warning": (
+            "Count of 'Large step' warnings in between_peri_apo regime. Should be zero."
+        ),
+        "inside_peri_no_large_step_warning": (
+            "Count of 'Large step' warnings in inside_peri regime. Should be zero."
+        ),
+    }
+
     checks_html = "\n".join(
-        f"<li><b>{html_escape(c['check'])}</b>: {'PASS' if c.get('passed') else 'FAIL'} - {html_escape(c.get('message', ''))}</li>"
+        "<li><b>{name}</b>: {status} — {msg}<br><i>{desc}</i></li>".format(
+            name=html_escape(c['check']),
+            status='<span style=\"color:#2e7d32\">PASS</span>' if c.get('passed') else '<span style=\"color:#d81b60\">FAIL</span>',
+            msg=html_escape(c.get('message', '')),
+            desc=html_escape(check_descriptions.get(c['check'], '')))
         for c in checks
     )
 

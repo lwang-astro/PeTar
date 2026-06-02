@@ -178,7 +178,7 @@ is_interrupt_feature_token() {
 is_require_only_feature_token() {
 	local token="$1"
 	case "$token" in
-		base|merger|bse|mobse|bseEmp|dsm|galpy|agama|gasdrag|mp)
+		base|merger|bse|mobse|bseEmp|dsm|galpy|agama|gasdrag|64b|gpu|mp|mpfrc)
 			return 0
 			;;
 		pn*)

@@ -3,9 +3,9 @@
   "description": "Long-term binary conservation test (>=100 periods): dt_soft sweep with auto changeover radii, focusing on semi/ecc conservation without assuming dt_soft scaling.",
   "workdir": "{repo_root}",
   "setup_commands": [
-    "mkdir -p test/validation/work/t2",
-    "python3 test/validation/make_ic.py --case t2 --output test/validation/work/t2/input.base",
-    "cd test/validation/work/t2 && petar.init -f input input.base"
+    "mkdir -p test/out/work/t2",
+    "python3 test/validation/make_ic.py --case t2 --output test/out/work/t2/input.base",
+    "cd test/out/work/t2 && petar.init -f input input.base"
   ],
   "extract": {
     "period": 0.028256534656,
@@ -20,27 +20,27 @@
   "runs": [
     {
       "id": "dt12",
-      "command": "cd test/validation/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-4 --r-search-group 1e-3 -u 1 -b 1 -t 3.2 -s 2.44140625e-4 -o 4.8828125e-4 -w 2 -f t2_dt12 input",
+      "command": "cd test/out/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-4 --r-search-group 1e-3 -u 1 -b 1 -t 3.2 -s 2.44140625e-4 -o 4.8828125e-4 -w 2 -f t2_dt12 input",
       "output": "dt12.log"
     },
     {
       "id": "dt11",
-      "command": "cd test/validation/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-4 --r-search-group 1e-3 -u 1 -b 1 -t 3.2 -s 4.8828125e-4 -o 9.765625e-4 -w 2 -f t2_dt11 input",
+      "command": "cd test/out/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-4 --r-search-group 1e-3 -u 1 -b 1 -t 3.2 -s 4.8828125e-4 -o 9.765625e-4 -w 2 -f t2_dt11 input",
       "output": "dt11.log"
     },
     {
       "id": "dt10",
-      "command": "cd test/validation/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-4 --r-search-group 1e-3 -u 1 -b 1 -t 3.2 -s 9.765625e-4 -o 1.953125e-3 -w 2 -f t2_dt10 input",
+      "command": "cd test/out/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-4 --r-search-group 1e-3 -u 1 -b 1 -t 3.2 -s 9.765625e-4 -o 1.953125e-3 -w 2 -f t2_dt10 input",
       "output": "dt10.log"
     },
     {
       "id": "dt9",
-      "command": "cd test/validation/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-4 --r-search-group 1e-3 -u 1 -b 1 -t 3.2 -s 1.953125e-3 -o 3.90625e-3 -w 2 -f t2_dt9 input",
+      "command": "cd test/out/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-4 --r-search-group 1e-3 -u 1 -b 1 -t 3.2 -s 1.953125e-3 -o 3.90625e-3 -w 2 -f t2_dt9 input",
       "output": "dt9.log"
     },
     {
       "id": "dt8",
-      "command": "cd test/validation/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-4 --r-search-group 1e-3 -u 1 -b 1 -t 3.2 -s 3.90625e-3 -o 7.8125e-3 -w 2 -f t2_dt8 input",
+      "command": "cd test/out/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-4 --r-search-group 1e-3 -u 1 -b 1 -t 3.2 -s 3.90625e-3 -o 7.8125e-3 -w 2 -f t2_dt8 input",
       "output": "dt8.log"
     }
   ],

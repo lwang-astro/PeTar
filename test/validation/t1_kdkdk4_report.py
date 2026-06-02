@@ -2,7 +2,9 @@
 import argparse
 import json
 import math
+import os
 import re
+import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -311,17 +313,68 @@ def svg_multi_plot(series_map: Dict[str, List[Point]], title: str, x_label: str,
 """
 
 
+def _detect_or_build_petar(require_64b: bool) -> str:
+    """Select (and if needed build) a petar binary with the right 64b settings via petar.select."""
+    import shutil, subprocess as _sp
+    sel = shutil.which("petar.select")
+    if not sel:
+        return shutil.which("petar") or "petar"
+
+    args = ["--require", "64b", "--optional", "avx2,omp"] if require_64b else ["--optional", "avx2,omp"]
+    r = _sp.run([sel] + args, capture_output=True, text=True)
+    if r.returncode == 0:
+        return shutil.which("petar") or "petar"
+
+    # Not found – build it
+    print(f"[T1] {'64b' if require_64b else 'non64b'} KDKDK4 binary not found. Building...")
+    config_flags = "--enable-64b" if require_64b else ""
+    _sp.run(f"./configure {config_flags}", shell=True, check=True, capture_output=True)
+    _sp.run(f"make -j{os.cpu_count() or 4}", shell=True, check=True, capture_output=True)
+    _sp.run("make install", shell=True, check=True, capture_output=True)
+    _sp.run([sel] + args, check=True, capture_output=True)
+    return shutil.which("petar") or "petar"
+
+
+def _run_t1_scenario(scenario_file: str, report_path: str, out_dir: str, petar_bin: str) -> None:
+    """Invoke run_validation.py for T1 with a specific binary."""
+    import subprocess as _sp
+    cmd = [
+        sys.executable, "test/validation/run_validation.py",
+        "--scenario", scenario_file,
+        "--out-dir", out_dir,
+        "--report", report_path,
+        "--var", f"petar_bin_order4={petar_bin}",
+    ]
+    print(f"[T1] Running: {' '.join(cmd)}")
+    r = _sp.run(cmd, check=False)
+    if r.returncode != 0:
+        print(f"[T1] Warning: run_validation.py returned {r.returncode}", file=sys.stderr)
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate T1 KDKDK4 HTML report")
-    parser.add_argument("--report", default="test/out/report.t1.json")
-    parser.add_argument("--primary-tag", default="primary")
+    parser = argparse.ArgumentParser(description="T1 KDKDK4 changeover: 64b+non64b run + merged HTML report")
+    parser.add_argument("--run", action="store_true", help="Run both 64b and non64b scenarios before generating report")
+    parser.add_argument("--report", default="test/out/report.t1.64b.overlay.json")
+    parser.add_argument("--primary-tag", default="64b")
     parser.add_argument("--compare-report", default="")
-    parser.add_argument("--compare-tag", default="compare")
+    parser.add_argument("--compare-tag", default="non64b")
     parser.add_argument("--scenario", default="t1_high_ecc_changeover")
     parser.add_argument("--scenario-file", default="")
-    parser.add_argument("--ic", default="test/validation/work/t1/input.base")
-    parser.add_argument("--output", default="test/out/t1_kdkdk4_report.html")
+    parser.add_argument("--out-dir-64b", default="test/out/validation_t1_kdkdk4_64b")
+    parser.add_argument("--out-dir-non64b", default="test/out/validation_t1_kdkdk4_non64b")
+    parser.add_argument("--ic", default="test/out/work/t1/input.base")
+    parser.add_argument("--output", default="test/out/t1_kdkdk4_summary.html")
     args = parser.parse_args()
+
+    if args.run:
+        sfile = args.scenario_file or str(scenario_file_from_name(args.scenario))
+        petar_64 = _detect_or_build_petar(True)
+        petar_non64 = _detect_or_build_petar(False)
+        _run_t1_scenario(sfile, args.report, args.out_dir_64b, petar_64)
+        _run_t1_scenario(sfile, args.compare_report or "test/out/report.t1.non64b.overlay.json",
+                         args.out_dir_non64b, petar_non64)
+        if not args.compare_report:
+            args.compare_report = "test/out/report.t1.non64b.overlay.json"
 
     report = load_json(Path(args.report))
     scenario_path = Path(args.scenario_file) if args.scenario_file else scenario_file_from_name(args.scenario)
@@ -343,6 +396,8 @@ def main() -> int:
     def classify_regime(rout: float, rin: float, peri: float, apo: float) -> str:
         if rout < peri:
             return "inside"
+        if rin > apo:
+            return "hard"
         if rin < peri < rout:
             return "peri-between"
         if peri < rin < apo and apo < rout:
@@ -444,8 +499,39 @@ def main() -> int:
             f"{label} | full={full_slope:.2f}, fine={fine_slope:.2f}, coarse={coarse_slope:.2f}"
         ] = points
 
+    check_descriptions = {
+        "inside_energy_bound_fine": (
+            "Maximum |Error/Total| at finest dt_soft in inside (tree-only) regime. "
+            "Verifies that KDKDK4 tree integration does not produce abnormally large errors."
+        ),
+        "inside_loglog_slope": (
+            "Log-log slope of |Error/Total| vs dt_soft in inside regime. "
+            "Expect ~4 for KDKDK4 4th-order tree integration (64b only; non64b has round-off plateau)."
+        ),
+        "hard_r200_energy_bound_fine": (
+            "Maximum |Error/Total| at finest dt_soft in hard (Hermite-only, r_in > r_apo) regime. "
+            "Verifies that Hermite integration stays within reasonable error bounds."
+        ),
+        "hard_r200_plateau_si06_to_si04": (
+            "Convergence ratio between coarse (si06) and fine (si04) dt in hard regime. "
+            "Tests the adaptive-timestep plateau: error should grow much slower than dt^4, indicating Hermite self-regulates timestep."
+        ),
+        "inside_no_hard_energy_alarm": (
+            "Count of 'Hard energy significant' warnings in inside regime. "
+            "Should be zero — tree-only integration should not trigger hard-energy alarms."
+        ),
+        "hard_r200_no_hard_energy_alarm": (
+            "Count of 'Hard energy significant' warnings in hard regime. "
+            "Should be zero — pure Hermite integration should be stable."
+        ),
+    }
+
     checks_html = "\n".join(
-        f"<li><b>{html_escape(c['check'])}</b>: {'PASS' if c.get('passed') else 'FAIL'} - {html_escape(c.get('message', ''))}</li>"
+        "<li><b>{name}</b>: {status} — {msg}<br><i>{desc}</i></li>".format(
+            name=html_escape(c['check']),
+            status='<span style=\"color:#2e7d32\">PASS</span>' if c.get('passed') else '<span style=\"color:#d81b60\">FAIL</span>',
+            msg=html_escape(c.get('message', '')),
+            desc=html_escape(check_descriptions.get(c['check'], '')))
         for c in checks
     )
 
@@ -514,11 +600,25 @@ code{{white-space:pre-wrap;word-break:break-all;}}
 </style></head><body>
 <h1>T1: KDKDK4 Changeover Validation Report</h1>
 <div class=\"note\">
-This report uses exact T1 parameters extracted from the notebook: m1=1 Msun, m2=10 Msun, semi=0.1 pc, e=0.9, initialized at apocenter, with dt_soft = 2^[-13,-6], and representative rout values from the original sweep.<br/>
-Goal 1: When rout &lt; binary pericenter (peri), evaluate particle-tree error-order behavior under KDKDK4.<br/>
-Goal 2: Add an intermediate group with rin &lt; peri &lt; rout and test whether its error level lies between inside and wide-crossing.<br/>
-Goal 3: When the binary crosses the changeover shell with peri &lt; rin, expect coarse dt_soft to show plateau-like behavior and fine dt_soft to recover near 4th-order dependence.
-</div>
+<b>Goal:</b> Test how a high-eccentricity binary behaves under different PeTar integration regimes — pure particle-tree (KDKDK4 4th-order), pure Hermite (4th-order adaptive), and soft+hard crossing — by varying the changeover radius r<sub>out</sub>. Compare double-precision (64b) vs default-precision (non64b) tree forces.<br/><br/>
+
+<h3>Test Design</h3>
+<b>Binary IC:</b> m1=1&#8239;M<sub>&sun;</sub>, m2=10&#8239;M<sub>&sun;</sub>, semi=0.1&#8239;pc, e=0.9, start at apocenter (&approx;0.19&#8239;pc).<br/>
+One orbital period &approx;0.0283&#8239;Myr. Pericenter r<sub>peri</sub>=0.01&#8239;pc, apocenter r<sub>apo</sub>=0.19&#8239;pc.<br/>
+<b>dt<sub>soft</sub> sweep:</b> 2<sup>&minus;13</sup> to 2<sup>&minus;6</sup>, sample the error-scaling curve.<br/>
+<br/>
+<b>r<sub>out</sub> regimes &amp; why each value is chosen:</b>
+<table>
+<tr><th>r<sub>out</sub></th><th>r<sub>in</sub>(=0.1&times;r<sub>out</sub>)</th><th>regime</th><th>purpose</th></tr>
+<tr><td>0.005</td><td>0.0005</td><td>inside (r<sub>out</sub>&lt;r<sub>peri</sub>)</td><td>All forces in particle-tree. Expect &asymp;4th-order KDKDK4 error slope.</td></tr>
+<tr><td>0.05</td><td>0.005</td><td>peri-between (r<sub>in</sub>&lt;r<sub>peri</sub>&lt;r<sub>out</sub>)</td><td>Pericenter lies in the changeover shell; probes the handover from tree to hard.</td></tr>
+<tr><td>0.32</td><td>0.032</td><td>crossing (r<sub>peri</sub>&lt;r<sub>in</sub>&lt;r<sub>apo</sub>&lt;r<sub>out</sub>)</td><td>Narrow crossing: binary just fits inside changeover. Coarse dt tends to plateau.</td></tr>
+<tr><td>2.0</td><td>0.2</td><td>hard (r<sub>in</sub>&gt;r<sub>apo</sub>)</td><td>All forces in Hermite hard region. Coarse dt plateau (adaptive timestep); fine dt returns to 4th order.</td></tr>
+</table>
+<i>r<sub>out</sub>=0.32 (crossing) shows mixed soft+hard behavior. r<sub>out</sub>=2.0 (hard) shows Hermite plateau at coarse dt.</i><br/>
+<br/>
+<b>64b vs non64b comparison:</b> The 64b build uses double-precision tree forces (<code>--enable-64b</code>). The non64b build uses default precision. Crossing-regime errors (tree-dominated) are dominated by round-off and should differ; inside-regime errors (hard-dominated) may be similar.<br/>
+<b>Line styles:</b> solid = 64b, dashed = non64b. Same <code>r<sub>out</sub></code> = same color.</div>
 
 <h2>Figure 1: Overall Error vs Step Size</h2>
 {svg_multi_plot(annotated_all_series, 'T1 representative runs: dt_soft vs max error within one binary period', 'dt_soft', 'max |Error/Total|', logx=True, logy=True)}

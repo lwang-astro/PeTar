@@ -636,8 +636,112 @@ def execute_scenario(
     return run_results, check_results
 
 
+def _detect_petar_binary() -> str:
+    """Try to auto-detect the active petar binary, preferring KDKDK4 variants."""
+    import shutil
+    # 1) if petar.select is available, try to get a KDKDK4 binary
+    sel = shutil.which("petar.select")
+    if sel is not None:
+        import subprocess as _sp
+        try:
+            result = _sp.run(
+                [sel, "--require", "kdkdk4", "--optional", "mpi,omp,avx2"],
+                capture_output=True, text=True, timeout=10,
+            )
+            if result.returncode == 0:
+                line = result.stdout.strip().split("\n")[0]
+                if line:
+                    path = shutil.which(line.split()[0] if " " not in line else line)
+                    if path:
+                        return path
+        except Exception:
+            pass
+    # 2) check the current petar symlink
+    petar_path = shutil.which("petar")
+    if petar_path is not None:
+        resolved = Path(petar_path).resolve()
+        parent = resolved.parent
+        stem = resolved.name
+        # try kdkdk4 suffix variants
+        for suffix in ["kdkdk4", "64b.kdkdk4"]:
+            candidate = parent / f"{stem}.{suffix}"
+            if candidate.exists():
+                return str(candidate)
+        # try sibling kdkdk4 binaries with similar prefix
+        for suffix in ["kdkdk4", "64b.kdkdk4"]:
+            for candidate in sorted(parent.glob(f"petar.*.{suffix}")):
+                return str(candidate)
+        return petar_path
+    # 3) fallback: check bin/ relative to repo root
+    candidates = [
+        Path(__file__).resolve().parents[2] / "bin" / "petar",
+    ]
+    for c in candidates:
+        if c.exists():
+            return str(c)
+    return "petar"
+
+
+def _validate_variables(variables: Dict[str, str], scenario: Dict[str, Any]) -> None:
+    """Check that all template variables used in scenario commands are defined.
+
+    Only matches {var} patterns where var contains at least one underscore,
+    to avoid false positives like awk's {print}.
+    """
+    import re as _re
+    # require at least one underscore — real template vars are like {petar_bin_switch}, {repo_root}
+    pattern = _re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*_[a-zA-Z0-9_.]+)}")
+    for run in scenario.get("runs", []):
+        cmd = run.get("command", "")
+        for m in pattern.findall(cmd):
+            if m not in variables:
+                raise ValueError(f"Undefined template variable '{{{m}}}' in run '{run.get('id')}'. "
+                                 f"Use --var {m}=<value> to define it.")
+    for cmd in scenario.get("setup_commands", []):
+        for m in pattern.findall(cmd):
+            if m not in variables:
+                raise ValueError(f"Undefined template variable '{{{m}}}' in setup command. "
+                                 f"Use --var {m}=<value> to define it.")
+
+
+def _select_or_build_petar(require_64b: bool | None = None) -> str:
+    """Use petar.select to pick a binary; build with ./configure if missing.
+    Since 64b is treated as require-only by petar.select, omitting it picks non-64b.
+    """
+    import shutil, subprocess as _sp
+    sel = shutil.which("petar.select")
+    if not sel:
+        return shutil.which("petar") or "petar"
+
+    args = ["--require", "64b", "--optional", "avx2,omp"] if require_64b else ["--optional", "avx2,omp"]
+    r = _sp.run([sel] + args, capture_output=True, text=True)
+    if r.returncode == 0:
+        return shutil.which("petar") or "petar"
+
+    print(f"[pipeline] {'64b ' if require_64b else ''}KDKDK4 binary not found. Building...")
+    config = "--enable-64b" if require_64b else ""
+    _sp.run(f"./configure {config}", shell=True, check=True, capture_output=True)
+    _sp.run(f"make -j{os.cpu_count() or 4}", shell=True, check=True, capture_output=True)
+    _sp.run("make install", shell=True, check=True, capture_output=True)
+    _sp.run([sel] + args, check=True, capture_output=True)
+    return shutil.which("petar") or "petar"
+
+
+def _pipeline(scenario_file: str, report_json: str, out_dir: str, petar_var: str, petar_bin: str) -> int:
+    """Run a single scenario via run_validation.py subprocess."""
+    cmd = [
+        sys.executable, __file__,
+        "--scenario", scenario_file,
+        "--out-dir", out_dir,
+        "--report", report_json,
+        "--var", f"{petar_var}={petar_bin}",
+    ]
+    print(f"[pipeline] {' '.join(cmd)}")
+    return subprocess.run(cmd, check=False).returncode
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="PeTar validation runner (minimal framework)")
+    parser = argparse.ArgumentParser(description="PeTar validation runner")
     parser.add_argument("--scenario", action="append", help="Scenario JSON path (can be repeated)")
     parser.add_argument("--scenario-dir", default="test/validation/scenarios", help="Default scenario directory")
     parser.add_argument("--out-dir", default="test/out", help="Output directory")
@@ -645,7 +749,50 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="Print commands without running")
     parser.add_argument("--report", default="test/out/report.json", help="Report JSON path")
     parser.add_argument("--criteria", default="test/validation/criteria.json", help="Criteria JSON path")
+    parser.add_argument("--continue-on-error", action="store_true",
+                        help="Continue with remaining scenarios/runs even if one fails")
+    parser.add_argument("--pipeline", choices=["t1", "t2", "t3"],
+                        help="Run full pipeline: select/build binary, run scenario, generate HTML report")
     args = parser.parse_args()
+
+    # --pipeline mode: single-test end-to-end with HTML report
+    if args.pipeline == "t1":
+        bin_64 = str(Path(_select_or_build_petar(True)).resolve())
+        bin_non64 = str(Path(_select_or_build_petar(False)).resolve())
+        print(f"[pipeline] 64b: {bin_64}")
+        sfile = "test/validation/scenarios/t1_high_ecc_changeover.json"
+        _pipeline(sfile, "test/out/report.t1.64b.overlay.json", "test/out/validation_t1_kdkdk4_64b", "petar_bin_order4", bin_64)
+        _pipeline(sfile, "test/out/report.t1.non64b.overlay.json", "test/out/validation_t1_kdkdk4_non64b", "petar_bin_order4", bin_non64)
+        subprocess.run([
+            sys.executable, "test/validation/t1_kdkdk4_report.py",
+            "--report", "test/out/report.t1.64b.overlay.json",
+            "--primary-tag", "64b",
+            "--compare-report", "test/out/report.t1.non64b.overlay.json",
+            "--compare-tag", "non64b",
+            "--output", "test/out/t1_kdkdk4_summary.html",
+        ], check=False)
+        return 0
+    if args.pipeline == "t2":
+        bin_pet = _select_or_build_petar()
+        print(f"[pipeline] t2 binary: {bin_pet}")
+        sfile = "test/validation/scenarios/t2_binary_conservation_longterm.json"
+        _pipeline(sfile, "test/out/report.t2.binary.json", "test/out/validation_t2_binary", "petar_bin_switch", bin_pet)
+        subprocess.run([
+            sys.executable, "test/validation/t2_binary_conservation_report.py",
+            "--report", "test/out/report.t2.binary.json",
+            "--output", "test/out/t2_binary_conservation_summary.html",
+        ], check=False)
+        return 0
+    if args.pipeline == "t3":
+        bin_pet = _select_or_build_petar()
+        sfile = "test/validation/scenarios/t3_binary_hard_switch_longterm.json"
+        _pipeline(sfile, "test/out/report.t3.binary.json", "test/out/validation_t3_binary", "petar_bin_switch", bin_pet)
+        subprocess.run([
+            sys.executable, "test/validation/t3_binary_hard_switch_report.py",
+            "--report", "test/out/report.t3.binary.json",
+            "--output", "test/out/t3_binary_hard_switch_summary.html",
+        ], check=False)
+        return 0
 
     repo_root = Path(__file__).resolve().parents[2]
     scenario_dir = (repo_root / args.scenario_dir).resolve()
@@ -658,11 +805,12 @@ def main() -> int:
 
     variables = parse_key_value(args.var)
     variables.setdefault("repo_root", str(repo_root))
-    variables.setdefault("petar_bin_order2", "petar")
-    variables.setdefault("petar_bin_order4", "petar")
-    variables.setdefault("petar_bin_switch", "petar")
-    variables.setdefault("petar_bin_blogh_a", variables.get("petar_bin_switch", "petar"))
-    variables.setdefault("petar_bin_blogh_b", variables.get("petar_bin_switch", "petar"))
+    detected = _detect_petar_binary()
+    variables.setdefault("petar_bin_order2", detected)
+    variables.setdefault("petar_bin_order4", detected)
+    variables.setdefault("petar_bin_switch", detected)
+    variables.setdefault("petar_bin_blogh_a", detected)
+    variables.setdefault("petar_bin_blogh_b", detected)
 
     scenario_paths = []
     if args.scenario:
@@ -683,14 +831,28 @@ def main() -> int:
 
     for spath in scenario_paths:
         scenario = load_json(spath)
-        run_results, check_results = execute_scenario(
-            scenario=scenario,
-            base_dir=repo_root,
-            out_dir=out_dir,
-            variables=variables,
-            criteria=criteria,
-            dry_run=args.dry_run,
-        )
+        if not args.dry_run:
+            _validate_variables(variables, scenario)
+        try:
+            run_results, check_results = execute_scenario(
+                scenario=scenario,
+                base_dir=repo_root,
+                out_dir=out_dir,
+                variables=variables,
+                criteria=criteria,
+                dry_run=args.dry_run,
+            )
+        except (RuntimeError, ValueError) as exc:
+            print(f"[ERROR] Scenario '{scenario.get('name', '?')}' failed: {exc}", file=sys.stderr)
+            if not args.continue_on_error:
+                raise
+            run_results = []
+            check_results = [{
+                "passed": False,
+                "scenario": scenario.get("name", "?"),
+                "check": "scenario_execution",
+                "message": str(exc),
+            }]
 
         for run_item in run_results:
             all_runs.append(

@@ -29,7 +29,13 @@ You are a full-stack PeTar development expert. Your job is to help develop, debu
 2. **Plan the change** — Identify which files need modification across the codebase (src/, tools/, test/, doc/).
 3. **Implement** — Make focused, minimal changes. Follow existing code style (C++ with FDPS/SDAR patterns, Python with numpy/matplotlib conventions).
 4. **Update documentation** — Update SKILL.md, README.md, and test READMEs if the change affects user-facing behavior, CLI options, or test workflows.
-5. **Validate** — Build with `make install`, run relevant functional tests, then run validation tests if applicable.
+5. **Validate immediately after every change** — After every edit to code, scripts, or configuration:
+   - Run the changed tool/script with `--help` or `--dry-run` to confirm it parses and starts without errors.
+   - If the change affects a specific scenario or test, run that scenario only to verify correctness.
+   - Confirm the output (log, report, HTML) exists and contains expected content.
+   - **Do not batch multiple independent changes without validating each step** — fix and verify one thing at a time, then move to the next.
+   - If validation fails, diagnose the root cause and fix before proceeding.
+   - Do not run full test suites or cascade into unrelated tests without user confirmation first.
 
 ## Constraints
 
@@ -38,6 +44,7 @@ You are a full-stack PeTar development expert. Your job is to help develop, debu
 - DO NOT skip documentation updates when changing user-facing interfaces.
 - DO keep restart/resume workflows separate from fresh IC generation workflows.
 - DO validate custom options against the selected binary help output before using them.
+- DO NOT add unnecessary configure flags — the default `./configure` output is the correct baseline. Only add flags explicitly required by the test (e.g., `--enable-64b` for 64b vs non64b comparison). Do not add `--with-*` flags unless the test specifically needs that feature.
 
 ## Domain Knowledge
 
