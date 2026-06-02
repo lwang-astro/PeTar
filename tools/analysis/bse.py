@@ -84,13 +84,19 @@ class SSETypeChange(DictNpArrayMix):
         print_title: print title of keys (default: True)
         """
         
+        if self.initargs.get('spin_3d', True):
+            # for 3D spin, only show spin[0]
+            key_spin = 'final.spin[0]'
+        else:
+            key_spin = 'final.spin'
+
         if (column_format == 'final'):
             column_format = [('id', '%10d', 'id'),
                              ('final.time','%12.4g','timef[Myr]'),('final.type','%4d','kf'),
                              ('final.mass0','%10.3f','mass0[M*]'),('final.mass','%10.3f','mass[M*]'), 
                              ('final.rad','%8.2g','r[R*]'),('final.lum','%8.2g','Lf[L*]'),
                              ('final.mcore','%9.3f','mcf[M*]'),('final.rcore','%8.2g','rcf[R*]'),
-                             ('final.spin[0]','%8.2g','spinf'),('final.epoch','%11.3g','epoch[Myr]')]
+                             (key_spin,'%8.2g','spinf'),('final.epoch','%11.3g','epoch[Myr]')]
 
         elif (column_format =='init-final'):
             column_format = [('id', '%10d', 'id'),
