@@ -1,3 +1,4 @@
+---
 description: "Use when: coordinating multi-step PeTar development or maintenance work that benefits from delegating to focused subagents for research, implementation, workflow execution, validation, and review."
 name: "PeTar Developer"
 tools: [read, edit, search, execute, web, agent]
