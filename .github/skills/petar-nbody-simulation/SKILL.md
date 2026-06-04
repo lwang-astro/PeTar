@@ -15,12 +15,14 @@ This compact version prioritizes execution safety, option correctness, and repro
 - Infer required physics/runtime features first, then switch binary family with `petar.select`.
 - Do not run whatever `petar` currently points to unless selected for this scenario.
 - Ask only for missing required inputs; do not guess mandatory physics parameters.
+- Do not proceed with a run until all scenario-required inputs are present.
 - Before execution, provide parameter summary + exact commands; run only after user confirmation.
 - Default output prefix is `data` when user does not provide one.
 - Default unit mode is `-u 1` when user does not provide one.
 - Enforce unit consistency across IC generation, `petar.init`, runtime options, and post-processing.
 - For stellar evolution requests, require module confirmation: `merger`, `bse`, `bseEmp`, `mobse` (`moBSE`), or `dsm`.
 - For external potential requests, require mode confirmation: `galpy` or `agama`.
+- For star-cluster IC generation, do not proceed until the IC parameter set is complete.
 - For BSE-family runs, metallicity is mandatory.
 - For galactic/external potential runs, potential model and cluster COM phase-space are mandatory.
 - Exclude debug families unless user explicitly asks for debug.
@@ -31,6 +33,7 @@ This compact version prioritizes execution safety, option correctness, and repro
 - Prefer `petar.select` over manual symlink edits.
 - If MPI output must feed downstream post-processing/movie/extraction, run `petar.data.gether` first.
 - Do not use `petar.init` in restart/resume workflows.
+- Do not answer analysis, conversion, movie generation, or restart-cleanup requests only with abstract advice when an installed PeTar tool exists for that task.
 - For post-processing tools, ensure mode flags match producing solver family and snapshot format.
 - For functional smoke automation, required test inputs must be git-tracked; output artifacts are not inputs.
 
@@ -83,6 +86,9 @@ When generator-based star-cluster IC creation is required:
 - If target runtime is `petar -u 1`, convert velocity with:
   - `petar.init -v 1.022712165045695`
 - Prefer normalizing units in `petar.init` unless user explicitly requests a native-unit workflow.
+- For any raw IC source, confirm or infer source mass/length/velocity units before `petar.init`.
+- Recommended path: normalize the IC into the target PeTar unit system during `petar.init` so that, for `petar -u 1`, the final IC is in `Msun`, `pc`, `pc/Myr`.
+- Advanced native-unit paths require a matching `-G` and consistent conversion of all unit-sensitive runtime and post-processing options; do not recommend this path unless the user explicitly asks to preserve native units.
 
 ### Star-Cluster Generation Inputs
 
@@ -93,6 +99,8 @@ If IC must be generated for a star cluster, require:
 3. Density profile model (+ profile parameters if needed).
 4. IMF model.
 5. Binary fraction + distribution model.
+
+Do not continue to command generation until this parameter set is complete.
 
 ## Binary Selection and Capability Validation
 
@@ -108,6 +116,9 @@ If IC must be generated for a star cluster, require:
 3. Keep physics/structure-sensitive tokens in `--require`.
 4. Keep performance tokens in `--optional` (for example `avx512,avx2,omp,mpi`).
 5. If no candidate matches, stop and provide exact reconfigure/build hints.
+
+Physics- or structure-sensitive families should not be treated as ranking-only preferences.
+Use `--require` for interruption modules, external-potential families, `gasdrag`, `pn*`, and `mp`/MPFRC style precision requirements.
 
 ### Option Validation
 
@@ -154,6 +165,7 @@ Use installed tools directly when user intent matches:
 - `petar.external.pot.movie`
 
 Do not give only abstract advice when a matching tool exists.
+If the request is specifically about conversion, extraction, movie generation, restart cleanup, or external-potential maps, prefer the corresponding installed tool command pattern over generic workflow prose.
 
 ## Snapshot Read-Mismatch Policy
 
@@ -200,6 +212,7 @@ Use these as primary references:
 ## Scope Notes
 
 - This skill is intentionally compact.
+- This compact version still keeps the mandatory execution guardrails from earlier long-form versions in `Non-Negotiable Rules` and the most error-prone unit/workflow sections.
 - Use repository docs and sample scripts for long-form explanations and example-heavy guidance.
 - Functional smoke defaults are documented in [README.md](README.md) and [test/functional/README.md](test/functional/README.md).
 - If a required detail is not in this file, query source docs rather than guessing.

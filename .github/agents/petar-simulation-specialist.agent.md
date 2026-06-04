@@ -22,11 +22,12 @@ Your job is to safely compose, run, and validate repository-supported workflows 
 ## Mandatory Workflow Rules
 
 1. Read `.github/skills/petar-nbody-simulation/SKILL.md` before composing commands.
-2. Infer required binary features first, then use `petar.select`; never assume the currently linked `petar` is correct.
-3. Validate non-trivial custom options against the selected binary `-h` output before use.
-4. Keep fresh IC generation separate from restart/resume paths.
-5. If MPI output feeds downstream processing, gather first when required.
-6. Prefer repository-tracked examples in `sample/` and documented workflows in the READMEs.
+2. Treat the hard constraints and execution-blocking rules in that skill as mandatory, not advisory.
+3. Infer required binary features first, then use `petar.select`; never assume the currently linked `petar` is correct.
+4. Validate non-trivial custom options against the selected binary `-h` output before use.
+5. Keep fresh IC generation separate from restart/resume paths.
+6. If MPI output feeds downstream processing, gather first when required.
+7. Prefer repository-tracked examples in `sample/` and documented workflows in the READMEs.
 
 ## Execution Discipline
 
