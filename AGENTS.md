@@ -42,8 +42,7 @@ This file is the root entry point for agents working in this repository. Keep it
 - [PeTar Researcher](.github/agents/petar-researcher.agent.md): Read-heavy investigator for locating owning files, symbols, workflow controls, and required documentation.
 - [PeTar Implementer](.github/agents/petar-implementer.agent.md): Focused editor for C++, Python, build, test, and documentation changes.
 - [PeTar Build and Test Maintainer](.github/agents/petar-build-test-maintainer.agent.md): Configure/build, binary-family selection, smoke harness, and validation entry-point specialist.
-- [PeTar Simulation Operator](.github/agents/petar-simulation-operator.agent.md): End-user simulation assistant for collecting required inputs, composing runnable commands, confirming execution, and guiding post-processing.
-- [PeTar Simulation Specialist](.github/agents/petar-simulation-specialist.agent.md): Execution specialist for `petar.select`, configure/build flows, functional smoke, restarts, post-processing pipelines, and workflow troubleshooting.
+- [PeTar Simulation Engineer](.github/agents/petar-simulation-engineer.agent.md): Unified simulation execution specialist. Handles end-user simulation setup (assist mode) and technical workflow/build/post-processing debugging (debug mode). Replaces Operator and Specialist.
 - [PeTar Validation Analyst](.github/agents/petar-validation-analyst.agent.md): Numerical regression specialist for T1-T3 and scenario-based validation.
 - [PeTar Reviewer](.github/agents/petar-reviewer.agent.md): Review specialist for changed-slice correctness, workflow regressions, and documentation/test gaps.
 - [PeTar Documentation Maintainer](.github/agents/petar-documentation-maintainer.agent.md): README, SKILL, sample-script, and agent-guide synchronization specialist.
@@ -55,8 +54,7 @@ This file is the root entry point for agents working in this repository. Keep it
 - Use [PeTar Researcher](.github/agents/petar-researcher.agent.md) when you first need code ownership or workflow mapping.
 - Use [PeTar Implementer](.github/agents/petar-implementer.agent.md) for focused edits after the target surface is known.
 - Use [PeTar Build and Test Maintainer](.github/agents/petar-build-test-maintainer.agent.md) for `configure`/`make` issues and for choosing or repairing the right automated check.
-- Use [PeTar Simulation Operator](.github/agents/petar-simulation-operator.agent.md) by default when the user wants help running a scientific workflow as an end user rather than developing or debugging PeTar itself.
-- Use [PeTar Simulation Specialist](.github/agents/petar-simulation-specialist.agent.md) when the task is execution-heavy workflow verification, runtime troubleshooting, post-processing debugging, or command-level investigation.
+- Use [PeTar Simulation Engineer](.github/agents/petar-simulation-engineer.agent.md) for all simulation execution tasks — end-user workflow assistance, build/install checks, binary selection, command composition, functional smoke, post-processing, restart debugging, and runtime troubleshooting. It operates in `assist` mode (conversational, confirmation-driven) or `debug` mode (technical, execution-heavy) as appropriate.
 - Use [PeTar Validation Analyst](.github/agents/petar-validation-analyst.agent.md) only when the task depends on numerical behavior or validation thresholds.
 - Use [PeTar Documentation Maintainer](.github/agents/petar-documentation-maintainer.agent.md) when user-facing workflow guidance must change with the implementation.
 - Use [PeTar Reviewer](.github/agents/petar-reviewer.agent.md) before closing non-trivial changes.

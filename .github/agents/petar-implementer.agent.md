@@ -35,7 +35,7 @@ Your job is to make the smallest defensible change that fixes the root cause, th
    - touched test case
    - narrow compile/build check
    - scenario-specific runner
-3. If a change affects simulation workflow rather than pure code structure, coordinate with **PeTar Simulation Specialist** for execution-heavy checks.
+3. If a change affects simulation workflow rather than pure code structure, coordinate with **PeTar Simulation Engineer** for execution-heavy checks.
 4. If a change affects numerical behavior or acceptance thresholds, coordinate with **PeTar Validation Analyst**.
 
 ## Output

@@ -24,7 +24,7 @@ Your job is to keep build, install, binary selection, smoke tests, and validatio
 2. Use `petar.select` before reasoning about solver availability.
 3. Choose the narrowest executable check that can falsify the current hypothesis.
 4. Keep generated artifacts under existing output directories; do not invent tracked fixtures unless necessary.
-5. If the issue is really about runtime workflow semantics, hand off to **PeTar Simulation Specialist**.
+5. If the issue is really about runtime workflow semantics, hand off to **PeTar Simulation Engineer**.
 6. If the issue is really about code ownership or source edits, hand off to **PeTar Researcher** or **PeTar Implementer**.
 
 ## Output

@@ -18,8 +18,7 @@ Delegate to these agents whenever their scope matches the task:
 2. **PeTar Researcher** — read-heavy codebase and workflow investigation.
 3. **PeTar Implementer** — focused source, script, build, and test edits.
 4. **PeTar Build and Test Maintainer** — configure/build issues, binary-family selection, smoke and validation harness work.
-5. **PeTar Simulation Operator** — end-user simulation setup, required-input collection, runnable commands, and confirmation-driven execution.
-6. **PeTar Simulation Specialist** — run commands, functional smoke, and post-processing workflow checks.
+5. **PeTar Simulation Engineer** — unified simulation execution: build/install checks, binary selection, command composition, end-user simulation assistance, functional smoke, post-processing, restart debugging, and runtime troubleshooting. Operates in `assist` mode (conversational) or `debug` mode (technical) as appropriate.
 7. **PeTar Validation Analyst** — T1-T3 style numerical and scenario validation.
 8. **PeTar Reviewer** — changed-slice review, regression risk analysis, and documentation/test gap checks.
 9. **PeTar Documentation Maintainer** — README, SKILL, sample, and agent-guide synchronization.
@@ -31,8 +30,7 @@ Delegate to these agents whenever their scope matches the task:
    - Use **PeTar Researcher** first when the task spans multiple subsystems or more than a few files.
    - Use **PeTar Implementer** for concrete code changes.
    - Use **PeTar Build and Test Maintainer** for `configure`, `make`, `make install`, binary availability, smoke harness, and validation entry-point questions.
-   - Use **PeTar Simulation Operator** by default when the user wants help running a scientific workflow as an end user rather than developing or debugging PeTar.
-   - Use **PeTar Simulation Specialist** when the task is execution-heavy workflow verification, runtime troubleshooting, post-processing debugging, or command-level investigation rather than end-user run assistance.
+   - Use **PeTar Simulation Engineer** for all simulation execution tasks — the agent auto-selects `assist` mode (end-user, conversational) or `debug` mode (technical, execution-heavy) based on the user's intent.
    - Use **PeTar Validation Analyst** when correctness depends on scenario metrics or T1-T3 style comparisons.
    - Use **PeTar Documentation Maintainer** when workflow semantics or user-facing guidance change.
    - Use **PeTar Reviewer** after non-trivial edits before declaring the task complete.
@@ -62,7 +60,7 @@ Delegate to these agents whenever their scope matches the task:
 3. If scope is unclear at a local code level, delegate a narrow investigation to **PeTar Researcher**.
 4. If changes are required, delegate the implementation slice to **PeTar Implementer**.
 5. Route build/test harness questions to **PeTar Build and Test Maintainer**.
-6. Route end-user simulation assistance to **PeTar Simulation Operator** by default, and use **PeTar Simulation Specialist** only when the task is execution-heavy troubleshooting or workflow verification.
+6. Route all simulation execution to **PeTar Simulation Engineer**. The agent auto-selects between `assist` mode (end-user, conversational) and `debug` mode (technical, execution-heavy) based on the user's intent.
 7. Route numerical or scenario-regression checks to **PeTar Validation Analyst** when correctness depends on validation behavior.
 8. Delegate doc synchronization to **PeTar Documentation Maintainer** when needed.
 9. Delegate final changed-slice review to **PeTar Reviewer** when the change is substantial.
