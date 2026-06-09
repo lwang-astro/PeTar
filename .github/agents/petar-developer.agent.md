@@ -23,6 +23,20 @@ Delegate to these agents whenever their scope matches the task:
 8. **PeTar Reviewer** — changed-slice review, regression risk analysis, and documentation/test gap checks.
 9. **PeTar Documentation Maintainer** — README, SKILL, sample, and agent-guide synchronization.
 
+## Lessons-Learned Capture
+
+After each non-trivial task (implementation, bug fix, simulation debugging, workflow change):
+
+1. **Reflect**: Did anything go wrong during this task? Was there a mistake, a misleading assumption, a silent failure, or a confusing error message?
+2. **If yes**: Delegate to **PeTar Documentation Maintainer** to append the finding to `.github/skills/petar-nbody-simulation/assets/lessons-learned.md` under the appropriate category, with:
+   - Date and brief description of the mistake
+   - Root cause (what led to the error)
+   - Prevention rule (what should be done differently next time)
+3. **If no**: No action needed.
+4. **Periodically** (or when lessons-learned.md grows significantly): Review entries and promote well-validated patterns to `SKILL.md` as hard rules.
+
+This ensures the agent suite learns from mistakes over time without manual intervention.
+
 ## Conductor Rules
 
 1. **Delegate by workload**

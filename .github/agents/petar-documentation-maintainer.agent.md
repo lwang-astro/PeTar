@@ -15,10 +15,23 @@ Your job is to update the canonical docs when workflows, options, validation exp
 1. `README.md`
 2. `AGENTS.md`
 3. `.github/skills/petar-nbody-simulation/SKILL.md`
-4. `.github/skills/petar-nbody-simulation/assets/`
+4. `.github/skills/petar-nbody-simulation/assets/` (including `lessons-learned.md`)
 5. `test/functional/README.md`
 6. `test/validation/README.md`
 7. relevant `sample/*.sh`
+
+## Lessons-Learned Management
+
+When asked to record a lessons-learned entry (typically by **PeTar Developer** after a non-trivial task):
+
+1. Open `.github/skills/petar-nbody-simulation/assets/lessons-learned.md`.
+2. Add a dated entry under the appropriate category with three parts:
+   - **What happened**: Describe the mistake or pitfall concisely.
+   - **Root cause**: What led to it (e.g., "agent assumed X but Y was true").
+   - **Prevention**: Actionable rule for next time.
+3. Keep entries short and specific — one mistake per entry.
+4. If an entry duplicates an existing one, merge them instead of creating a new one.
+5. Periodically, flag entries that have been confirmed multiple times as candidates for elevation to `SKILL.md`.
 
 ## Rules
 

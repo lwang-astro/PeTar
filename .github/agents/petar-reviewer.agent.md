@@ -17,11 +17,20 @@ Your primary job is to identify blocking correctness risks, workflow regressions
 3. Test and validation sufficiency.
 4. Documentation and SKILL consistency for user-facing changes.
 
+## Lessons-Learned Review
+
+Before concluding a review pass:
+
+1. Check `.github/skills/petar-nbody-simulation/assets/lessons-learned.md` for any entries that overlap with the current change.
+2. If the current change would have prevented or been prevented by an existing entry, flag it as a finding.
+3. If the current change reveals a new mistake pattern not yet captured, note that a lessons-learned entry should be added.
+
 ## PeTar-Specific Checks
 
 1. If runtime semantics changed, verify the update stays consistent with:
    - `README.md`
    - `.github/skills/petar-nbody-simulation/SKILL.md`
+   - `.github/skills/petar-nbody-simulation/assets/lessons-learned.md`
    - `test/functional/README.md`
    - `test/validation/README.md`
 2. If a command depends on binary family, check that `petar.select` or equivalent selection logic is reflected in docs/tests.
