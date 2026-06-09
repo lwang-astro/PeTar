@@ -15,9 +15,10 @@ These tools are installed from `install_script_tool` in `Makefile.in` and are pa
 
 ## Output management and restart support
 
-- `petar.data.gether`
-  Gather MPI outputs, split SSE/BSE event files, and generate snapshot lists.
-  Do not add `-g` by default; use `petar.data.gether -g <prefix>` only when merged group files are explicitly requested, because group outputs may be large.
+- `petar.data.gether` (legacy)
+  Legacy tool for consolidating per-rank MPI output files and splitting mixed stellar-evolution event files from old runs.
+  Current PeTar (with the tmp file mechanism) automatically generates `data.snap.lst` and committed shared output files — no gathering step is needed for current runs.
+  Only use this tool for old simulation runs that lack `snap.lst`.
 
 - `petar.data.clear`
   Remove events after a specified time before restarting from an intermediate snapshot.

@@ -26,7 +26,9 @@
 - `.github/skills/petar-nbody-simulation/SKILL.md`
 
 能力资产文件：
-- `.github/skills/petar-nbody-simulation/assets/option-matrix.md`
+- `.github/skills/petar-nbody-simulation/assets/option-matrix.md` (machine-specific binary snapshot)
+- `.github/skills/petar-nbody-simulation/assets/option-reference.md` (source-generated complete catalog)
+- `.github/skills/petar-nbody-simulation/assets/option-list.txt` (flat option name list)
 - `.github/skills/petar-nbody-simulation/assets/script-tools.md`
 - `.github/skills/petar-nbody-simulation/assets/binary-scenario-map.md`
 - `.github/skills/petar-nbody-simulation/assets/minimal-question-sets.md`

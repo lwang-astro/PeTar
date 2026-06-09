@@ -26,6 +26,7 @@ Your job is to make the smallest defensible change that fixes the root cause, th
 4. If user-facing commands, workflow semantics, or examples change, update the relevant docs in the same change.
 5. When touching runtime or post-processing tools, keep mode flags and producing solver family consistent.
 6. When touching build/configure logic, preserve the default configure baseline unless the task explicitly requires extra flags.
+7. When modifying any header file that contains `IOParams` option declarations (`src/petar.hpp`, `src/hard.hpp`, `bse-interface/*.h`, `galpy-interface/*.h`, `agama-interface/*.h`, `src/disk_star_merger.hpp`, `src/gas_drag.hpp`, `src/external_hard.hpp`, `parallel-random/rand_io.hpp`), run `.github/skills/petar-nbody-simulation/assets/generate_option_reference.py` afterward to keep `option-reference.md` synchronized.
 
 ## Validation Rules
 

@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ---------------------------------------------------------------------------
+# Machine-specific binary option inventory.
+#
+# This script scans PATH for installed PeTar binaries and runs <binary> -h
+# on each to produce a snapshot of the currently installed binary families
+# and their options. This is a MACHINE-SPECIFIC snapshot.
+#
+# For the complete theoretical option space across all configure variants,
+# use generate_option_reference.py instead, which parses source headers
+# without requiring any binary installation.
+#
+# See also: option-reference.md  (source-generated, complete)
+#           option-matrix.md     (this script's output, machine snapshot)
+# ---------------------------------------------------------------------------
+
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ASSET_DIR="$ROOT_DIR/assets"
 

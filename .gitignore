@@ -15,13 +15,31 @@ build/*
 bin/*
 include/*
 
+# tmp src
+src/tmp/*
+src/get_version.hpp
+bse-interface/tmp/*
+bse-interface/bse/tmp/*
+bse-interface/mobse/tmp/*
+bse-interface/bseEmp/tmp/*
+mobse-interface/tmp/*
+parallel-random/tmp/*
+galpy-interface/tmp/*
+tools/analysis/tmp/*
+sample/tmp/*
+
+.vscode/settings.json
 config.log
 config.status
 Makefile
 bse-interface/Makefile
 bse-interface/petar.bse
-mobse-interface/Makefile
-mobse-interface/petar.mobse
+bse-interface/petar.bseEmp
+bse-interface/petar.mobse
+bse-interface/petar.get.init.binary.bse
+galpy-interface/petar.galpy
+galpy-interface/petar.galpy.help
+parallel-random/test_rand*
 GPATH
 GRTAGS
 GTAGS
@@ -32,6 +50,7 @@ test/validation/work/
 test/validation/__pycache__/
 test/functional/__pycache__/
 tools/analysis/__pycache__/
+tools/__pycache__/
 
 # generated option snapshots for skill assets
 .github/skills/petar-nbody-simulation/assets/*.options.txt
