@@ -38,6 +38,21 @@ This compact version prioritizes execution safety, option correctness, and repro
 - For functional smoke automation, required test inputs must be git-tracked; output artifacts are not inputs.
 - When modifying source headers that define CLI options (`src/petar.hpp`, `src/hard.hpp`, `bse-interface/*.h`, `galpy-interface/*.h`, `agama-interface/*.h`, `src/disk_star_merger.hpp`, `src/gas_drag.hpp`, `src/external_hard.hpp`, `parallel-random/rand_io.hpp`), remind the user to re-run `.github/skills/petar-nbody-simulation/assets/generate_option_reference.py` so that `option-reference.md` stays synchronized.
 
+### Environment requirements
+
+- Before any PeTar launch, require `export OMP_STACKSIZE=128M` (and `ulimit -s unlimited` on Linux). Missing this causes segfault on large simulations.
+- For MPI+OpenMP launches, recommend `--bind-to none` to prevent processes being restricted to a single core.
+- For MPI launches in UCX environments, require `export UCX_VFS_ENABLE=n` to avoid a known UCX segfault.
+- When `./configure` runs on a cluster login node, warn that auto-detected SIMD capabilities may differ from compute nodes; suggest verifying with `--enable-avx2` / `--enable-avx512` flags.
+
+### bseEmp-specific
+
+- `bseEmp` requires manually linking `ffbonn` or `ffgeneva` metal-poor track directories before first use. Without this, the binary crashes at initialization with a file-not-found error. Ask the user to set up these links before composing a bseEmp run command.
+
+### Coordinate origin
+
+- Warn when the density center is far from `(0,0,0)` or includes very distant particles — this can trigger `n_jp<=pg.NJMAX` assertion failures due to tree cell resolution limits.
+
 ## Required Input Checklist
 
 Collect the minimum required fields before composing run commands.
@@ -45,7 +60,7 @@ Collect the minimum required fields before composing run commands.
 ### Common
 
 1. Working directory.
-2. Scenario: isolated | BSE/SSE | DSM | Galpy | Agama | restart.
+2. Scenario: isolated | BSE/SSE | DSM | Galpy | Agama | restart | standalone-bse.
 3. End time `-t`.
 4. Output interval `-o`.
 5. Launch mode: serial | OpenMP | MPI+OpenMP | GPU.
@@ -62,6 +77,7 @@ Collect the minimum required fields before composing run commands.
 - Galpy:
   - one of `--galpy-set` / `--galpy-conf-file` / `--galpy-type-arg`
   - optional `--galpy-rscale`, `--galpy-vscale`
+  - note: PeTar only supports Galpy ≤ 1.10.2
 - Agama:
   - `--agama-conf-file`
   - optional `--agama-rscale`, `--agama-vscale`
@@ -69,6 +85,10 @@ Collect the minimum required fields before composing run commands.
   - restart snapshot
   - parameter file (`-p`, default `data.par` if appropriate)
   - append/overwrite behavior (`-a 1`/`-a 0`)
+- standalone-bse:
+  - use `petar.bse` (or `petar.mobse`, `petar.bseEmp`) binary directly, not the N-body solver
+  - no IC generation or `petar.init` needed
+  - see `README.md` for usage
 
 ## IC and Unit Rules
 
@@ -102,6 +122,16 @@ If IC must be generated for a star cluster, require:
 5. Binary fraction + distribution model.
 
 Do not continue to command generation until this parameter set is complete.
+
+## Timestep Tuning with petar.find.dt
+
+`petar.find.dt` searches for a suitable tree time step for a given snapshot and launch configuration:
+
+1. Run the solver for a short test duration with data output every step.
+2. Run `petar.find.dt` on the output snapshots to get a recommended `-s` value.
+3. Restart the simulation with the recommended time step.
+
+This is especially useful for simulations where the automatic time step estimate is suboptimal.
 
 ## Binary Selection and Capability Validation
 
@@ -164,120 +194,71 @@ Use installed tools directly when user intent matches:
 - `petar.galev.process`
 - `petar.data.gether` — legacy; for old MPI runs without automatic `snap.lst`
 - `petar.external.pot.movie`
+- `petar.galpy.pot.movie`
+
+### Other tools
+
+- `petar.update.par` — migrate legacy `.par` files from old PeTar versions
+- `petar.find.dt` — search for suitable tree time step (see `Timestep Tuning` section)
+- `petar.galpy.help` — query Galpy potential families and argument/config help
+- `petar.external.galpy` / `petar.external.agama` — generate external potential map snapshots from run parameter files for visualization workflows
 
 Do not give only abstract advice when a matching tool exists.
 If the request is specifically about conversion, extraction, movie generation, restart cleanup, or external-potential maps, prefer the corresponding installed tool command pattern over generic workflow prose.
 
 ## petar.movie Usage
 
-`petar.movie` generates movies from simulation snapshots. It reads a snapshot list file that is automatically generated at runtime as `data.snap.lst` (with the default prefix `data`). No separate gathering step is needed for current PeTar runs.
+`petar.movie` generates movies from `data.snap.lst` (auto-generated at runtime). Mode-consistency flags must match the producing solver family, or snapshot read errors will occur (see `Snapshot Read-Mismatch Policy`).
 
-### Input file
-
-`data.snap.lst` is created during simulation runtime and can be used directly by `petar.movie` and `petar.data.process`. For legacy runs without this file, use `ls | egrep '^data.[0-9]+$' | sort -n -k 1.6 > snap.lst` or `petar.data.gether` as a fallback.
-
-### Common Scenarios
-
-#### 1. Particle position distribution in x-y plane
-
-```bash
-petar.movie -m x-y -R 10 -o particle_movie.mp4 data.snap.lst
-```
-
-#### 2. HR diagram alone
-
-```bash
-petar.movie -H -o hr_movie.mp4 data.snap.lst
-```
-
-#### 3. Combined: particle + HR + semi-ecc diagram for BSE simulations
-
-```bash
-petar.movie -m x-y -R 10 -H -b -i bse -s npy -o combined.mp4 data.snap.lst
-```
-
-#### 4. Lagrangian radii evolution
-
-Requires `data.lagr` from `petar.data.process --calc-lagrangian`:
-
-```bash
-petar.movie -L data.lagr -o lagr_movie.mp4 data.snap.lst
-```
-
-### Mode-consistency flags
-
-These must match the producing solver family:
+### Required mode flags
 
 | Flag | Value | When |
 |------|-------|------|
 | `-i` | `none`, `merger`, `base`, `bse`, `mobse` | Match solver interrupt mode |
 | `-t` | `none`, `galpy`, `agama` | Match solver external mode |
-| `-s` | `ascii`, `binary`, `npy` | `npy` when snapshots are from `petar.data.process`; `binary` when directly from solver output |
-| `--snapshot-type` | `origin`, `post` | `post` for `petar.data.process` output (single/binary files); `origin` for raw solver output |
-| `-G` | float | Gravitational constant; default 0.00449830997959438 (Msun, pc, Myr); use 1.0 for Henon units |
+| `-s` | `ascii`, `binary`, `npy` | `npy` for `petar.data.process` output; `binary` for raw solver output |
+| `--snapshot-type` | `origin`, `post` | `post` for processed snapshots; `origin` for raw solver output |
+| `-G` | float | Gravitational constant; 0.00449830997959438 for Msun/pc/Myr; 1.0 for Henon |
 
-### Comparison mode
-
-Compare multiple simulations side-by-side by preparing a model list file and using `-l`:
+### Quick examples
 
 ```bash
-petar.movie -m x-y -l models.lst -o comparison.mp4 snapshots.lst
+# Particle distribution
+petar.movie -m x-y -R 10 data.snap.lst
+
+# HR diagram
+petar.movie -H data.snap.lst
+
+# Combined panels for BSE simulation
+petar.movie -m x-y -R 10 -H -b -i bse -s npy data.snap.lst
 ```
 
-### Overlay external potential map
-
-Combine with `petar.external.pot.movie` output or overlay directly:
-
-```bash
-petar.movie -m x-y -R 20 --ext-pot -o with_pot.mp4 data.snap.lst
-```
-
-### Snapshot format matching for movie
+### Snapshot format matching
 
 - Raw solver output (`data.*`): use `-s binary --snapshot-type origin`
 - Post-processed output (`data.*.single`, `data.*.binary`): use `-s npy --snapshot-type post`
 
-Mismatched flags cause snapshot read errors; see `Snapshot Read-Mismatch Policy`.
+Mismatched flags cause snapshot read errors (see `Snapshot Read-Mismatch Policy`). For full flag reference and comparison-mode usage, see `README.md`.
 
 ## Python Data Analysis Tools
 
-PeTar provides a Python analysis library at `tools/analysis/`, importable as `import petar` after installation. This is the primary interface for custom data analysis beyond what `petar.data.process` and `petar.movie` provide.
+PeTar installs a Python analysis library (`import petar`) at `tools/analysis/`. The primary reference is `sample/data_analysis.ipynb`.
 
-### Import Pattern
+### Quick start
 
 ```python
 import petar
-import numpy as np
-import matplotlib.pyplot as plt
-```
 
-Reference: `sample/data_analysis.ipynb`
-
-### Core Classes
-
-#### PeTarDataHeader — read snapshot header
-
-```python
-header = petar.PeTarDataHeader("data.1")
-print(header.time, header.n, header.file_id)
-```
-
-For snapshots with external potential offsets (Galpy/Agama), pass `external_mode`:
-
-```python
-header = petar.PeTarDataHeader("data.1", external_mode="galpy")
-# header.pos_offset, header.vel_offset are now populated
-```
-
-#### Particle — read snapshot particle data
-
-The `Particle` class inherits from `HardParticle` → `BaseParticle` → `SimpleParticle`. The exact columns depend on compile-time configuration, controlled by keyword arguments:
-
-```python
-# Pure gravity
-particle = petar.Particle()
+header = petar.PeTarDataHeader("data.1")        # read snapshot header
+particle = petar.Particle()                      # read particles
 particle.fromfile("data.1", offset=petar.HEADER_OFFSET)
+```
 
+### Mode-specific reading (required for correctness)
+
+The `Particle` columns depend on the solver's compile-time configuration. Pass matching keyword arguments:
+
+```python
 # BSE simulation
 particle = petar.Particle(interrupt_mode="bse")
 particle.fromfile("data.1", offset=petar.HEADER_OFFSET)
@@ -287,81 +268,32 @@ particle = petar.Particle(external_mode="galpy")
 particle.fromfile("data.1", offset=petar.HEADER_OFFSET)
 ```
 
-**Key keyword arguments for `Particle.__init__`:**
+**Key keyword arguments for `Particle()`:**
 
 | Argument | Values | Purpose |
 |----------|--------|---------|
-| `interrupt_mode` | `none`, `merger`, `base`, `bse`, `mobse`, `dsm` | Controls stellar evolution columns |
-| `external_mode` | `none`, `galpy`, `agama` | Controls external potential column |
-| `use_mpfrc` | bool | High-precision position parts |
-| `collect_sp_acc` | bool | Superparticle acceleration column |
+| `interrupt_mode` | `none`, `merger`, `base`, `bse`, `mobse`, `dsm` | Must match solver `--with-interrupt` |
+| `external_mode` | `none`, `galpy`, `agama` | Must match solver `--with-external` |
 
-**Common particle members** (vary by mode):
-- `mass`, `pos`, `vel` — inherited from SimpleParticle
-- `binary_state` — interruption state flag
-- `radius`, `dm`, `star` — when interrupt_mode is set
-- `r_search`, `id` — from HardParticle
-- `acc_soft`, `pot`, `pot_soft` — from Particle
-- `pot_ext` — when external_mode is not `none`
+Mismatched keyword arguments cause column misalignment and read errors (see `Snapshot Read-Mismatch Policy`).
 
-#### Binary — read binary/triple systems
-
-After `petar.data.process` generates `data.*.binary` files:
-
-```python
-binary = petar.Binary()
-binary.fromfile("data.1.binary")
-
-# Access members: binary.semi, binary.ecc, binary.mass, binary.pos, binary.vel
-# binary.p1, binary.p2 are the two component particles
-```
-
-#### PeTarData — load full processed snapshot
-
-```python
-data = petar.PeTarData("data.1", interrupt_mode="bse")
-# data.single  — single star Particle data
-# data.binary  — Binary data
-# data.header  — PeTarDataHeader
-```
-
-### Snapshot offset constants
-
-Use the correct header offset for the particle data:
-
-| Constant | Value | When |
-|----------|-------|------|
-| `petar.HEADER_OFFSET` | 24 | Default binary format |
-| `petar.HEADER_OFFSET_F128` | 32 | Float128 build |
-| `petar.HEADER_OFFSET_WITH_CM` | 72 | With center-of-mass in header |
-| `petar.HEADER_OFFSET_WITH_CM_F128` | 128 | Float128 + CM in header |
-
-### Analysis Modules
-
-After loading data, use sub-modules for specific analyses:
+### Analysis modules
 
 | Module | Purpose |
 |--------|---------|
 | `petar.profile` | Radial density/velocity profiles |
-| `petar.lagrangian` | Lagrangian radii computation |
+| `petar.lagrangian` | Lagrangian radii |
 | `petar.escaper` | Escaper identification |
 | `petar.bse` | BSE stellar evolution analysis |
-| `petar.bse.pulsar` | Pulsar-specific analysis |
+| `petar.bse.pulsar` | Pulsar analysis |
 | `petar.dsm` | Disk star merger analysis |
 | `petar.external` | External potential analysis |
-| `petar.tide` | Tidal interaction analysis |
+| `petar.tide` | Tidal analysis |
 | `petar.galev` | Galev stellar population synthesis |
 | `petar.agama` | Agama MW potential utilities |
-| `petar.parallel_data_process` | Parallel processing of multiple snapshots |
+| `petar.parallel_data_process` | Parallel multi-snapshot processing |
 
-### Reading ASCII snapshots
-
-If snapshots were converted to ASCII via `petar.format.transfer`:
-
-```python
-particle = petar.Particle()
-particle.fromfile("data.1.A", snapshot_format="ascii")
-```
+For detailed class API (header offsets, keyword arguments, member lists), see `sample/data_analysis.ipynb`.
 
 ## Snapshot Read-Mismatch Policy
 
@@ -409,8 +341,7 @@ Use these as primary references:
 
 ## Scope Notes
 
-- This skill is intentionally compact.
-- This compact version still keeps the mandatory execution guardrails from earlier long-form versions in `Non-Negotiable Rules` and the most error-prone unit/workflow sections.
-- Use repository docs and sample scripts for long-form explanations and example-heavy guidance.
+- This skill prioritizes execution correctness: it keeps mode-consistency rules, required inputs, and error-prone workflow constraints in full detail.
+- Reference-style content (full flag lists, class API docs, comparison-mode usage) is kept in repository docs (`README.md`, `sample/data_analysis.ipynb`) to avoid duplication.
 - Functional smoke defaults are documented in [README.md](README.md) and [test/functional/README.md](test/functional/README.md).
 - If a required detail is not in this file, query source docs rather than guessing.
