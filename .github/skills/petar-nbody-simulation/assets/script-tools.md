@@ -31,8 +31,38 @@ These tools are installed from `install_script_tool` in `Makefile.in` and are pa
 - `petar.get.object.snap`
   Extract selected objects or binaries across snapshots into time-series files.
 
+  **Command template**:
+  ```bash
+  petar.get.object.snap -i <interrupt_mode> -t <external_mode> -p <out_prefix> -f <snap_format> -m id <object_id> data.snap.lst
+  ```
+
+  | Flag | Purpose | Example |
+  |------|---------|---------|
+  | `-i` | Interrupt mode (none/merger/bse) | `-i bse` |
+  | `-t` | External mode (none/galpy/agama) | `-t galpy` |
+  | `-p` | Output prefix | `-p object` |
+  | `-f` | Snapshot format (origin/post) | `-f origin` |
+  | `-m id <N>` | Select object by ID | `-m id 1` |
+
+  Omit `-i`/`-t` when the solver uses no interrupt/external mode.
+
 - `petar.format.transfer.post`
   Convert post-processed snapshot formats among ascii, binary, and npy.
+
+  **Command template**:
+  ```bash
+  petar.format.transfer.post -d single -s binary -o npy -i <interrupt_mode> -t <external_mode> data.snap.last.lst
+  ```
+
+  | Flag | Purpose | Example |
+  |------|---------|---------|
+  | `-d` | Data kind (single/binary) | `-d single` |
+  | `-s` | Source format (ascii/binary/npy) | `-s binary` |
+  | `-o` | Output format (ascii/binary/npy) | `-o npy` |
+  | `-i` | Interrupt mode | `-i bse` |
+  | `-t` | External mode | `-t galpy` |
+
+  The input list file contains snapshot filenames (one per line), typically `data.snap.last.lst` for a single snapshot. Mode flags `-i`/`-t` must match the producing solver family.
 
 - `petar.galev.process`
   Generate or convert inputs for Galev workflows.

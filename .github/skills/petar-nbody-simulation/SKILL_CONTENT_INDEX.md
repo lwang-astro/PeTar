@@ -80,6 +80,29 @@ Status: covered, with mandatory tool-use and mode-matching rules kept in `SKILL.
 
 Status: split between `SKILL.md` guardrails and asset-level detail
 
+### 4b. Post-processing tool command templates
+
+- Compact tool-usage rule (use installed tools, mode matching): `.github/skills/petar-nbody-simulation/SKILL.md`
+- Detailed command templates for `petar.get.object.snap` and `petar.format.transfer.post`: `.github/skills/petar-nbody-simulation/assets/script-tools.md`
+- Per-scenario `petar.movie` default arguments: `.github/skills/petar-nbody-simulation/assets/default-postprocessing.md`
+
+Status: covered, with tool-specific templates and movie defaults in asset files
+
+### 4c. Python data readback patterns
+
+- Compact reading guidance and keyword-argument table: `.github/skills/petar-nbody-simulation/SKILL.md` (Python Data Analysis Tools section)
+- Detailed readback patterns (10 patterns: lagr, core, status, escaper, SSE/BSE, snapshot offsets, object snap, profile matching, GroupInfo, DSM interrupt): `.github/skills/petar-nbody-simulation/assets/data-readback-patterns.md`
+- Primary tutorial reference: `sample/data_analysis.ipynb`
+
+Status: covered, with SKILL.md providing the compact keyword-argument reference and asset providing full readback strategies
+
+### 4d. DSM workflow reference
+
+- Compact DSM rules (init, runtime, post-processing): `.github/skills/petar-nbody-simulation/SKILL.md` (DSM-specific section)
+- Detailed DSM workflow (IC prep, radius calculation, parameter reasoning, artifact checklist): `.github/skills/petar-nbody-simulation/assets/dsm-workflow.md`
+
+Status: covered, with hard rules in SKILL.md and detailed reference in asset
+
 ### 5. Functional smoke defaults and test-specific policies
 
 - User-facing summary and current defaults: `README.md` (Automated Test Layers -> Functional smoke tests)

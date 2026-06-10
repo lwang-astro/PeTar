@@ -36,6 +36,7 @@ This compact version prioritizes execution safety, option correctness, and repro
 - Do not answer analysis, conversion, movie generation, or restart-cleanup requests only with abstract advice when an installed PeTar tool exists for that task.
 - For post-processing tools, ensure mode flags match producing solver family and snapshot format.
 - For functional smoke automation, required test inputs must be git-tracked; output artifacts are not inputs.
+- For `petar.data.process` in smoke or repeated-run scenarios, use `--no-auto-resume` to prevent unintended auto-restart behavior against stale outputs.
 - When modifying source headers that define CLI options (`src/petar.hpp`, `src/hard.hpp`, `bse-interface/*.h`, `galpy-interface/*.h`, `agama-interface/*.h`, `src/disk_star_merger.hpp`, `src/gas_drag.hpp`, `src/external_hard.hpp`, `parallel-random/rand_io.hpp`), remind the user to re-run `.github/skills/petar-nbody-simulation/assets/generate_option_reference.py` so that `option-reference.md` stays synchronized.
 
 ### Environment requirements
@@ -48,6 +49,13 @@ This compact version prioritizes execution safety, option correctness, and repro
 ### bseEmp-specific
 
 - `bseEmp` requires manually linking `ffbonn` or `ffgeneva` metal-poor track directories before first use. Without this, the binary crashes at initialization with a file-not-found error. Ask the user to set up these links before composing a bseEmp run command.
+
+### DSM-specific
+
+- DSM init uses `petar.init -s dsm --type <type> --radius <radius>` where `--radius` is the disk outer edge in simulation units (pc for `-u 1`).
+- DSM runtime requires `--detect-interrupt 1 --dsm-new-star-mode 0` for stable smoke behavior.
+- DSM post-processing and snap reads use `-i dsm` or `interrupt_mode="dsm"`.
+- The file `data.interrupt` records interrupted DSMs; its binary layout may include trailing padding bytes — validate by record count, not strict dtype alignment.
 
 ### Coordinate origin
 
