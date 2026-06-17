@@ -35,6 +35,8 @@ public:
     IOParams<double> epsilon_helium; //!< helium enrichment scaling factor, used to calculate helium enrichment timescale, if zero, no helium enrichment
     IOParams<double> epsilon_bh; //!< the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH, if zero, no accretion growth for BH
     IOParams<double> epsilon_mdot; //!<  mass-change scaling factor, used to calculate mass-change timescale, if zero, no growth or mass loss
+    IOParams<double> salpeter_mass_threshold; //!< mass threshold multiplier for Salpeter timescale mass dependence, threshold = equilbrium_mass * this value
+    IOParams<double> salpeter_mass_index; //!< power-law index for mass-dependent Salpeter timescale
     IOParams<double> gravitational_constant; //!< gravitational constant
     IOParams<double> speed_of_light; //!< speed of light
     IOParams<double> time_step_factor; //!< time step factor for mass change calculation
@@ -56,6 +58,8 @@ public:
                               epsilon_helium(input_par_store, 0.006, "dsm-epsilon-he", "helium enrichment scaling factor, used to calculate helium enrichment timescale; = 0: no helium enrichment"),
                               epsilon_bh(input_par_store, 0.06, "dsm-epsilon-bh", "the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH; = 0: no accretion growth for BH"),
                               epsilon_mdot(input_par_store, 1.0, "dsm-epsilon-mdot", "mass-change scaling factor, used to calculate mass-change timescale; = 0: no growth or mass loss"),
+                              salpeter_mass_threshold(input_par_store, 1.0, "dsm-salpeter-mass-thres", "mass threshold multiplier for Salpeter timescale, threshold = equilbrium_mass * this value"),
+                              salpeter_mass_index(input_par_store, 0.0, "dsm-salpeter-mass-index", "power-law index for mass-dependent Salpeter timescale, tau_eff = tau * (threshold/mass)^index when mass > threshold; = 0: no mass dependence"),
                               gravitational_constant(input_par_store, 1.0, "G", "gravitational constant", NULL, false),
                               speed_of_light(input_par_store, 1.0, "dsm-speed-of-light", "speed of light"),
                               time_step_factor(input_par_store, 0.001, "dsm-dt-factor", "time step factor for mass change calculation"),
@@ -88,6 +92,8 @@ public:
             {speed_of_light.key, required_argument, &merger_flag, 12},
             {time_step_factor.key, required_argument, &merger_flag, 13},
             {redistribute_star_mode.key, required_argument, &merger_flag, 14},
+            {salpeter_mass_threshold.key, required_argument, &merger_flag, 15},
+            {salpeter_mass_index.key, required_argument, &merger_flag, 16},
             {"help",      no_argument,       0, 'h'},
             {0,0,0,0}
         };
@@ -175,6 +181,16 @@ public:
                     if(print_flag) redistribute_star_mode.print(std::cout);
                     opt_used+=2;
                     break;
+                case 15:
+                    salpeter_mass_threshold.value = atof(optarg);
+                    if(print_flag) salpeter_mass_threshold.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 16:
+                    salpeter_mass_index.value = atof(optarg);
+                    if(print_flag) salpeter_mass_index.print(std::cout);
+                    opt_used+=2;
+                    break;
                 default:
                     break;
                 }
@@ -251,6 +267,8 @@ public:
     Float epsilon_helium; //!< helium enrichment scaling factor, used to calculate helium enrichment timescale, if zero, no helium enrichment
     Float epsilon_bh; //!< the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH, if zero, no accretion growth for BH
     Float epsilon_mdot; //!< mass-change scaling factor, used to calculate mass-change timescale, if zero, no growth or mass loss
+    Float salpeter_mass_threshold; //!< mass threshold multiplier for Salpeter timescale mass dependence
+    Float salpeter_mass_index; //!< power-law index for mass-dependent Salpeter timescale
     Float gravitational_constant; //!< gravitational constant
     Float speed_of_light; //!< speed of light
     Float time_step_factor; //!< time step factor for mass change calculation
@@ -269,6 +287,8 @@ public:
                              epsilon_helium(0.0),
                              epsilon_bh(0.0), 
                              epsilon_mdot(0.0),
+                             salpeter_mass_threshold(1.0),
+                             salpeter_mass_index(0.0),
                              gravitational_constant(0.0),
                              speed_of_light(0.0),
                              time_step_factor(0.0),
@@ -290,6 +310,8 @@ public:
         assert(epsilon_helium>=0.0);
         assert(epsilon_bh>=0.0);
         assert(epsilon_mdot>=0.0);
+        assert(salpeter_mass_threshold>0.0);
+        assert(salpeter_mass_index>=0.0);
         assert(gravitational_constant>0.0);
         assert(speed_of_light>0.0);
         assert(time_step_factor>0.0);
@@ -311,6 +333,8 @@ public:
              <<"epsilon_helium : "<<epsilon_helium<<std::endl
              <<"epsilon_bh : "<<epsilon_bh<<std::endl
              <<"epsilon_mdot : "<<epsilon_mdot<<std::endl
+             <<"salpeter_mass_threshold : "<<salpeter_mass_threshold<<std::endl
+             <<"salpeter_mass_index : "<<salpeter_mass_index<<std::endl
              <<"gravitational_constant : "<<gravitational_constant<<std::endl
              <<"speed_of_light : "<<speed_of_light<<std::endl
              <<"time_step_factor : "<<time_step_factor<<std::endl
@@ -335,6 +359,8 @@ public:
         epsilon_helium = _input.epsilon_helium.value;
         epsilon_bh = _input.epsilon_bh.value;
         epsilon_mdot = _input.epsilon_mdot.value;
+        salpeter_mass_threshold = _input.salpeter_mass_threshold.value;
+        salpeter_mass_index = _input.salpeter_mass_index.value;
         gravitational_constant = _input.gravitational_constant.value;
         speed_of_light = _input.speed_of_light.value;
         time_step_factor = _input.time_step_factor.value;
@@ -451,9 +477,16 @@ public:
                     // calculate equilbrium mass
                     Float equilbrium_mass = initial_equlibrium_mass * std::pow(helium_fraction_disk / p->star.helium_fraction, 2.5);
 
+                    // mass-dependent Salpeter timescale: when mass > threshold, tau decreases as (threshold/mass)^index
+                    Float salpeter_mass_thresh = equilbrium_mass * salpeter_mass_threshold;
+                    Float salpeter_timescale_eff = salpeter_timescale;
+                    if (salpeter_mass_index > 0.0 && p->mass > salpeter_mass_thresh) {
+                        salpeter_timescale_eff = salpeter_timescale * std::pow(salpeter_mass_thresh / p->mass, salpeter_mass_index);
+                    }
+
                     // Eddington accretion rate m'_edd = r/r_grav * m / tau_salpeter = r c^2 / (G tau_salpeter)
                     // use epsilon_mdot to control the Eddington growth/mass rate
-                    Float mdot_eddington = p->radius * speed_of_light * speed_of_light / (gravitational_constant * epsilon_mdot * salpeter_timescale);
+                    Float mdot_eddington = p->radius * speed_of_light * speed_of_light / (gravitational_constant * epsilon_mdot * salpeter_timescale_eff);
 
                     // factor of star's intrinsic luminosity over the Eddington luminosity
                     Float m_frac_8 = std::pow(p->mass / equilbrium_mass, 8.0);
