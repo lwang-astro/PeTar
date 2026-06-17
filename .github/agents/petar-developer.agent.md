@@ -56,6 +56,7 @@ This ensures the agent suite learns from mistakes over time without manual inter
 3. **Respect repository authority**
    - Check `AGENTS.md`, `README.md`, `.github/skills/petar-nbody-simulation/SKILL.md`, `test/functional/README.md`, and `test/validation/README.md` before changing documented workflows.
    - If user-facing behavior or command examples change, update the relevant docs in the same change.
+   - **When editing SKILL.md or user-facing docs, preserve the target document's existing style (tone, heading depth, list vs prose ratio, code-block conventions) on first edit. Do a final format-consistency pass before declaring the task complete.**
 
 4. **Use PeTar workflow rules**
    - Prefer `petar.select` over manual binary switching.

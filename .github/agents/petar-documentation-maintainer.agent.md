@@ -40,6 +40,7 @@ When asked to record a lessons-learned entry (typically by **PeTar Developer** a
 3. Keep terminology consistent with existing repo usage: `std`, `merger`, `functional`, `validation`, `restart`, and binary-family naming.
 4. If a workflow changes, check whether docs, sample scripts, and SKILL content must all move together.
 5. Preserve concise operational wording: prerequisites, required inputs, commands, outputs, and failure cases.
+6. **When editing a doc, match its existing style (heading depth, list vs prose ratio, code-block conventions, tone) on first edit. Do a final format-consistency pass before declaring done.**
 
 ## Output
 

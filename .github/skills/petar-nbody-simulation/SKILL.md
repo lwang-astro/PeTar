@@ -28,6 +28,12 @@ This compact version prioritizes execution safety, option correctness, and repro
 - Exclude debug families unless user explicitly asks for debug.
 - Exclude GPU families unless user explicitly asks for GPU.
 - Validate all custom options against selected binary `-h` before emitting runnable commands.
+- Before using an installed petar binary, check whether its version matches the source code version:
+  ```bash
+  binary_version=$(strings <binary> | grep -A1 "^Version: $" | tail -1)
+  source_version=$(echo "$(cat VERSION)_$(cat ../SDAR/VERSION)")
+  ```
+  If mismatched, ask the user whether to rebuild with `./configure` + `make install` before proceeding.
 - Never use `*.hard.debug` or `*.format.transfer` binaries as production solvers.
 - For source-level debugging, require rebuild with `--with-debug=g`.
 - Prefer `petar.select` over manual symlink edits.
@@ -154,7 +160,14 @@ This is especially useful for simulations where the automatic time step estimate
 2. Select with `petar.select --require ... [--optional ...]`.
 3. Keep physics/structure-sensitive tokens in `--require`.
 4. Keep performance tokens in `--optional` (for example `avx512,avx2,omp,mpi`).
-5. If no candidate matches, stop and provide exact reconfigure/build hints.
+5. If no candidate matches, stop and provide exact reconfigure/build hints, then explicitly ask the user whether to proceed with `./configure` + `make install` and wait for confirmation before executing any build command.
+6. **Version consistency check**: Before comparing results across builds (e.g., KDK vs KDKDK4, 32-bit vs 64-bit),
+   confirm both binaries share the same PeTar version string:
+   ```bash
+   strings <binary> | grep -A1 "^Version: $" | tail -1
+   ```
+   If versions differ, results reflect code-evolution differences, not the variable under test.
+   (See also Non-Negotiable Rules for checking version vs source code before running a binary.)
 
 Physics- or structure-sensitive families should not be treated as ranking-only preferences.
 Use `--require` for interruption modules, external-potential families, `gasdrag`, `pn*`, and `mp`/MPFRC style precision requirements.
@@ -167,6 +180,71 @@ Before composing runnable commands:
 2. `<binary> -h` and extract supported options.
 3. Reject unsupported options and explain why.
 4. If binary name ends with `.hard.debug` or `.format.transfer`, switch to matching solver binary.
+
+## Changeover Radius and Tree Time Step
+
+### Basic Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `-r <r_out>` | 0.0 (auto) | Outer changeover radius |
+| `--r-ratio <ratio>` | 0.1 | Inner/outer ratio: `r_in = r_ratio * r_out` |
+| `-s <dt_soft>` | 0.0 (auto) | Tree (PT) time step, regularized to 0.5^n |
+
+### `-s` ↔ `-r` Coupling: Two Switching Criteria
+
+Controlled by `--dt-soft-sigma-factor`:
+
+- **Freefall-based** (default, `--dt-soft-sigma-factor=0`): `dt_soft = P(r_in) / nstep`, where `P(r_in)` is the binary period at semi-major axis `r_in`. `nstep` is set by `--dt-soft-kepler-nstep` (default 16, recommended 64 for high accuracy). Mass-dependent via per-particle mass-weighted `r_in`. See Wang et al. 2026, ApJ, 998, 233.
+- **σ-based** (`--dt-soft-sigma-factor > 0`, recommended 0.2): `dt_soft = alpha * r_in / (sqrt(3) * sigma_3D)`. Classic criterion from Iwasawa et al. 2015. When `-r=0`, `dt_soft` is first auto-estimated as `2.6e-4 * G*M / sigma_3D^3`, then `r_out` and `r_in` are derived.
+
+**Criterion selection** (Wang et al. 2026):
+- Low-σ / loose clusters, wide binaries, subvirial/fractal ICs → **freefall-based** (σ hard to measure, or σ-based gives too-small r_in).
+- High-σ / dense clusters (N ≥ 10⁴) → **σ-based** (larger r_in for same dt_soft).
+- Both similar at optimal dt_soft for virial equilibrium N≈10³. Transition: `dt_soft / t_ch ∝ 1/N`.
+
+**Environment considerations:**
+- **Star cluster** (default): σ well-defined; both criteria applicable; auto chain works.
+- **Isolated binary / few-body scattering**: σ undefined → auto defaults will fail. Must set `-r`, `-s` explicitly. Use freefall-based criterion directly: choose `-s` and let the code derive `r_out`, or choose `-r` and set `--dt-soft-kepler-nstep` for accuracy. SDAR handles close encounters by default (`--r-group` auto from `r_in`).
+- **Stellar disk / DSM**: rotation-dominated, σ inapplicable. Use freefall-based criterion. Set `-r` explicitly from disk scale height or the encounter region of interest. `--r-group` should be smaller than the disk scale height to avoid false SDAR triggers from shear.
+- **Unknown / mixed**: fall back to **freefall-based criterion** (no σ dependency, works for any particle configuration). Set `-r` and `-s` explicitly when possible; avoid relying on auto defaults unless the system is clearly a virialized cluster.
+
+### Related Parameters
+
+- **`--dt-soft-kepler-nstep`** (default 16.0): Steps per orbit for freefall criterion. ns=16 matches pure Hermite final error; ns=64 matches peak error (recommended for precision). Active only with freefall criterion.
+- **`--dt-soft-sigma-factor`** (default 0.0): 0 = use freefall criterion; > 0 = use σ-based criterion with this alpha value.
+- **`--r-search-min`** (default 0.0, auto): Hard-cluster neighbor search radius. Auto: `max(search_vel_factor * sigma_1D * dt_soft + r_out, 1.2 * r_out)`. Override when auto-detected radius misses a specific binary population.
+- **`--r-search-group`** (default -1.0, auto): Group candidate search radius. Auto: `1.0 * r_in`. Set to 0 to disable SDAR. Controls which particles are considered for SDAR group membership.
+- **`--r-group`** (default -1.0, auto): Multi-body detection radius and tidal tensor box size. Auto: `0.8 * r_search_group`. Must satisfy `r_group < r_in` for SDAR to activate on binaries.
+  - **Accuracy trade-off**: SDAR (LogH) is designed and most accurate for **2-body** (binary) systems. Multi-body SDAR groups (hierarchical triples, 3+ bodies) have significantly degraded accuracy — the LogH method loses its Kepler-solver property when a third body is present (Wang 2025, ApJ, 978, 65). The hybrid BlogH method improves accuracy for weakly perturbed triples but is not yet integrated into PeTar's runtime SDAR.
+  - **r_group too large**: risks capturing multiple stars into one SDAR group → multi-body SDAR (lower accuracy, especially for secular evolution like Kozai–Lidov). In disk/DSM environments, excessive r_group may trigger false SDAR groups from shear — keep r_group smaller than the disk scale height.
+  - **r_group too small**: misses real binaries → they remain in the P3T Hermite/leapfrog integrator (also less accurate and slower for tight binaries).
+  - **Default auto value** (0.8 * r_search_group ≈ 0.8 * r_in) is a reasonable balance for typical star clusters. Override only when a specific binary population is being missed (increase r_group) or too many multi-body groups degrade accuracy (decrease r_group).
+
+**Do not confuse** `--r-search-min` (hard-binary neighbor search) with the changeover boundary (`-r` / `--r-ratio`). `--r-group` and `--r-search-group` control SDAR group detection, not force switching.
+
+### Auto-Detection Chain (All Defaults)
+
+```
+-s = 0, -r = 0, --dt-soft-sigma-factor = 0:
+  dt_soft = 2.6e-4 * G*M / sigma^3          (auto-estimate)
+  rout derived from dt_soft via freefall criterion
+  r_in = r_ratio * rout
+  r_search_min = max(vel_factor*sigma*dt_soft + rout, 1.2*rout)
+  r_search_group = r_in
+  r_group = 0.8 * r_search_group
+```
+
+To fix r_in and vary changeover width:
+```bash
+# r_in = 0.01 pc, r_ratio = 0.5 → r_out = 0.02 pc (narrow)
+-r 0.02 --r-ratio 0.5
+
+# r_in = 0.01 pc, r_ratio = 0.1 → r_out = 0.10 pc (wide)
+-r 0.10 --r-ratio 0.1
+```
+
+Set `-s` and `-r` explicitly to take full manual control. Any parameter left at default continues to auto-derive.
 
 ## Workflow Patterns
 
@@ -190,6 +268,22 @@ Before composing runnable commands:
 2. Final positional argument is restart snapshot.
 3. Use `-a 0` only when overwrite requested.
 4. If restarting from an intermediate snapshot that may duplicate events, use `petar.data.clear` first.
+
+## Controlled Experiment Checklist
+
+Before running a parameter scan or cross-build comparison:
+
+### General checks
+
+- [ ] Compared builds share the **same PeTar version** (check `strings ... | grep Version`)
+- [ ] Parameters under study are explicitly set (not relying on defaults); verify derived values match intent
+- [ ] A control run with known-good parameters (e.g., defaults from sample scripts) behaves as expected before scanning
+- [ ] Unit system is consistent across IC generation, `petar.init`, and runtime options
+- [ ] Binary family selected via `petar.select` matches the required physics features
+
+### Scenario-specific checks
+
+Refer to `Required Input Checklist` above for scenario-specific mandatory parameters, and to `Environment considerations` under `Changeover Radius and Tree Time Step` for changeover/timestep strategy per system type.
 
 ## Post-Processing Tool Policy
 
@@ -346,6 +440,13 @@ Use these as primary references:
 - `.github/skills/petar-nbody-simulation/assets/option-matrix.md`
 - `.github/skills/petar-nbody-simulation/assets/option-reference.md`
 - `.github/skills/petar-nbody-simulation/assets/script-tools.md`
+
+Technical background (key algorithms):
+
+- PeTar code description: P3T hybrid method, Hamiltonian splitting, performance benchmarks (Wang et al. 2020, MNRAS, 497, 536) — [https://doi.org/10.1093/mnras/staa1915](https://doi.org/10.1093/mnras/staa1915)
+- SDAR integrator: slow-down + time-transformed symplectic method for few-body systems (Wang et al. 2020, MNRAS, 493, 3398) — [https://doi.org/10.1093/mnras/staa480](https://doi.org/10.1093/mnras/staa480)
+- BlogH hybrid method and LogH accuracy limits for hierarchical triples (Wang 2025, ApJ, 978, 65) — [https://doi.org/10.3847/1538-4357/ad98f3](https://doi.org/10.3847/1538-4357/ad98f3)
+- Freefall-based P3T switching criterion vs σ-based criterion (Wang et al. 2026, ApJ, 998, 233) — [https://doi.org/10.3847/1538-4357/ae367c](https://doi.org/10.3847/1538-4357/ae367c)
 
 ## Scope Notes
 
