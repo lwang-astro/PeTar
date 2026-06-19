@@ -1217,7 +1217,7 @@ public:
                                 p2->setBinaryPairID(p1->id);
                                 p1->setBinaryInterruptState(BinaryInterruptState::collision);
                                 p2->setBinaryInterruptState(BinaryInterruptState::collision);
-                                p1->time_interrupt = std::min(_bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri), time_interrupt_max);
+                                p1->time_interrupt = std::min(_bin_interrupt.time_now + (drdv<0 ? t_peri : (_bin.period - t_peri)), time_interrupt_max);
                                 p2->time_interrupt = p1->time_interrupt;
                                     
                             }
