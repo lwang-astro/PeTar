@@ -49,7 +49,7 @@ public:
 #ifdef SOFT_PERT
                          soft_perturbation(input_par_store, 1, "soft-perturbation", "switch of soft perturbation (tidal tensor); 1: enable, 0: suppress"),
 #endif
-                         fname_par(input_par_store, "input.par", "p", "Parameter file prefix; related files are <prefix>.hard/.bse/.dsm/.exthard/.galpy/.rand", NULL, false),
+                         fname_par(input_par_store, "data.par", "p", "Parameter file prefix; related files are <prefix>.hard/.bse/.dsm/.exthard/.galpy/.rand", NULL, false),
                          fname_dump(input_par_store, "hard_dump", "dump-filename", "Hard dump data filename", NULL, false),
                          print_flag(false)
     {}
@@ -139,7 +139,7 @@ public:
             case 'h':
                 if (print_flag) {
                     std::cout<<"A tool to integrate a dumped cluster of neighbor particles using particle-particle method (Hermite/SDAR)\n"
-                         <<"Usage: petar.hard.debug [options] [hard parameter filename (defaulted: input.par or input.par.hard)] [dumped data filename (defaulted: hard_dump)]\n"
+                         <<"Usage: petar.hard.debug [options] [hard parameter filename (defaulted: data.par or data.par.hard)] [dumped data filename (defaulted: hard_dump)]\n"
                          <<"   dumped data file: Hard dump file from petar simulation\n"
                          <<"---- Main Options---- :\n"
                          <<"    -h (--help):  help\n";
@@ -209,28 +209,13 @@ int main(int argc, char **argv){
     };
 
     auto infer_par_from_dump = [](const std::string& _dump_name, std::string& _par_prefix) {
-        const std::string marker_hard_dump = ".hard_dump";
-        const std::string marker_object = ".object_";
-        const std::string marker_dump = ".dump_";
-
-        std::size_t pos = _dump_name.find(marker_hard_dump);
-        if (pos != std::string::npos && pos > 0) {
-            _par_prefix = _dump_name.substr(0, pos) + ".par";
+        // Extract the output prefix: everything before the first '.' is the prefix.
+        // For example, "data.hard_dump.12345" -> prefix "data" -> "data.par".
+        std::size_t dot_pos = _dump_name.find('.');
+        if (dot_pos != std::string::npos && dot_pos > 0) {
+            _par_prefix = _dump_name.substr(0, dot_pos) + ".par";
             return true;
         }
-
-        pos = _dump_name.find(marker_object);
-        if (pos != std::string::npos && pos > 0) {
-            _par_prefix = _dump_name.substr(0, pos) + ".par";
-            return true;
-        }
-
-        pos = _dump_name.find(marker_dump);
-        if (pos != std::string::npos && pos > 0) {
-            _par_prefix = _dump_name.substr(0, pos) + ".par";
-            return true;
-        }
-
         return false;
     };
 
