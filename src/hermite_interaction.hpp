@@ -598,7 +598,7 @@ public:
         // tidal tensor energy
         for (int k=0; k<_n_group; k++) {
             const int i = _group_index[k];
-            _energy.epert += calcEnergyPertOneGroup(_groups[i], _perturber);
+            _energy.epert += calcEnergyPertOneGroup(_groups[i], _perturber) - _groups[i].info.epert_record;
             auto& bink = _groups[i].info.getBinaryTreeRoot();
             auto& pcm = _groups[i].particles.cm;
             auto& vcm = pcm.vel;
