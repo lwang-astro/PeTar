@@ -5713,7 +5713,7 @@ printf "%s\n" "$ac_res" >&6; }
 if eval test \"x\$"$as_ac_File"\" = x"yes"
 then :
   PETAR_INCLUDE=$PETAR_INCLUDE" -I$sdar_prefix/src"
-             SDAR_PATH=$sdar_prefix
+             SDAR_PATH=$(cd $sdar_prefix && pwd)
 else $as_nop
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}

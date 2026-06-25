@@ -25,7 +25,8 @@ use_mpi =@use_mpi@
 use_omp = @use_omp@
 
 #FFLAGS = -O2 -Wall -finit-real=nan 
-CXXFLAGS += @CXXFLAGS@ @OPTFLAGS@ 
+CXXFLAGS += @CXXFLAGS@ @OPTFLAGS@
+CXXFLAGS += -I@SDAR_PATH@/src
 FFLAGS += @FCFLAGS@
 FCLIBS = @FCLIBS@
 

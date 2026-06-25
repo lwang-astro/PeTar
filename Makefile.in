@@ -357,7 +357,7 @@ build/@PROG_NAME@.hard.debug: hard_debug.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(OMPFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS) $(RANDLIBS)
 
 build/petar.external.$(ext_mode): external_test.cxx $(EXTLIBFILES) $(EXT_SRC) |build
-	$(CXX) $(OPTFLAGS) $(CXXFLAGS) $(EXTFLAGS) $< -o $@ $(EXTLIBS)
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(EXTFLAGS) $< -o $@ $(EXTLIBS)
 
 build/petar.hard.test: hard_test.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(HARD_FDPSFLAGS) $(OMPFLAGS) $(HARD_MT_FLAGS) -o $@ $< $(CXXLIBS) $(RANDLIBS)

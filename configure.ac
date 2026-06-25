@@ -379,7 +379,7 @@ AC_ARG_WITH([sdar-prefix],
 
 AC_CHECK_FILE(["$sdar_prefix/src/Hermite/hermite_integrator.h"],
 	      [PETAR_INCLUDE=$PETAR_INCLUDE" -I$sdar_prefix/src"
-             SDAR_PATH=$sdar_prefix],
+             SDAR_PATH=$(cd $sdar_prefix && pwd)],
 	      [AC_MSG_FAILURE([can't find SDAR library, please provide correct PREFIX by using --with-sdar-prefix])])
 
 # GALPY
