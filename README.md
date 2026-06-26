@@ -1123,11 +1123,12 @@ The subsequent sections provide detailed descriptions of each tool.
 
 #### Selecting Installed Binary Families
 
-When multiple PeTar binaries are installed (for example, combinations of `mpi`, `omp`, `avx2`, `avx512`, `bse`, `galpy`, `agama`), the `petar.select` tool can rebuild three symlinks in the install bin directory:
+When multiple PeTar binaries are installed (for example, combinations of `mpi`, `omp`, `avx2`, `avx512`, `bse`, `galpy`, `agama`), the `petar.select` tool can rebuild four symlinks in the install bin directory:
 
 - `petar`
 - `petar.hard.debug`
 - `petar.format.transfer`
+- `petar.dump2test`
 
 The tool supports three modes:
 
@@ -1163,6 +1164,34 @@ When no installed binary satisfies `--require`, `petar.select` reports the avail
 - `gpu` -> `./configure --enable-cuda`
 
 After rebuilding with the needed options, run `make install` and re-run `petar.select`.
+
+#### Dump Conversion and Lightweight Hard Integration Test
+
+The `petar.hard.debug` tool (described in the [Troubleshooting section](#hard-debug-tool)) re-executes a dumped hard cluster with full physics (stellar evolution, external potential, tidal tensor). This provides high fidelity but requires all physics modules to be compiled and compatible.
+
+For situations where only the pure gravitational behaviour of the hard integrator (Hermite + SDAR) needs to be tested — for example, to reproduce an energy error, verify a bug fix, or benchmark step counts — a lighter alternative is available: convert the dump into a `petar.hard.test` snapshot via `petar.dump2test`, then run the converted snapshot with `petar.hard.test`.
+
+The conversion tool reads the same binary dump files used by `petar.hard.debug` and writes an ASCII snapshot that `petar.hard.test` can ingest:
+
+```shell
+# Convert a dump file to a hard.test snapshot
+petar.dump2test data.hard_dump_t12345_M0_O0_c1
+
+# Run the converted snapshot
+petar.hard.test -t 0.01 -r 0.5 --r-ratio 0.1 -s 0.001953125 \
+  data.hard_dump_t12345_M0_O0_c1.cluster1.snap
+```
+
+`petar.dump2test` automatically infers the parameter prefix from the dump filename, reads the accompanying `.hard` parameter file, and prints the recommended `petar.hard.test` command for each cluster found in the dump. It also supports filtering by particle count (`-n`), group count (`--n-crit-group`), time range (`--tstart`, `--tend`), and dump index (`--istart`, `--iend`).
+
+The following physics components are excluded from the converted snapshot and therefore not tested by `petar.hard.test`:
+
+- Stellar evolution (SSE/BSE), disk star merger
+- External potential (Galpy, Agama)
+- Tidal tensor (soft perturbation)
+- Post-Newtonian corrections
+
+This makes the `petar.dump2test` + `petar.hard.test` combination suitable for isolating and debugging pure N-body hard-integration issues without the overhead or binary-compatibility constraints of a full `petar.hard.debug` run.
 
 #### Initial Input Data File
 

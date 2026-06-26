@@ -1425,7 +1425,6 @@ public:
         if (use_sym_int) {
             sym_interrupt_binary = sym_int.integrateToTime(_time_end);
             auto& bink = sym_int.info.getBinaryTreeRoot();
-            auto& pcm = sym_int.particles.cm;
             
             // case of binary disruption            
             bool reset_flag = (bink.semi < 0 ) && (bink.ecca > 0);
@@ -1453,6 +1452,7 @@ public:
 #ifdef ADJUST_GROUP_PRINT
             if (manager->h4_manager.group_info_output.isWriteEnabled() && reset_flag) {
                 // print break group information
+                auto& pcm = sym_int.particles.cm;
                 sym_int.printGroupInfo(1, manager->h4_manager.group_info_output, WRITE_WIDTH, &pcm);
             }
 #endif

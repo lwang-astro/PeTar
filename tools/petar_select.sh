@@ -16,6 +16,7 @@ Description:
 	petar
 	petar.hard.debug
 	petar.format.transfer
+	petar.dump2test
 
   The target can be either:
 	1) a full binary name, e.g. petar.mpi.omp.avx2.agama
@@ -526,7 +527,7 @@ update_links() {
 	local target="$2"
 
 	local req
-	for req in "$target" "$target.hard.debug" "$target.format.transfer"; do
+	for req in "$target" "$target.hard.debug" "$target.format.transfer" "$target.dump2test"; do
 		if [[ ! -f "$bindir/$req" ]]; then
 			echo "Error: required file not found: $bindir/$req" >&2
 			if [[ "$target" == petar.* ]]; then
@@ -539,11 +540,13 @@ update_links() {
 	ln -sfn "$target" "$bindir/petar"
 	ln -sfn "$target.hard.debug" "$bindir/petar.hard.debug"
 	ln -sfn "$target.format.transfer" "$bindir/petar.format.transfer"
+	ln -sfn "$target.dump2test" "$bindir/petar.dump2test"
 
 	echo "Updated links in $bindir"
 	echo "  petar -> $target"
 	echo "  petar.hard.debug -> $target.hard.debug"
 	echo "  petar.format.transfer -> $target.format.transfer"
+	echo "  petar.dump2test -> $target.dump2test"
 }
 
 list_versions() {
@@ -555,7 +558,7 @@ list_versions() {
 		local name
 		name="$(basename "$f")"
 
-		if [[ "$name" == *.hard.debug || "$name" == *.format.transfer ]]; then
+		if [[ "$name" == *.hard.debug || "$name" == *.format.transfer || "$name" == *.dump2test ]]; then
 			continue
 		fi
 

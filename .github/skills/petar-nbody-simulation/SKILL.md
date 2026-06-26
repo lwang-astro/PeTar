@@ -34,7 +34,7 @@ This compact version prioritizes execution safety, option correctness, and repro
   source_version=$(echo "$(cat VERSION)_$(cat ../SDAR/VERSION)")
   ```
   If mismatched, ask the user whether to rebuild with `./configure` + `make install` before proceeding.
-- Never use `*.hard.debug` or `*.format.transfer` binaries as production solvers.
+- Never use `*.hard.debug`, `*.format.transfer`, `petar.hard.test`, or `*.dump2test` binaries as production solvers.
 - For source-level debugging, require rebuild with `--with-debug=g`.
 - Prefer `petar.select` over manual symlink edits.
 - For current PeTar runs (tmp file mechanism), `data.snap.lst` is generated at runtime and stream outputs are automatically committed — no gathering step is needed. `petar.data.gether` is a legacy tool only required for old MPI runs that lack `snap.lst`.

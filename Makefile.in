@@ -19,7 +19,7 @@ orb_mode=@with_orbit@
 
 CXXFLAGS=@CXXFLAGS@
 
-TARGET=build/@PROG_NAME@ build/@PROG_NAME@.hard.debug build/@PROG_NAME@.format.transfer
+TARGET=build/@PROG_NAME@ build/@PROG_NAME@.hard.debug build/@PROG_NAME@.format.transfer build/petar.hard.test build/@PROG_NAME@.dump2test
 all: $(TARGET)
 
 SRC = main.cc ${shell ls ./src/*.hpp} 
@@ -356,11 +356,14 @@ build/@PROG_NAME@.format.transfer: format_transfer.cxx |build
 build/@PROG_NAME@.hard.debug: hard_debug.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(OMPFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS) $(RANDLIBS)
 
+build/@PROG_NAME@.dump2test: dump2test.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) |build
+	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(OMPFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS) $(RANDLIBS)
+
 build/petar.external.$(ext_mode): external_test.cxx $(EXTLIBFILES) $(EXT_SRC) |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(EXTFLAGS) $< -o $@ $(EXTLIBS)
 
 build/petar.hard.test: hard_test.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) |build
-	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(HARD_FDPSFLAGS) $(OMPFLAGS) $(HARD_MT_FLAGS) -o $@ $< $(CXXLIBS) $(RANDLIBS)
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(HARD_FDPSFLAGS) $(OMPFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS) $(RANDLIBS)
 
 build/petar.simd.test: simd_test.cxx soft_force.hpp io.hpp hard_ptcl.hpp static_variables.hpp force_gpu_cuda.hpp phantomquad_for_p3t_k.hpp phantomquad_for_p3t_x86.hpp $(OBJS) |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(CUDA_FDPSFLAGS) $(CUDAFLAGS) $(MT_FLAGS) $< $(OBJS) -o $@  $(CXXLIBS)
@@ -407,6 +410,7 @@ install: $(TARGET) SE_INSTALL EXT_INSTALL install_script_tool
 	ln -sf @prefix@/bin/@PROG_NAME@ @prefix@/bin/petar
 	ln -sf @prefix@/bin/@PROG_NAME@.hard.debug @prefix@/bin/petar.hard.debug
 	ln -sf @prefix@/bin/@PROG_NAME@.format.transfer @prefix@/bin/petar.format.transfer
+	ln -sf @prefix@/bin/@PROG_NAME@.dump2test @prefix@/bin/petar.dump2test
 
 skill-check:
 	bash .github/skills/petar-nbody-simulation/assets/check_skill_consistency.sh
