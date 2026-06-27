@@ -359,6 +359,10 @@ int main(int argc, char** argv)
     sys_hard.manager = &hard_manager;
     sys_hard.setTimeOrigin(time_sys);
 
+#ifdef HARD_DEBUG_PRINT
+    sys_hard.output_filename_prefix = main_parameters.fname_snap.value;
+#endif
+
     // initial system hard particles, only one cluster
     PS::ReallocatableArray<PS::S32> p_list;
     p_list.resizeNoInitialize(N);

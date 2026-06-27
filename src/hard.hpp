@@ -2221,6 +2221,10 @@ public:
     PS::ReallocatableArray<COMM::BinaryTree<PtclH4,COMM::Binary>> binary_table;
     HardManager* manager;
 
+#ifdef HARD_DEBUG_PRINT
+    std::string output_filename_prefix;
+#endif
+
 #ifdef PROFILE
     PS::S64 sdar_substep_sum;
     PS::S64 sdar_tsyn_step_sum;
@@ -3185,6 +3189,12 @@ public:
 
 #ifndef ONLY_SOFT
         HardIntegrator hard_int_thread[num_thread];
+
+#ifdef HARD_DEBUG_PRINT
+        for (PS::S32 i = 0; i < num_thread; ++i) {
+            hard_int_thread[i].output_filename_prefix = this->output_filename_prefix;
+        }
+#endif
 
 #ifdef PROFILE
         PS::S64 sdar_n_groups_threads[num_thread], sdar_substep_sum_threads[num_thread];
