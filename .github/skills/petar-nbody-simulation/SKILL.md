@@ -16,7 +16,15 @@ This compact version prioritizes execution safety, option correctness, and repro
 - Do not run whatever `petar` currently points to unless selected for this scenario.
 - Ask only for missing required inputs; do not guess mandatory physics parameters.
 - Do not proceed with a run until all scenario-required inputs are present.
-- Before execution, provide parameter summary + exact commands; run only after user confirmation.
+- **Always `cd` to the designated simulation working directory before running any IC generation, solver, or post-processing command. Do not create any files outside this directory.** Test runs, debugging, and exploratory commands must also go inside the simulation directory — never in the repository root or other project directories. If a directory does not exist, create it before executing any commands.
+- **If the user does not specify a working directory, ask for one — do not decide the path yourself.** A simulation produces many files (ICs, logs, snapshots, parameter dumps, movies); placing them in an unspecified location makes them hard to find later. If the user has no preference, suggest a reasonable convention (e.g., `~/petar_sim/<descriptive-name>`) and confirm before creating.
+- **Before any solver execution (`petar`, `petar.find.dt`, `petar.bse`, etc.), present a structured parameter summary to the user and wait for explicit confirmation. Do not skip this gate for "quick tests" or "just checking" commands — any command that invokes a solver costs at least seconds and may produce side effects (output files, parameter files).**
+  The summary must include, in this order:
+  1. Working directory and input snapshot
+  2. Full command line (binary, flags, options, redirects)
+  3. Estimated runtime hint (e.g., "N=1000 × 100 Myr → a few minutes" or "N=500 × 100 Myr → a couple of minutes")
+  4. Expected output files (e.g., `output`, `data.*`, `commands.log`)
+  5. A clear prompt: *"Proceed? (y/n)"* — stop and wait for user response.
 - Default output prefix is `data` when user does not provide one.
 - Default unit mode is `-u 1` when user does not provide one.
 - Enforce unit consistency across IC generation, `petar.init`, runtime options, and post-processing.
