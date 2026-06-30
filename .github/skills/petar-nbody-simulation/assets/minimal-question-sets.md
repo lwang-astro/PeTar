@@ -4,8 +4,9 @@ This note documents the minimum missing information that the skill should ask fo
 
 ## Isolated cluster
 
-Ask only if missing:
-- initial condition source
+When IC generation is required (no existing snapshot), ask for ALL fields in the "Star-Cluster Generation Inputs" checklist (SKILL.md) before composing commands.
+
+Runtime-only asks (when snapshot already exists):
 - unit mode (`-u 0` or `-u 1`)
 - end time (`-t`)
 - output interval (`-o`)
@@ -13,8 +14,11 @@ Ask only if missing:
 
 ## BSE / SSE
 
-Ask only if missing:
-- initial condition source
+When IC generation is required (no existing snapshot), ask for ALL fields in the "Star-Cluster Generation Inputs" checklist (SKILL.md) before composing commands. Pay special attention to:
+- primordial binary count (`-b`)
+- parallel launch mode
+
+Runtime-only asks (when snapshot already exists):
 - unit mode
 - end time (`-t`)
 - output interval (`-o`)

@@ -55,3 +55,6 @@ tools/__pycache__/
 # generated option snapshots for skill assets
 .github/skills/petar-nbody-simulation/assets/*.options.txt
 .github/skills/petar-nbody-simulation/assets/tool-help/
+
+# vscode workspace
+PeTar.code-workspace

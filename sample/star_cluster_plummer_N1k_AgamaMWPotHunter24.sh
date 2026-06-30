@@ -10,6 +10,11 @@ if ! command -v petar.select >/dev/null 2>&1; then
 	exit 1
 fi
 
+if ! command -v petar.find.dt >/dev/null 2>&1; then
+	echo "Error: petar.find.dt is not found in PATH. Please run 'make install' first." >&2
+	exit 1
+fi
+
 # use mcluster to generate a star cluster with the initial condtion: 
 # N=1000
 # Kroupa (2001) IMF
@@ -42,7 +47,19 @@ petar.init -c 8000,0,0,0,-180,0 -t -v kms2pcmyr -f input test.dat.10
 # to create the configuration file for Agama potential with a rotating bar and spiral arm, 
 # where 'evolve_duration' is the duration of simulation, which assume the ending phase has bar/spiral arm of present-day positions.
 petar.select --require agama --optional mpi,omp,avx512,avx2
-OMP_NUM_THREADS=1 OMP_STACKSIZE=128M petar -u 1 --agama-conf-file MWpotentialHunter24_rotspiral.ini -t 500.0 -o 1.0 input &>output
+
+# Optimise tree time step with petar.find.dt for best performance.
+# NOTE: petar.find.dt only tests the first 6 steps, so the recommended dt
+# may degrade later. Always halve it for the production run.
+# See SKILL.md "Performance Optimisation" for details.
+dt_rec=$(petar.find.dt -a "-u 1 --agama-conf-file MWpotentialHunter24_rotspiral.ini" -i 1 input 2>/dev/null | \
+    grep "Best performance choice" | sed 's/.*tree step: //' | sed 's/,.*//')
+dt_use=$(python3 -c "print(float('$dt_rec') / 2.0)")
+echo "--- Production tree time step (half of recommended): $dt_use ---"
+
+# Use PeTar to execute the simulation.
+# '-s $dt_use' uses the optimised tree time step from petar.find.dt.
+OMP_NUM_THREADS=1 OMP_STACKSIZE=128M petar -u 1 --agama-conf-file MWpotentialHunter24_rotspiral.ini -t 500.0 -o 1.0 -s "$dt_use" input &>output
 
 # after mode finished, gether the output data and do post-data process to detect binaries, obtain Lagrangian and core radii and corresponding properties.
 # To maintain consistent units during post-processing, use '-G 0.00449830997959438' to set the gravitational constant to astronomical units.

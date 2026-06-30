@@ -22,7 +22,9 @@ This compact version prioritizes execution safety, option correctness, and repro
 - Enforce unit consistency across IC generation, `petar.init`, runtime options, and post-processing.
 - For stellar evolution requests, require module confirmation: `merger`, `bse`, `bseEmp`, `mobse` (`moBSE`), or `dsm`.
 - For external potential requests, require mode confirmation: `galpy` or `agama`.
-- For star-cluster IC generation, do not proceed until the IC parameter set is complete.
+- For star-cluster IC generation, do not proceed until the IC parameter set is complete (see "Star-Cluster Generation Inputs" below for the definitive checklist).
+- For any simulation using external potential (Galpy/Agama), require explicit COM position (x,y,z) and velocity (vx,vy,vz) in physical units. Do not accept vague descriptions like "Sun position" without confirming numerical values.
+- Do not assume default values for physics-defining star-cluster IC parameters (half-mass radius, virial ratio, IMF model, mass range, mass segregation, random seed). Each must be explicitly confirmed with the user. If the user does not specify one, ask — do not proceed on defaults alone.
 - For BSE-family runs, metallicity is mandatory.
 - For galactic/external potential runs, potential model and cluster COM phase-space are mandatory.
 - Exclude debug families unless user explicitly asks for debug.
@@ -34,11 +36,35 @@ This compact version prioritizes execution safety, option correctness, and repro
   source_version=$(echo "$(cat VERSION)_$(cat ../SDAR/VERSION)")
   ```
   If mismatched, ask the user whether to rebuild with `./configure` + `make install` before proceeding.
+- **When rebuilding, pass only the configure flags required by the current simulation scenario.** Do not reuse the previous `config.status` command verbatim — it may carry features (e.g., `gasdrag`, `pnhermite`) that are not needed and produce an unnecessarily large binary.
+  - Derive required flags from the scenario features determined during binary selection:
+    - `--with-interrupt=<bse|mobse|bseEmp|dsm>` for stellar evolution / disk star merger
+    - `--with-external=<galpy|agama>` for external potential
+    - `--with-external-hard=<gasdrag>` — **only if gas drag is explicitly requested**
+    - `--with-pn=<pnall|pnhermite|...>` — **only if post-Newtonian correction is explicitly requested**
+    - `--enable-mpfrc` — **only if MPFRC precision is explicitly requested**
+    - `--enable-64b`, `--enable-avx2`, `--enable-avx512`, `--enable-omp`, `--enable-mpi` — architecture options carry minimal feature risk
+  - If the user confirms a rebuild, compose the configure command from the current scenario needs, not from `config.status`.
 - Never use `*.hard.debug`, `*.format.transfer`, `petar.hard.test`, or `*.dump2test` binaries as production solvers.
 - For source-level debugging, require rebuild with `--with-debug=g`.
 - Prefer `petar.select` over manual symlink edits.
 - For current PeTar runs (tmp file mechanism), `data.snap.lst` is generated at runtime and stream outputs are automatically committed — no gathering step is needed. `petar.data.gether` is a legacy tool only required for old MPI runs that lack `snap.lst`.
 - Do not use `petar.init` in restart/resume workflows.
+- **Always run `petar.find.dt` before a production solver run, then halve the recommended value and pass it as `-s <value>`.** The overhead is negligible (seconds to a minute) and the speedup is 2–5× over the run. The only exception is when the user explicitly requests a quick test or debug run (e.g., `-t 0`, or visibly sub-minute runtime). In those cases, skip `petar.find.dt` and let the solver auto-estimate `-s`. See "Performance Optimisation" below for the detailed workflow.
+- **Redirect stdout + stderr of every major command to a file. Do not run commands without redirection — lost output cannot be reviewed later.** Use consistent naming:
+  - `mcluster ... >mc.log` for IC generation
+  - `petar.init ...` (no redirect needed — output is minimal and goes to terminal)
+  - `petar ... &>output` for the solver run (primary output log)
+  - `petar.find.dt ... &>finddt.log` for timestep benchmarking (full output preserved, summary extracted via pipe + `tee /dev/stderr`)
+  - `petar.data.gether ... &>gether.log` for data gathering
+  - `petar.data.process ... &>process.log` for post-processing
+  - `petar.movie ... &>movie.log` for movie generation
+  - `petar.external.* ... &>ext.log` for external potential tools
+- **Record every command to a `commands.log` file in the simulation working directory.** Before executing each major step (IC generation, `petar.init`, `petar.find.dt`, solver run, post-processing, movie), append the full command line with a timestamp. This ensures the user can later reproduce the exact sequence of operations.
+  ```bash
+  echo "# $(date): petar -u 1 --galpy-set MWPotential2014 -t 100.0 -o 1.0 -s 0.0009765625 input" >> commands.log
+  ```
+  Append to an existing `commands.log` if resuming or adding steps; create a new one at the start of each fresh simulation.
 - Do not answer analysis, conversion, movie generation, or restart-cleanup requests only with abstract advice when an installed PeTar tool exists for that task.
 - For post-processing tools, ensure mode flags match producing solver family and snapshot format.
 - For functional smoke automation, required test inputs must be git-tracked; output artifacts are not inputs.
@@ -77,7 +103,11 @@ Collect the minimum required fields before composing run commands.
 2. Scenario: isolated | BSE/SSE | DSM | Galpy | Agama | restart | standalone-bse.
 3. End time `-t`.
 4. Output interval `-o`.
-5. Launch mode: serial | OpenMP | MPI+OpenMP | GPU.
+5. **Launch mode** — confirm each sub-field explicitly (do not default without asking):
+   - Mode: serial | OpenMP | MPI+OpenMP | GPU.
+   - MPI process count (if MPI mode).
+   - OpenMP thread count (if OpenMP/MPI+OpenMP mode).
+   - Custom launcher prefix (e.g. `srun -N 2`), if any — otherwise use `mpiexec -n` for MPI.
 6. Initial data source: existing PeTar snapshot | raw table | generator.
 7. Extra user options to pass through (validated only).
 
@@ -89,10 +119,12 @@ Collect the minimum required fields before composing run commands.
 - DSM:
   - only requested DSM controls (`--dsm-*`)
 - Galpy:
+  - COM position (x,y,z) and velocity (vx,vy,vz) **in physical units** — do not accept vague descriptions; confirm numerical values
   - one of `--galpy-set` / `--galpy-conf-file` / `--galpy-type-arg`
   - optional `--galpy-rscale`, `--galpy-vscale`
   - note: PeTar only supports Galpy ≤ 1.10.2
 - Agama:
+  - COM position (x,y,z) and velocity (vx,vy,vz) **in physical units** — do not accept vague descriptions; confirm numerical values
   - `--agama-conf-file`
   - optional `--agama-rscale`, `--agama-vscale`
 - Restart:
@@ -125,27 +157,84 @@ When generator-based star-cluster IC creation is required:
 - Recommended path: normalize the IC into the target PeTar unit system during `petar.init` so that, for `petar -u 1`, the final IC is in `Msun`, `pc`, `pc/Myr`.
 - Advanced native-unit paths require a matching `-G` and consistent conversion of all unit-sensitive runtime and post-processing options; do not recommend this path unless the user explicitly asks to preserve native units.
 
-### Star-Cluster Generation Inputs
+### Star-Cluster Generation Inputs (Complete Checklist)
 
-If IC must be generated for a star cluster, require:
+If IC must be generated for a star cluster (e.g., via mcluster), every parameter below must be explicitly confirmed with the user. Do not assume defaults for any physics-defining parameter. If the user does not volunteer a value, ask; do not proceed until all fields are resolved.
 
-1. Size scale (total mass or total star count).
-2. Half-mass radius.
-3. Density profile model (+ profile parameters if needed).
-4. IMF model.
-5. Binary fraction + distribution model.
+| # | Parameter | mcluster flag | Why it matters | Default if not asked |
+|---|-----------|---------------|----------------|----------------------|
+| 1 | Size scale | `-N` or `-M` | Total particle count or total mass | N/A — must be specified |
+| 2 | Density profile model + parameters | `-P` | Plummer, King (W0), fractal, etc. | N/A — must be specified |
+| 3 | Half-mass radius | `-R` | Controls density and dynamical timescale; directly affects evolution speed and escape rate | **Not safe to default** — ask user |
+| 4 | Virial ratio (Q) | `-Q` | Q=0.5 = virial equilibrium; Q=0 = cold collapse; Q>0.5 = expanding. Drives initial dynamical phase | **Not safe to default** — ask user |
+| 5 | IMF model + parameters | `-M` | Kroupa, Salpeter, top-heavy, etc. Determines stellar mass distribution | **Not safe to default** — ask user |
+| 6 | Stellar mass range (min, max) | `-m` | Lower (typically 0.08 Msun) and upper mass limits | **Not safe to default** — confirm with user |
+| 7 | Binary fraction + distribution model | `-b` | Fraction of binaries, period/semi-major axis distribution, mass-ratio distribution | Must be confirmed even for zero binaries |
+| 8 | Mass segregation | `-S` | S=0 = no primordial segregation; S>0 = segregated | mcluster default (0) — confirm with user |
+| 9 | Random seed | `-s` | Reproducibility. seed=0 = automatic (non-reproducible) | mcluster default (0) — confirm with user |
+| 10 | External potential COM position | `-c` (via petar.init) | Cluster center-of-mass initial position (x,y,z) in simulation units | **Not safe to default** — ask user |
+| 11 | External potential COM velocity | `-c` (via petar.init) | Cluster center-of-mass initial velocity (vx,vy,vz) in simulation units | **Not safe to default** — ask user |
 
-Do not continue to command generation until this parameter set is complete.
+**Enforcement rule**: Before composing any mcluster command, iterate through all applicable rows above. For each row, if the user has not provided a value, ask. Do not proceed to command generation until every applicable field is resolved.
 
-## Timestep Tuning with petar.find.dt
+## Performance Optimisation: Tree Time Step Tuning
 
-`petar.find.dt` searches for a suitable tree time step for a given snapshot and launch configuration:
+### Why tune the tree time step?
 
-1. Run the solver for a short test duration with data output every step.
-2. Run `petar.find.dt` on the output snapshots to get a recommended `-s` value.
-3. Restart the simulation with the recommended time step.
+PeTar auto-estimates a tree time step (`-s`) from the initial particle distribution.
+However, this auto estimate is conservative and often suboptimal for production runs.
+Tuning `-s` with `petar.find.dt` can give **2–5× speedup** while maintaining accuracy.
 
-This is especially useful for simulations where the automatic time step estimate is suboptimal.
+### Tool: petar.find.dt
+
+`petar.find.dt` benchmarks the solver across several tree time step candidates and reports the fastest one.
+
+**Usage**:
+```
+petar.find.dt [options] <snapshot-file>
+```
+
+**Options**:
+
+| Flag | Argument | Description | Default |
+|------|----------|-------------|---------|
+| `-p` | string | Petar commander name | `petar` |
+| `-a` | string | Extra petar options (enclosed in `"..."`). Do **not** include `-o`, `-w`, `-t`, `-i`, or `-s` — those are set internally | (none) |
+| `-r` | string | Custom launcher prefix (e.g. `"srun -N 2"`). When set, `-m` and `-o` are ignored | (none) |
+| `-m` | int | MPI process count for `mpiexec -n <N>` | MPI not used |
+| `-o` | int | OpenMP thread count | auto |
+| `-s` | float | Base tree step to start scanning from | auto (from petar initial output) |
+| `-i` | int | Snapshot format: 0 = binary, 1 = ASCII | 1 |
+| `-t` | float | Max wall time (seconds) per test run | auto (last run × 3) |
+
+**Output**: Files `check.perf.<timestep>.log` are created. The tool prints the recommended `-s` value.
+
+### Critical Caveat: Halve the Recommended Step
+
+`petar.find.dt` only benchmarks the **first 6 solver steps**. In many simulations, the optimal tree time step for the initial configuration leads to increasingly large changeover radii as the cluster evolves (e.g., half-mass radius grows from mass loss, or binaries harden), causing the direct-integration (hard) part to slow down significantly after some time.
+
+**Rule**: Always use **`s_rec / 2`** (the next smaller regularized step, i.e. half the recommended value) for the production run. This provides a safety margin against late-time performance degradation. The cost is only ~2× more tree steps while avoiding the risk of the hard solver becoming a bottleneck.
+
+### Workflow Integration
+
+Insert the `petar.find.dt` step **between IC preparation and the production run**:
+
+```
+IC generation (mcluster) → petar.init → petar.select → petar.find.dt → petar (full production run)
+```
+
+Step by step:
+
+1. Generate IC and convert with `petar.init` (as usual).
+2. Run `petar.select` to pick the solver binary matching your scenario.
+3. Run `petar.find.dt` directly on the input snapshot — it handles all internal test runs automatically:
+   ```
+   petar.find.dt -a "<extra-opts>" -i 1 input
+   ```
+   Use `-i 1` for ASCII-format input (default from `petar.init`), `-i 0` for binary.  
+   Pass all scenario-specific options (e.g. `--galpy-set`, `--bse-metallicity`, `-b`) inside `-a "..."`.
+4. **Halve** the recommended `s` value — use the next regularized step (×0.5).
+5. Launch the production run with `-s <halved-value>` plus the other options.
 
 ## Binary Selection and Capability Validation
 
@@ -447,6 +536,18 @@ Technical background (key algorithms):
 - SDAR integrator: slow-down + time-transformed symplectic method for few-body systems (Wang et al. 2020, MNRAS, 493, 3398) — [https://doi.org/10.1093/mnras/staa480](https://doi.org/10.1093/mnras/staa480)
 - BlogH hybrid method and LogH accuracy limits for hierarchical triples (Wang 2025, ApJ, 978, 65) — [https://doi.org/10.3847/1538-4357/ad98f3](https://doi.org/10.3847/1538-4357/ad98f3)
 - Freefall-based P3T switching criterion vs σ-based criterion (Wang et al. 2026, ApJ, 998, 233) — [https://doi.org/10.3847/1538-4357/ae367c](https://doi.org/10.3847/1538-4357/ae367c)
+
+## Reference Documents (Must Read)
+
+The following asset files contain critical information not inlined in this document.
+When a task falls into the corresponding category, **read the file explicitly** with `read_file` before proceeding — do not guess or rely on memory.
+
+| When to read | File | What it contains |
+|-------------|------|------------------|
+| **Any simulation scenario** (after scenario is identified) | `assets/minimal-question-sets.md` | Per-scenario required-ask lists, including the "do not ask if already known" rule |
+| **Tool usage needed** (before composing commands) | `assets/script-tools.md` | Command templates and usage patterns for all PeTar tools (`petar.init`, `petar.find.dt`, `petar.data.process`, `petar.movie`, etc.) |
+| **Python data analysis** (before writing analysis code) | `assets/data-readback-patterns.md` | Verified readback patterns and `interrupt_mode`/`external_mode` keyword arguments for Python snapshot readers |
+| **DSM workflow** (when scenario = DSM) | `assets/dsm-workflow.md` | DSM-specific IC preparation, runtime parameters, and post-processing pipeline |
 
 ## Scope Notes
 

@@ -11,6 +11,11 @@ if ! command -v petar.select >/dev/null 2>&1; then
 	echo "Error: petar.select is not found in PATH. Please run 'make install' for PeTar first." >&2
 	exit 1
 fi
+
+if ! command -v petar.find.dt >/dev/null 2>&1; then
+	echo "Error: petar.find.dt is not found in PATH. Please run 'make install' first." >&2
+	exit 1
+fi
 mcluster -N 1000 -b 0.95 -C 5 -u 1 >mc.log
 
 # use petar.init to create initial data for petar.
@@ -31,7 +36,19 @@ petar.init -c 8000,0,0,0,220,0 -t -s bse -v kms2pcmyr -f input test.dat.10
 # Parallel hint: for N~10^3 with many primordial binaries (this sample), multi-threading can help.
 # If needed, set 'OMP_NUM_THREADS=[number of threads]' (e.g. 2-4) and benchmark on your machine.
 petar.select --require bse,galpy --optional mpi,omp,avx512,avx2
-OMP_STACKSIZE=128M petar -u 1 -b 500 --galpy-set MWPotential2014 --bse-metallicity 0.02 -t 100.0 -o 5.0 input &>output
+
+# Optimise tree time step with petar.find.dt for best performance.
+# NOTE: petar.find.dt only tests the first 6 steps, so the recommended dt
+# may degrade later. Always halve it for the production run.
+# See SKILL.md "Performance Optimisation" for details.
+dt_rec=$(petar.find.dt -a "-u 1 -b 500 --galpy-set MWPotential2014 --bse-metallicity 0.02" -i 1 input 2>/dev/null | \
+    grep "Best performance choice" | sed 's/.*tree step: //' | sed 's/,.*//')
+dt_use=$(python3 -c "print(float('$dt_rec') / 2.0)")
+echo "--- Production tree time step (half of recommended): $dt_use ---"
+
+# Use PeTar to execute the simulation with stellar evolution and MilkyWay potential.
+# '-s $dt_use' uses the optimised tree time step from petar.find.dt.
+OMP_STACKSIZE=128M petar -u 1 -b 500 --galpy-set MWPotential2014 --bse-metallicity 0.02 -t 100.0 -o 5.0 -s "$dt_use" input &>output
 
 # after mode finished, gether the output data and do post-data process to detect binaries, obtain Lagrangian and core radii and corresponding properties.
 # to obtain the estimation of tidal radius, using '--r-escape tidal'
