@@ -60,6 +60,7 @@ public:
     IOParams<PS::F64> eps;
     IOParams<PS::F64> r_group;
     IOParams<PS::F64> r_search_group;
+    IOParams<PS::F64> r_search_group_safety;
     IOParams<PS::F64> r_out;
     IOParams<PS::F64> r_in_over_out;
     IOParams<PS::F64> acc_offset_sq;
@@ -119,7 +120,8 @@ public:
                     gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant", NULL, false),
                     eps              (input_par_store, 0.0,  "soft-eps", "Softening epsilon"),
                     r_group          (input_par_store,-1.0,  "r-group", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.); = -1: auto-determine by 0.8*r_search_group; = 0: switch off SDAR; > 0: custom criterion value"),
-                    r_search_group   (input_par_store,-1.0,  "r-search-group", "The radial criterion for detecting multiple group candidates; = -1: auto-determine by 1.0*r_in; = 0: switch off SDAR; > 0: custom criterion value"),
+                    r_search_group   (input_par_store,-1.0,  "r-search-group", "The radial criterion for detecting multiple group candidates; = -1: auto-determine by 1.0*r_in (or by sigma_1D based hard-soft boundary if sigma_1D is provided); = 0: switch off SDAR; > 0: custom criterion value"),
+                    r_search_group_safety(input_par_store, 1.0, "r-search-group-safety", "Safety factor for physics-based SDAR group search: r_search_group = min(r_in, safety * G * m_avg / sigma_1D^2); only used when r-search-group=-1 and sigma_1D is provided"),
                     r_out            (input_par_store, 0.0,  "r", "Outer changeover radius for hard manager initialization; = 0: use external r_out input", NULL, false),
                     r_in_over_out    (input_par_store, 0.0,  "r-ratio", "Inner-to-outer changeover radius ratio (r_in/r_out) for hard manager initialization; must be in (0,1) when used", NULL, false),
                     acc_offset_sq    (input_par_store, -1.0, "hermite-acc-offset-sq", "Square acceleration offset for Hermite time step calculation to avoid too small step when weak acceleration exists; = -1: calculate from mean mass <m> and r_out (G*<m>/r_out^2)^2; = 0: no offset; > 0: custom offset value"),
@@ -189,6 +191,7 @@ public:
             {eps.key,                    required_argument, &hard_flag, 2},
             {r_group.key,                required_argument, &hard_flag, 3},
             {r_search_group.key,         required_argument, &hard_flag, 4},
+            {r_search_group_safety.key,  required_argument, &hard_flag, 36},
             {r_out.key,                  required_argument, &hard_flag, 34},
             {r_in_over_out.key,          required_argument, &hard_flag, 35},
             {acc_offset_sq.key,          required_argument, &hard_flag, 23},
@@ -272,6 +275,12 @@ public:
                         if(print_flag) r_search_group.print(std::cout);
                         opt_used += 2;
                         //assert(r_search_group.value>=0.0);
+                        break;
+                    case 36:
+                        r_search_group_safety.value = atof(optarg);
+                        if(print_flag) r_search_group_safety.print(std::cout);
+                        opt_used += 2;
+                        assert(r_search_group_safety.value>0.0);
                         break;
                     case 34:
                         r_out.value = atof(optarg);
@@ -625,6 +634,7 @@ public:
         @param[in] _write_style: write style
         @param[in] _print_flag: print flag
         @param[in] _mass_average: average mass of particles; <=0 means do not override and use only when needed
+        @param[in] _vel_disp_1d: 1D velocity dispersion for physics-based SDAR group search radius; <=0 means fallback to r_in based auto
         @param[in] _r_out_base: outer changeover radius override; <=0 means use _input.r_out
         @param[in] _r_in_over_out_base: ratio override (r_in/r_out); <=0 means use _input.r_in_over_out
         @param[in] _dt_soft: softening time step override for dt_max_hermite fallback; <=0 means no override
@@ -641,6 +651,7 @@ public:
                  const int _write_style, 
                  const bool _print_flag=false,
                  const PS::F64 _mass_average=0.0, 
+                 const PS::F64 _vel_disp_1d=0.0,
                  const PS::F64 _r_out_base=0.0,
                  const PS::F64 _r_in_over_out_base=0.0,
                  const PS::F64 _dt_soft=0.0) {
@@ -664,9 +675,18 @@ public:
         r_out_base = _input.r_out.value;
         r_in_base = r_out_base * _input.r_in_over_out.value;
         
-        // if r_search_group is not defined, set to r_in
+        // if r_search_group is not defined
         if (_input.r_search_group.value==-1.0) {
-            _input.r_search_group.value = r_in_base;
+            // Physics-based: use hard-soft boundary a_hs = G * m_avg / sigma_1D^2
+            if (_vel_disp_1d > 0.0 && _mass_average > 0.0) {
+                PS::F64 a_hs = _input.gravitational_constant.value * _mass_average
+                               / (_vel_disp_1d * _vel_disp_1d);
+                _input.r_search_group.value = std::min(r_in_base,
+                    _input.r_search_group_safety.value * a_hs);
+            } else {
+                // Fallback: use r_in (original behaviour)
+                _input.r_search_group.value = r_in_base;
+            }
         }
         PtclHard::r_search_group_over_in = _input.r_search_group.value/r_in_base;
         const PS::F64 ratio_eps = 8.0*std::numeric_limits<PS::F64>::epsilon();

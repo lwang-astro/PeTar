@@ -342,7 +342,7 @@ int main(int argc, char** argv)
 
     // system hard paramters
     HardManager hard_manager;
-    hard_manager.initial(hard_parameters, stat, true, false, m_average, r_out, r_in_over_out, dt_soft);
+    hard_manager.initial(hard_parameters, stat, true, false, m_average, 0.0, r_out, r_in_over_out, dt_soft);
 
     // print parameters
     std::cout<<"r_out="<<r_out<<std::endl
