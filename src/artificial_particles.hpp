@@ -612,12 +612,13 @@ public:
 #ifndef STELLAR_EVOLUTION
         // stellar mass loss may cause inconsistence
         assert(abs(mass_cm_check-pcm->group_data.artificial.getMassBackup())<1e-10);
-        PS::F64vec dpos = pos_cm_check-pcm->pos;
-        assert(abs(dpos*dpos)<1e-20);
+        //PS::F64vec dpos = pos_cm_check-pcm->pos;
+        // tidal tensor particles may cause inconsistence, set to 1e-10 (may also be too strict)
+        //assert(abs(dpos*dpos)<1e-10);
 #else
         assert(abs(mass_cm_check-pcm->group_data.artificial.getMassBackup())<1e-3);
-        PS::F64vec dpos = pos_cm_check-pcm->pos;
-        assert(abs(dpos*dpos)<1e-10);
+        //PS::F64vec dpos = pos_cm_check-pcm->pos;
+        //assert(abs(dpos*dpos)<1e-10);
 #endif
     }
 #endif

@@ -1800,21 +1800,25 @@ public:
                 }
                 else {
                     auto& ap_manager = manager->ap_manager;
+                    if (bink.semi > 0.0) {
+                        // update new cm. pos and vel for binarytree root                
+                        bink.pos = pcm.pos;
+                        bink.vel = pcm.vel;
+                        ap_manager.updateArtificialParticles(_ptcl_artificial, bink);
+#ifdef ARTIFICIAL_PARTICLE_DEBUG                
+                        ap_manager.checkConsistence(ptcl_origin, _ptcl_artificial);
+#endif
 
-                    // update new cm. pos and vel for binarytree root                
-                    bink.pos = pcm.pos;
-                    bink.vel = pcm.vel;
-                    ap_manager.updateArtificialParticles(_ptcl_artificial, bink);
-    #ifdef ARTIFICIAL_PARTICLE_DEBUG                
-                    ap_manager.checkConsistence(ptcl_origin, _ptcl_artificial);
-    #endif
-
-                    // set mass back to backup mass                
-                    for (int i=0; i<n_members; i++) {
-                        auto& pi = ptcl_origin[i];
-                        ASSERT(!pi.group_data.artificial.isUnused());
-                        pi.group_data.artificial.setMassBackup(pi.mass);
-                        pi.mass = 0.0; // set mass to zero
+                        // set mass back to backup mass                
+                        for (int i=0; i<n_members; i++) {
+                            auto& pi = ptcl_origin[i];
+                            ASSERT(!pi.group_data.artificial.isUnused());
+                            pi.group_data.artificial.setMassBackup(pi.mass);
+                            pi.mass = 0.0; // set mass to zero
+                        }
+                    } else {
+                        // binary became unbound (semi <= 0), mark for group dissolution
+                        sdar_n_groups_arti_change ++;
                     }
                 }
             }    
