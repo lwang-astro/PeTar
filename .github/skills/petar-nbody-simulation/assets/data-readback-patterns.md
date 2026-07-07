@@ -15,6 +15,8 @@ import numpy as np
 
 ## Common Parameters
 
+### Keyword arguments
+
 Two keyword arguments control column layout and must match the producing solver:
 
 | Argument | Values | Purpose |
@@ -23,6 +25,49 @@ Two keyword arguments control column layout and must match the producing solver:
 | `external_mode` | `none`, `galpy`, `agama` | Must match solver `--with-external` |
 
 Pass these consistently to all readers. See `Snapshot Read-Mismatch Policy` in `SKILL.md` for how to diagnose mismatches.
+
+### Input/output format: choosing the right read method
+
+`petar.data.process` supports three output formats, each requiring a different read method:
+
+| `output_format` | File extension | Read method | Write method |
+|-----------------|----------------|-------------|--------------|
+| `binary` (default) | (none) | `.fromfile(path)` | `.tofile(f)` |
+| `npy` | `.npy` | **`.load(path)`** | `.save(f)` |
+| `ascii` | (none) | `.loadtxt(path)` | `.savetxt(f)` |
+
+When reading post-processed files, **check the file extension** to determine the format. If the file ends with `.npy`, use `.load()` instead of `.fromfile()`. Otherwise, use the method matching the table above.
+
+### Unit conversion (critical for scientific correctness)
+
+**Never use approximate hardcoded constants** (e.g., `semi * 206265`). These introduce systematic bias that can corrupt scientific results.
+
+PeTar's physical constants (`src/astro_units.hpp`) are now **auto-generated from `astropy`** via `tools/generate_astro_units.py`. This means `petar` module constants and `astropy.units` derive from the same IAU/CODATA sources — there is no precision hierarchy between them.
+
+**Preferred approach — `astropy.units`** (cleaner API, handles any conversion in one line):
+```python
+import astropy.units as u
+
+# pc → AU
+semi_au = (binary.semi * u.pc).to(u.AU).value
+
+# pc/Myr → km/s
+vel_kms = (binary.vel * u.pc / u.Myr).to(u.km / u.s).value
+
+# pc → km, Rsun, ly, etc.
+semi_km = (binary.semi * u.pc).to(u.km).value
+semi_rsun = (binary.semi * u.pc).to(u.Rsun).value
+```
+
+**Alternative — `petar` module constants** (same values, use when cross-checking against C++ solver output):
+```python
+# Gravitational constant (Msun, pc, Myr) — from astropy via astro_units.hpp
+petar.G_MSUN_PC_MYR          # = 0.004498502151469553
+
+# pc/Myr ↔ km/s — from astropy via astro_units.hpp
+petar.PCMYR_TO_KMS           # = 0.9777922216807892
+petar.KMS_TO_PCMYR           # = 1.022712165045695
+```
 
 ## Pattern 1: Lagrangian Radii (`data.lagr`)
 
@@ -114,7 +159,9 @@ particle.fromfile("data.1", offset=offset)
 
 ### Reading single/binary component snapshots
 
-After `petar.data.process`, each snapshot has split files:
+After `petar.data.process`, each snapshot has split files. **Choose read method by file extension:**
+
+**Binary format (default, no `.npy` suffix):**
 
 ```python
 # Single particles
@@ -129,6 +176,23 @@ binary = petar.Binary(
     G=petar.G_MSUN_PC_MYR,
 )
 binary.fromfile("data.1.binary")
+```
+
+**npy format (`.npy` suffix):** use `.load()` instead of `.fromfile()`:
+
+```python
+# Single particles
+single = petar.Particle(interrupt_mode="<mode>", external_mode="<mode>")
+single.load("data.1.single.npy")        # .load() not .fromfile()
+
+# Binary particles
+binary = petar.Binary(
+    member_particle_type=petar.Particle,
+    interrupt_mode="<mode>",
+    external_mode="<mode>",
+    G=petar.G_MSUN_PC_MYR,
+)
+binary.load("data.1.binary.npy")        # .load() not .fromfile()
 ```
 
 ## Pattern 7: Object Snapshots (`object.<N>`)
@@ -239,6 +303,7 @@ When running read checks, warnings fall into two categories:
 - `not aligned with dtype itemsize` — binary layout mismatch
 - `File may be truncated` — incomplete snapshot
 - `dtype mismatch` — column schema mismatch
+- `column` mismatch (shape, column count, column dtype) — column layout mismatch
 
 These indicate a mode-flag or format mismatch. Stop, correct flags, retry.
 
@@ -296,19 +361,24 @@ def readback(case_dir, output_prefix, interrupt_mode, external_mode):
           f"BinaryEscaper({interrupt_mode}, {external_mode})")
 
     # SSE/BSE tables (if present)
-    for suffix, cls, kwargs in [
-        ("sse", petar.SSEType, {}),
-        ("sse.type_change", petar.SSETypeChange, {}),
-        ("sse.sn_kick", petar.SSESNKick, {}),
-        ("bse", petar.BSEType, {}),
-        ("bse_status", petar.BSEStatus, {}),
-        ("bse.type_change", petar.BSETypeChange, {}),
-        ("bse.sn_kick", petar.BSEKick, {}),
-    ]:
+    # Each entry is (suffix, class, method_name) — method_name must be 'loadtxt' or 'fromfile'
+    sse_bse_entries = [
+        ("sse", petar.SSEType, "loadtxt"),
+        ("sse.type_change", petar.SSETypeChange, "loadtxt"),
+        ("sse.sn_kick", petar.SSESNKick, "loadtxt"),
+        ("bse", petar.BSEType, "loadtxt"),
+        ("bse_status", petar.BSEStatus, "fromfile"),
+        ("bse.type_change", petar.BSETypeChange, "loadtxt"),
+        ("bse.sn_kick", petar.BSEKick, "loadtxt"),
+        ("bse.gw_kick", petar.BSEKick, "loadtxt"),
+        ("bse.dynamic_merge", petar.BSEDynamicMerge, "loadtxt"),
+        ("bse.binary_merge", petar.BSETypeChange, "loadtxt"),
+    ]
+    for suffix, cls, method in sse_bse_entries:
         path = case_dir / f"{output_prefix}.{suffix}"
         if path.exists():
-            loader = lambda p, c=cls, k=kwargs: c().loadtxt(str(p)) if hasattr(c(), 'loadtxt') else c().fromfile(str(p))
-            check(suffix, path, loader, f"{cls.__name__}()")
+            loader = lambda p, c=cls, m=method: getattr(c(), m)(str(p))
+            check(suffix, path, loader, f"{cls.__name__}().{method}(path)")
 
     # Snapshots from snap.lst
     snap_list = case_dir / f"{output_prefix}.snap.lst"

@@ -410,6 +410,33 @@ export PYTHONPATH=$PYTHONPATH:[Install path]/include
 
 These environment variable configuration commands need to be executed each time a new terminal is opened. To automate the loading of these variables, it is advisable to add these commands to the .bashrc file in the case of a bash Linux system.
 
+### Physical Constants (auto-generated header)
+
+The file [`src/astro_units.hpp`](src/astro_units.hpp) defines the physical constants used throughout PeTar's C++ solver (gravitational constant, unit conversions, speed of light). These constants are **auto-generated** from `astropy`'s IAU/CODATA definitions, ensuring they stay aligned with the latest astronomical standards.
+
+**Regenerate when**:
+- You update `astropy` to a new version and want to pick up revised IAU/CODATA values.
+- You add a new physical constant to the header and need it computed from fundamental definitions.
+
+**Prerequisite**: `astropy` (>= 5.0) and `numpy`. Install with:
+```shell
+pip install astropy numpy
+```
+
+**Usage**:
+```shell
+# Regenerate src/astro_units.hpp from astropy:
+python tools/generate_astro_units.py
+
+# Check if existing header matches current astropy:
+python tools/generate_astro_units.py --check
+
+# Preview computed values without modifying the file:
+python tools/generate_astro_units.py --print
+```
+
+The generated header includes timestamp and version metadata (`astropy`, Python version) for provenance tracking.
+
 ## Sample Scripts
 
 After completing the installation process, users can quickly get started by exploring sample scripts in the `sample` folder. These scripts provide practical demonstrations of generating initial conditions with `mcluster`, selecting a suitable installed PeTar binary family via `petar.select`, running simulations, and post-processing outputs. Each script starts with pre-checks for `mcluster` and `petar.select`.

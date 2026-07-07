@@ -125,7 +125,7 @@ To make warning exposure deterministic, functional movie checks are run with `--
 ## Suggested Next Iterations
 
 1. Expand matrix to include gasdrag/DSM/CUDA/step-mode families.
-2. Add restart/resume smoke (`petar.data.clear` + resume run).
+2. Add restart/resume smoke (abnormal-stop + resume run; `petar.data.clear` for legacy cleanup testing).
 3. Add MPI launch mode (`mpirun`) and gather behavior checks.
 4. Add strict artifact schema checks (file counts, non-empty constraints, regex in logs).
 5. Wire into CI with stage split: `functional -> validation`.

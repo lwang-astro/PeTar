@@ -1,6 +1,6 @@
 ---
 name: petar-nbody-simulation
-description: "Use when: setting up or running PeTar N-body simulations, including petar.select binary-family switching, petar.init conversion, isolated clusters, BSE/SSE, Galpy or Agama external potential, MPI/OpenMP/GPU launch, restart/resume, petar.data post-processing, timestep tuning with petar.find.dt, restart cleanup with petar.data.clear, snapshot extraction with petar.get.object.snap, format conversion with petar.format.transfer.post, galev processing, and movie generation."
+description: "Use when: setting up or running PeTar N-body simulations, including petar.select binary-family switching, petar.init conversion, isolated clusters, BSE/SSE, Galpy or Agama external potential, MPI/OpenMP/GPU launch, restart/resume, petar.data post-processing, timestep tuning with petar.find.dt, snapshot extraction with petar.get.object.snap, format conversion with petar.format.transfer.post, galev processing, and movie generation."
 ---
 
 # PeTar N-body Simulation Skill (Compact)
@@ -53,6 +53,7 @@ This compact version prioritizes execution safety, option correctness, and repro
     - `--enable-mpfrc` — **only if MPFRC precision is explicitly requested**
     - `--enable-64b`, `--enable-avx2`, `--enable-avx512`, `--enable-omp`, `--enable-mpi` — architecture options carry minimal feature risk
   - If the user confirms a rebuild, compose the configure command from the current scenario needs, not from `config.status`.
+- **After any `astropy` upgrade** (or when adding a new constant to `astro_units.hpp`), regenerate the physical constants header with `python tools/generate_astro_units.py`. This ensures `G_ASTRO`, `PCMYR_TO_KMS`, `SPEED_OF_LIGHT`, etc. stay aligned with the latest IAU/CODATA definitions. See `README.md` (Compilation and Installation → Physical Constants) for usage.
 - Never use `*.hard.debug`, `*.format.transfer`, `petar.hard.test`, or `*.dump2test` binaries as production solvers.
 - For source-level debugging, require rebuild with `--with-debug=g`.
 - Prefer `petar.select` over manual symlink edits.
@@ -364,7 +365,8 @@ Set `-s` and `-r` explicitly to take full manual control. Any parameter left at 
 1. Use `-p <par_file>` before overrides.
 2. Final positional argument is restart snapshot.
 3. Use `-a 0` only when overwrite requested.
-4. If restarting from an intermediate snapshot that may duplicate events, use `petar.data.clear` first.
+4. **Duplicate-event prevention is now handled automatically** via the transactional `*.tmp` file mechanism: each output interval is first written to temporary files and only committed on successful completion. This eliminates the need for manual cleanup before restarts in modern PeTar.
+5. For **legacy (old-version) runs only**: if restarting from an intermediate snapshot with older output files that may contain already-committed duplicate records, use `petar.data.clear -t <time> [prefix]` to trim event files back to the snapshot time.
 
 ## Controlled Experiment Checklist
 
@@ -441,42 +443,53 @@ Mismatched flags cause snapshot read errors (see `Snapshot Read-Mismatch Policy`
 
 ## Python Data Analysis Tools
 
-PeTar installs a Python analysis library (`import petar`) at `tools/analysis/`. The primary reference is `sample/data_analysis.ipynb`.
+### Hard Rule: Read the Authority First
 
-### Quick start
+Before writing any Python analysis code that reads PeTar output files, **you MUST read `assets/data-readback-patterns.md`** with `read_file`. Do not guess the API from memory — the class constructors, keyword arguments, header offsets, and `fromfile`/`loadtxt` method signatures vary by file type and solver configuration. Guessing produces read errors and incorrect results.
 
-```python
-import petar
+The primary reference is `sample/data_analysis.ipynb`; the verified readback patterns are in `assets/data-readback-patterns.md`.
 
-header = petar.PeTarDataHeader("data.1")        # read snapshot header
-particle = petar.Particle()                      # read particles
-particle.fromfile("data.1", offset=petar.HEADER_OFFSET)
-```
+### Unit Conversion Rule
 
-### Mode-specific reading (required for correctness)
+**Never use approximate hardcoded constants** (e.g., `semi * 206265`). **Always prefer `astropy.units`** for all unit conversions — it uses IAU 2015/2019 definitions and is authoritative. Use `petar` module constants (e.g., `petar.G_MSUN_PC_MYR`) only when exact consistency with PeTar's C++ solver is required. See `assets/data-readback-patterns.md` (Unit Conversion section) for complete guidance and examples.
 
-The `Particle` columns depend on the solver's compile-time configuration. Pass matching keyword arguments:
+### File-Type → Reader-Class Quick Reference
 
-```python
-# BSE simulation
-particle = petar.Particle(interrupt_mode="bse")
-particle.fromfile("data.1", offset=petar.HEADER_OFFSET)
+This table maps each output file type to its reader class. For **exact constructor kwargs, header offsets, and method signatures**, read `assets/data-readback-patterns.md`.
 
-# Galpy external potential
-particle = petar.Particle(external_mode="galpy")
-particle.fromfile("data.1", offset=petar.HEADER_OFFSET)
-```
+| File pattern | Reader class | Key notes |
+|---|---|---|
+| `data.<N>` (raw snapshot) | `petar.Particle` | Needs `offset=`, `interrupt_mode`, `external_mode` kwargs; offset depends on external mode |
+| `data.lagr` | `petar.LagrangianMultiple` | `external_mode` controls COM-offset columns |
+| `data.core` | `petar.Core` | Simple: `core.fromfile("data.core")` |
+| `data.status` | `petar.Status` | Simple: `status.fromfile("data.status")` |
+| `data.esc_single` / `data.esc_binary` | `petar.SingleEscaper` / `petar.BinaryEscaper` | Needs `interrupt_mode`, `external_mode` |
+| `data.sse` / `data.bse` (tables) | `petar.SSEType` / `petar.BSEType` | ASCII tables — use `.loadtxt()` |
+| `data.sse.type_change` / `data.bse.type_change` | `petar.SSETypeChange` / `petar.BSETypeChange` | ASCII event tables — `.loadtxt()` |
+| `data.sse.sn_kick` / `data.bse.sn_kick` | `petar.SSESNKick` / `petar.BSEKick` | ASCII event tables — `.loadtxt()` |
+| `data.bse.gw_kick` | `petar.BSEKick` | Same class as sn_kick |
+| `data.bse.dynamic_merge` | `petar.BSEDynamicMerge` | ASCII — `.loadtxt()` |
+| `data.bse.binary_merge` | `petar.BSETypeChange` | Reuses BSETypeChange, not a dedicated class |
+| `data.bse_status` | `petar.BSEStatus` | Binary format — `.fromfile()` |
+| `data.<N>.single` / `.single.npy` (post-processed) | `petar.Particle` | No header, no offset; `.npy` suffix → use **`.load()`** instead of `.fromfile()` |
+| `data.<N>.binary` / `.binary.npy` (post-processed) | `petar.Binary` | No header, no offset; needs `G=`, `interrupt_mode`, `external_mode`, `member_particle_type=petar.Particle`; `.npy` suffix → use **`.load()`** instead of `.fromfile()` |
+| `data.<N>.triple` / `.quadruple` | `petar.GroupInfo(N=3)` / `petar.GroupInfo(N=4)` | No header; `N=` controls column layout |
+| `data.group.n<N>` | `petar.GroupInfo(N=<N>)` | `N=` must match file suffix |
+| `object.<N>` (object snapshots) | `petar.Particle` | **Must** call `obj.addNewMember("time", ...)` before `fromfile()` |
+| `data.prof.rank.*` | `petar.Profile` | Column count depends on GPU/FDPS version — use matching strategy (see `data-readback-patterns.md`) |
 
-**Key keyword arguments for `Particle()`:**
+### Universal Keyword Arguments
+
+These kwargs control column layout and **must match the producing solver**. Pass them consistently to `Particle`, `Binary`, escaper, and Lagrangian readers:
 
 | Argument | Values | Purpose |
 |----------|--------|---------|
-| `interrupt_mode` | `none`, `merger`, `base`, `bse`, `mobse`, `dsm` | Must match solver `--with-interrupt` |
+| `interrupt_mode` | `none`, `merger`, `base`, `bse`, `mobse`, `bseEmp`, `dsm` | Must match solver `--with-interrupt` |
 | `external_mode` | `none`, `galpy`, `agama` | Must match solver `--with-external` |
 
-Mismatched keyword arguments cause column misalignment and read errors (see `Snapshot Read-Mismatch Policy`).
+Mismatched kwargs cause column misalignment and read errors (see `Snapshot Read-Mismatch Policy`).
 
-### Analysis modules
+### Analysis Modules (import petar.<module>)
 
 | Module | Purpose |
 |--------|---------|
@@ -491,8 +504,6 @@ Mismatched keyword arguments cause column misalignment and read errors (see `Sna
 | `petar.galev` | Galev stellar population synthesis |
 | `petar.agama` | Agama MW potential utilities |
 | `petar.parallel_data_process` | Parallel multi-snapshot processing |
-
-For detailed class API (header offsets, keyword arguments, member lists), see `sample/data_analysis.ipynb`.
 
 ## Snapshot Read-Mismatch Policy
 
@@ -554,7 +565,7 @@ When a task falls into the corresponding category, **read the file explicitly** 
 |-------------|------|------------------|
 | **Any simulation scenario** (after scenario is identified) | `assets/minimal-question-sets.md` | Per-scenario required-ask lists, including the "do not ask if already known" rule |
 | **Tool usage needed** (before composing commands) | `assets/script-tools.md` | Command templates and usage patterns for all PeTar tools (`petar.init`, `petar.find.dt`, `petar.data.process`, `petar.movie`, etc.) |
-| **Python data analysis** (before writing analysis code) | `assets/data-readback-patterns.md` | Verified readback patterns and `interrupt_mode`/`external_mode` keyword arguments for Python snapshot readers |
+| **Python data analysis** (before writing any analysis code) | `assets/data-readback-patterns.md` | **MUST READ before writing any analysis code.** Contains verified readback patterns for all file types (Particle, Binary, LagrangianMultiple, Core, Status, Escaper, SSEType/BSE event tables, GroupInfo, Profile, object snapshots), including constructor kwargs, header offsets, `fromfile` vs `loadtxt` method choice, and mode-matching rules. |
 | **DSM workflow** (when scenario = DSM) | `assets/dsm-workflow.md` | DSM-specific IC preparation, runtime parameters, and post-processing pipeline |
 
 ## Scope Notes
