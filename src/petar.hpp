@@ -3014,7 +3014,6 @@ public:
         known_options.push_back("help");
         known_options.push_back("h");
         known_options.push_back("disable-print-info");
-        known_options.push_back("keep-tmp-on-startup");
         FindUndefinedOptions(all_pars, argc, argv, &known_options);
 
         // reading parameters

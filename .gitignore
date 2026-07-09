@@ -58,3 +58,6 @@ tools/__pycache__/
 
 # vscode workspace
 PeTar.code-workspace
+
+# clangd cache
+.cache/clangd

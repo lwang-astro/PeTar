@@ -16,6 +16,7 @@
 using COMM::IOParams;
 using COMM::IOParamsContainer;
 using COMM::IOParamsPrintHelp;
+using COMM::FindUndefinedOptions;
 
 
 class FileHeader{
@@ -105,46 +106,3 @@ public:
     }
 
 };
-
-
-//! check if the options are defined
-/*! If option is not defined, print error message and abort
-
-    @param[in] io_par_list list of IOParamsContainer
-    @param[in] argc number of arguments
-    @param[in] argv argument list
-*/
-static void FindUndefinedOptions(std::vector<IOParamsContainer*> io_par_list, const int argc, char* argv[], std::vector<std::string>* known_options=NULL) {
-    for (int i=1; i<argc; i++) {
-        if (argv[i][0]=='-') {
-            std::string arg(argv[i]);
-            if (arg[0]=='-' && arg[1]=='-') {
-                arg = arg.substr(2);
-            }
-            else if (arg[0]=='-') {
-                arg = arg.substr(1);
-                // exclude negative number arg with '-'
-                if (arg[0]>='0' && arg[0]<='9') continue;
-            }
-            bool found = false;
-            if (known_options != NULL) {
-                for (auto iter = known_options->begin(); iter != known_options->end(); ++iter) {
-                    if (arg == *iter) {
-                        found = true;
-                        break;
-                    }
-                }
-            }
-            for (auto iter = io_par_list.begin(); iter != io_par_list.end(); ++iter) { 
-                if ((*iter)->isDefined(arg.c_str())) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                std::cerr<<"Error: option "<<arg<<" is not defined!\n";
-                abort();
-            }
-        }
-    }
-}
