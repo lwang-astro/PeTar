@@ -33,7 +33,7 @@ do
 	    echo '                If the type number (for BSE between 0-14) is provided, set the given stellar type to all objects.';
 	    echo "                If '\$[column index]' is given, read the corresponding column as the type for individual objects.";
 	    echo "                   For example, --type '\$8' indicates the 8th column is the types.";
-	    echo '  --radius  [S] Set the initial stellar radius for "-s base" mode (default: 0.0)';
+	    echo '  --radius  [S] Set the initial stellar radius for "-s merger" mode (default: 0.0)';
 	    echo '                If value is given, set the given radius for all stars.';
 	    echo "                If '\$[column index]' is given, read the corresponding column as the stellar radii for individual stars.";
 	    echo "                   For example, --radius '\$8' indicates the 8th column is the stellar radii.";

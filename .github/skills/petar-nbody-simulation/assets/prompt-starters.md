@@ -51,7 +51,7 @@
 
 ```text
 请先用“最小提问清单”收集缺失信息，并且只问缺项：
-1) interrupt: off/base/bse/mobse/bseEmp/dsm
+1) interrupt: off/merger/bse/mobse/bseEmp/dsm
 2) external(long-timescale): off/galpy/agama
 3) external-hard(short-timescale): off/gasdrag
 4) pn: off/pnhermite/pnsdar/pnall

@@ -21,7 +21,7 @@ Two keyword arguments control column layout and must match the producing solver:
 
 | Argument | Values | Purpose |
 |----------|--------|---------|
-| `interrupt_mode` | `none`, `merger`, `base`, `bse`, `mobse`, `dsm` | Must match solver `--with-interrupt` |
+| `interrupt_mode` | `none`, `merger`, `bse`, `mobse`, `dsm` | Must match solver `--with-interrupt` |
 | `external_mode` | `none`, `galpy`, `agama` | Must match solver `--with-external` |
 
 Pass these consistently to all readers. See `Snapshot Read-Mismatch Policy` in `SKILL.md` for how to diagnose mismatches.

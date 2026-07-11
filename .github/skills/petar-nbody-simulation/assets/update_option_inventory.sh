@@ -116,7 +116,7 @@ solver_perf_tags() {
 
 solver_has_interrupt() {
     local bn="$1"
-    [[ "$bn" =~ \.(base|bse|mobse|bseEmp|dsm)(\.|$) ]]
+    [[ "$bn" =~ \.(merger|bse|mobse|bseEmp|dsm)(\.|$) ]]
 }
 
 solver_has_stellar_evolution() {
@@ -208,7 +208,7 @@ token_group_from_configure_feature() {
         kdk|kdkdk|kdkdk4)
             echo "step-mode"
             ;;
-        base|bse|mobse|bseEmp|dsm)
+        merger|bse|mobse|bseEmp|dsm)
             echo "interrupt-mode"
             ;;
         galpy|agama)
@@ -365,7 +365,7 @@ matrix="$ASSET_DIR/option-matrix.md"
     echo "No fixed priority across physics scenarios. Select filters by user requirements first, then choose by performance."
     echo
     echo "Configure mapping:"
-    echo "- --with-interrupt -> suffix tokens: base | bse | mobse | bseEmp | dsm"
+    echo "- --with-interrupt -> suffix tokens: merger | bse | mobse | bseEmp | dsm"
     echo "- --with-external -> suffix tokens: galpy | agama"
     echo "- --with-external-hard -> suffix token: gasdrag"
     echo "- --with-pn -> suffix tokens: pn*"

@@ -57,6 +57,8 @@ dsm-merger-tdelay
 dsm-new-star-mode
 dsm-rstar-power
 dsm-rstar-scale
+dsm-salpeter-mass-index
+dsm-salpeter-mass-thres
 dsm-salpeter-time
 dsm-seed-mass
 dsm-speed-of-light
@@ -138,6 +140,7 @@ r-escape
 r-group
 r-ratio
 r-search-group
+r-search-group-safety
 r-search-min
 r-search-peri-factor
 r-search-vel-factor

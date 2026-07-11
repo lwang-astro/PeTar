@@ -59,7 +59,7 @@ Discovery rule:
 No fixed priority across physics scenarios. Select filters by user requirements first, then choose by performance.
 
 Configure mapping:
-- --with-interrupt -> suffix tokens: base | bse | mobse | bseEmp | dsm
+- --with-interrupt -> suffix tokens: merger | bse | mobse | bseEmp | dsm
 - --with-external -> suffix tokens: galpy | agama
 - --with-external-hard -> suffix token: gasdrag
 - --with-pn -> suffix tokens: pn*

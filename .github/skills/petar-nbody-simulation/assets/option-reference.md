@@ -3,7 +3,7 @@
 All possible PeTar command-line options across every configure variant.
 Generated from source headers — no binary compilation needed.
 
-> Generated: 2026-06-09 01:37 UTC
+> Generated: 2026-07-11 14:17 UTC
 > Regenerate: `python3 .github/skills/petar-nbody-simulation/assets/generate_option_reference.py`
 
 See [`option-matrix.md`](option-matrix.md) for currently installed binaries.
@@ -15,14 +15,14 @@ Use `<binary> -h` for exact runtime option validation.
 
 | Configure Flag Group | Option Count |
 |-----------------------|-------------|
-| Core (always available) | 76 |
+| Core (always available) | 77 |
 | BSE Interrupt (`--with-interrupt=bse|mobse|bseEmp`) | 61 |
-| DSM Interrupt (`--with-interrupt=dsm`) | 17 |
+| DSM Interrupt (`--with-interrupt=dsm`) | 19 |
 | Galpy External (`--with-external=galpy`) | 10 |
 | Agama External (`--with-external=agama`) | 3 |
 | Gas Drag (`--with-external-hard=gasdrag`) | 10 |
 | External Hard (`--with-external-hard`) | 2 |
-| **Total** | **179** |
+| **Total** | **182** |
 
 ---
 
@@ -54,35 +54,35 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::F64`
 - **Default**: `1.0`
 - **Description**: Scale factor for SDAR step size calculation
-- **Source**: `src/hard.hpp`:140
+- **Source**: `src/hard.hpp`:142
 
 ### `--ar-max-error`
 
 - **Type**: `PS::F64`
 - **Default**: `1e-8`
 - **Description**: Maximum energy error allowed for the SDAR integrator
-- **Source**: `src/hard.hpp`:137
+- **Source**: `src/hard.hpp`:139
 
 ### `--ar-max-nstep`
 
 - **Type**: `PS::S64`
 - **Default**: `1000000`
 - **Description**: Maximum step allowed for the SDAR sym integrator
-- **Source**: `src/hard.hpp`:138
+- **Source**: `src/hard.hpp`:140
 
 ### `--ar-slowdown-factor`
 
 - **Type**: `PS::F64`
 - **Default**: `1e-4`
 - **Description**: Slowdown perturbation criterion
-- **Source**: `src/hard.hpp`:141
+- **Source**: `src/hard.hpp`:143
 
 ### `--ar-sym-order`
 
 - **Type**: `PS::S64`
 - **Default**: `-6`
 - **Description**: Order of the symplectic integrator for SDAR, should be even number; -6,-8: Yoshida 2nd symplectic method; 4,6,8,...: Yoshida 1st symplectic method
-- **Source**: `src/hard.hpp`:139
+- **Source**: `src/hard.hpp`:141
 
 ### `--b`
 
@@ -96,15 +96,15 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::S64`
 - **Default**: `-1`
 - **Description**: id of the central object for a system like a stellar disk
-- **Source**: `src/hard.hpp`:132
+- **Source**: `src/hard.hpp`:134
 
 ### `--detect-interrupt`
 
 - **Type**: `PS::S64`
 - **Default**: `1`
 - **Description**: Stellar evolution of binaries in SDAR integration; 0: switch off; 1: using BSE based code (if '--stellar-evolution != 0)
-- **Source**: `src/hard.hpp`:147
-- **Guards**: `BSE_BASE` → --with-interrupt=base, `STELLAR_EVOLUTION` → --with-interrupt
+- **Source**: `src/hard.hpp`:149
+- **Guards**: `BSE_BASE` → --with-interrupt (bse/mobse/bseEmp), `STELLAR_EVOLUTION` → --with-interrupt
 
 ### `--domain-nstep`
 
@@ -142,7 +142,7 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::F64`
 - **Default**: `1e-4`
 - **Description**: Maximum energy error allowed for the hard integrator
-- **Source**: `src/hard.hpp`:117
+- **Source**: `src/hard.hpp`:118
 - **Guards**: `HARD_CHECK_ENERGY` → development debug
 
 ### `--f`
@@ -189,56 +189,56 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::F64`
 - **Default**: `-1.0`
 - **Description**: Square acceleration offset for Hermite time step calculation to avoid too small step when weak acceleration exists; = -1: calculate from mean mass <m> and r_out (G*<m>/r_out^2)^2; = 0: no offset; > 0: custom offset value
-- **Source**: `src/hard.hpp`:125
+- **Source**: `src/hard.hpp`:127
 
 ### `--hermite-de-crit`
 
 - **Type**: `PS::F64`
 - **Default**: `1e-4`
 - **Description**: Ekin change rate criterion for reinitializing hermite time step
-- **Source**: `src/hard.hpp`:143
+- **Source**: `src/hard.hpp`:145
 
 ### `--hermite-dm-crit`
 
 - **Type**: `PS::F64`
 - **Default**: `1e-4`
 - **Description**: Mass change rate criterion for reinitializing hermite time step
-- **Source**: `src/hard.hpp`:142
+- **Source**: `src/hard.hpp`:144
 
 ### `--hermite-dt-max`
 
 - **Type**: `PS::F64`
 - **Default**: `0.0`
 - **Description**: Maximum hermite timestep
-- **Source**: `src/hard.hpp`:135
+- **Source**: `src/hard.hpp`:137
 
 ### `--hermite-dt-min-index`
 
 - **Type**: `PS::S64`
 - **Default**: `40`
 - **Description**: Power index n for the smallest timestep (0.5^n) allowed in the Hermite integrator
-- **Source**: `src/hard.hpp`:136
+- **Source**: `src/hard.hpp`:138
 
 ### `--hermite-eta`
 
 - **Type**: `PS::F64`
 - **Default**: `0.1`
 - **Description**: Hermite timestep coefficient eta
-- **Source**: `src/hard.hpp`:133
+- **Source**: `src/hard.hpp`:135
 
 ### `--hermite-eta-init`
 
 - **Type**: `PS::F64`
 - **Default**: `0.001`
 - **Description**: Hermite timestep coefficient eta for initial step in 2nd order
-- **Source**: `src/hard.hpp`:134
+- **Source**: `src/hard.hpp`:136
 
 ### `--hermite-n-neighbor-max`
 
 - **Type**: `PS::S64`
 - **Default**: `300`
 - **Description**: Maximum number of group neighbors to be stored
-- **Source**: `src/hard.hpp`:144
+- **Source**: `src/hard.hpp`:146
 
 ### `--i`
 
@@ -252,14 +252,14 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::S64`
 - **Default**: `-1`
 - **Description**: Starting ID for artificial particles, total number of real particles must always be smaller than this
-- **Source**: `src/hard.hpp`:131
+- **Source**: `src/hard.hpp`:133
 
 ### `--kdtree-n-particles-min`
 
 - **Type**: `PS::S64`
 - **Default**: `32`
 - **Description**: Minimum number of particles + groups for building kdtree to speed up neighbor search in Hermite-only neighbor force calculation
-- **Source**: `src/hard.hpp`:170
+- **Source**: `src/hard.hpp`:172
 - **Guards**: `HERMITE_ONLY_CALC_NEIGHBOR_FORCE` → --enable-hermite-only-calc-neighbor-force
 
 ### `--keep-tmp-on-startup`
@@ -295,7 +295,7 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::S64`
 - **Default**: `4`
 - **Description**: Number of binary sample points for tree perturbation force using orbit-sampling method
-- **Source**: `src/hard.hpp`:129
+- **Source**: `src/hard.hpp`:131
 - **Guards**: `ORBIT_SAMPLING` → --enable-orbit-sampling
 
 ### `--p`
@@ -310,14 +310,14 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::F64`
 - **Default**: `1`
 - **Description**: speed of light value for Post Newtonian; if -u 1 is used, auto determined
-- **Source**: `src/hard.hpp`:161
+- **Source**: `src/hard.hpp`:163
 
 ### `--pn-crit-ar`
 
 - **Type**: `PS::F64`
 - **Default**: `1e-6`
 - **Description**: AR speed criterion to switch on PN terms, min (v/c)^2
-- **Source**: `src/hard.hpp`:167
+- **Source**: `src/hard.hpp`:169
 - **Guards**: `SDAR_PN` → --with-pn (SDAR)
 
 ### `--pn-crit-hermite`
@@ -325,7 +325,7 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::F64`
 - **Default**: `1e-6`
 - **Description**: Hermite speed criterion to switch on PN terms, min (v/c)^2
-- **Source**: `src/hard.hpp`:164
+- **Source**: `src/hard.hpp`:166
 - **Guards**: `HERMITE_PN` → --with-pn (Hermite)
 
 ### `--r`
@@ -347,7 +347,7 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::F64`
 - **Default**: `-1.0`
 - **Description**: Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.); = -1: auto-determine by 0.8*r_search_group; = 0: switch off SDAR; > 0: custom criterion value
-- **Source**: `src/hard.hpp`:121
+- **Source**: `src/hard.hpp`:122
 
 ### `--r-ratio`
 
@@ -360,8 +360,15 @@ Use `<binary> -h` for exact runtime option validation.
 
 - **Type**: `PS::F64`
 - **Default**: `-1.0`
-- **Description**: The radial criterion for detecting multiple group candidates; = -1: auto-determine by 1.0*r_in; = 0: switch off SDAR; > 0: custom criterion value
-- **Source**: `src/hard.hpp`:122
+- **Description**: The radial criterion for detecting multiple group candidates; = -1: auto-determine by 1.0*r_in (or by sigma_1D based hard-soft boundary if sigma_1D is provided); = 0: switch off SDAR; > 0: custom criterion value
+- **Source**: `src/hard.hpp`:123
+
+### `--r-search-group-safety`
+
+- **Type**: `PS::F64`
+- **Default**: `1.0`
+- **Description**: Safety factor for physics-based SDAR group search: r_search_group = min(r_in, safety * G * m_avg / sigma_1D^2); only used when r-search-group=-1 and sigma_1D is provided
+- **Source**: `src/hard.hpp`:124
 
 ### `--r-search-min`
 
@@ -403,28 +410,28 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::S64`
 - **Default**: `0`
 - **Description**: Ending of the first id range for hard dump; notice that the ending id is not included in hard dump
-- **Source**: `src/hard.hpp`:157
+- **Source**: `src/hard.hpp`:159
 
 ### `--record-id-end-two`
 
 - **Type**: `PS::S64`
 - **Default**: `0`
 - **Description**: Ending of the 2nd id range for hard dump; notice that the ending id is not included in hard dump
-- **Source**: `src/hard.hpp`:159
+- **Source**: `src/hard.hpp`:161
 
 ### `--record-id-start-one`
 
 - **Type**: `PS::S64`
 - **Default**: `0`
 - **Description**: Starting of the first id range for hard dump recording every tree step, save into files object_[id]
-- **Source**: `src/hard.hpp`:156
+- **Source**: `src/hard.hpp`:158
 
 ### `--record-id-start-two`
 
 - **Type**: `PS::S64`
 - **Default**: `0`
 - **Description**: Starting of the 2nd id range for hard dump recording every tree step
-- **Source**: `src/hard.hpp`:158
+- **Source**: `src/hard.hpp`:160
 
 ### `--s`
 
@@ -445,15 +452,15 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::F64`
 - **Default**: `0.0`
 - **Description**: Softening epsilon
-- **Source**: `src/hard.hpp`:120
+- **Source**: `src/hard.hpp`:121
 
 ### `--stellar-evolution`
 
 - **Type**: `PS::S64`
 - **Default**: `1`
 - **Description**: Stellar evolution of stars in Hermite and SDAR integration; 0: switch off; >=1: using SSE/BSE based codes; 2: activate dynamical tide and hyperbolic GW radiation
-- **Source**: `src/hard.hpp`:148
-- **Guards**: `BSE_BASE` → --with-interrupt=base, `STELLAR_EVOLUTION` → --with-interrupt
+- **Source**: `src/hard.hpp`:150
+- **Guards**: `BSE_BASE` → --with-interrupt (bse/mobse/bseEmp), `STELLAR_EVOLUTION` → --with-interrupt
 
 ### `--t`
 
@@ -489,14 +496,14 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::S64`
 - **Default**: `4`
 - **Description**: Number of steps per slow-down binary orbits (period/dt_soft) for isolated binaries; also the maximum criterion for activating tidal tensor method
-- **Source**: `src/hard.hpp`:126
+- **Source**: `src/hard.hpp`:128
 
 ### `--tt-switch`
 
 - **Type**: `PS::S64`
 - **Default**: `1`
 - **Description**: Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0: off, 1: on
-- **Source**: `src/hard.hpp`:127
+- **Source**: `src/hard.hpp`:129
 
 ### `--u`
 
@@ -517,7 +524,7 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::S64`
 - **Default**: `2`
 - **Description**: Write information of new and end groups; 0: no output; 1: ascii output; 2: binary output, files are [data filename prefix].group.[MPI rank].n[N_member]
-- **Source**: `src/hard.hpp`:154
+- **Source**: `src/hard.hpp`:156
 - **Guards**: `ADJUST_GROUP_PRINT` → --enable-adjust-group-print
 
 ## BSE Interrupt (`--with-interrupt=bse|mobse|bseEmp`)
@@ -944,119 +951,133 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `double`
 - **Default**: `1.0`
 - **Description**: gravitational constant
-- **Source**: `src/disk_star_merger.hpp`:59
+- **Source**: `src/disk_star_merger.hpp`:63
 
 ### `--dsm-dt-factor`
 
 - **Type**: `double`
 - **Default**: `0.001`
 - **Description**: time step factor for mass change calculation
-- **Source**: `src/disk_star_merger.hpp`:61
+- **Source**: `src/disk_star_merger.hpp`:65
 
 ### `--dsm-epsilon-bh`
 
 - **Type**: `double`
 - **Default**: `0.06`
 - **Description**: the kenetic energy to radiation conversion efficiency of Eddington-limited accretion for BH; = 0: no accretion growth for BH
-- **Source**: `src/disk_star_merger.hpp`:57
+- **Source**: `src/disk_star_merger.hpp`:59
 
 ### `--dsm-epsilon-he`
 
 - **Type**: `double`
 - **Default**: `0.006`
 - **Description**: helium enrichment scaling factor, used to calculate helium enrichment timescale; = 0: no helium enrichment
-- **Source**: `src/disk_star_merger.hpp`:56
+- **Source**: `src/disk_star_merger.hpp`:58
 
 ### `--dsm-epsilon-mdot`
 
 - **Type**: `double`
 - **Default**: `1.0`
 - **Description**: mass-change scaling factor, used to calculate mass-change timescale; = 0: no growth or mass loss
-- **Source**: `src/disk_star_merger.hpp`:58
+- **Source**: `src/disk_star_merger.hpp`:60
 
 ### `--dsm-he-disk`
 
 - **Type**: `double`
 - **Default**: `0.28`
 - **Description**: helium fraction in the disk, used to calculate the equilbrium mass
-- **Source**: `src/disk_star_merger.hpp`:54
+- **Source**: `src/disk_star_merger.hpp`:56
 
 ### `--dsm-lambda0`
 
 - **Type**: `double`
 - **Default**: `0.75`
 - **Description**: fraction of star's intrinsic luminosity over the Eddington luminosity without merger
-- **Source**: `src/disk_star_merger.hpp`:53
+- **Source**: `src/disk_star_merger.hpp`:55
 
 ### `--dsm-medd`
 
 - **Type**: `double`
 - **Default**: `253.3124306069483`
 - **Description**: initial equilbrium mass of star
-- **Source**: `src/disk_star_merger.hpp`:52
+- **Source**: `src/disk_star_merger.hpp`:54
 
 ### `--dsm-merger-dm`
 
 - **Type**: `double`
 - **Default**: `0.0`
 - **Description**: mass loss rate for merger
-- **Source**: `src/disk_star_merger.hpp`:47
+- **Source**: `src/disk_star_merger.hpp`:49
 
 ### `--dsm-merger-tdelay`
 
 - **Type**: `double`
 - **Default**: `0.0`
 - **Description**: time delay for merger to increase mass
-- **Source**: `src/disk_star_merger.hpp`:50
+- **Source**: `src/disk_star_merger.hpp`:52
 
 ### `--dsm-new-star-mode`
 
 - **Type**: `long long int`
 - **Default**: `1`
 - **Description**: redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity in random position along a circular orbit with the semi-major axis being the distance to the center; 2: redistribute star by choosing next type 3 star
-- **Source**: `src/disk_star_merger.hpp`:62
+- **Source**: `src/disk_star_merger.hpp`:66
 
 ### `--dsm-rstar-power`
 
 - **Type**: `double`
 - **Default**: `0.6`
 - **Description**: stellar radius power index 'n', rs = s M^n
-- **Source**: `src/disk_star_merger.hpp`:48
+- **Source**: `src/disk_star_merger.hpp`:50
 
 ### `--dsm-rstar-scale`
 
 - **Type**: `double`
 - **Default**: `0.0046`
 - **Description**: stellar radius scale 's', rs = s M^n
-- **Source**: `src/disk_star_merger.hpp`:49
+- **Source**: `src/disk_star_merger.hpp`:51
+
+### `--dsm-salpeter-mass-index`
+
+- **Type**: `double`
+- **Default**: `0.0`
+- **Description**: power-law index for mass-dependent Salpeter timescale, tau_eff = tau * (threshold/mass)^index when mass > threshold; = 0: no mass dependence
+- **Source**: `src/disk_star_merger.hpp`:62
+
+### `--dsm-salpeter-mass-thres`
+
+- **Type**: `double`
+- **Default**: `1.0`
+- **Description**: mass threshold multiplier for Salpeter timescale, threshold = equilbrium_mass * this value
+- **Source**: `src/disk_star_merger.hpp`:61
 
 ### `--dsm-salpeter-time`
 
 - **Type**: `double`
 - **Default**: `0`
 - **Description**: salpeter timescale, for the star to reach equilbrium, if zero, no stellar evolution
-- **Source**: `src/disk_star_merger.hpp`:55
+- **Source**: `src/disk_star_merger.hpp`:57
 
 ### `--dsm-seed-mass`
 
 - **Type**: `double`
 - **Default**: `10.0`
 - **Description**: initial mass of star seed
-- **Source**: `src/disk_star_merger.hpp`:51
+- **Source**: `src/disk_star_merger.hpp`:53
 
 ### `--dsm-speed-of-light`
 
 - **Type**: `double`
 - **Default**: `1.0`
 - **Description**: speed of light
-- **Source**: `src/disk_star_merger.hpp`:60
+- **Source**: `src/disk_star_merger.hpp`:64
 
 ### `--p`
 
 - **Type**: `std::string`
 - **Default**: `"input.par"`
 - **Description**: Input parameter file for external force (this option should be used first before any other options)
-- **Source**: `src/disk_star_merger.hpp`:63
+- **Source**: `src/disk_star_merger.hpp`:67
 
 ## Galpy External (`--with-external=galpy`)
 

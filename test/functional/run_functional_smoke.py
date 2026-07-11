@@ -62,7 +62,7 @@ def configure_args_for_build_tag(tag: str) -> List[str]:
     mapping = {
         "std": [],
         "merger": ["--with-interrupt=merger"],
-        "base": ["--with-interrupt=merger"],
+        "merger": ["--with-interrupt=merger"],
         "dsm": ["--with-interrupt=dsm"],
         "bse": ["--with-interrupt=bse"],
         "galpy": ["--with-external=galpy"],
@@ -358,7 +358,7 @@ def read_last_snapshot_list(path: Path) -> str:
 
 
 def infer_build_tag_from_require(require: str) -> str:
-    tokens = {"merger" if x.strip() == "base" else x.strip() for x in require.split(",") if x.strip()}
+    tokens = {x.strip() for x in require.split(",") if x.strip()}
     if not tokens:
         return "std"
 
@@ -544,7 +544,7 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
             interrupt_mode = "dsm"
         elif any(x in require_tokens for x in ["bse", "bseEmp", "mobse"]):
             interrupt_mode = "bse"
-        elif any(x in require_tokens for x in ["base", "merger"]):
+        elif "merger" in require_tokens:
             interrupt_mode = "merger"
 
     external_mode = "none"

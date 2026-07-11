@@ -250,7 +250,7 @@ Step by step:
 ### Binary Selection
 
 1. Determine required tokens from scenario:
-   - interrupt: `base`, `bse`, `mobse`, `bseEmp`, `dsm`
+   - interrupt: `merger`, `bse`, `mobse`, `bseEmp`, `dsm`
    - external: `galpy`, `agama`
    - external-hard: `gasdrag`
    - PN: `pn*`
@@ -415,7 +415,7 @@ If the request is specifically about conversion, extraction, movie generation, r
 
 | Flag | Value | When |
 |------|-------|------|
-| `-i` | `none`, `merger`, `base`, `bse`, `mobse` | Match solver interrupt mode |
+| `-i` | `none`, `merger`, `bse`, `mobse` | Match solver interrupt mode |
 | `-t` | `none`, `galpy`, `agama` | Match solver external mode |
 | `-s` | `ascii`, `binary`, `npy` | `npy` for `petar.data.process` output; `binary` for raw solver output |
 | `--snapshot-type` | `origin`, `post` | `post` for processed snapshots; `origin` for raw solver output |
@@ -484,7 +484,7 @@ These kwargs control column layout and **must match the producing solver**. Pass
 
 | Argument | Values | Purpose |
 |----------|--------|---------|
-| `interrupt_mode` | `none`, `merger`, `base`, `bse`, `mobse`, `bseEmp`, `dsm` | Must match solver `--with-interrupt` |
+| `interrupt_mode` | `none`, `merger`, `bse`, `mobse`, `bseEmp`, `dsm` | Must match solver `--with-interrupt` |
 | `external_mode` | `none`, `galpy`, `agama` | Must match solver `--with-external` |
 
 Mismatched kwargs cause column misalignment and read errors (see `Snapshot Read-Mismatch Policy`).
