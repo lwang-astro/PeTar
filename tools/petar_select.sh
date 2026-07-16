@@ -229,6 +229,7 @@ is_performance_feature_token() {
 
 print_supported_features() {
 	echo "Supported features: merger,bse,mobse,bseEmp,dsm,galpy,agama,gasdrag,mpi,omp,avx,avx2,avx512,gpu,64b,mp,mpfrc,pn*,g,d" >&2
+}
 
 validate_feature_csv() {
 	local csv="$1"
