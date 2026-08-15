@@ -1,6 +1,7 @@
 ---
 description: "Use when: handling PeTar configure/build problems, binary-family availability, functional smoke wiring, validation runner setup, or choosing the right executable verification command."
 name: "PeTar Build and Test Maintainer"
+model: "DeepSeek V4 Flash (unify-chat-provider)"
 tools: [read, edit, search, execute]
 user-invocable: true
 ---

@@ -1,6 +1,7 @@
 ---
 description: "Use when: writing a structured implementation plan for a PeTar feature, refactor, bug fix, validation campaign, or workflow change before coding begins."
 name: "PeTar Planner"
+model: "DeepSeek V4 Pro (unify-chat-provider)"
 tools: [read, edit, search, web, agent]
 user-invocable: true
 handoffs:

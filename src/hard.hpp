@@ -3549,8 +3549,8 @@ public:
                 // directly estimate slowdown based on perturbation calculation method for more general cases
                 AR::SlowDown sd;
                 sd.initialSlowDownReference(manager->ar_manager.slowdown_pert_ratio_ref,manager->ar_manager.slowdown_timescale_max);
-                sd.pert_in = manager->ar_manager.interaction.calcPertFromBinary(bin);
-                sd.pert_out = manager->ar_manager.interaction.calcPertFromMR(bin.r_search, bin.mass, 1.0/Ptcl::mean_mass_inv);
+                sd.pert_in = COMM::Binary::calcPertFromBinary(bin);
+                sd.pert_out = COMM::Binary::calcPertFromMR(bin.r_search, bin.mass, 1.0/Ptcl::mean_mass_inv);
                 sd.period = bin.period;
                 // here use twice to ensure the period*sd can be larger than dt_nstep
                 sd.timescale = 2*manager->ar_manager.slowdown_timescale_max;

@@ -1,6 +1,7 @@
 ---
 description: "Use when: reviewing PeTar code or workflow changes for regressions, missing tests, documentation drift, and command or mode inconsistencies."
 name: "PeTar Reviewer"
+model: "DeepSeek V4 Pro (unify-chat-provider)"
 tools: [read, search, execute]
 user-invocable: true
 ---

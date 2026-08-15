@@ -627,37 +627,11 @@ public:
     }
     
 
-    //! calculate perturbation from c.m. acceleration
-    Float calcPertFromForcePot(const Float* _force, const Float& _pot) {
-        Float force2 = _force[0]*_force[0]+_force[1]*_force[1]+_force[2]*_force[2];
-#ifdef AR_SLOWDOWN_PERT_R4
-        Float inv_r = -force2/_pot;
-        return sqrt(force2)*inv_r*inv_r*inv_r/gravitational_constant;
-#else
-        return -force2/(_pot*gravitational_constant);
-#endif
-    }
-
-    //! calculate perturbation from binary tree
-    static Float calcPertFromBinary(const COMM::Binary& _bin) {
-        Float apo = _bin.semi*(1.0+_bin.ecc);
-        Float apo2 = apo*apo;
-#ifdef AR_SLOWDOWN_PERT_R4
-        return (_bin.m1*_bin.m2)/(apo2*apo2);
-#else
-        return (_bin.m1*_bin.m2)/(apo2*apo);
-#endif
-    }
-
-    //! calculate perturbation from distance to perturber and masses of particle and perturber
-    static Float calcPertFromMR(const Float _r, const Float _mp, const Float _mpert) {
-        Float r2 = _r*_r;
-#ifdef AR_SLOWDOWN_PERT_R4
-        return _mp*_mpert/(r2*r2);
-#else
-        return (_mp*_mpert)/(r2*_r);
-#endif
-    }
+    // perturbation metric functions (calcPertFromMR / calcPertFromBinary /
+    // calcPertFromForcePot) are moved to COMM::Binary in Common/binary_tree.h
+    // so that the tree construction pairing, the tree-stale detection and the
+    // slowdown factor always share the same units. The interaction class keeps
+    // only the accumulation hooks (calcSlowDownPert*, calcSlowDownPertExt).
 
 #if (defined AR_SLOWDOWN_ARRAY) || (defined AR_SLOWDOWN_TREE)
 
@@ -708,7 +682,7 @@ public:
                        pj.pos[2] - pi.pos[2]};
         Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
         Float r = sqrt(r2);
-        _pert_out += calcPertFromMR(r, pi.mass, pj.mass);
+        _pert_out += COMM::Binary::calcPertFromMR(r, pi.mass, pj.mass);
 
 #ifdef AR_SLOWDOWN_TIMESCALE
         Float dv[3] = {pj.vel[0] - pi.vel[0],
@@ -814,7 +788,7 @@ public:
                 Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
                 Float r = sqrt(r2);
                 Float k  = ChangeOver::calcAcc0WTwo(chi, chj, r);
-                _pert_out += calcPertFromMR(r, mcm, k*mj);
+                _pert_out += COMM::Binary::calcPertFromMR(r, mcm, k*mj);
 
 #ifdef AR_SLOWDOWN_TIMESCALE
                 // velocity dependent method

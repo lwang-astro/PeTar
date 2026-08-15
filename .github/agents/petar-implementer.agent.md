@@ -1,6 +1,7 @@
 ---
 description: "Use when: making focused PeTar code or script changes in C++, Python, build logic, or tests."
 name: "PeTar Implementer"
+model: "DeepSeek V4 Flash (unify-chat-provider)"
 tools: [read, edit, search, execute, agent]
 user-invocable: true
 ---

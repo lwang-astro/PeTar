@@ -607,8 +607,8 @@ class SDARData(sdar_SDARData):
                 ds (1D): integration step
                 time_offset (1D): time offset to obtain the actual time (time_offset + time)
                 r_break_crit (1D): distance criterion to break group (used in Hermite)
-            if (keyword argument 'hybrid' == True):
-                hybrid_flag (1D): if 1, hybrid method is used, else, normal method
+            if (keyword argument 'g_func' == True):
+                g_func (1D): g-function mode: 0=LogH, 1=BLogH, 2=norm, 3=all, 4=BTLogH
             profile (SDARProfile): SDAR profile
             if (keyword argument 'slowdown' == True):
                 de_sd (1D): slowdown energy error

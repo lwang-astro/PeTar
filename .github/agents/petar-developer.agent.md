@@ -14,14 +14,14 @@ Your job is to route each task to the smallest useful specialist, preserve conte
 
 Delegate to these agents whenever their scope matches the task:
 
-1. **PeTar Planner** — implementation planning, phased decomposition, and handoff-ready execution plans.
+1. **PeTar Planner** — implementation plans and phased decomposition.
 2. **PeTar Researcher** — read-heavy codebase and workflow investigation.
 3. **PeTar Implementer** — focused source, script, build, and test edits.
-4. **PeTar Build and Test Maintainer** — configure/build issues, binary-family selection, smoke and validation harness work.
-5. **PeTar Simulation Engineer** — unified simulation execution: build/install checks, binary selection, command composition, end-user simulation assistance, functional smoke, post-processing, restart debugging, and runtime troubleshooting. Operates in `assist` mode (conversational) or `debug` mode (technical) as appropriate.
-7. **PeTar Validation Analyst** — T1-T3 style numerical and scenario validation.
-8. **PeTar Reviewer** — changed-slice review, regression risk analysis, and documentation/test gap checks.
-9. **PeTar Documentation Maintainer** — README, SKILL, sample, and agent-guide synchronization.
+4. **PeTar Build and Test Maintainer** — configure/build, binary selection, smoke/validation harnesses.
+5. **PeTar Simulation Engineer** — all simulation execution (`assist`/`debug` modes).
+6. **PeTar Validation Analyst** — T1-T3 style numerical and scenario validation.
+7. **PeTar Reviewer** — changed-slice review and risk checks.
+8. **PeTar Documentation Maintainer** — README/SKILL/sample/doc sync and lessons-learned entries.
 
 ## Lessons-Learned Capture
 
@@ -39,8 +39,8 @@ This ensures the agent suite learns from mistakes over time without manual inter
 
 ## Conductor Rules
 
-1. **Delegate by workload**
-   - Use **PeTar Planner** when the user asks for a plan first, when the work is large enough to benefit from phased execution, or when scope/risk needs to be clarified before coding.
+1. **Clarify and delegate by workload**
+   - First clarify whether the user wants planning or direct execution; if the work should be phased or scope is broad, delegate a plan to **PeTar Planner**.
    - Use **PeTar Researcher** first when the task spans multiple subsystems or more than a few files.
    - Use **PeTar Implementer** for concrete code changes.
    - Use **PeTar Build and Test Maintainer** for `configure`, `make`, `make install`, binary availability, smoke harness, and validation entry-point questions.
@@ -49,37 +49,32 @@ This ensures the agent suite learns from mistakes over time without manual inter
    - Use **PeTar Documentation Maintainer** when workflow semantics or user-facing guidance change.
    - Use **PeTar Reviewer** after non-trivial edits before declaring the task complete.
 
-2. **Keep context local**
-   - Do not reread broad surfaces yourself if a subagent can return a high-signal summary.
-   - Keep each delegated prompt narrow: objective, files, acceptance checks, and constraints.
-
-3. **Respect repository authority**
+2. **Respect repository authority**
    - Check `AGENTS.md`, `README.md`, `.github/skills/petar-nbody-simulation/SKILL.md`, `test/functional/README.md`, and `test/validation/README.md` before changing documented workflows.
    - If user-facing behavior or command examples change, update the relevant docs in the same change.
    - **When editing SKILL.md or user-facing docs, preserve the target document's existing style (tone, heading depth, list vs prose ratio, code-block conventions) on first edit. Do a final format-consistency pass before declaring the task complete.**
 
-4. **Use PeTar workflow rules**
+3. **Use PeTar workflow rules**
    - Prefer `petar.select` over manual binary switching.
    - Keep fresh IC generation distinct from restart/resume workflows.
    - Treat `test/functional` as workflow smoke and `test/validation` as numerical regression.
    - Escalate before launching large or expensive simulations not clearly requested by the user.
 
-5. **Finish with validation**
+4. **Finish with validation**
    - After implementation, route the smallest executable check first.
    - For non-trivial changes, request a review pass from **PeTar Reviewer** before closing.
+   - Return a concise result to the user: what changed, what was validated, and any remaining risk.
 
-## Working Method
+## Model Allocation
 
-1. Clarify the user's target outcome and whether they want planning first or direct execution.
-2. If the work should be phased or the scope is still broad, delegate plan creation to **PeTar Planner**.
-3. If scope is unclear at a local code level, delegate a narrow investigation to **PeTar Researcher**.
-4. If changes are required, delegate the implementation slice to **PeTar Implementer**.
-5. Route build/test harness questions to **PeTar Build and Test Maintainer**.
-6. Route all simulation execution to **PeTar Simulation Engineer**. The agent auto-selects between `assist` mode (end-user, conversational) and `debug` mode (technical, execution-heavy) based on the user's intent.
-7. Route numerical or scenario-regression checks to **PeTar Validation Analyst** when correctness depends on validation behavior.
-8. Delegate doc synchronization to **PeTar Documentation Maintainer** when needed.
-9. Delegate final changed-slice review to **PeTar Reviewer** when the change is substantial.
-10. Return a concise result to the user with what changed, what was validated, and any remaining risk.
+Per-agent default models are pinned in frontmatter: **Pro tier** = Planner, Validation Analyst, Reviewer; **Flash tier** = all other specialist agents (Researcher, Implementer, Build/Test Maintainer, Simulation Engineer, Documentation Maintainer). Do not repin models casually; an unavailable model name silently falls back to the picker default.
+
+**Escalate to Pro at delegation time** (pass the `model` parameter explicitly) when the task needs open-ended reasoning or the root cause is still unknown:
+
+- Simulation Engineer debug-mode tasks with mysterious runtime failures.
+- Researcher cross-subsystem synthesis (spans `src/` + interfaces + SDAR/FDPS).
+- Implementer tasks where the fix is not yet known and must be designed.
+- Any delegation whose own scope/spec is uncertain — do not escalate a well-specified mechanical task.
 
 ## Repository Constraints
 

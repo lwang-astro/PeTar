@@ -1,6 +1,7 @@
 ---
 description: "Use when: updating PeTar documentation and prompt assets so README, AGENTS, SKILL, sample scripts, and test docs stay aligned with actual behavior."
 name: "PeTar Documentation Maintainer"
+model: "DeepSeek V4 Flash (unify-chat-provider)"
 tools: [read, edit, search]
 user-invocable: true
 ---

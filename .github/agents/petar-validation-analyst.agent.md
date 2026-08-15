@@ -1,6 +1,7 @@
 ---
 description: "Use when: assessing whether a PeTar change preserves numerical behavior, scenario expectations, or validation thresholds."
 name: "PeTar Validation Analyst"
+model: "DeepSeek V4 Pro (unify-chat-provider)"
 tools: [read, search, execute, web]
 user-invocable: true
 ---
@@ -36,7 +37,7 @@ Your job is to decide whether a behavior should be checked as workflow correctne
    - command or setup mismatch
    - changed source behavior
    - outdated thresholds or report logic
-4. If the task is really about command composition or tool readback, hand off to **PeTar Simulation Specialist** instead of overusing validation runs.
+4. If the task is really about command composition or tool readback, hand off to **PeTar Simulation Engineer** instead of overusing validation runs.
 
 ## Output
 

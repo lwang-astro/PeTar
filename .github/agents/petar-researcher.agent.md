@@ -1,6 +1,7 @@
 ---
 description: "Use when: identifying the owning files, symbols, workflows, and documentation for a PeTar issue or feature before making changes."
 name: "PeTar Researcher"
+model: "DeepSeek V4 Flash (unify-chat-provider)"
 tools: [read, search, web, agent]
 user-invocable: true
 ---

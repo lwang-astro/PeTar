@@ -5,50 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug cluster (prompt args)",
+            "name": "Debug (prompt program)",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${env:HOME}/bin/petar",
-            "args": [],
-            "stopAtEntry": false,
-            "cwd": "${input:clusterRunCwd}",
-            "environment": [
-                {
-                    "name": "PATH",
-                    "value": "${env:HOME}/bin:${env:PATH}"
-                },
-                {
-                    "name": "OMP_NUM_THREADS",
-                    "value": "${input:clusterOmpThreads}"
-                }
-            ],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Set runtime args from prompt",
-                    "text": "set args ${input:clusterRunArgs}",
-                    "ignoreFailures": true
-                }
-            ],
-            "preLaunchTask": "build", // Ensure the program is built before debugging
-            "miDebuggerPath": "/usr/bin/gdb", // Path to gdb
-            "logging": {
-                "engineLogging": false,
-                "trace": false,
-                "traceResponse": false
-            }
-        },
-        {
-            "name": "Debug cluster hard (prompt args)",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${env:HOME}/bin/petar.hard.debug",
+            "program": "${env:HOME}/bin/${input:programChoice}",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${input:clusterRunCwd}",
@@ -87,9 +47,15 @@
     ],
     "inputs": [
         {
+            "id": "programChoice",
+            "type": "promptString",
+            "description": "Input binary name under ${HOME}/bin (petar, petar.hard.debug, ar.logh, hermite, ...)",
+            "default": "petar"
+        },
+        {
             "id": "clusterRunArgs",
             "type": "promptString",
-            "description": "Input runtime arguments for petar",
+            "description": "Input runtime arguments for the program",
             "default": " input"
         },
         {

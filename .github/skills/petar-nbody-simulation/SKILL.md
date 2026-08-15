@@ -321,6 +321,8 @@ Controlled by `--dt-soft-sigma-factor`:
 
 **Do not confuse** `--r-search-min` (hard-binary neighbor search) with the changeover boundary (`-r` / `--r-ratio`). `--r-group` and `--r-search-group` control SDAR group detection, not force switching.
 
+**SDAR deep-dive routing**: When a task requires replicating a close-encounter / few-body subsystem in standalone SDAR, debugging SDAR group detection (`--r-group` / `--r-search-group`), or modifying `SDAR/src/`, read the SDAR repository's [sdar-fewbody-integration skill](../SDAR/.github/skills/sdar-fewbody-integration/SKILL.md) and [SDAR AGENTS.md](../SDAR/AGENTS.md) first — they carry strict standalone workflow rules (working directory, input format, command logging, `import sdar` post-processing, and version consistency).
+
 ### Auto-Detection Chain (All Defaults)
 
 ```

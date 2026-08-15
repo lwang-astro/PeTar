@@ -64,3 +64,4 @@ This file is the root entry point for agents working in this repository. Keep it
 - Scenario and command templates: [README.md](README.md)
 - Workflow rules and option constraints: [.github/skills/petar-nbody-simulation/SKILL.md](.github/skills/petar-nbody-simulation/SKILL.md)
 - Cross-session context: [.github/skills/petar-nbody-simulation/HANDOFF.md](.github/skills/petar-nbody-simulation/HANDOFF.md)
+- SDAR close-encounter / few-body subsystem work: consult the SDAR repository's [AGENTS.md](../SDAR/AGENTS.md) and [sdar-fewbody-integration skill](../SDAR/.github/skills/sdar-fewbody-integration/SKILL.md) before replicating a subsystem in standalone SDAR, debugging SDAR group detection, or modifying `SDAR/src/`.
