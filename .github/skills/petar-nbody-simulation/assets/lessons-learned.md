@@ -16,12 +16,32 @@ Periodically reviewed → verified entries are elevated to `SKILL.md` as hard ru
 - [Post-Processing](#post-processing)
 - [Restart / Resume](#restart--resume)
 - [Documentation](#documentation)
+- [Agent Workflow & Delegation](#agent-workflow--delegation)
 
 ---
 
 ## Build & Configure
 
-*(No entries yet)*
+- **2026-08-27 (SDAR)** — Derived preprocessor macros defined in an includer are invisible to included headers.
+  Mistake: `AR_G_FUNC_MUL_POT_FAMILY`/`AR_G_FUNC` were defined in `symplectic_integrator.h`, but `information.h`
+  (included earlier by it) also gates code on them → all family branches silently compiled out, `ds` took the
+  wrong formula; the only symptom was last-digit float drift in the first output row.
+  Root cause: old macros came from the command line (`-D`), visible everywhere; refactored *derived* macros
+  inherit include order.
+  Prevention: shared derived macros live in their own header (`src/AR/g_func.h`) that every consumer includes
+  first; when verifying a pure refactor, insert one-shot stderr prints to confirm the expected branch is taken
+  before trusting bit-level diffs.
+- **2026-08-27 (SDAR)** — Stale binaries in `build/` are not a valid regression baseline.
+  Mistake: Phase-0 baselines were taken from existing `sample/AR/build/*` binaries; they differed from
+  HEAD-rebuilt binaries in 1000/1002 lines (hot fixes were never rebuilt), nearly misattributing a real bug
+  to binary staleness and hiding the include-order bug above.
+  Prevention: for refactors, generate baselines from binaries rebuilt via `git worktree add <tmp> HEAD` —
+  never trust pre-existing build outputs.
+- **2026-08-27 (SDAR)** — Bit-level output diffs must exclude wall-clock columns.
+  `SDAR_TIME_MEASURE` prints `Total(s)/Int(s)` (per-step CPU time) which differ every run; they accounted for
+  1000/1002 "differences" until physical columns were compared selectively. Prevention: normalize/ignore
+  timing/profile columns before declaring divergence (normalize/grep out `Total(s)`/`Int(s)`-style columns;
+  the SDAR g-func refactor acceptance log in `SDAR/docs/hierarchical_blogh_impl_notes.md` used this approach).
 
 ---
 
@@ -100,3 +120,21 @@ Periodically reviewed → verified entries are elevated to `SKILL.md` as hard ru
 2. **快速映射表**：文件类型 → Reader 类 + 一行关键提示（如 offset、kwargs 需求）
 3. **通用关键字参数表**：`interrupt_mode` / `external_mode` 等跨类共用的参数
 4. 详细的构造函数签名、属性列表、偏移量选择 → 全部放在 `data-readback-patterns.md`，禁止在 SKILL.md 中重复
+
+---
+
+## Agent Workflow & Delegation
+
+### 2026-09-12: 大 subagent 拆分用于“已推导内容”的落地，延迟高且增量低
+
+**Mistake**: 方案 G 的设计与验证约束已在主会话完成推导后，仍按 conductor 默认模式把“写实施计划”整体委派给 Planner（Pro 档），随后又把含全文底稿的文档整合委派给 Documentation Maintainer。两次调用用户体感异常缓慢；事后评估 Planner 增量价值 ≈ 10%（几个代码锚点核实与 .sh 命令摘录），Doc Maintainer 实为机械编辑执行（4 处 replace），且主会话事后仍自行 grep 复核，产生双重验证成本。
+
+**Root cause**: 委派判断基于任务“形式”（写计划→Planner、改文档→Doc Maintainer）而非“上下文状态”。subagent 无状态：主会话已读过的 ~7000 行代码/文档（symplectic_integrator.h 4420 行、ar.cxx 717 行、plan doc 731 行、NOTES 680 行）必须由 agent 从磁盘重读；Pro 档模型推理慢；agent 内部 read→grep→read→write→verify 多轮串行，每轮都是完整模型推理。已有的“well-specified mechanical task 不升档”规则未被应用——当 prompt 已包含成品内容的绝大部分时，任务已经是 well-specified mechanical。
+
+**Prevention rule**: 委派门槛基于上下文状态而非任务形式：
+1. 上下文已在主会话建立、只剩“表达出来”（写计划/文档、聚焦单文件编辑）→ conductor 直接做，不经 subagent；
+2. 只需少量新事实（锚点/命令/行号）→ 主会话 grep/read 直接获取；
+3. subagent 保留给：大量**新**上下文探索（内置 Explore）、长仿真与回归战役（Simulation Engineer，已吸收 Build & Test Maintainer——隔离长输出有真实价值）、根因未明的开放式推理（才升 Pro）；
+4. 委派前自问：这个任务的增量是“获取新上下文”还是“表达已有上下文”？后者不委派。
+
+落地（2026-09-12）：agent 套件 9 → 3 + 内置 Explore。Planner/Researcher/Implementer/Build & Test Maintainer/Validation Analyst/Documentation Maintainer 移除；职责分别并入 Developer（规划/聚焦编辑/文档/lessons）、Simulation Engineer（configure/Makefile/smoke/validation harness 接线）、Reviewer（验证层级选择/T1-T3/阈值判定）。

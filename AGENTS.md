@@ -37,27 +37,21 @@ This file is the root entry point for agents working in this repository. Keep it
 
 ## Custom Agents
 
-- [PeTar Developer](.github/agents/petar-developer.agent.md): Conductor agent. Use for multi-step PeTar work or broad PeTar requests that should be routed across research, implementation, simulation, validation, and review specialists.
-- [PeTar Planner](.github/agents/petar-planner.agent.md): Planning-first agent for writing phased implementation plans that can be handed to PeTar Developer.
-- [PeTar Researcher](.github/agents/petar-researcher.agent.md): Read-heavy investigator for locating owning files, symbols, workflow controls, and required documentation.
-- [PeTar Implementer](.github/agents/petar-implementer.agent.md): Focused editor for C++, Python, build, test, and documentation changes.
-- [PeTar Build and Test Maintainer](.github/agents/petar-build-test-maintainer.agent.md): Configure/build, binary-family selection, smoke harness, and validation entry-point specialist.
-- [PeTar Simulation Engineer](.github/agents/petar-simulation-engineer.agent.md): Unified simulation execution specialist. Handles end-user simulation setup (assist mode) and technical workflow/build/post-processing debugging (debug mode). Replaces Operator and Specialist.
-- [PeTar Validation Analyst](.github/agents/petar-validation-analyst.agent.md): Numerical regression specialist for T1-T3 and scenario-based validation.
-- [PeTar Reviewer](.github/agents/petar-reviewer.agent.md): Review specialist for changed-slice correctness, workflow regressions, and documentation/test gaps.
-- [PeTar Documentation Maintainer](.github/agents/petar-documentation-maintainer.agent.md): README, SKILL, sample-script, and agent-guide synchronization specialist.
+The suite was consolidated on 2026-09-12 (see `.github/skills/petar-nbody-simulation/assets/lessons-learned.md`, "Agent Workflow & Delegation"): delegation is for context isolation and long-output isolation, not for packaging already-derived context.
+
+- [PeTar Developer](.github/agents/petar-developer.agent.md): Conductor. Orchestrates work, writes plans and makes focused code/doc edits directly, and delegates execution and review below.
+- [PeTar Simulation Engineer](.github/agents/petar-simulation-engineer.agent.md): All execution - configure/build/install maintenance, binary-family selection, simulation runs, functional smoke and validation harness execution, post-processing, restart debugging (`assist`/`debug` modes). Absorbs the former Build and Test Maintainer.
+- [PeTar Reviewer](.github/agents/petar-reviewer.agent.md): Pre-close review of non-trivial changes plus numerical validation analysis (validation-layer choice, T1-T3, threshold verdicts). Absorbs the former Validation Analyst.
+
+Read-only discovery uses the built-in **Explore** agent. Planning, focused implementation, and documentation sync are performed directly by PeTar Developer.
 
 ## Delegation Pattern
 
-- Start with [PeTar Developer](.github/agents/petar-developer.agent.md) for broad or ambiguous requests.
-- Use [PeTar Planner](.github/agents/petar-planner.agent.md) when the user wants a plan first or when a large task should be broken into explicit phases before implementation.
-- Use [PeTar Researcher](.github/agents/petar-researcher.agent.md) when you first need code ownership or workflow mapping.
-- Use [PeTar Implementer](.github/agents/petar-implementer.agent.md) for focused edits after the target surface is known.
-- Use [PeTar Build and Test Maintainer](.github/agents/petar-build-test-maintainer.agent.md) for `configure`/`make` issues and for choosing or repairing the right automated check.
+- Start with [PeTar Developer](.github/agents/petar-developer.agent.md) for all requests; it works directly when the context is already established: planning, focused code/script edits, documentation sync, and lessons-learned entries.
+- Use **Explore** (built-in) when owning code or workflow surfaces are unknown and read-heavy discovery is needed.
 - Use [PeTar Simulation Engineer](.github/agents/petar-simulation-engineer.agent.md) for all simulation execution tasks — end-user workflow assistance, build/install checks, binary selection, command composition, functional smoke, post-processing, restart debugging, and runtime troubleshooting. It operates in `assist` mode (conversational, confirmation-driven) or `debug` mode (technical, execution-heavy) as appropriate.
-- Use [PeTar Validation Analyst](.github/agents/petar-validation-analyst.agent.md) only when the task depends on numerical behavior or validation thresholds.
-- Use [PeTar Documentation Maintainer](.github/agents/petar-documentation-maintainer.agent.md) when user-facing workflow guidance must change with the implementation.
-- Use [PeTar Reviewer](.github/agents/petar-reviewer.agent.md) before closing non-trivial changes.
+- Use [PeTar Reviewer](.github/agents/petar-reviewer.agent.md) before closing non-trivial changes, and whenever a verdict on numerical behavior or validation thresholds is required.
+- Delegate only for new-context acquisition or long-output isolation; never to repackage already-derived context.
 
 ## If You Need More Detail
 
