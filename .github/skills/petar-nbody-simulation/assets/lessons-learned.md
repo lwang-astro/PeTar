@@ -22,26 +22,10 @@ Periodically reviewed → verified entries are elevated to `SKILL.md` as hard ru
 
 ## Build & Configure
 
-- **2026-08-27 (SDAR)** — Derived preprocessor macros defined in an includer are invisible to included headers.
-  Mistake: `AR_G_FUNC_MUL_POT_FAMILY`/`AR_G_FUNC` were defined in `symplectic_integrator.h`, but `information.h`
-  (included earlier by it) also gates code on them → all family branches silently compiled out, `ds` took the
-  wrong formula; the only symptom was last-digit float drift in the first output row.
-  Root cause: old macros came from the command line (`-D`), visible everywhere; refactored *derived* macros
-  inherit include order.
-  Prevention: shared derived macros live in their own header (`src/AR/g_func.h`) that every consumer includes
-  first; when verifying a pure refactor, insert one-shot stderr prints to confirm the expected branch is taken
-  before trusting bit-level diffs.
-- **2026-08-27 (SDAR)** — Stale binaries in `build/` are not a valid regression baseline.
-  Mistake: Phase-0 baselines were taken from existing `sample/AR/build/*` binaries; they differed from
-  HEAD-rebuilt binaries in 1000/1002 lines (hot fixes were never rebuilt), nearly misattributing a real bug
-  to binary staleness and hiding the include-order bug above.
-  Prevention: for refactors, generate baselines from binaries rebuilt via `git worktree add <tmp> HEAD` —
-  never trust pre-existing build outputs.
-- **2026-08-27 (SDAR)** — Bit-level output diffs must exclude wall-clock columns.
-  `SDAR_TIME_MEASURE` prints `Total(s)/Int(s)` (per-step CPU time) which differ every run; they accounted for
-  1000/1002 "differences" until physical columns were compared selectively. Prevention: normalize/ignore
-  timing/profile columns before declaring divergence (normalize/grep out `Total(s)`/`Int(s)`-style columns;
-  the SDAR g-func refactor acceptance log in `SDAR/docs/hierarchical_blogh_impl_notes.md` used this approach).
+*(SDAR-specific entries moved 2026-09-13 to
+`SDAR/.github/skills/sdar-fewbody-integration/assets/lessons-learned.md`.)*
+
+*(No entries yet)*
 
 ---
 
@@ -79,6 +63,12 @@ Periodically reviewed → verified entries are elevated to `SKILL.md` as hard ru
 2. 每步 wallclock 的变化趋势（从实际运行的 timing profile 提取）
 3. find.dt 的早期评估可能严重低估长时间模拟的硬积分成本
 4. 总耗时 ≈ (每 Myr 步数) × (每步 wallclock)，两者可能反向变化
+
+### 2026-09-13: SDAR integrator lessons moved
+
+*(The four 2026-09-13 SDAR entries — getH evaluator mismatch, cross-build-flag step
+comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
+`SDAR/.github/skills/sdar-fewbody-integration/assets/lessons-learned.md`.)*
 
 ---
 

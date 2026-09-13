@@ -608,7 +608,7 @@ class SDARData(sdar_SDARData):
                 time_offset (1D): time offset to obtain the actual time (time_offset + time)
                 r_break_crit (1D): distance criterion to break group (used in Hermite)
             if (keyword argument 'g_func' == True):
-                g_func (1D): g-function mode: 0=LogH, 1=BLogH, 2=norm, 3=all, 4=BTLogH
+                g_func (1D): g-function active state: 0=standard LogH, 1=the g-function method of this build (per-binary macro; old data files used codes 1-4)
             profile (SDARProfile): SDAR profile
             if (keyword argument 'slowdown' == True):
                 de_sd (1D): slowdown energy error

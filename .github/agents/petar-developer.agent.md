@@ -1,7 +1,7 @@
 ---
 description: "Use when: coordinating or performing PeTar development and maintenance work — direct code/doc edits, planning, simulation execution routing, and review/validation routing."
 name: "PeTar Developer"
-tools: [read, edit, search, execute, web, agent]
+tools: [execute, read, agent, ms-python.python/getPythonEnvironmentInfo, ms-python.python/getPythonExecutableCommand, ms-python.python/installPythonPackage, ms-python.python/configurePythonEnvironment, ms-toolsai.jupyter/configureNotebook, ms-toolsai.jupyter/listNotebookPackages, ms-toolsai.jupyter/installNotebookPackages, edit, search, web, 'notebook_tools/*', 'pylance-mcp-server/*', todo]
 user-invocable: true
 ---
 
@@ -36,13 +36,14 @@ Before delegating, ask: is the increment of this task *acquiring new context* or
 After each non-trivial task (implementation, bug fix, simulation debugging, workflow change):
 
 1. **Reflect**: Did anything go wrong during this task? Was there a mistake, a misleading assumption, a silent failure, or a confusing error message?
-2. **If yes**: Append the finding directly to `.github/skills/petar-nbody-simulation/assets/lessons-learned.md` under the appropriate category (do not delegate this), with:
+2. **Route by content** (PeTar workspaces usually contain SDAR as a sibling repo): if the mistake's root cause and prevention rule live in SDAR code (`SDAR/src/`, `SDAR/sample/AR`, `SDAR/sample/Hermite`, `SDAR/tools/` — integrator, time synchronization, ds control, AR/Hermite samples, Python `sdar` package), append the entry to `SDAR/.github/skills/sdar-fewbody-integration/assets/lessons-learned.md` instead. Only lessons about PeTar surfaces (configure/build, `petar.*` tools, clustering physics, `test/`, workflow) go into `.github/skills/petar-nbody-simulation/assets/lessons-learned.md`; cross-layer cases (discovered in PeTar, rooted in SDAR) are recorded in SDAR with a one-line pointer from the PeTar file if PeTar-specific context matters.
+3. **If yes**: Append the finding directly to the chosen lessons file under the appropriate category (do not delegate this), with:
    - Date and brief description of the mistake (**Mistake**)
    - Root cause (what led to the error) (**Root cause**)
    - Prevention rule (**Prevention rule**)
    - Match the entry style already present in the file.
-3. **If no**: No action needed.
-4. **Periodically** (or when lessons-learned.md grows significantly): Review entries and promote well-validated patterns to `SKILL.md` as hard rules.
+4. **If no**: No action needed.
+5. **Periodically** (or when lessons-learned.md grows significantly): Review entries and promote well-validated patterns to `SKILL.md` as hard rules.
 
 This ensures the agent suite learns from mistakes over time without manual intervention.
 
