@@ -3542,19 +3542,23 @@ public:
             // Set member particle type, backup mass, collect member particle index to group_ptcl_adr_list
             //use _ptcl_in_cluster as the first particle address as reference to calculate the particle index.
             if (!manager->tidal_tensor_switcher) {
-                auto& bin = *stable_checker.stable_binary_tree[i];
-                const PS::S32 n_members = bin.getMemberN();
+                // one AR group per stable sub-tree of this candidate group; the outer
+                // loop index (candidate id) must not index stable_binary_tree
+                for (int k=0; k<stable_checker.stable_binary_tree.size(); k++) {
+                    auto& bin = *stable_checker.stable_binary_tree[k];
+                    const PS::S32 n_members = bin.getMemberN();
 
-                struct { Tptcl* adr_ref; PS::S32* group_list; PS::S32 n; PS::S64 pcm_id; ChangeOver* changeover_cm; PS::F64 rsearch_cm; bool changeover_update_flag;}
-                    group_index_pars = { _ptcl_in_cluster,  &group_ptcl_adr_list[group_ptcl_adr_offset], 0, -1, &bin.changeover, bin.r_search, false};
-                bin.processLeafIter(group_index_pars, collectGroupMemberAdrAndSetMemberParametersIter);
-                if (group_index_pars.changeover_update_flag) changeover_update_flag = true;
+                    struct { Tptcl* adr_ref; PS::S32* group_list; PS::S32 n; PS::S64 pcm_id; ChangeOver* changeover_cm; PS::F64 rsearch_cm; bool changeover_update_flag;}
+                        group_index_pars = { _ptcl_in_cluster,  &group_ptcl_adr_list[group_ptcl_adr_offset], 0, -1, &bin.changeover, bin.r_search, false};
+                    bin.processLeafIter(group_index_pars, collectGroupMemberAdrAndSetMemberParametersIter);
+                    if (group_index_pars.changeover_update_flag) changeover_update_flag = true;
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-                assert(group_index_pars.n==n_members);
-#endif                
-                _n_member_in_group.push_back(GroupIndexInfo(_i_cluster, _n_groups, n_members, group_ptcl_adr_offset, 1));
-                _n_groups++;
-                group_ptcl_adr_offset += n_members;
+                    assert(group_index_pars.n==n_members);
+#endif
+                    _n_member_in_group.push_back(GroupIndexInfo(_i_cluster, _n_groups, n_members, group_ptcl_adr_offset, 1));
+                    _n_groups++;
+                    group_ptcl_adr_offset += n_members;
+                }
                 continue;
             }
             
