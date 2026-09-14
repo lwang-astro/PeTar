@@ -13,6 +13,7 @@ step_mode=@with_step_mode@
 se_mode=@with_interrupt@
 ext_mode=@with_external@
 ext_hard_mode=@with_external_hard@
+sdar_g_func=@with_sdar_g_func@
 pn_mode=@with_pn@
 tt_mode=@with_tidal_tensor@
 orb_mode=@with_orbit@
@@ -57,6 +58,11 @@ MT_FLAGS += -D SOFT_PERT
 MT_FLAGS += -D AR_TTL
 MT_FLAGS += -D AR_SLOWDOWN_TREE
 #MT_FLAGS += -D AR_TTL_GT_BINARY_INNER
+# SDAR g-function method for the hard integrator (configure --with-sdar-g-func);
+# btlogh: default LogH (ar-g-func 0) is bit-identical, BTLogH is switch on at runtime
+ifeq ($(sdar_g_func),btlogh)
+MT_FLAGS += -D AR_G_FUNC_BTLOGH
+endif
 #MT_FLAGS += -D FIX_CHANGEOVER
 MT_FLAGS += -D AR_SLOWDOWN_TIMESCALE
 # monopole (flying-time) dt fallback for changeover-truncated free particles in
@@ -337,6 +343,9 @@ SIMD_DEBFLAGS += -DAVX_PRELOAD
 DEBUG_OPT_FLAGS = @DEBFLAGS@ -D SANITY_CHECK_REALLOCATABLE_ARRAY
 HARD_DEBFLAGS+= -D AR_DEBUG -D AR_DEBUG_DUMP -D AR_DEBUG_PRINT -D AR_WARN -D HARD_DEBUG -D HARD_DEBUG_PRINT -D ADJUST_GROUP_DEBUG -D HERMITE_DEBUG -D AR_COLLECT_DS_MODIFY_INFO -D STABLE_CHECK_DEBUG_PRINT -D ARTIFICIAL_PARTICLE_DEBUG -D ARTIFICIAL_PARTICLE_DEBUG_PRINT
 HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_TREE -D AR_SLOWDOWN_TIMESCALE -D HARD_CHECK_ENERGY -D HERMITE_ONLY_CALC_NEIGHBOR_FORCE
+ifeq ($(sdar_g_func),btlogh)
+HARD_MT_FLAGS += -D AR_G_FUNC_BTLOGH
+endif
 
 #------------------------------------
 

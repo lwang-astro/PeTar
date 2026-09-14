@@ -303,6 +303,16 @@ Please note that the supported SIMD options of the compiler and the running CPU 
 
 In the case of a supercomputer, the host and computing nodes might feature distinct CPU architectures. The configure script detects the SIMD version based on the local CPU. It is advisable to verify whether the CPU instructions on the computing node support a superior SIMD choice and opt for that during compilation.
 
+##### Selecting the SDAR g-function Method for the Hard Integrator
+
+The AR (SDAR) integrator used for close encounters and multiple systems supports an alternative time-transformation (g-function) method, BTLogH, which uses a tree-level product of potentials and improves the resolution of hierarchical multiples. The method is selected at compilation with:
+
+```shell
+./configure --with-sdar-g-func=btlogh
+```
+
+where the choices are `btlogh` (default) and `logh`. A `btlogh` build appends `.btlogh` to the executable name and adds the runtime option `--ar-g-func`: `0` (default, standard LogH) is bit-identical to a `logh` build; `1` switches BTLogH on. The auto-switch mode (`2`) is not available for BTLogH. Since most AR groups in a cluster simulation are isolated binaries where BTLogH reduces to standard LogH, the runtime default remains LogH and BTLogH is enabled explicitly with `--ar-g-func 1`.
+
 ##### Enabling GPU Acceleration
 
 PeTar supports the utilization of GPUs based on the CUDA language to accelerate tree force calculations as an alternative speed-up method to SIMD acceleration. To enable this feature, use the following command:
@@ -1015,8 +1025,10 @@ Below is a table illustrating the corresponding units for various output files, 
 | :-------------------------- | :---------------------------------------------------------  | :---------------------------------------------------------------  |
 | `petar` output log          | Printed information from `petar`                            | PeTar unit                                                         |
 | data.[index]                | Snapshots                                                   | Particle class: PeTar unit + Stellar evolution unit (refer to `petar -h`) |
-| data.esc                    | Escapers                                                    | Time: PeTar unit; Particle: Particle class                         |
-| data.group.n[member count]  | Multiple systems                                            | Binary parameters: PeTar unit; Particle members: Particle class   |
+| data.esc                    | Contains information on escaped particles. Runtime temporary files are created per MPI rank and then appended into this shared final file. In ASCII mode, the columns match those in snapshot files with an additional escaped-time column at the beginning. In BINARY mode, each record is stored as one escaped time followed by one particle record in the same binary layout as snapshots. |
+| data.group.n[member count]  | Provides details on the start and end of multiple systems (e.g., binary, triple ...) identified during SDAR integration. The runtime temporary files are created per MPI rank and committed into the shared final files `data.group.n2`, `data.group.n3`, ... |
+|                      | The definition of a multiple system is based on the distance criterion specified in the `petar` option `--r-group` (default: -1, auto-determined from the changeover inner radius). |
+|                      | In cases where a multiple system spans multiple tree time steps, the start event may be recorded multiple times during each tree time step, while only one or no end event is recorded. This behavior is a result of the algorithm's design. |
 | data.[bse_name]             | Binary stellar evolution events                             | Stellar evolution unit                                             |
 | data.[sse_name]             | Single stellar evolution events                             | Stellar evolution unit                                             |
 | data.interrupt              | Interruption events                                         | PeTar unit / Stellar evolution unit depending on interrupt mode    |

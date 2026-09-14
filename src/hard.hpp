@@ -80,6 +80,9 @@ public:
     IOParams<PS::S64> sym_order_ar;
     IOParams<PS::F64> ds_scale_ar;
     IOParams<PS::F64> sd_factor;
+#ifdef AR_G_FUNC
+    IOParams<PS::S64> ar_g_func;
+#endif
     IOParams<PS::F64> reinit_dt_dm_crit;
     IOParams<PS::F64> reinit_dt_de_crit;
     IOParams<PS::S64> n_neighbor_max;
@@ -141,6 +144,9 @@ public:
                     sym_order_ar (input_par_store, -6,       "ar-sym-order", "Order of the symplectic integrator for SDAR, should be even number; -6,-8: Yoshida 2nd symplectic method; 4,6,8,...: Yoshida 1st symplectic method"),
                     ds_scale_ar  (input_par_store, 1.0,      "ar-ds-scale", "Scale factor for SDAR step size calculation"),
                     sd_factor    (input_par_store, 1e-4,     "ar-slowdown-factor", "Slowdown perturbation criterion"),
+#ifdef AR_G_FUNC
+                    ar_g_func    (input_par_store, 0,        "ar-g-func", "SDAR g-function (time transformation) method; 0: standard LogH; 1: the method of this build (BTLogH, requires --with-sdar-g-func=btlogh); 2 (auto switch) is not supported for BTLogH"),
+#endif
                     reinit_dt_dm_crit(input_par_store, 1e-4, "hermite-dm-crit", "Mass change rate criterion for reinitializing hermite time step"),
                     reinit_dt_de_crit(input_par_store, 1e-4, "hermite-de-crit", "Ekin change rate criterion for reinitializing hermite time step"),
                     n_neighbor_max(input_par_store, 300,     "hermite-n-neighbor-max", "Maximum number of group neighbors to be stored"),
@@ -209,6 +215,9 @@ public:
             {e_err_ar.key,               required_argument, &hard_flag, 13},
             {step_limit_ar.key,          required_argument, &hard_flag, 14},
             {sd_factor.key,              required_argument, &hard_flag, 15},
+#ifdef AR_G_FUNC
+            {ar_g_func.key,               required_argument, &hard_flag, 37},
+#endif
             {sym_order_ar.key,           required_argument, &hard_flag, 31},
             {ds_scale_ar.key,            required_argument, &hard_flag, 32},
             {reinit_dt_dm_crit.key,      required_argument, &hard_flag, 24},
@@ -364,6 +373,14 @@ public:
                         opt_used += 2;
                         assert(sd_factor.value>0.0);
                         break;
+#ifdef AR_G_FUNC
+                    case 37:
+                        ar_g_func.value = atoi(optarg);
+                        if(print_flag) ar_g_func.print(std::cout);
+                        opt_used += 2;
+                        assert(ar_g_func.value==0 || ar_g_func.value==1);
+                        break;
+#endif
                     case 31:
                         sym_order_ar.value = atoi(optarg);
                         if(print_flag) sym_order_ar.print(std::cout);
@@ -743,6 +760,9 @@ public:
         ar_manager.step_count_max = _input.step_limit_ar.value;
         //ar_manager.slowdown_timescale_max = dt_soft;
         ar_manager.ds_scale = _input.ds_scale_ar.value;
+#ifdef AR_G_FUNC
+        ar_manager.g_func = _input.ar_g_func.value;
+#endif
 #ifdef SLOWDOWN_MASSRATIO
         ar_manager.slowdown_mass_ref = _mass_average;
 #endif
@@ -1132,6 +1152,9 @@ public:
             use_sym_int = true;
 
             sym_int.manager = &ar_manager;
+#ifdef AR_G_FUNC
+            sym_int.g_func = ar_manager.g_func;
+#endif
 
             sym_int.particles.setMode(COMM::ListMode::copy);
             const PS::S32 n_members = _n_member_in_group[0];
@@ -1188,7 +1211,11 @@ public:
             // initialization 
             sym_int.initialIntegration(0.0);
             sym_int.info.time_offset = time_origin;
+#ifdef AR_G_FUNC
+            sym_int.info.calcDsAndStepOption(ar_manager.step.getOrder(),  ar_manager.interaction.gravitational_constant, ar_manager.ds_scale, sym_int.g_func_on);
+#else
             sym_int.info.calcDsAndStepOption(ar_manager.step.getOrder(),  ar_manager.interaction.gravitational_constant, ar_manager.ds_scale); 
+#endif
 
             // calculate c.m. changeover
             PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;

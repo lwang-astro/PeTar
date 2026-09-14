@@ -5,6 +5,7 @@ agama-conf-file
 agama-rscale
 agama-vscale
 ar-ds-scale
+ar-g-func
 ar-max-error
 ar-max-nstep
 ar-slowdown-factor
