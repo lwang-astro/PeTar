@@ -59,6 +59,9 @@ MT_FLAGS += -D AR_SLOWDOWN_TREE
 #MT_FLAGS += -D AR_TTL_GT_BINARY_INNER
 #MT_FLAGS += -D FIX_CHANGEOVER
 MT_FLAGS += -D AR_SLOWDOWN_TIMESCALE
+# monopole (flying-time) dt fallback for changeover-truncated free particles in
+# the hard integrator (SDAR src/Hermite/block_time_step.h); PeTar-hard specific
+MT_FLAGS += -D HERMITE_MONOPOLE_DT_LIMIT
 #MT_FLAGS += -D AR_SLOWDOWN_MASSRATIO
 MT_FLAGS += -D CLUSTER_VELOCITY
 MT_FLAGS += -D HARD_CHECK_ENERGY

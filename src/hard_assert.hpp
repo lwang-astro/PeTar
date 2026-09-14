@@ -149,6 +149,7 @@ public:
         }
         if (n_ptcl<=0) {
             std::cerr<<"Error: Hard particle number "<<n_ptcl<<" <=0 !\n";
+            std::cerr<<"Check your dump data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the dump generation\n";
             abort();
         }
         ptcl_bk.resizeNoInitialize(n_ptcl);
@@ -175,10 +176,12 @@ public:
         }
         if (n_arti<0) {
             std::cerr<<"Error: Artificial particle number "<<n_arti<<" <0 !\n";
+            std::cerr<<"Check your dump data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the dump generation\n";
             abort();
         }
         if (n_group<0) {
             std::cerr<<"Error: Group number "<<n_group<<" <0 !\n";
+            std::cerr<<"Check your dump data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the dump generation\n";
             abort();
         }
         n_member_in_group.resizeNoInitialize(n_group);

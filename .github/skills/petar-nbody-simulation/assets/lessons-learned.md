@@ -22,10 +22,16 @@ Periodically reviewed → verified entries are elevated to `SKILL.md` as hard ru
 
 ## Build & Configure
 
-*(SDAR-specific entries moved 2026-09-13 to
-`SDAR/.github/skills/sdar-fewbody-integration/assets/lessons-learned.md`.)*
+### 2026-09-13: 头文件依赖缺口使 make 静默不重编——"改了没编"浪费整轮 gdb 推理
 
-*(No entries yet)*
+**Mistake**: 修 SDAR `symplectic_integrator.h` 的 merger 能量记账后跑 PeTar `make install`，输出全部 "up to date"，直接 install 了 `build/` 里的**旧二进制**；随后 gdb 行断点打印的账本值与源码逻辑矛盾，推演多轮（宏未定义？时序错位？）后才发现二进制根本不含新代码。同轮 SDAR 侧 `make -C sample/AR` 对 `information.h` 同样静默跳过。另两次犯同一 gdb 错误：**行断点停在语句执行前**——在第 N 行断点打印的是 N-1 及之前语句的效果，用它验证"清零是否生效"必然读到旧值（需断在块之后的行）。
+
+**Root cause**: PeTar Makefile 对 `../SDAR/src/*.h` 与 SDAR sample/AR 对自身 src 的头依赖规则都不完整（未列出的头文件不在目标的依赖链上），mtime 变化不触发重编；install 目标无条件拷贝 build/ 内容，掩盖了未编译。gdb 行断点语义（语句前停止）与"验证赋值效果"的直觉冲突。
+
+**Prevention rule**:
+1. 改 SDAR/PeTar 头文件后，**不要信任 make 的 up-to-date 判断**：`rm` 目标二进制（或 `make -B <target>`）强制重编，跑前 `md5sum` 确认二进制 mtime/md5 已变；
+2. gdb 验证一段赋值代码是否生效，断点设在块**结束后**的行；打印值与源码预期矛盾时，第一反应先确认二进制含新代码（`md5sum`/反汇编一行），再推演时序；
+3. 长期修复方向：两个 Makefile 补全头依赖（wildcard `$(SDAR_SRC)/*.h` 入依赖表），或改用 compile_commands/化构建。
 
 ---
 
@@ -74,7 +80,13 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 ## Post-Processing
 
-*(No entries yet)*
+### 2026-09-14: hard.debug 日志用错 reader、未分割混合列、多线程残缺视图
+
+**Mistake**: 分析 `petar.hard.debug` 的 h4 日志（n59 弹弓问题排查）时连环三个错：(1) 先用 `sdar.HermiteData` 读取，列匹配直接报 IndexError——PeTar 构建额外输出恒星演化/外场列，SDAR reader 不认识；(2) 换对 reader 后又整文件直读——AR group 形成使中途列数变化（2369→3083→4154），单一构造参数读不了；(3) 默认多线程下日志只含 thread 0 的粒子子集，前几轮“粒子冻结/缺失”的结论全部基于残缺视图，险些误导根因判断（实际那些粒子在其他线程里正常积分）。
+
+**Root cause**: h4 日志的列布局同时依赖构建特性（interrupt/external 模式）与运行时组结构（SD 列随组增减）；hard_debug 的 OpenMP 输出只写 thread 0；time 重置标志重启轮、每轮能量参考重置。
+
+**Prevention rule**: 读 `data.*_h4_*.log` 前必读 `data-readback-patterns.md` Pattern 11：(1) 只用 `petar.HermiteData`，构造参数匹配构建；(2) 先 `awk 'NF>1{c[NF]++}'` 列数直方图，按列数分割后分段读取；(3) 按 time 重置分轮分析；(4) 需要完整粒子视图时 `OMP_NUM_THREADS=1` 重跑（gdb 调试时也必须单线程）。
 
 ---
 

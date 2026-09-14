@@ -423,3 +423,37 @@ def readback(case_dir, output_prefix, interrupt_mode, external_mode):
               lambda p: petar.InterruptBinary(particle_type=petar.HardParticle, interrupt_mode="dsm").fromfile(str(p)),
               "InterruptBinary(HardParticle, dsm)", strict=False)
 ```
+
+## Pattern 11: hard.debug H4 diagnostic logs (`data.*_h4_<N>_<rank>.log`)
+
+Output of `petar.hard.debug` (hard-integrator diagnostic log). Three rules
+separate this from every other file type:
+
+1. **Reader: `petar.HermiteData` — never `sdar.HermiteData`.** The PeTar build
+   adds columns (stellar evolution / external-field modes) the SDAR reader does
+   not know; using it fails with column-index errors
+   (`IndexError: index N is out of bounds for axis 1`). The constructor must
+   match the build that wrote the log:
+   ```python
+   d = petar.HermiteData(N_particle=<N>, N_sd=<n_groups>, time_measure=False,
+                         interrupt_mode='bse', external_mode='galpy')
+   d.loadtxt('data..._h4_59_0.log', skiprows=0)
+   ```
+2. **Column count changes mid-file when AR groups form/dissolve** (each group
+   adds slowdown/orbit columns). Detect and split FIRST, then read each segment
+   with the matching `N_sd`:
+   ```bash
+   awk 'NF>1{c[NF]++} END{for(k in c) print k, c[k]}' data..._h4_59_0.log
+   # e.g. {2369: 303651, 3083: 1, 4154: 1} -> split by NF into separate files
+   ```
+   Reading mixed-column lines with one constructor fails or corrupts data.
+3. **`time` resets (`diff(time) < 0`) mark hard_debug restart rounds.** Analyze
+   per round (split at resets): energy references are re-initialized each
+   round, so a global cumulative `de` shows fake spikes at round boundaries. A
+   few restart rounds after a group event are normal hard_debug behavior.
+
+**Threading caveat:** with the default OpenMP thread count the log contains
+only thread 0's particle subset — a *partial* view that silently invalidates
+per-particle analysis (particles appear frozen or missing). Rerun with
+`OMP_NUM_THREADS=1` (also ~30x faster under gdb; many threads plus gdb makes
+the debugging session pathologically slow).

@@ -479,6 +479,7 @@ This table maps each output file type to its reader class. For **exact construct
 | `data.group.n<N>` | `petar.GroupInfo(N=<N>)` | `N=` must match file suffix |
 | `object.<N>` (object snapshots) | `petar.Particle` | **Must** call `obj.addNewMember("time", ...)` before `fromfile()` |
 | `data.prof.rank.*` | `petar.Profile` | Column count depends on GPU/FDPS version — use matching strategy (see `data-readback-patterns.md`) |
+| `data.*_h4_<N>_<rank>.log` (hard.debug) | `petar.HermiteData` | **PeTar reader only** (not sdar); constructor must match build (`interrupt_mode`/`external_mode`); split by column count first (AR groups change it mid-file); per-round analysis at time resets; rerun with `OMP_NUM_THREADS=1` (multi-thread logs hold only thread 0) — see Pattern 11 |
 
 ### Universal Keyword Arguments
 
