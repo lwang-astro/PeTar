@@ -87,6 +87,7 @@ No agent pins a model in frontmatter (pins removed 2026-09-12 — an unavailable
 3. Do not add undocumented configure or runtime options without checking repository docs and `-h` output.
 4. Keep repo-local guidance consistent with `.github/skills/petar-nbody-simulation/SKILL.md`.
 5. Remember the workspace is multi-root: PeTar changes may depend on `FDPS/` and `SDAR/`, and some workflows rely on `galpy` or `Agama`.
+6. Bump `VERSION` in every commit: run `(cd tools && bash get_version.sh)` (the script has no executable bit, hence `bash`; it writes `git rev-list --count HEAD` + 1), append the `e` suffix marking the experiment branch (`echo "$(cat VERSION)e" > VERSION`), and stage `VERSION` with the change. Convention: commit #N carries `VERSION` = `Ne`. SDAR follows the same convention via its repo-root `get_version.sh` (run from the root, then add `e`).
 
 ## Key Reference Files
 
