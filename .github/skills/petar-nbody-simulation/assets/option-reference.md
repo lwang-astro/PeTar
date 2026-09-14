@@ -60,7 +60,7 @@ Use `<binary> -h` for exact runtime option validation.
 
 - **Type**: `PS::S64`
 - **Default**: `0`
-- **Description**: SDAR g-function (time transformation) method; 0: standard LogH; 1: the method of this build (BTLogH, requires --with-sdar-g-func=btlogh); 2 (auto switch) is not supported for BTLogH
+- **Description**: SDAR g-function (time transformation) method; 0: standard LogH; 1: BTLogH (compiled in by default)
 - **Source**: `src/hard.hpp`:148
 - **Guards**: `AR_G_FUNC`
 

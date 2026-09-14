@@ -305,13 +305,7 @@ In the case of a supercomputer, the host and computing nodes might feature disti
 
 ##### Selecting the SDAR g-function Method for the Hard Integrator
 
-The AR (SDAR) integrator used for close encounters and multiple systems supports an alternative time-transformation (g-function) method, BTLogH, which uses a tree-level product of potentials and improves the resolution of hierarchical multiples. The method is selected at compilation with:
-
-```shell
-./configure --with-sdar-g-func=btlogh
-```
-
-where the choices are `btlogh` (default) and `logh`. A `btlogh` build appends `.btlogh` to the executable name and adds the runtime option `--ar-g-func`: `0` (default, standard LogH) is bit-identical to a `logh` build; `1` switches BTLogH on. The auto-switch mode (`2`) is not available for BTLogH. Since most AR groups in a cluster simulation are isolated binaries where BTLogH reduces to standard LogH, the runtime default remains LogH and BTLogH is enabled explicitly with `--ar-g-func 1`.
+The AR (SDAR) integrator used for close encounters and multiple systems supports an alternative time-transformation (g-function) method, BTLogH, which uses a tree-level product of potentials and improves the resolution of hierarchical multiples. BTLogH support is compiled in by default and is controlled at runtime with the option `--ar-g-func`: `0` (default, standard LogH) is bit-identical to a build without BTLogH support; `1` switches BTLogH on. Since most AR groups in a cluster simulation are isolated binaries where BTLogH reduces to standard LogH, the runtime default remains LogH and BTLogH is enabled explicitly with `--ar-g-func 1`.
 
 ##### Enabling GPU Acceleration
 

@@ -145,7 +145,7 @@ public:
                     ds_scale_ar  (input_par_store, 1.0,      "ar-ds-scale", "Scale factor for SDAR step size calculation"),
                     sd_factor    (input_par_store, 1e-4,     "ar-slowdown-factor", "Slowdown perturbation criterion"),
 #ifdef AR_G_FUNC
-                    ar_g_func    (input_par_store, 0,        "ar-g-func", "SDAR g-function (time transformation) method; 0: standard LogH; 1: the method of this build (BTLogH, requires --with-sdar-g-func=btlogh); 2 (auto switch) is not supported for BTLogH"),
+                    ar_g_func    (input_par_store, 0,        "ar-g-func", "SDAR g-function (time transformation) method; 0: standard LogH; 1: BTLogH"),
 #endif
                     reinit_dt_dm_crit(input_par_store, 1e-4, "hermite-dm-crit", "Mass change rate criterion for reinitializing hermite time step"),
                     reinit_dt_de_crit(input_par_store, 1e-4, "hermite-de-crit", "Ekin change rate criterion for reinitializing hermite time step"),

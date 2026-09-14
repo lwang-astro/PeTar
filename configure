@@ -653,7 +653,6 @@ with_pn
 with_external_hard
 with_external
 with_interrupt
-with_sdar_g_func
 with_step_mode
 with_debug
 use_mpfrc
@@ -751,7 +750,6 @@ with_sdar_prefix
 with_galpy_prefix
 with_agama_prefix
 with_step_mode
-with_sdar_g_func
 with_interrupt
 with_external
 with_external_hard
@@ -1436,11 +1434,6 @@ Optional Packages:
   --with-step-mode        Tree step mode (kdk: K[0.5]-D[1.0]-K[0.5]; kdkdk:
                           K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6]; kdkdk4:
                           Chin-4th). Default: kdkdk4
-  --with-sdar-g-func      SDAR g-function method for the AR integrator (logh,
-                          btlogh). Default: btlogh. btlogh compiles the
-                          tree-level product g-func; the default (0, standard
-                          LogH) is bit-identical to a logh build, switch on at
-                          runtime with --ar-g-func 1
   --with-interrupt        Interruption detection mode (merger, bse, mobse,
                           bseEmp, dsm). Default: off
   --with-external         External potential (galpy,agama). Default: off
@@ -5069,25 +5062,6 @@ else
 fi
 
 
-# SDAR g-function (time transformation) method for the hard integrator
-
-# Check whether --with-sdar-g-func was given.
-if test "${with_sdar_g_func+set}" = set; then :
-  withval=$with_sdar_g_func;
-else
-  with_sdar_g_func=btlogh
-fi
-
-
-if test x"$with_sdar_g_func" == xbtlogh; then :
-  PROG_NAME=$PROG_NAME'.btlogh'
-elif test x"$with_sdar_g_func" != xlogh; then :
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "Unknown SDAR g-function method '$with_sdar_g_func'; supported values are logh, btlogh
-See \`config.log' for more details" "$LINENO" 5; }
-fi
-
 # interruption options
 FCFLAGS_BK=$FCFLAGS
 ac_ext=${ac_fc_srcext-f}
@@ -7531,7 +7505,6 @@ VERSION=$petar_version'_'$sdar_version
 
 
 
-
 { $as_echo "$as_me:${as_lineno-$LINENO}: ----------------------Configure Summary--------------------" >&5
 $as_echo "$as_me: ----------------------Configure Summary--------------------" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Features:" >&5
@@ -7572,8 +7545,6 @@ $as_echo "$as_me:      Sanitizer request: $sanitize_mode_requested" >&6;}
 $as_echo "$as_me:      Sanitizer mode:    $sanitize_mode" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      Step mode:         $with_step_mode" >&5
 $as_echo "$as_me:      Step mode:         $with_step_mode" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}:      SDAR g-func:       $with_sdar_g_func" >&5
-$as_echo "$as_me:      SDAR g-func:       $with_sdar_g_func" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      interrupt mode:    $with_interrupt" >&5
 $as_echo "$as_me:      interrupt mode:    $with_interrupt" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      external mode:     $with_external" >&5

@@ -403,18 +403,6 @@ AC_ARG_WITH([step-mode],
             [PROG_NAME=$PROG_NAME'.'$with_step_mode],
             [with_step_mode=kdkdk4])
 
-# SDAR g-function (time transformation) method for the hard integrator
-AC_ARG_WITH([sdar-g-func],
-            [AS_HELP_STRING([--with-sdar-g-func],
-                            [SDAR g-function method for the AR integrator (logh, btlogh). Default: btlogh. btlogh compiles the tree-level product g-func; the default (0, standard LogH) is bit-identical to a logh build, switch on at runtime with --ar-g-func 1])],
-            [],
-            [with_sdar_g_func=btlogh])
-
-AS_IF([test x"$with_sdar_g_func" == xbtlogh],
-      [PROG_NAME=$PROG_NAME'.btlogh'],
-      [test x"$with_sdar_g_func" != xlogh],
-      [AC_MSG_FAILURE([Unknown SDAR g-function method '$with_sdar_g_func'; supported values are logh, btlogh])])
-
 # interruption options
 FCFLAGS_BK=$FCFLAGS
 AC_ARG_WITH([interrupt],
@@ -605,7 +593,6 @@ AC_SUBST([use_gperf])
 AC_SUBST([use_mpfrc])
 AC_SUBST([with_debug])
 AC_SUBST([with_step_mode])
-AC_SUBST([with_sdar_g_func])
 AC_SUBST([with_interrupt])
 AC_SUBST([with_external])
 AC_SUBST([with_external_hard])
@@ -664,7 +651,6 @@ AC_MSG_NOTICE([     Debug mode:        $with_debug])
 AC_MSG_NOTICE([     Sanitizer request: $sanitize_mode_requested])
 AC_MSG_NOTICE([     Sanitizer mode:    $sanitize_mode])
 AC_MSG_NOTICE([     Step mode:         $with_step_mode])
-AC_MSG_NOTICE([     SDAR g-func:       $with_sdar_g_func])
 AC_MSG_NOTICE([     interrupt mode:    $with_interrupt])
 AC_MSG_NOTICE([     external mode:     $with_external])
 AS_IF([test x"$with_external" == xgalpy],
