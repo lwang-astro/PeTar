@@ -76,9 +76,34 @@ Periodically reviewed → verified entries are elevated to `SKILL.md` as hard ru
 comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 `SDAR/.github/skills/sdar-fewbody-integration/assets/lessons-learned.md`.)*
 
+### 2026-09-14: petar.init `-f` 参数顺序写反，覆盖原初条件文件
+
+**Mistake**: 运行 `petar.init -v kms2pcmyr -s merger --radius 1e-5 -f N100_b0.5.txt input` 时，本意是将 `N100_b0.5.txt`（mcluster 输出）转换为 PeTar 输入文件 `input`，但 `-f` 指定的是**输出文件**，位置参数 `input` 才是输入文件。结果把 PeTar 格式的数据写回了 `N100_b0.5.txt`，覆盖了原始初始条件；后续重新跑模拟时只能从被污染的文件读取，导致粒子数错误（N=1）和一系列格式断言失败。
+
+**Root cause**: 误以为 `-f` 是输入文件参数，与常见工具（如 `mcluster -o`）的语义混淆，也没有在运行后核对 `petar.init` 的提示语 `Transfer "..." to PeTar input data file "..."`。
+
+**Prevention rule**:
+1. `petar.init -f <output> <input>`：`-f` 永远是**输出**（PeTar 输入快照），位置参数是**输入**（原始粒子表）。
+2. 执行后必须核对提示语 `Transfer "<input>" to PeTar input data file "<output>"` 是否符合预期。
+3. 对原始 IC 文件做只读保护：用 `chmod -w <raw_ic>` 或保留一个 `.orig` 备份，防止误覆盖。
+
+
+
 ---
 
 ## Post-Processing
+
+### 2026-09-14: 读 PeTar 二进制快照漏掉 `offset=HEADER_OFFSET` 且未指定 `interrupt_mode`
+
+**Mistake**: 用 `petar.Particle().fromfile('data.0')` 读取标准孤立星团快照时，第一个粒子被读成 header（mass=0, id=101），其余 100 个粒子的质量、ID 全部错乱（负质量、巨大 ID），导致总质量为负、Lagrangian 半径计算完全错误。同时产生 `Binary file size ... not aligned with dtype itemsize` 警告，但 initially 被当作非致命警告忽略。
+
+**Root cause**: `petar.Particle.fromfile` 默认从文件字节 0 开始按粒子 dtype 解析，而 PeTar 二进制快照前 `HEADER_OFFSET`（24 字节）是文件头（time, N, file_id）；漏掉偏移会把 header 解释成第一个粒子。此外，不同编译特性（interrupt/external 模式）会改变粒子 dtype 的列布局，必须用对应的 `interrupt_mode`/`external_mode` 构造 reader。
+
+**Prevention rule**:
+1. 读取 PeTar 原始二进制快照时，**必须**使用 `petar.Particle(interrupt_mode='...', external_mode='...').fromfile(fname, offset=petar.HEADER_OFFSET)`。
+2. `interrupt_mode` 取值为 `none` / `merger` / `bse` / `mobse` / `bseEmp` / `dsm`，必须与编译和运行时一致；`external_mode` 取值为 `none` / `galpy` / `agama`。
+3. 任何 `Binary file size not aligned` 警告都应视为潜在 dtype/偏移/模式不匹配的信号，先修正 reader 参数再忽略警告。
+4. 分析前做快速 sanity check：总质量应为正、粒子数等于 header.n、ID 在合理正整数范围内。
 
 ### 2026-09-14: hard.debug 日志用错 reader、未分割混合列、多线程残缺视图
 

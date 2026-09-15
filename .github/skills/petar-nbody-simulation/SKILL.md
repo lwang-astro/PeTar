@@ -166,6 +166,10 @@ When generator-based star-cluster IC creation is required:
 - Recommended path: normalize the IC into the target PeTar unit system during `petar.init` so that, for `petar -u 1`, the final IC is in `Msun`, `pc`, `pc/Myr`.
 - Advanced native-unit paths require a matching `-G` and consistent conversion of all unit-sensitive runtime and post-processing options; do not recommend this path unless the user explicitly asks to preserve native units.
 
+### petar.init Argument Order
+
+`-f` specifies the **PeTar output snapshot**; the positional argument is the **raw input table**. Writing `petar.init -f <raw_table> <pe_tar_input>` overwrites the raw IC with PeTar-formatted data. Always use `petar.init [...] -f <pe_tar_input> <raw_table>` and verify the `Transfer "<raw_table>" to PeTar input data file "<pe_tar_input>"` message.
+
 ### Star-Cluster Generation Inputs (Complete Checklist)
 
 If IC must be generated for a star cluster (e.g., via mcluster), every parameter below must be explicitly confirmed with the user. Do not assume defaults for any physics-defining parameter. If the user does not volunteer a value, ask; do not proceed until all fields are resolved.
@@ -461,7 +465,7 @@ This table maps each output file type to its reader class. For **exact construct
 
 | File pattern | Reader class | Key notes |
 |---|---|---|
-| `data.<N>` (raw snapshot) | `petar.Particle` | Needs `offset=`, `interrupt_mode`, `external_mode` kwargs; offset depends on external mode |
+| `data.<N>` (raw snapshot) | `petar.Particle` | Binary offset depends on build: `HEADER_OFFSET` (default), `HEADER_OFFSET_WITH_CM` (Galpy/Agama), `HEADER_OFFSET_F128` / `HEADER_OFFSET_WITH_CM_F128` (MPFRC). ASCII: `skiprows=1`. Needs `interrupt_mode`/`external_mode` kwargs matching the solver build. Header (time, N, optional COM offset) is read with `petar.PeTarDataHeader` |
 | `data.lagr` | `petar.LagrangianMultiple` | `external_mode` controls COM-offset columns |
 | `data.core` | `petar.Core` | Simple: `core.fromfile("data.core")` |
 | `data.status` | `petar.Status` | Simple: `status.fromfile("data.status")` |
@@ -516,13 +520,32 @@ Treat the following as read failures (not harmless warnings):
 - ASCII shape/column mismatch
 - text decode errors caused by format mismatch
 
+**Minimal correct examples for raw snapshots**:
+```python
+import petar
+
+# Binary snapshot: offset depends on build features
+header = petar.PeTarDataHeader('data.0', external_mode='none')  # time, N, file_id
+p = petar.Particle(interrupt_mode='none', external_mode='none')
+p.fromfile('data.0', offset=petar.HEADER_OFFSET)
+
+# With Galpy/Agama external potential, the header includes COM position/velocity:
+# header = petar.PeTarDataHeader('data.0', external_mode='galpy')
+# p.fromfile('data.0', offset=petar.HEADER_OFFSET_WITH_CM)
+
+# ASCII snapshot: skip the one-line header
+p = petar.Particle(interrupt_mode='none', external_mode='none')
+p.loadtxt('data.0', skiprows=1)
+```
+Forgetting the correct header offset (binary) or `skiprows=1` (ASCII) reads the header as the first particle, producing negative masses and nonsensical IDs. Post-processed snapshots (`data.<N>.single`, `data.<N>.binary`, etc.) have **no header** and must not use either offset.
+
 Recovery sequence:
 
 1. Stop current downstream command.
 2. Re-check producing solver family and runtime output mode.
-3. Re-check reader flags (`-i`, `-t`, format flags, snapshot type flags).
+3. Re-check reader flags (`-i`, `-t`, format flags, snapshot type flags) and Python kwargs (`interrupt_mode`, `external_mode`, header offset).
 4. Retry with corrected mode.
-5. If mismatch persists, stop and report outputs as untrustworthy.
+5. **Do not write a custom binary/ASCII parser as a workaround.** PeTar output formats are intentionally covered by the installed Python readers; a column mismatch almost always means the reader mode/flags are wrong. If the mode/flags are verified and the mismatch persists, treat it as a potential bug in the reader or the producing solver, stop the analysis, and report the issue to the user with the exact file pattern, reader class, kwargs, and error message.
 
 ## Minimal Interaction Rule
 
