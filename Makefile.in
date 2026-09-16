@@ -421,6 +421,14 @@ install: $(TARGET) SE_INSTALL EXT_INSTALL install_script_tool
 skill-check:
 	bash .github/skills/petar-nbody-simulation/assets/check_skill_consistency.sh
 
+# Regenerate compile_commands.json for clangd from the current build
+# configuration (./configure options plus the petar.select binary family).
+# Run this after reconfiguring so clangd sees the macros that are really enabled.
+# The file is machine-specific generated output and is not tracked by git.
+.PHONY: compile_commands.json
+compile_commands.json:
+	python3 tools/gen_compile_commands.py
+
 clean: SE_CLEAN EXT_CLEAN RAND_CLEAN
 	rm -f $(TARGET) build/*.o 
 

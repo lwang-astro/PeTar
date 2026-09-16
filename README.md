@@ -414,6 +414,18 @@ export PYTHONPATH=$PYTHONPATH:[Install path]/include
 
 These environment variable configuration commands need to be executed each time a new terminal is opened. To automate the loading of these variables, it is advisable to add these commands to the .bashrc file in the case of a bash Linux system.
 
+### clangd / IDE compile database
+
+`compile_commands.json` tells clangd (and other language servers) how each source file is compiled, which is what makes include resolution and `#ifdef` feature branches correct in the editor. Because it is machine-specific generated output, it is **not tracked by git** and must be produced locally once the code is configured:
+
+```shell
+make compile_commands.json
+```
+
+The file is derived from the configured `Makefile` (`MT_FLAGS`, `CXXFLAGS`, `OMPFLAGS`, `FDPSFLAGS`, `PETAR_INCLUDE`, ...), so the IDE sees exactly the macros that are enabled — for example `STELLAR_EVOLUTION`, `GALPY`, `GAS_DRAG`, `DISK_STAR_MERGER`. Without it, code behind those macros is shown as inactive and navigation/hover degrades.
+
+Re-run the command after changing the configuration (`./configure ...`) or the binary family (`petar.select ...`), then reload the language server (`clangd: Restart language server` in VS Code). The generator accepts `--print` to show the compile command without writing the file.
+
 ### Physical Constants (auto-generated header)
 
 The file [`src/astro_units.hpp`](src/astro_units.hpp) defines the physical constants used throughout PeTar's C++ solver (gravitational constant, unit conversions, speed of light). These constants are **auto-generated** from `astropy`'s IAU/CODATA definitions, ensuring they stay aligned with the latest astronomical standards.
