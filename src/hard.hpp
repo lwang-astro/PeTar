@@ -1809,7 +1809,19 @@ public:
             sym_int.particles.template writeBackMemberAll<PtclH4>();
 
             PS::S32 n_members = sym_int.particles.getSize();
+/*            
 #ifdef DISK_STAR_MERGER
+            // 2026-09-16 fix (tsalm2p3 NaN crash, see PETAR_HARD_DEBUG_NOTES case 2):
+            // Do NOT overwrite the remnant position/velocity with the whole-cluster c.m.
+            // When the cluster contains the SMBH, the c.m. is dominated by the SMBH, so the
+            // remnant is placed next to the SMBH; redistributeStar() then spawns the new
+            // star at |cm - center| ~ 0.1 AU from the SMBH and the AR integration of such a
+            // 1e8:1 pair produces NaN.
+            // writeBackMemberAll() already restores the correct merger-site position, and
+            // the drift before redistributeStar() is limited to < 1 tree step (measured
+            // ~2 AU at r~9000 AU, negligible for the rebirth radius).
+            // If the c.m. velocity is ever needed to orient the rebirth orbital plane,
+            // use the merging *pair* c.m. (local disk motion) instead of the cluster c.m.
             for (PS::S32 i=0; i<n_members; i++) {
                 auto& pi = ptcl_origin[i];
                 if (pi.mass==0.0) {
@@ -1817,6 +1829,7 @@ public:
                 }
             }
 #endif
+*/
 
             // drift artificial particles and move particle mass to backup mass
             if (_ptcl_artificial!=NULL) {
@@ -1912,7 +1925,19 @@ public:
             h4_int.particles.shiftToOriginFrame();
 #endif
 
+/*
 #ifdef DISK_STAR_MERGER
+            // 2026-09-16 fix (tsalm2p3 NaN crash, see PETAR_HARD_DEBUG_NOTES case 2):
+            // Do NOT overwrite the remnant position/velocity with the whole-cluster c.m.
+            // When the cluster contains the SMBH, the c.m. is dominated by the SMBH, so the
+            // remnant is placed next to the SMBH; redistributeStar() then spawns the new
+            // star at |cm - center| ~ 0.1 AU from the SMBH and the AR integration of such a
+            // 1e8:1 pair produces NaN.
+            // writeBackMemberAll() already restores the correct merger-site position, and
+            // the drift before redistributeStar() is limited to < 1 tree step (measured
+            // ~2 AU at r~9000 AU, negligible for the rebirth radius).
+            // If the c.m. velocity is ever needed to orient the rebirth orbital plane,
+            // use the merging *pair* c.m. (local disk motion) instead of the cluster c.m.
             auto& h4_pcm = h4_int.particles.cm;
             for (PS::S32 i=0; i<h4_int.particles.getSize(); i++) {
                 auto& pi = ptcl_origin[i];
@@ -1920,6 +1945,7 @@ public:
                     manager->ar_manager.interaction.disk_star_merger_manager.setRemnantOrbitToCM(pi, h4_pcm);
             }
 #endif
+*/
 
             // back up center of mass pos and vel
             PS::F64vec cm_pos_org = pcm.pos;
