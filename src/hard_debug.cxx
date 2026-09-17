@@ -507,9 +507,15 @@ int main(int argc, char **argv){
 #else
             hard_manager.h4_manager.interaction.ext_force.initial(ext_hard_io, stat.time, hard_manager.center, hard_manager.center_id, true);
 #endif
+            // link the AR interaction to the external force as done in the main run, otherwise the AR
+            // groups created dynamically during the integration would use a null ext_force pointer
+            hard_manager.ar_manager.interaction.ext_force = &hard_manager.h4_manager.interaction.ext_force;
 #endif
 #ifdef STELLAR_EVOLUTION
-            hard_manager.ar_manager.interaction.time_interrupt_max = hard_dump.time_end; // set max interrupt time to integration end time, to avoid unexpected interruption after integration end time due to inaccurate time offset in hard dump
+            // set max interrupt time to the physical integration end time to avoid unexpected interruption after integration end time.
+            // note that time_end stored in the hard dump is a relative step width, thus the global time offset must be added to be
+            // consistent with the main run (stat.time + dt_drift), while particle time_record/time_interrupt are physical times
+            hard_manager.ar_manager.interaction.time_interrupt_max = hard_dump.time_offset + hard_dump.time_end;
 #endif
             HardIntegrator hard_int;
 #ifdef HARD_DEBUG_PRINT

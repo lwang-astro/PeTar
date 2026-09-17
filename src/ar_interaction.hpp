@@ -865,7 +865,12 @@ public:
             _p.time_record += dt-dt_miss;
 
             // estimate next time to check
-            _p.time_interrupt = std::min(_p.time_record + bse_manager.getTimeStepStar(_p.star), time_interrupt_max);
+            // the effective maximum interrupt time should never be earlier than the evolution ending
+            // time, otherwise time_interrupt could be set earlier than time_record when _time_end
+            // exceeds time_interrupt_max (e.g. when the hard dump time offset is not added or the
+            // Hermite block-step boundary goes beyond the drift step width)
+            const Float time_interrupt_max_use = std::max(time_interrupt_max, _time_end);
+            _p.time_interrupt = std::min(_p.time_record + bse_manager.getTimeStepStar(_p.star), time_interrupt_max_use);
 
             // record mass change (if loss, negative)
             double dm = bse_manager.getMassLoss(output);
@@ -921,8 +926,13 @@ public:
             // call mass change function
             if (_p.time_interrupt<=_time_end) {
                 int modify_flag = 0;
+                // the effective maximum interrupt time should never be earlier than the evolution
+                // ending time, otherwise calcMassChange obtains next_dt<0 and asserts
+                // time_interrupt>=time_record may fail (e.g. when the hard dump time offset is not
+                // added or the Hermite block-step boundary goes beyond the drift step width)
+                const Float time_interrupt_max_use = std::max(time_interrupt_max, _time_end);
                 while (_p.star.last_mass_change_time < _time_end) {
-                    int modify_flag_iter = disk_star_merger_manager.calcMassChange(&_p, _time_end, time_interrupt_max);
+                    int modify_flag_iter = disk_star_merger_manager.calcMassChange(&_p, _time_end, time_interrupt_max_use);
                     modify_flag = std::max(modify_flag, modify_flag_iter);
                 }
                 return modify_flag;
