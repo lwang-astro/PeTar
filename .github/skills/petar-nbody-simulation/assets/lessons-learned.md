@@ -117,7 +117,16 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 ## Restart / Resume
 
-*(No entries yet)*
+### 2026-09-16: 重启改 `-s` 后 par 文件中的派生参数过期，触发 DSM 559 断言崩溃
+
+**Mistake**: tsalm2p3（DSM 构建）重启时用 `-s 0.0625` 缩小树时间步，未同步处理 `data.par.hard` 中存储的 `hermite-dt-max`（= 旧 dt_soft/2 = 0.0625，首启自动推导后被写入 par 文件）。重启后 drift 半步 `time_interrupt_max` = 0.03125，而 H4 块步边界可达 0.0625，DSM 活跃星的 `time_interrupt` 越过 timax 使 `next_dt<0`，在 `disk_star_merger.hpp:559`（`calcMassChange`）断言崩溃。同理 `-r` 改变后 `r-search-group`/`r-group`/`r-search-min` 等派生半径也不会自动更新，需手动加 `--r-search-min 0 --r-group -1 --r-search-group -1`，既繁琐又无文档。
+
+**Root cause**: PeTar 每次启动把**解析后的最终值**（含自动推导结果）覆盖写入 data.par/data.par.hard；重启读取后，仅当值等于哨兵值（0/-1）才走自动推导路径——哨兵已被派生值替换，推导永不触发。命令行显式给出的选项与 par 文件载入的值无法区分，"改 `-s` 时哪些依赖参数需要联动"没有机制保证。
+
+**Prevention rule**:
+1. 2026-09-16 起源码已实现重启自动重算（`petar.hpp` `initialParameters()`），且 `-s`/`-r` 互耦（2026-09-17，与首启一致）：只给 `-s` → `r_out` 连同 `hermite-dt-max`、`r-search-min`、`r-search-group`、`r-group`、`hermite-acc-offset-sq` 重算；只给 `-r` → `dt_soft` 连同上述半径参数重算；两者都给则互不重置；`-s 0`/`-r 0` 哨兵是推导请求不触发交叉重置；`--r-ratio`/`--r-search-group-safety` 给出 → 组半径重算。当前命令行显式给出的参数不被重置；关闭特性的 0 值（如 `--r-search-group 0`）永不重置。半径变化时 `update_changeover_flag` 置位，重启逐粒子更新 changeover。重启只需 `petar -p data.par -s <new> [snap]`。
+2. 显式 `--hermite-dt-max` 不得超过一个 tree drift step（KDKDK4 = dt_soft/2），否则会错过时间中断（恒星演化/DSM 事件）引发断言；越界时代码会打印警告。
+3. 组合重启命令时牢记：PeTar 每次启动都会用解析后的参数**覆盖写** data.par*——复现实验之间不要互相复制 par 文件；重启二进制快照默认需 `-i 0`（`i=2` 默认按 ASCII 读会报 "cannot read header" 中止）。
 
 ---
 

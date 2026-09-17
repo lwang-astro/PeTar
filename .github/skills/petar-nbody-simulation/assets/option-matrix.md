@@ -9,50 +9,38 @@ Discovery rule:
 
 ## Solver Binaries Included
 
-- petar.mpi.omp.avx2.64b (59 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.64b
-- petar.mpi.omp.avx2.agama (62 options)
+- petar.mpi.omp.avx2.agama (63 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.agama
-- petar.mpi.omp.avx2.bse.agama (94 options)
+- petar.mpi.omp.avx2.bse.agama (95 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.agama
-- petar.mpi.omp.avx2.bse.galpy.gasdrag (107 options)
+- petar.mpi.omp.avx2.bse.galpy.gasdrag (108 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag
-- petar.mpi.omp.avx2.bse.galpy (96 options)
+- petar.mpi.omp.avx2.bse.galpy (97 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy
-- petar.mpi.omp.avx2.bse.gasdrag (102 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.gasdrag
-- petar.mpi.omp.avx2.bse (91 options)
+- petar.mpi.omp.avx2.bse (92 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse
-- petar.mpi.omp.avx2.bse.pnhermite (93 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.pnhermite
-- petar.mpi.omp.avx2.dsm.galpy.gasdrag (93 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.dsm.galpy.gasdrag
-- petar.mpi.omp.avx2.dsm.gasdrag (88 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.dsm.gasdrag
-- petar.mpi.omp.avx2.galpy.mp (64 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.mp
-- petar.mpi.omp.avx2.galpy (64 options)
+- petar.mpi.omp.avx2.bseEmp.galpy (99 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy
+- petar.mpi.omp.avx2.btlogh.bseEmp.galpy (100 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.btlogh.bseEmp.galpy
+- petar.mpi.omp.avx2.btlogh (62 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.btlogh
+- petar.mpi.omp.avx2.dsm (78 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.dsm
+- petar.mpi.omp.avx2.galpy.gasdrag (77 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.gasdrag
+- petar.mpi.omp.avx2.galpy (66 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy
-- petar.mpi.omp.avx2.gasdrag (70 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gasdrag
-- petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag (107 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag
-- petar.mpi.omp.avx2.gpu.bse.galpy (96 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy
-- petar.mpi.omp.avx2.gpu.bse (91 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse
-- petar.mpi.omp.avx2.gpu.dsm.galpy.gasdrag (93 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.dsm.galpy.gasdrag
-- petar.mpi.omp.avx2.gpu (59 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu
-- petar.mpi.omp.avx2.kdk.g (59 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.kdk.g
-- petar.mpi.omp.avx2.kdkdk4.g (59 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.kdkdk4.g
-- petar.mpi.omp.avx2 (59 options)
+- petar.mpi.omp.avx2.merger (63 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.merger
+- petar.mpi.omp.avx2.mp (60 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.mp
+- petar.mpi.omp.avx2 (62 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2
-- petar.mpi.omp.avx2.pnall (62 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.pnall
+- petar.omp.avx2.64b (58 options)
+  - path: /home/lwang/bin/petar.omp.avx2.64b
+- petar.omp.avx2 (58 options)
+  - path: /home/lwang/bin/petar.omp.avx2
 
 ## Requirement-Driven Solver Filters
 
@@ -66,161 +54,118 @@ Configure mapping:
 
 ### Interrupt Module (--with-interrupt)
 
-- petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 107
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag
-- petar.mpi.omp.avx2.gpu.bse.galpy
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 96
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy
-- petar.mpi.omp.avx2.gpu.dsm.galpy.gasdrag
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 93
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.dsm.galpy.gasdrag
-- petar.mpi.omp.avx2.gpu.bse
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 91
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse
 - petar.mpi.omp.avx2.bse.galpy.gasdrag
   - perf-tags: avx2,omp,mpi
-  - options: 107
+  - options: 108
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag
-- petar.mpi.omp.avx2.bse.gasdrag
+- petar.mpi.omp.avx2.btlogh.bseEmp.galpy
   - perf-tags: avx2,omp,mpi
-  - options: 102
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.gasdrag
+  - options: 100
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.btlogh.bseEmp.galpy
+- petar.mpi.omp.avx2.bseEmp.galpy
+  - perf-tags: avx2,omp,mpi
+  - options: 99
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy
 - petar.mpi.omp.avx2.bse.galpy
   - perf-tags: avx2,omp,mpi
-  - options: 96
+  - options: 97
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy
 - petar.mpi.omp.avx2.bse.agama
   - perf-tags: avx2,omp,mpi
-  - options: 94
+  - options: 95
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.agama
+- petar.mpi.omp.avx2.bse
+  - perf-tags: avx2,omp,mpi
+  - options: 92
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse
+- petar.mpi.omp.avx2.dsm
+  - perf-tags: avx2,omp,mpi
+  - options: 78
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.dsm
+- petar.mpi.omp.avx2.merger
+  - perf-tags: avx2,omp,mpi
+  - options: 63
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.merger
 
 ### Stellar Evolution (bse/mobse/bseEmp)
 
-- petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 107
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag
-- petar.mpi.omp.avx2.gpu.bse.galpy
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 96
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy
-- petar.mpi.omp.avx2.gpu.bse
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 91
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse
 - petar.mpi.omp.avx2.bse.galpy.gasdrag
   - perf-tags: avx2,omp,mpi
-  - options: 107
+  - options: 108
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag
-- petar.mpi.omp.avx2.bse.gasdrag
+- petar.mpi.omp.avx2.btlogh.bseEmp.galpy
   - perf-tags: avx2,omp,mpi
-  - options: 102
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.gasdrag
+  - options: 100
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.btlogh.bseEmp.galpy
+- petar.mpi.omp.avx2.bseEmp.galpy
+  - perf-tags: avx2,omp,mpi
+  - options: 99
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy
 - petar.mpi.omp.avx2.bse.galpy
   - perf-tags: avx2,omp,mpi
-  - options: 96
+  - options: 97
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy
 - petar.mpi.omp.avx2.bse.agama
   - perf-tags: avx2,omp,mpi
-  - options: 94
+  - options: 95
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.agama
-- petar.mpi.omp.avx2.bse.pnhermite
+- petar.mpi.omp.avx2.bse
   - perf-tags: avx2,omp,mpi
-  - options: 93
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.pnhermite
+  - options: 92
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse
 
 ### Long-timescale External: Galpy (--with-external=galpy)
 
-- petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 107
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag
-- petar.mpi.omp.avx2.gpu.bse.galpy
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 96
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy
-- petar.mpi.omp.avx2.gpu.dsm.galpy.gasdrag
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 93
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.dsm.galpy.gasdrag
 - petar.mpi.omp.avx2.bse.galpy.gasdrag
   - perf-tags: avx2,omp,mpi
-  - options: 107
+  - options: 108
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag
+- petar.mpi.omp.avx2.btlogh.bseEmp.galpy
+  - perf-tags: avx2,omp,mpi
+  - options: 100
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.btlogh.bseEmp.galpy
+- petar.mpi.omp.avx2.bseEmp.galpy
+  - perf-tags: avx2,omp,mpi
+  - options: 99
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy
 - petar.mpi.omp.avx2.bse.galpy
   - perf-tags: avx2,omp,mpi
-  - options: 96
+  - options: 97
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy
-- petar.mpi.omp.avx2.dsm.galpy.gasdrag
+- petar.mpi.omp.avx2.galpy.gasdrag
   - perf-tags: avx2,omp,mpi
-  - options: 93
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.dsm.galpy.gasdrag
-- petar.mpi.omp.avx2.galpy.mp
-  - perf-tags: avx2,omp,mpi
-  - options: 64
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.mp
+  - options: 77
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.gasdrag
 - petar.mpi.omp.avx2.galpy
   - perf-tags: avx2,omp,mpi
-  - options: 64
+  - options: 66
   - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy
 
 ### Long-timescale External: Agama (--with-external=agama)
 
 - petar.mpi.omp.avx2.bse.agama
   - perf-tags: avx2,omp,mpi
-  - options: 94
+  - options: 95
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.agama
 - petar.mpi.omp.avx2.agama
   - perf-tags: avx2,omp,mpi
-  - options: 62
+  - options: 63
   - path: /home/lwang/bin/petar.mpi.omp.avx2.agama
 
 ### Short-timescale External Hard: Gas Drag (--with-external-hard=gasdrag)
 
-- petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 107
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag
-- petar.mpi.omp.avx2.gpu.dsm.galpy.gasdrag
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 93
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.dsm.galpy.gasdrag
 - petar.mpi.omp.avx2.bse.galpy.gasdrag
   - perf-tags: avx2,omp,mpi
-  - options: 107
+  - options: 108
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag
-- petar.mpi.omp.avx2.bse.gasdrag
+- petar.mpi.omp.avx2.galpy.gasdrag
   - perf-tags: avx2,omp,mpi
-  - options: 102
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.gasdrag
-- petar.mpi.omp.avx2.dsm.galpy.gasdrag
-  - perf-tags: avx2,omp,mpi
-  - options: 93
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.dsm.galpy.gasdrag
-- petar.mpi.omp.avx2.dsm.gasdrag
-  - perf-tags: avx2,omp,mpi
-  - options: 88
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.dsm.gasdrag
-- petar.mpi.omp.avx2.gasdrag
-  - perf-tags: avx2,omp,mpi
-  - options: 70
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gasdrag
+  - options: 77
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.gasdrag
 
 ### Post-Newtonian Relativity (--with-pn)
 
-- petar.mpi.omp.avx2.bse.pnhermite
-  - perf-tags: avx2,omp,mpi
-  - options: 93
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.pnhermite
-- petar.mpi.omp.avx2.pnall
-  - perf-tags: avx2,omp,mpi
-  - options: 62
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.pnall
+- (no matching solver detected)
 
 ### Special-purpose Features (Non-default Recommendations)
 
@@ -228,28 +173,21 @@ These are for special user requests and should not be selected by default.
 
 ### High-precision Tree Force (--enable-64b)
 
-- petar.mpi.omp.avx2.64b
-  - perf-tags: avx2,omp,mpi
-  - options: 59
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.64b
+- petar.omp.avx2.64b
+  - perf-tags: avx2,omp
+  - options: 58
+  - path: /home/lwang/bin/petar.omp.avx2.64b
 
 ### High-precision Position Representation (--enable-mpfrc)
 
-- petar.mpi.omp.avx2.galpy.mp
+- petar.mpi.omp.avx2.mp
   - perf-tags: avx2,omp,mpi
-  - options: 64
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.mp
+  - options: 60
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.mp
 
 ### Debug Build: g (--with-debug=g)
 
-- petar.mpi.omp.avx2.kdkdk4.g
-  - perf-tags: avx2,omp,mpi
-  - options: 59
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.kdkdk4.g
-- petar.mpi.omp.avx2.kdk.g
-  - perf-tags: avx2,omp,mpi
-  - options: 59
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.kdk.g
+- (no matching solver detected)
 
 ### Debug Build: assert (--with-debug=assert)
 
@@ -260,68 +198,64 @@ These are for special user requests and should not be selected by default.
 
 Priority order: gpu > avx512 > avx2 > omp > mpi
 Apply this ordering after choosing a requirement-driven filter.
-- #1 petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 107
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag
-- #2 petar.mpi.omp.avx2.gpu.bse.galpy
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 96
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy
-- #3 petar.mpi.omp.avx2.gpu.dsm.galpy.gasdrag
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 93
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.dsm.galpy.gasdrag
-- #4 petar.mpi.omp.avx2.gpu.bse
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 91
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse
-- #5 petar.mpi.omp.avx2.gpu
-  - perf-tags: gpu,avx2,omp,mpi
-  - options: 59
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu
-- #6 petar.mpi.omp.avx2.bse.galpy.gasdrag
+- #1 petar.mpi.omp.avx2.bse.galpy.gasdrag
   - perf-tags: avx2,omp,mpi
-  - options: 107
+  - options: 108
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag
-- #7 petar.mpi.omp.avx2.bse.gasdrag
+- #2 petar.mpi.omp.avx2.btlogh.bseEmp.galpy
   - perf-tags: avx2,omp,mpi
-  - options: 102
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.gasdrag
-- #8 petar.mpi.omp.avx2.bse.galpy
+  - options: 100
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.btlogh.bseEmp.galpy
+- #3 petar.mpi.omp.avx2.bseEmp.galpy
   - perf-tags: avx2,omp,mpi
-  - options: 96
+  - options: 99
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy
+- #4 petar.mpi.omp.avx2.bse.galpy
+  - perf-tags: avx2,omp,mpi
+  - options: 97
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy
-- #9 petar.mpi.omp.avx2.bse.agama
+- #5 petar.mpi.omp.avx2.bse.agama
   - perf-tags: avx2,omp,mpi
-  - options: 94
+  - options: 95
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.agama
-- #10 petar.mpi.omp.avx2.dsm.galpy.gasdrag
+- #6 petar.mpi.omp.avx2.bse
   - perf-tags: avx2,omp,mpi
-  - options: 93
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.dsm.galpy.gasdrag
-- #11 petar.mpi.omp.avx2.bse.pnhermite
-  - perf-tags: avx2,omp,mpi
-  - options: 93
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.pnhermite
-- #12 petar.mpi.omp.avx2.bse
-  - perf-tags: avx2,omp,mpi
-  - options: 91
+  - options: 92
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse
+- #7 petar.mpi.omp.avx2.dsm
+  - perf-tags: avx2,omp,mpi
+  - options: 78
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.dsm
+- #8 petar.mpi.omp.avx2.galpy.gasdrag
+  - perf-tags: avx2,omp,mpi
+  - options: 77
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.gasdrag
+- #9 petar.mpi.omp.avx2.galpy
+  - perf-tags: avx2,omp,mpi
+  - options: 66
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy
+- #10 petar.mpi.omp.avx2.merger
+  - perf-tags: avx2,omp,mpi
+  - options: 63
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.merger
+- #11 petar.mpi.omp.avx2.agama
+  - perf-tags: avx2,omp,mpi
+  - options: 63
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.agama
+- #12 petar.mpi.omp.avx2.btlogh
+  - perf-tags: avx2,omp,mpi
+  - options: 62
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.btlogh
 
 ## Helper Tool Binaries Excluded From Simulation Commands
 
-- petar.mpi.omp.avx2.64b.format.transfer (9 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.64b.format.transfer
-- petar.mpi.omp.avx2.64b.hard.debug (59 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.64b.hard.debug
 - petar.mpi.omp.avx2.agama.format.transfer (9 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.agama.format.transfer
-- petar.mpi.omp.avx2.agama.hard.debug (62 options)
+- petar.mpi.omp.avx2.agama.hard.debug (63 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.agama.hard.debug
 - petar.mpi.omp.avx2.bse.agama.format.transfer (9 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.agama.format.transfer
-- petar.mpi.omp.avx2.bse.agama.hard.debug (94 options)
+- petar.mpi.omp.avx2.bse.agama.hard.debug (95 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.agama.hard.debug
 - petar.mpi.omp.avx2.bse.format.transfer (9 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.format.transfer
@@ -329,80 +263,60 @@ Apply this ordering after choosing a requirement-driven filter.
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.format.transfer
 - petar.mpi.omp.avx2.bse.galpy.gasdrag.format.transfer (9 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag.format.transfer
-- petar.mpi.omp.avx2.bse.galpy.gasdrag.hard.debug (107 options)
+- petar.mpi.omp.avx2.bse.galpy.gasdrag.hard.debug (108 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag.hard.debug
-- petar.mpi.omp.avx2.bse.galpy.hard.debug (96 options)
+- petar.mpi.omp.avx2.bse.galpy.hard.debug (97 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.hard.debug
-- petar.mpi.omp.avx2.bse.gasdrag.format.transfer (9 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.gasdrag.format.transfer
-- petar.mpi.omp.avx2.bse.gasdrag.hard.debug (102 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.gasdrag.hard.debug
-- petar.mpi.omp.avx2.bse.hard.debug (91 options)
+- petar.mpi.omp.avx2.bse.hard.debug (92 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.hard.debug
-- petar.mpi.omp.avx2.bse.pnhermite.format.transfer (9 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.pnhermite.format.transfer
-- petar.mpi.omp.avx2.bse.pnhermite.hard.debug (93 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.pnhermite.hard.debug
-- petar.mpi.omp.avx2.dsm.galpy.gasdrag.format.transfer (9 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.dsm.galpy.gasdrag.format.transfer
-- petar.mpi.omp.avx2.dsm.galpy.gasdrag.hard.debug (93 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.dsm.galpy.gasdrag.hard.debug
-- petar.mpi.omp.avx2.dsm.gasdrag.format.transfer (9 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.dsm.gasdrag.format.transfer
-- petar.mpi.omp.avx2.dsm.gasdrag.hard.debug (88 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.dsm.gasdrag.hard.debug
+- petar.mpi.omp.avx2.bseEmp.galpy.format.transfer (9 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy.format.transfer
+- petar.mpi.omp.avx2.bseEmp.galpy.hard.debug (99 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy.hard.debug
+- petar.mpi.omp.avx2.btlogh.bseEmp.galpy.format.transfer (9 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.btlogh.bseEmp.galpy.format.transfer
+- petar.mpi.omp.avx2.btlogh.bseEmp.galpy.hard.debug (100 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.btlogh.bseEmp.galpy.hard.debug
+- petar.mpi.omp.avx2.btlogh.format.transfer (9 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.btlogh.format.transfer
+- petar.mpi.omp.avx2.btlogh.hard.debug (62 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.btlogh.hard.debug
+- petar.mpi.omp.avx2.dsm.format.transfer (9 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.dsm.format.transfer
+- petar.mpi.omp.avx2.dsm.hard.debug (78 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.dsm.hard.debug
 - petar.mpi.omp.avx2.format.transfer (9 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.format.transfer
 - petar.mpi.omp.avx2.galpy.format.transfer (9 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.format.transfer
-- petar.mpi.omp.avx2.galpy.hard.debug (64 options)
+- petar.mpi.omp.avx2.galpy.gasdrag.format.transfer (9 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.gasdrag.format.transfer
+- petar.mpi.omp.avx2.galpy.gasdrag.hard.debug (77 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.gasdrag.hard.debug
+- petar.mpi.omp.avx2.galpy.hard.debug (66 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.hard.debug
-- petar.mpi.omp.avx2.galpy.mp.format.transfer (9 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.mp.format.transfer
-- petar.mpi.omp.avx2.galpy.mp.hard.debug (64 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.mp.hard.debug
-- petar.mpi.omp.avx2.gasdrag.format.transfer (9 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gasdrag.format.transfer
-- petar.mpi.omp.avx2.gasdrag.hard.debug (70 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gasdrag.hard.debug
-- petar.mpi.omp.avx2.gpu.bse.format.transfer (9 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.format.transfer
-- petar.mpi.omp.avx2.gpu.bse.galpy.format.transfer (9 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy.format.transfer
-- petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag.format.transfer (9 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag.format.transfer
-- petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag.hard.debug (107 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag.hard.debug
-- petar.mpi.omp.avx2.gpu.bse.galpy.hard.debug (96 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.galpy.hard.debug
-- petar.mpi.omp.avx2.gpu.bse.hard.debug (91 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.bse.hard.debug
-- petar.mpi.omp.avx2.gpu.dsm.galpy.gasdrag.format.transfer (9 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.dsm.galpy.gasdrag.format.transfer
-- petar.mpi.omp.avx2.gpu.dsm.galpy.gasdrag.hard.debug (93 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.dsm.galpy.gasdrag.hard.debug
-- petar.mpi.omp.avx2.gpu.format.transfer (9 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.format.transfer
-- petar.mpi.omp.avx2.gpu.hard.debug (59 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.gpu.hard.debug
-- petar.mpi.omp.avx2.hard.debug (59 options)
+- petar.mpi.omp.avx2.hard.debug (62 options)
   - path: /home/lwang/bin/petar.mpi.omp.avx2.hard.debug
-- petar.mpi.omp.avx2.kdk.g.format.transfer (9 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.kdk.g.format.transfer
-- petar.mpi.omp.avx2.kdk.g.hard.debug (59 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.kdk.g.hard.debug
-- petar.mpi.omp.avx2.kdkdk4.g.format.transfer (9 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.kdkdk4.g.format.transfer
-- petar.mpi.omp.avx2.kdkdk4.g.hard.debug (59 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.kdkdk4.g.hard.debug
-- petar.mpi.omp.avx2.pnall.format.transfer (9 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.pnall.format.transfer
-- petar.mpi.omp.avx2.pnall.hard.debug (62 options)
-  - path: /home/lwang/bin/petar.mpi.omp.avx2.pnall.hard.debug
+- petar.mpi.omp.avx2.merger.format.transfer (9 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.merger.format.transfer
+- petar.mpi.omp.avx2.merger.hard.debug (63 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.merger.hard.debug
+- petar.mpi.omp.avx2.mp.format.transfer (9 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.mp.format.transfer
+- petar.mpi.omp.avx2.mp.hard.debug (60 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.mp.hard.debug
+- petar.omp.avx2.64b.format.transfer (9 options)
+  - path: /home/lwang/bin/petar.omp.avx2.64b.format.transfer
+- petar.omp.avx2.64b.hard.debug (58 options)
+  - path: /home/lwang/bin/petar.omp.avx2.64b.hard.debug
+- petar.omp.avx2.format.transfer (9 options)
+  - path: /home/lwang/bin/petar.omp.avx2.format.transfer
+- petar.omp.avx2.hard.debug (58 options)
+  - path: /home/lwang/bin/petar.omp.avx2.hard.debug
 
 ## Script Tools (Non-solver Workflow Commands)
 
-- petar.data.clear (13 options)
+- petar.data.clear (14 options)
   - path: /home/lwang/bin/petar.data.clear
 - petar.data.gether (5 options)
   - path: /home/lwang/bin/petar.data.gether
@@ -410,14 +324,12 @@ Apply this ordering after choosing a requirement-driven filter.
   - path: /home/lwang/bin/petar.data.process
 - petar.external.pot.movie (12 options)
   - path: /home/lwang/bin/petar.external.pot.movie
-- petar.find.dt (13 options)
+- petar.find.dt (12 options)
   - path: /home/lwang/bin/petar.find.dt
 - petar.format.transfer.post (16 options)
   - path: /home/lwang/bin/petar.format.transfer.post
 - petar.galev.process (20 options)
   - path: /home/lwang/bin/petar.galev.process
-- petar.get.init.binary (3 options)
-  - path: /home/lwang/bin/petar.get.init.binary
 - petar.get.object.snap (26 options)
   - path: /home/lwang/bin/petar.get.object.snap
 - petar.init (16 options)
@@ -431,12 +343,34 @@ Apply this ordering after choosing a requirement-driven filter.
 
 - petar.bse (44 options)
   - path: /home/lwang/bin/petar.bse
+- petar.bseEmp (45 options)
+  - path: /home/lwang/bin/petar.bseEmp
 - petar.external.agama (7 options)
   - path: /home/lwang/bin/petar.external.agama
 - petar.external.galpy (9 options)
   - path: /home/lwang/bin/petar.external.galpy
 - petar.galpy.help (5 options)
   - path: /home/lwang/bin/petar.galpy.help
+- petar.get.init.binary.bse (3 options)
+  - path: /home/lwang/bin/petar.get.init.binary.bse
+- petar.hard.test (40 options)
+  - path: /home/lwang/bin/petar.hard.test
+- petar.mpi.omp.avx2.bse.galpy.gasdrag.dump2test (39 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bse.galpy.gasdrag.dump2test
+- petar.mpi.omp.avx2.bseEmp.galpy.dump2test (42 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.bseEmp.galpy.dump2test
+- petar.mpi.omp.avx2.btlogh.bseEmp.galpy.dump2test (43 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.btlogh.bseEmp.galpy.dump2test
+- petar.mpi.omp.avx2.btlogh.dump2test (41 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.btlogh.dump2test
+- petar.mpi.omp.avx2.dump2test (44 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.dump2test
+- petar.mpi.omp.avx2.galpy.dump2test (40 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.dump2test
+- petar.mpi.omp.avx2.galpy.gasdrag.dump2test (40 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.galpy.gasdrag.dump2test
+- petar.mpi.omp.avx2.merger.dump2test (42 options)
+  - path: /home/lwang/bin/petar.mpi.omp.avx2.merger.dump2test
 - petar.read.par (4 options)
   - path: /home/lwang/bin/petar.read.par
 - petar.select (7 options)
@@ -452,46 +386,34 @@ Apply this ordering after choosing a requirement-driven filter.
   - binaries: 2
 - .avx2
   - group: architecture
-  - binaries: 22
+  - binaries: 16
 - .bse
   - group: interrupt-mode
-  - binaries: 9
+  - binaries: 4
+- .bseEmp
+  - group: interrupt-mode
+  - binaries: 2
 - .dsm
   - group: interrupt-mode
-  - binaries: 3
-- .g
-  - group: debug
-  - binaries: 2
+  - binaries: 1
 - .galpy
   - group: external-potential
-  - binaries: 8
+  - binaries: 6
 - .gasdrag
   - group: external-hard
-  - binaries: 7
-- .gpu
-  - group: parallel-runtime
-  - binaries: 5
-- .kdk
-  - group: step-mode
-  - binaries: 1
-- .kdkdk4
-  - group: step-mode
+  - binaries: 2
+- .merger
+  - group: interrupt-mode
   - binaries: 1
 - .mp
   - group: mpfrc
   - binaries: 1
 - .mpi
   - group: parallel-runtime
-  - binaries: 22
+  - binaries: 14
 - .omp
   - group: parallel-runtime
-  - binaries: 22
-- .pnall
-  - group: post-newtonian
-  - binaries: 1
-- .pnhermite
-  - group: post-newtonian
-  - binaries: 1
+  - binaries: 16
 
 ## Common Core Options
 
@@ -502,8 +424,6 @@ Apply this ordering after choosing a requirement-driven filter.
 - --ar-sym-order
 - --center-id
 - --disable-print-info
-- --domain-nstep
-- --domain-weight-mode
 - --dt-soft-kepler-nstep
 - --dt-soft-sigma-factor
 - --energy-err-hard
@@ -518,6 +438,7 @@ Apply this ordering after choosing a requirement-driven filter.
 - --hermite-n-neighbor-max
 - --id-offset
 - --kdtree-n-particles-min
+- --keep-tmp-on-startup
 - --n-sample-average
 - --r-escape
 - --r-group
@@ -557,15 +478,13 @@ Apply this ordering after choosing a requirement-driven filter.
 
 ## Feature-specific Options By Binary
 
-### petar.mpi.omp.avx2.64b
-
-- (no extra options beyond core)
-
 ### petar.mpi.omp.avx2.agama
 
 - --agama-conf-file
 - --agama-rscale
 - --agama-vscale
+- --domain-nstep
+- --domain-weight-mode
 
 ### petar.mpi.omp.avx2.bse.agama
 
@@ -601,6 +520,8 @@ Apply this ordering after choosing a requirement-driven filter.
 - --bse-wdflag
 - --bse-xi
 - --detect-interrupt
+- --domain-nstep
+- --domain-weight-mode
 - --rand-seed
 - --rand-seedfile
 - --stellar-evolution
@@ -636,6 +557,8 @@ Apply this ordering after choosing a requirement-driven filter.
 - --bse-wdflag
 - --bse-xi
 - --detect-interrupt
+- --domain-nstep
+- --domain-weight-mode
 - --ext-hard-switch
 - --galpy-conf-file
 - --galpy-rscale
@@ -687,57 +610,13 @@ Apply this ordering after choosing a requirement-driven filter.
 - --bse-wdflag
 - --bse-xi
 - --detect-interrupt
+- --domain-nstep
+- --domain-weight-mode
 - --galpy-conf-file
 - --galpy-rscale
 - --galpy-set
 - --galpy-type-arg
 - --galpy-vscale
-- --rand-seed
-- --rand-seedfile
-- --stellar-evolution
-
-### petar.mpi.omp.avx2.bse.gasdrag
-
-- --bse-alpha
-- --bse-beta
-- --bse-bhflag
-- --bse-bhwacc
-- --bse-bwind
-- --bse-ceflag
-- --bse-ecflag
-- --bse-eddfac
-- --bse-epsnov
-- --bse-gamma
-- --bse-hewind
-- --bse-kmech
-- --bse-lambda
-- --bse-metallicity
-- --bse-mscale
-- --bse-neta
-- --bse-nsflag
-- --bse-psflag
-- --bse-pts1
-- --bse-pts2
-- --bse-pts3
-- --bse-rscale
-- --bse-sigma
-- --bse-tflag
-- --bse-tscale
-- --bse-vscale
-- --bse-wdflag
-- --bse-xi
-- --detect-interrupt
-- --ext-hard-switch
-- --gdf-K
-- --gdf-coulomb-log
-- --gdf-decay-time
-- --gdf-gamma
-- --gdf-gas-density
-- --gdf-hard-mode
-- --gdf-ifunc-mach-lower
-- --gdf-ifunc-mach-upper
-- --gdf-ifunc-smooth-order
-- --gdf-sound-speed
 - --rand-seed
 - --rand-seedfile
 - --stellar-evolution
@@ -773,11 +652,13 @@ Apply this ordering after choosing a requirement-driven filter.
 - --bse-wdflag
 - --bse-xi
 - --detect-interrupt
+- --domain-nstep
+- --domain-weight-mode
 - --rand-seed
 - --rand-seedfile
 - --stellar-evolution
 
-### petar.mpi.omp.avx2.bse.pnhermite
+### petar.mpi.omp.avx2.bseEmp.galpy
 
 - --bse-alpha
 - --bse-beta
@@ -803,20 +684,81 @@ Apply this ordering after choosing a requirement-driven filter.
 - --bse-rscale
 - --bse-sigma
 - --bse-tflag
+- --bse-trackmode
 - --bse-tscale
 - --bse-vscale
 - --bse-wdflag
 - --bse-xi
 - --detect-interrupt
-- --pn-c
-- --pn-crit-hermite
+- --domain-nstep
+- --domain-weight-mode
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --r-search-group-safety
 - --rand-seed
 - --rand-seedfile
 - --stellar-evolution
 
-### petar.mpi.omp.avx2.dsm.galpy.gasdrag
+### petar.mpi.omp.avx2.btlogh.bseEmp.galpy
+
+- --ar-g-func
+- --bse-alpha
+- --bse-beta
+- --bse-bhflag
+- --bse-bhwacc
+- --bse-bwind
+- --bse-ceflag
+- --bse-ecflag
+- --bse-eddfac
+- --bse-epsnov
+- --bse-gamma
+- --bse-hewind
+- --bse-kmech
+- --bse-lambda
+- --bse-metallicity
+- --bse-mscale
+- --bse-neta
+- --bse-nsflag
+- --bse-psflag
+- --bse-pts1
+- --bse-pts2
+- --bse-pts3
+- --bse-rscale
+- --bse-sigma
+- --bse-tflag
+- --bse-trackmode
+- --bse-tscale
+- --bse-vscale
+- --bse-wdflag
+- --bse-xi
+- --detect-interrupt
+- --domain-nstep
+- --domain-weight-mode
+- --galpy-conf-file
+- --galpy-rscale
+- --galpy-set
+- --galpy-type-arg
+- --galpy-vscale
+- --r-search-group-safety
+- --rand-seed
+- --rand-seedfile
+- --stellar-evolution
+
+### petar.mpi.omp.avx2.btlogh
+
+- --ar-g-func
+- --domain-nstep
+- --domain-weight-mode
+- --r-search-group-safety
+
+### petar.mpi.omp.avx2.dsm
 
 - --detect-interrupt
+- --domain-nstep
+- --domain-weight-mode
 - --dsm-dt-factor
 - --dsm-epsilon-bh
 - --dsm-epsilon-he
@@ -832,6 +774,13 @@ Apply this ordering after choosing a requirement-driven filter.
 - --dsm-salpeter-time
 - --dsm-seed-mass
 - --dsm-speed-of-light
+- --rand-seed
+- --rand-seedfile
+
+### petar.mpi.omp.avx2.galpy.gasdrag
+
+- --domain-nstep
+- --domain-weight-mode
 - --ext-hard-switch
 - --galpy-conf-file
 - --galpy-rscale
@@ -848,253 +797,44 @@ Apply this ordering after choosing a requirement-driven filter.
 - --gdf-ifunc-smooth-order
 - --gdf-scale-density
 - --gdf-sound-speed
-- --rand-seed
-- --rand-seedfile
-
-### petar.mpi.omp.avx2.dsm.gasdrag
-
-- --detect-interrupt
-- --dsm-dt-factor
-- --dsm-epsilon-bh
-- --dsm-epsilon-he
-- --dsm-epsilon-mdot
-- --dsm-he-disk
-- --dsm-lambda0
-- --dsm-medd
-- --dsm-merger-dm
-- --dsm-merger-tdelay
-- --dsm-new-star-mode
-- --dsm-rstar-power
-- --dsm-rstar-scale
-- --dsm-salpeter-time
-- --dsm-seed-mass
-- --dsm-speed-of-light
-- --ext-hard-switch
-- --gdf-K
-- --gdf-coulomb-log
-- --gdf-decay-time
-- --gdf-gamma
-- --gdf-gas-density
-- --gdf-hard-mode
-- --gdf-ifunc-mach-lower
-- --gdf-ifunc-mach-upper
-- --gdf-ifunc-smooth-order
-- --gdf-sound-speed
-- --rand-seed
-- --rand-seedfile
-
-### petar.mpi.omp.avx2.galpy.mp
-
-- --galpy-conf-file
-- --galpy-rscale
-- --galpy-set
-- --galpy-type-arg
-- --galpy-vscale
+- --r-search-group-safety
 
 ### petar.mpi.omp.avx2.galpy
 
+- --domain-nstep
+- --domain-weight-mode
 - --galpy-conf-file
 - --galpy-rscale
 - --galpy-set
 - --galpy-type-arg
 - --galpy-vscale
+- --r-search-group-safety
 
-### petar.mpi.omp.avx2.gasdrag
+### petar.mpi.omp.avx2.merger
 
-- --ext-hard-switch
-- --gdf-K
-- --gdf-coulomb-log
-- --gdf-decay-time
-- --gdf-gamma
-- --gdf-gas-density
-- --gdf-hard-mode
-- --gdf-ifunc-mach-lower
-- --gdf-ifunc-mach-upper
-- --gdf-ifunc-smooth-order
-- --gdf-sound-speed
-
-### petar.mpi.omp.avx2.gpu.bse.galpy.gasdrag
-
-- --bse-alpha
-- --bse-beta
-- --bse-bhflag
-- --bse-bhwacc
-- --bse-bwind
-- --bse-ceflag
-- --bse-ecflag
-- --bse-eddfac
-- --bse-epsnov
-- --bse-gamma
-- --bse-hewind
-- --bse-kmech
-- --bse-lambda
-- --bse-metallicity
-- --bse-mscale
-- --bse-neta
-- --bse-nsflag
-- --bse-psflag
-- --bse-pts1
-- --bse-pts2
-- --bse-pts3
-- --bse-rscale
-- --bse-sigma
-- --bse-tflag
-- --bse-tscale
-- --bse-vscale
-- --bse-wdflag
-- --bse-xi
+- --ar-g-func
 - --detect-interrupt
-- --ext-hard-switch
-- --galpy-conf-file
-- --galpy-rscale
-- --galpy-set
-- --galpy-type-arg
-- --galpy-vscale
-- --gdf-K
-- --gdf-coulomb-log
-- --gdf-gamma
-- --gdf-gaspot-index
-- --gdf-hard-mode
-- --gdf-ifunc-mach-lower
-- --gdf-ifunc-mach-upper
-- --gdf-ifunc-smooth-order
-- --gdf-scale-density
-- --gdf-sound-speed
-- --rand-seed
-- --rand-seedfile
-- --stellar-evolution
+- --domain-nstep
+- --domain-weight-mode
+- --r-search-group-safety
 
-### petar.mpi.omp.avx2.gpu.bse.galpy
+### petar.mpi.omp.avx2.mp
 
-- --bse-alpha
-- --bse-beta
-- --bse-bhflag
-- --bse-bhwacc
-- --bse-bwind
-- --bse-ceflag
-- --bse-ecflag
-- --bse-eddfac
-- --bse-epsnov
-- --bse-gamma
-- --bse-hewind
-- --bse-kmech
-- --bse-lambda
-- --bse-metallicity
-- --bse-mscale
-- --bse-neta
-- --bse-nsflag
-- --bse-psflag
-- --bse-pts1
-- --bse-pts2
-- --bse-pts3
-- --bse-rscale
-- --bse-sigma
-- --bse-tflag
-- --bse-tscale
-- --bse-vscale
-- --bse-wdflag
-- --bse-xi
-- --detect-interrupt
-- --galpy-conf-file
-- --galpy-rscale
-- --galpy-set
-- --galpy-type-arg
-- --galpy-vscale
-- --rand-seed
-- --rand-seedfile
-- --stellar-evolution
-
-### petar.mpi.omp.avx2.gpu.bse
-
-- --bse-alpha
-- --bse-beta
-- --bse-bhflag
-- --bse-bhwacc
-- --bse-bwind
-- --bse-ceflag
-- --bse-ecflag
-- --bse-eddfac
-- --bse-epsnov
-- --bse-gamma
-- --bse-hewind
-- --bse-kmech
-- --bse-lambda
-- --bse-metallicity
-- --bse-mscale
-- --bse-neta
-- --bse-nsflag
-- --bse-psflag
-- --bse-pts1
-- --bse-pts2
-- --bse-pts3
-- --bse-rscale
-- --bse-sigma
-- --bse-tflag
-- --bse-tscale
-- --bse-vscale
-- --bse-wdflag
-- --bse-xi
-- --detect-interrupt
-- --rand-seed
-- --rand-seedfile
-- --stellar-evolution
-
-### petar.mpi.omp.avx2.gpu.dsm.galpy.gasdrag
-
-- --detect-interrupt
-- --dsm-dt-factor
-- --dsm-epsilon-bh
-- --dsm-epsilon-he
-- --dsm-epsilon-mdot
-- --dsm-he-disk
-- --dsm-lambda0
-- --dsm-medd
-- --dsm-merger-dm
-- --dsm-merger-tdelay
-- --dsm-new-star-mode
-- --dsm-rstar-power
-- --dsm-rstar-scale
-- --dsm-salpeter-time
-- --dsm-seed-mass
-- --dsm-speed-of-light
-- --ext-hard-switch
-- --galpy-conf-file
-- --galpy-rscale
-- --galpy-set
-- --galpy-type-arg
-- --galpy-vscale
-- --gdf-K
-- --gdf-coulomb-log
-- --gdf-gamma
-- --gdf-gaspot-index
-- --gdf-hard-mode
-- --gdf-ifunc-mach-lower
-- --gdf-ifunc-mach-upper
-- --gdf-ifunc-smooth-order
-- --gdf-scale-density
-- --gdf-sound-speed
-- --rand-seed
-- --rand-seedfile
-
-### petar.mpi.omp.avx2.gpu
-
-- (no extra options beyond core)
-
-### petar.mpi.omp.avx2.kdk.g
-
-- (no extra options beyond core)
-
-### petar.mpi.omp.avx2.kdkdk4.g
-
-- (no extra options beyond core)
+- --domain-nstep
+- --domain-weight-mode
 
 ### petar.mpi.omp.avx2
 
+- --ar-g-func
+- --domain-nstep
+- --domain-weight-mode
+- --r-search-group-safety
+
+### petar.omp.avx2.64b
+
 - (no extra options beyond core)
 
-### petar.mpi.omp.avx2.pnall
+### petar.omp.avx2
 
-- --pn-c
-- --pn-crit-ar
-- --pn-crit-hermite
+- (no extra options beyond core)
 

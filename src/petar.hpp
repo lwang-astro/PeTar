@@ -138,6 +138,11 @@ public:
     bool print_flag; 
     bool update_changeover_flag;
     bool update_rsearch_flag;
+    // flags to trace whether the corresponding options are explicitly given in the command line
+    // (used to detect stale auto-determined values stored in the restart parameter file)
+    bool dt_soft_opt_flag;
+    bool r_out_opt_flag;
+    bool r_search_min_opt_flag;
 
     IOParamsPeTar(): input_par_store(), 
                      theta            (input_par_store, 0.3,  "T",  "Particle-tree opening angle theta"),
@@ -154,9 +159,9 @@ public:
                      unit_set         (input_par_store, 0,    "u", "Input data unit; 0: based on the value of G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr, modify G to fit this unit set"),
                      gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant, if -u 1, G = 0.00449830997959438 pc^3/(Msun*Myr^2)"),
                      n_glb            (input_par_store, 100000, "n", "Total number of particles, used only when the input data filename is __Plummer"),
-                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft); > 0: custom dt_soft value, regularized to 0.5^n, where n is an integer; = 0: check '-r r_out':;      r_out = 0 (default): dt_soft = 2.6E-4*GM/sigma_3D^3, and is regularized to 0.5^n;          sigma_3D: global 3D velocity dispersion;      r_out > 0: check '--dt-soft-sigma-factor alpha':;          alpha > 0: dt_soft = alpha*r_in/(sqrt(3)*sigma);              r_in: determined by --r-ratio and r_out;          alpha = 0 (default): dt_soft = P(r_in)/nstep;              P(r_in): the binary period with the semi-major axis of r_in;              nstep: defined by --dt-soft-kepler-nstep"),
-                     r_out            (input_par_store, 0.0,  "r", "Outer changeover radius (r_out); > 0: custom r_out value and check '-s dt_soft';      dt_soft = 0: calculate dt_soft and then adjust r_out by dt_soft;      dt_soft > 0: use custom r_out directly; = 0 (default): check '--dt-soft-sigma-factor alpha':;      alpha > 0: r_out = alpha*dt_soft*sigma_3D/r-ratio;          sigma_3D: global 3D velocity dispersion;          r-ratio: defined by --r-ratio;      alpha = 0 (default): r_out = a(r_in)/r-ratio;          a(r_in): the binary semi-major axis with the period of nstep*dt_soft;          nstep: defined by --dt-soft-kepler-nstep"),
-                     r_in_over_out    (input_par_store, 0.1,  "r-ratio", "Ratio between inner (r_in) and outer (r_out) changeover radii"),
+                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft); > 0: custom dt_soft value, regularized to 0.5^n, where n is an integer; = 0: check '-r r_out':;      r_out = 0 (default): dt_soft = 2.6E-4*GM/sigma_3D^3, and is regularized to 0.5^n;          sigma_3D: global 3D velocity dispersion;      r_out > 0: check '--dt-soft-sigma-factor alpha':;          alpha > 0: dt_soft = alpha*r_in/(sqrt(3)*sigma);              r_in: determined by --r-ratio and r_out;          alpha = 0 (default): dt_soft = P(r_in)/nstep;              P(r_in): the binary period with the semi-major axis of r_in;              nstep: defined by --dt-soft-kepler-nstep; Note: on restart with this option given, hermite-dt-max, r-search-min and r_out (if -r not given) are re-determined"),
+                     r_out            (input_par_store, 0.0,  "r", "Outer changeover radius (r_out); > 0: custom r_out value and check '-s dt_soft';      dt_soft = 0: calculate dt_soft and then adjust r_out by dt_soft;      dt_soft > 0: use custom r_out directly; = 0 (default): check '--dt-soft-sigma-factor alpha':;      alpha > 0: r_out = alpha*dt_soft*sigma_3D/r-ratio;          sigma_3D: global 3D velocity dispersion;          r-ratio: defined by --r-ratio;      alpha = 0 (default): r_out = a(r_in)/r-ratio;          a(r_in): the binary semi-major axis with the period of nstep*dt_soft;          nstep: defined by --dt-soft-kepler-nstep; Note: on restart with this option given, r-search-min, r-search-group, r-group,;      hermite-acc-offset-sq and dt_soft (if -s not given) are re-determined"),
+                     r_in_over_out    (input_par_store, 0.1,  "r-ratio", "Ratio between inner (r_in) and outer (r_out) changeover radii; Note: on restart with this option given, r-search-group and r-group are re-determined"),
 #ifdef KDKDK_4TH
                      dt_soft_kepler_nstep(input_par_store, 16.0, "dt-soft-kepler-nstep", "Factor 'nstep' to determine dt_soft by P(r_in)/nstep, see option '-s' and '-r'"),
 #else
@@ -165,7 +170,7 @@ public:
                      dt_soft_sigma_factor(input_par_store, 0.0, "dt-soft-sigma-factor", "Factor 'alpha' to determine dt_soft by alpha*r_in/sigma_3D, see option '-s' and '-r'; = 0: not used, apply --dt-soft-kepler-nstep; > 0: use this option instead of '--dt-soft-kepler-nstep'"),
                      r_search_vel_factor (input_par_store, 3.0,  "r-search-vel-factor", "Neighbor search coefficient for velocity check (v*dt)"),
                      r_search_peri_factor(input_par_store, 1.5, "r-search-peri-factor", "Neighbor search coefficient for periapsis check"),
-                     r_search_min     (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters; = 0: auto-determine by max(search-vel-factor*sigma_1D*dt_soft + rout, 1.2 r_out); > 0: custom search radius value"),
+                     r_search_min     (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters; = 0: auto-determine by max(search-vel-factor*sigma_1D*dt_soft + rout, 1.2 r_out); > 0: custom search radius value; Note: on restart with -s, -r or --r-search-vel-factor given, the stored value is re-determined"),
                      r_escape         (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Object escape radius criterion; < 0: remove objects when r>-r_escape; >= 0: remove objects when r>r_escape and energy>0"),
                      dt_snap          (input_par_store, 1.0,  "o", "Output time interval for particle dataset snapshots"),
                      data_format      (input_par_store, 2,    "i", "Data file reading and writing format; snapshots, status and escaper outputs follow the write mode selected here; 0: read and write in BINARY; 1: read and write in ASCII; 2: read in ASCII, write in BINARY; 3: read in BINARY, write in ASCII"),
@@ -179,7 +184,8 @@ public:
                      fname_snp        (input_par_store, "data", "f", "Prefix of filenames for output data: [prefix].**"),
                      fname_par        (input_par_store, "input.par", "p", "Input parameter file (this option should be used first before any other options)"),
                      fname_inp        (input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false),
-                     print_flag(false), update_changeover_flag(false), update_rsearch_flag(false) {}
+                     print_flag(false), update_changeover_flag(false), update_rsearch_flag(false),
+                     dt_soft_opt_flag(false), r_out_opt_flag(false), r_search_min_opt_flag(false) {}
 
     
     //! reading parameters from GNU option API
@@ -288,6 +294,7 @@ public:
                     r_search_min.value = atof(optarg);
                     if(print_flag) r_search_min.print(std::cout);
                     update_rsearch_flag = true;
+                    r_search_min_opt_flag = true;
                     opt_used += 2;
                     break;
                 case 11:
@@ -338,6 +345,7 @@ public:
                 dt_soft.value = atof(optarg);
                 if(print_flag) dt_soft.print(std::cout);
                 update_rsearch_flag = true;
+                dt_soft_opt_flag = true;
                 opt_used += 2;
                 assert(dt_soft.value>=0.0);
                 break;
@@ -346,6 +354,7 @@ public:
                 if(print_flag) r_out.print(std::cout);
                 update_rsearch_flag = true;
                 update_changeover_flag = true;
+                r_out_opt_flag = true;
                 opt_used += 2;
                 assert(r_out.value>=0.0);
                 break;
@@ -3696,6 +3705,40 @@ public:
         PS::F64 mass_average_glb = mass_cm_glb/(PS::F64)n_glb;
         mass_average = mass_average_glb;
 
+        // -----------------------------------------------------------------
+        // Mutual re-determination of dt_soft (-s) and r_out (-r) on restart
+        //
+        // At the initial startup, when only one of them is explicitly given,
+        // the other is automatically determined from it (see the derivation
+        // below). The parameter file (-p) stores the resolved pair from the
+        // previous run, thus at restart giving only one of -s/-r leaves the
+        // stored value of the other stale. Here the stale one is reset to
+        // the auto-determination sentinel (0) unless it is also explicitly
+        // given, so that the derivation below reproduces the initial-startup
+        // behaviour. Sentinel inputs (-s 0 / -r 0) are derivation requests,
+        // not sources, and never trigger the cross reset.
+        // -----------------------------------------------------------------
+        const bool dt_soft_reset_flag = input_parameters.r_out_opt_flag && r_out>0.0
+                                        && !input_parameters.dt_soft_opt_flag && dt_soft>0.0;
+        if (dt_soft_reset_flag) {
+            // -r [>0] given without -s: dt_soft stored in the parameter file was derived from the old r_out and is stale
+            if (print_flag)
+                std::cout<<"Auto re-determination on restart/update: dt-soft old value "<<dt_soft
+                         <<" is ignored and re-determined (outer changeover radius updated).\n";
+            dt_soft = 0.0;
+        }
+        const bool r_out_reset_flag = input_parameters.dt_soft_opt_flag && dt_soft>0.0
+                                      && !input_parameters.r_out_opt_flag && r_out>0.0;
+        if (r_out_reset_flag) {
+            // -s [>0] given without -r: r_out stored in the parameter file was derived from the old dt_soft and is stale
+            if (print_flag)
+                std::cout<<"Auto re-determination on restart/update: r-out old value "<<r_out
+                         <<" is ignored and re-determined (tree step updated).\n";
+            r_out = 0.0;
+            // r_in/r_out change: particle changeover radii must be updated below
+            input_parameters.update_changeover_flag = true;
+        }
+
         // flag to check whether r_ous is already defined
         bool r_out_flag = (r_out>0);
         // flag to check whether dt_soft is already defined
@@ -3759,6 +3802,63 @@ public:
                     //r_in = r_out * r_in_over_out;
                 }
             }
+        }
+
+        // -----------------------------------------------------------------
+        // Automatic re-determination of dependent parameters on restart/update
+        //
+        // The parameter file (-p) stores the resolved (auto-determined) values
+        // of the dt/radius parameters from the previous run. When the primary
+        // options (-s: tree step; -r/--r-ratio: changeover radii) are
+        // explicitly given in the current command line, the stored dependent
+        // values become stale (e.g. a stale hermite-dt-max larger than the new
+        // half tree step can make the hard integrator miss time interrupts and
+        // crash). Here they are reset to the auto-determination sentinels
+        // (unless they are also explicitly given in the current command line),
+        // so that they are re-determined with the new inputs below and in
+        // HardManager::initial() exactly as in the initial startup.
+        // When the stored values already equal the sentinels (fresh start or
+        // explicit sentinel options such as '--r-search-min 0'), the reset is
+        // a no-op; values 0 that switch off a feature (e.g. r-search-group 0)
+        // are never reset.
+        // -----------------------------------------------------------------
+        if (input_parameters.update_rsearch_flag && !input_parameters.r_search_min_opt_flag && r_search_min>0.0) {
+            // -s/-r/--r-search-vel-factor given: r-search-min stored in the parameter file is stale
+            if (print_flag)
+                std::cout<<"Auto re-determination on restart/update: r-search-min old value "<<r_search_min
+                         <<" is ignored and re-determined (tree step or changeover radii updated).\n";
+            r_search_min = 0.0;
+        }
+        {
+            // group radii depend on the changeover radii (and the sigma-based safety factor)
+            const bool group_radius_update_flag = input_parameters.update_changeover_flag || hard_parameters.r_search_group_safety_opt_flag;
+            if (group_radius_update_flag && !hard_parameters.r_search_group_opt_flag && hard_parameters.r_search_group.value>0.0) {
+                if (print_flag)
+                    std::cout<<"Auto re-determination on restart/update: r-search-group old value "<<hard_parameters.r_search_group.value
+                             <<" is ignored and re-determined (changeover radii or group search criterion updated).\n";
+                hard_parameters.r_search_group.value = -1.0;
+            }
+            if (group_radius_update_flag && !hard_parameters.r_group_opt_flag && hard_parameters.r_group.value>0.0) {
+                if (print_flag)
+                    std::cout<<"Auto re-determination on restart/update: r-group old value "<<hard_parameters.r_group.value
+                             <<" is ignored and re-determined (changeover radii or group search criterion updated).\n";
+                hard_parameters.r_group.value = -1.0;
+            }
+            // hermite-acc-offset-sq depends on r_out only, thus it is reset when -r is given
+            // or when r_out is re-determined due to -s given without -r
+            if ((input_parameters.r_out_opt_flag || r_out_reset_flag) && !hard_parameters.acc_offset_sq_opt_flag && hard_parameters.acc_offset_sq.value>0.0) {
+                if (print_flag)
+                    std::cout<<"Auto re-determination on restart/update: hermite-acc-offset-sq old value "<<hard_parameters.acc_offset_sq.value
+                             <<" is ignored and re-determined (changeover radii updated).\n";
+                hard_parameters.acc_offset_sq.value = -1.0;
+            }
+        }
+        if ((input_parameters.dt_soft_opt_flag || dt_soft_reset_flag) && !hard_parameters.dt_max_hermite_opt_flag && hard_parameters.dt_max_hermite.value>0.0) {
+            // -s given (or dt_soft re-determined due to -r): hermite-dt-max stored in the parameter file was derived from the old tree step and is stale
+            if (print_flag)
+                std::cout<<"Auto re-determination on restart/update: hermite-dt-max old value "<<hard_parameters.dt_max_hermite.value
+                         <<" is ignored and re-determined (tree step updated).\n";
+            hard_parameters.dt_max_hermite.value = 0.0;
         }
 
         // if r_search_min is not defined, calculate by r_search_vel_factor*velocity_dispersion*tree_time_step + r_out

@@ -115,6 +115,13 @@ public:
 
     // flag
     bool print_flag; 
+    // flags to trace whether the corresponding options are explicitly given in the command line
+    // (used to detect stale auto-determined values stored in the restart parameter file)
+    bool r_group_opt_flag;
+    bool r_search_group_opt_flag;
+    bool r_search_group_safety_opt_flag;
+    bool acc_offset_sq_opt_flag;
+    bool dt_max_hermite_opt_flag;
     
     IOParamsHard(): input_par_store(), 
 #ifdef HARD_CHECK_ENERGY
@@ -122,12 +129,12 @@ public:
 #endif
                     gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant", NULL, false),
                     eps              (input_par_store, 0.0,  "soft-eps", "Softening epsilon"),
-                    r_group          (input_par_store,-1.0,  "r-group", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.); = -1: auto-determine by 0.8*r_search_group; = 0: switch off SDAR; > 0: custom criterion value"),
-                    r_search_group   (input_par_store,-1.0,  "r-search-group", "The radial criterion for detecting multiple group candidates; = -1: auto-determine by 1.0*r_in (or by sigma_1D based hard-soft boundary if sigma_1D is provided); = 0: switch off SDAR; > 0: custom criterion value"),
-                    r_search_group_safety(input_par_store, 1.0, "r-search-group-safety", "Safety factor for physics-based SDAR group search: r_search_group = min(r_in, safety * G * m_avg / sigma_1D^2); only used when r-search-group=-1 and sigma_1D is provided"),
+                    r_group          (input_par_store,-1.0,  "r-group", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.); = -1: auto-determine by 0.8*r_search_group; = 0: switch off SDAR; > 0: custom criterion value; Note: on restart with -s, -r, --r-ratio or --r-search-group-safety given and this option not, the stored value is re-determined"),
+                    r_search_group   (input_par_store,-1.0,  "r-search-group", "The radial criterion for detecting multiple group candidates; = -1: auto-determine by 1.0*r_in (or by sigma_1D based hard-soft boundary if sigma_1D is provided); = 0: switch off SDAR; > 0: custom criterion value; Note: on restart with -s, -r, --r-ratio or --r-search-group-safety given and this option not, the stored value is re-determined"),
+                    r_search_group_safety(input_par_store, 1.0, "r-search-group-safety", "Safety factor for physics-based SDAR group search: r_search_group = min(r_in, safety * G * m_avg / sigma_1D^2); only used when r-search-group=-1 and sigma_1D is provided; Note: on restart with this option given, r-search-group and r-group are re-determined"),
                     r_out            (input_par_store, 0.0,  "r", "Outer changeover radius for hard manager initialization; = 0: use external r_out input", NULL, false),
                     r_in_over_out    (input_par_store, 0.0,  "r-ratio", "Inner-to-outer changeover radius ratio (r_in/r_out) for hard manager initialization; must be in (0,1) when used", NULL, false),
-                    acc_offset_sq    (input_par_store, -1.0, "hermite-acc-offset-sq", "Square acceleration offset for Hermite time step calculation to avoid too small step when weak acceleration exists; = -1: calculate from mean mass <m> and r_out (G*<m>/r_out^2)^2; = 0: no offset; > 0: custom offset value"),
+                    acc_offset_sq    (input_par_store, -1.0, "hermite-acc-offset-sq", "Square acceleration offset for Hermite time step calculation to avoid too small step when weak acceleration exists; = -1: calculate from mean mass <m> and r_out (G*<m>/r_out^2)^2; = 0: no offset; > 0: custom offset value; Note: on restart with -s or -r given and this option not, the stored value is re-determined"),
                     n_step_per_orbit (input_par_store, 4,    "tt-nstep", "Number of steps per slow-down binary orbits (period/dt_soft) for isolated binaries; also the maximum criterion for activating tidal tensor method"),
                     tidal_tensor_switcher(input_par_store, 1,"tt-switch", "Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0: off, 1: on"),
 #ifdef ORBIT_SAMPLING
@@ -137,7 +144,7 @@ public:
                     center_id        (input_par_store, -1,   "center-id", "id of the central object for a system like a stellar disk", "None"),
                     eta              (input_par_store, 0.1,  "hermite-eta", "Hermite timestep coefficient eta"),
                     eta_init         (input_par_store, 0.001,"hermite-eta-init", "Hermite timestep coefficient eta for initial step in 2nd order"),
-                    dt_max_hermite   (input_par_store, 0.0,  "hermite-dt-max", "Maximum hermite timestep", "dt_soft"),
+                    dt_max_hermite   (input_par_store, 0.0,  "hermite-dt-max", "Maximum hermite timestep; = 0: auto-determine by one tree drift step;      KDKDK tree step (4th/2nd order): 0.5*dt_soft;      KDK tree step (2nd order): dt_soft; > 0: custom value, must not exceed one tree drift step; Note: on restart with -s or -r given and this option not, the stored value is re-determined"),
                     dt_min_hermite_index(input_par_store, 40,"hermite-dt-min-index",  "Power index n for the smallest timestep (0.5^n) allowed in the Hermite integrator"),
                     e_err_ar     (input_par_store, 1e-8,     "ar-max-error", "Maximum energy error allowed for the SDAR integrator"),
                     step_limit_ar(input_par_store, 1000000,  "ar-max-nstep", "Maximum step allowed for the SDAR sym integrator"),
@@ -178,7 +185,9 @@ public:
                     kdtree_n_particles_min(input_par_store, 32, "kdtree-n-particles-min", "Minimum number of particles + groups for building kdtree to speed up neighbor search in Hermite-only neighbor force calculation"),
 #endif                    
                     fname_par          (input_par_store, "input.par", "p", "Input parameter file for hard (this option should be used first before any other options)",NULL,false),
-                    print_flag(false) {}
+                    print_flag(false),
+                    r_group_opt_flag(false), r_search_group_opt_flag(false), r_search_group_safety_opt_flag(false),
+                    acc_offset_sq_opt_flag(false), dt_max_hermite_opt_flag(false) {}
 
     //! reading parameters from GNU option API
     /*!
@@ -276,18 +285,21 @@ public:
                     case 3:
                         r_group.value = atof(optarg);
                         if(print_flag) r_group.print(std::cout);
+                        r_group_opt_flag = true;
                         opt_used += 2;
                         //assert(r_group.value>=0.0);
                         break;
                     case 4:
                         r_search_group.value = atof(optarg);
                         if(print_flag) r_search_group.print(std::cout);
+                        r_search_group_opt_flag = true;
                         opt_used += 2;
                         //assert(r_search_group.value>=0.0);
                         break;
                     case 36:
                         r_search_group_safety.value = atof(optarg);
                         if(print_flag) r_search_group_safety.print(std::cout);
+                        r_search_group_safety_opt_flag = true;
                         opt_used += 2;
                         assert(r_search_group_safety.value>0.0);
                         break;
@@ -347,8 +359,9 @@ public:
                     case 11:
                         dt_max_hermite.value = atof(optarg);
                         if(print_flag) dt_max_hermite.print(std::cout);
+                        dt_max_hermite_opt_flag = true;
                         opt_used += 2;
-                        assert(dt_max_hermite.value > 0.0);
+                        assert(dt_max_hermite.value >= 0.0);
                         break;
                     case 12:
                         dt_min_hermite_index.value = atoi(optarg);
@@ -455,6 +468,7 @@ public:
                     case 23:
                         acc_offset_sq.value = atof(optarg);
                         if(print_flag) acc_offset_sq.print(std::cout);
+                        acc_offset_sq_opt_flag = true;
                         opt_used += 2;
                         assert(acc_offset_sq.value==-1.0 || acc_offset_sq.value>=0.0);
                         break;
@@ -747,6 +761,14 @@ public:
         if (_input.dt_max_hermite.value==0.0) {
             assert(_dt_soft>0.0);
             _input.dt_max_hermite.value = _dt_soft;
+        }
+        else if (_dt_soft>0.0 && _input.dt_max_hermite.value>_dt_soft && _print_flag) {
+            // one tree drift step (_dt_soft here) is the largest safe value: larger block time steps of the
+            // Hermite integrator can cross the tree step and miss time interrupts (e.g. stellar evolution
+            // or disk-star-merger events), which triggers assertion errors during the integration
+            std::cerr<<"Warning: hermite-dt-max ("<<_input.dt_max_hermite.value<<") is larger than one tree drift step ("
+                     <<_dt_soft<<"). This may cause missing time interrupts and assertion errors. Unless this is intended, "
+                     "use a value <= one tree drift step or let it be auto-determined (hermite-dt-max = 0).\n";
         }
         setDtRange(_input.dt_max_hermite.value, _input.dt_min_hermite_index.value);
         h4_manager.reinitialize_step_dm_criterion = _input.reinit_dt_dm_crit.value;

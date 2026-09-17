@@ -716,11 +716,23 @@ The third pivotal radius influencing performance is the radius used to identify 
 
 When initiating a new simulation, the automatically determined tree time step and radii may not always be the optimal choice for users. To select the most suitable tree time step, users can utilize the `petar.find.dt` tool (refer to [Determining the tree time step](#determining-the-tree-time-step)). This tool is compatible only with PeTar's autodetermined tree time step and changeover radii (refer to [Outer Changeover Radius](#outer-changeover-radius)).
 
-In cases where the structure of the particle system undergoes significant evolution over an extended period, users may wish to adjust the tree time step and radii mentioned earlier to enhance performance. If users prefer to modify only the tree time step while allowing `petar` to determine the radii automatically, the options in the following example are necessary to restart the simulation:
+In cases where the structure of the particle system undergoes significant evolution over an extended period, users may wish to adjust the tree time step and radii mentioned earlier to enhance performance. If users prefer to modify only the tree time step while allowing `petar` to determine the radii automatically, the following example can be used to restart the simulation:
 ```shell
-petar -p data.par -s [new tree_time_step] -r 0 --r-search-min 0 --r-group -1 [other options] [snapshot filename for restart]
+petar -p data.par -s [new tree_time_step] [other options] [snapshot filename for restart]
 ```
-Here, `-r 0` triggers the auto-determination of the outer changeover radius from the new tree time step. The `--r-search-min 0` resets the neighbor searching radius to auto-determination. The `--r-group -1` resets the multiple group radius to auto-determination (from the new changeover inner radius). Users can also employ `petar.find.dt` to select the optimal restart tree time step (refer to [Determining the tree time step](#determining-the-tree-time-step)).
+The changeover radii and all dependent radius parameters are automatically re-determined from the new tree time step (an explicit `-r 0` is accepted but no longer necessary).
+
+The parameter files (`data.par`, `data.par.hard`) store the resolved values of the automatically determined parameters (radii, `hermite-dt-max`, ...) from the previous run. When a restart command line explicitly gives a primary option, PeTar automatically re-determines the dependent parameters stored in the parameter files with the new inputs, in the same way as at the initial startup:
+
+- `-s` (new tree time step) and `-r` (new outer changeover radius) are mutually coupled, as at the initial startup: giving only `-s` re-determines `r_out` from the new tree time step (and then `hermite-dt-max`, `--r-search-min`, `--r-search-group`, `--r-group` and `--hermite-acc-offset-sq`); giving only `-r` re-determines `dt_soft` from the new outer changeover radius (and then the same dependent parameters). To keep the parameter-file value of the other one, restate it explicitly (e.g. `-s [new] -r [old r_out]`). The per-particle changeover radii are updated accordingly at restart.
+- When `--r-ratio` is given, `--r-search-group` and `--r-group` are re-determined from the new inner changeover radius (`r_out` and `--r-search-min` are unchanged in this case).
+- `--r-search-vel-factor` re-determines `--r-search-min`; `--r-search-group-safety` re-determines `--r-search-group` and `--r-group`.
+
+The re-determination is skipped for a parameter that is also explicitly given in the current command line (the given value is used instead), and stored values that switch off a feature (e.g. `--r-search-group 0`) are never reset. In older versions the reset options (e.g. `--r-search-min 0 --r-group -1 --r-search-group -1`) had to be appended manually at restart; they are still accepted, but no longer necessary. The re-determination uses the velocity dispersion and mean mass computed from the restart snapshot, so a re-determined value can slightly differ from the one derived at the initial time of the previous run.
+
+When `--hermite-dt-max` is explicitly given, its value should not exceed one tree drift step (`0.5*dt_soft` for the 4th/2nd-order KDKDK tree integrator; `dt_soft` for the 2nd-order KDK tree integrator). Otherwise the block time steps of the hard integrator can cross the tree step, miss time interrupts (stellar evolution, disk-star-merger events, ...) and trigger assertion errors; `petar` prints a warning in this case. Leaving it to the auto-determination (`--hermite-dt-max 0`) always uses the safe value (exactly one tree drift step).
+
+Users can also employ `petar.find.dt` to select the optimal restart tree time step (refer to [Determining the tree time step](#determining-the-tree-time-step)).
 
 ### Output
 #### Printed Information
@@ -1274,8 +1286,9 @@ It is worth noting that `petar` only accepts tree time steps that are integer po
 
 For users looking to restart a simulation and automatically determine the new tree time step along with other parameters (radii), the following command can be used:
 ```shell
-petar.find.dt -m 2 -o 4 -a "-p data.par -r 0 --r-search-min 0 --r-group -1" [restart snapshot filename]
+petar.find.dt -m 2 -o 4 -a "-p data.par -r 0" [restart snapshot filename]
 ```
+The dependent parameters (`--r-search-min`, `--r-search-group`, `--r-group`, `hermite-dt-max`, ...) are automatically re-determined by `petar` at the restart (see [Adjusting Tree Time Step and Radii](#adjusting-tree-time-step-and-radii)), so explicit reset options are not needed in `-a`.
 
 #### Gathering Output Files
 

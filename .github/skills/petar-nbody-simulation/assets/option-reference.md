@@ -3,7 +3,7 @@
 All possible PeTar command-line options across every configure variant.
 Generated from source headers — no binary compilation needed.
 
-> Generated: 2026-09-14 10:51 UTC
+> Generated: 2026-09-17 02:13 UTC
 > Regenerate: `python3 .github/skills/petar-nbody-simulation/assets/generate_option_reference.py`
 
 See [`option-matrix.md`](option-matrix.md) for currently installed binaries.
@@ -33,35 +33,35 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::F64`
 - **Default**: `1.0`
 - **Description**: Gravitational constant, if -u 1, G = 0.00449830997959438 pc^3/(Msun*Myr^2)
-- **Source**: `src/petar.hpp`:155
+- **Source**: `src/petar.hpp`:160
 
 ### `--T`
 
 - **Type**: `PS::F64`
 - **Default**: `0.3`
 - **Description**: Particle-tree opening angle theta
-- **Source**: `src/petar.hpp`:143
+- **Source**: `src/petar.hpp`:148
 
 ### `--a`
 
 - **Type**: `PS::S64`
 - **Default**: `1`
 - **Description**: Data file output mode; 0: overwrite files except object dump files, include header lines; 1: append files except snapshots, no header line
-- **Source**: `src/petar.hpp`:173
+- **Source**: `src/petar.hpp`:178
 
 ### `--ar-ds-scale`
 
 - **Type**: `PS::F64`
 - **Default**: `1.0`
 - **Description**: Scale factor for SDAR step size calculation
-- **Source**: `src/hard.hpp`:145
+- **Source**: `src/hard.hpp`:152
 
 ### `--ar-g-func`
 
 - **Type**: `PS::S64`
 - **Default**: `0`
-- **Description**: SDAR g-function (time transformation) method; 0: standard LogH; 1: BTLogH (compiled in by default)
-- **Source**: `src/hard.hpp`:148
+- **Description**: SDAR g-function (time transformation) method; 0: standard LogH; 1: BTLogH
+- **Source**: `src/hard.hpp`:155
 - **Guards**: `AR_G_FUNC`
 
 ### `--ar-max-error`
@@ -69,49 +69,49 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::F64`
 - **Default**: `1e-8`
 - **Description**: Maximum energy error allowed for the SDAR integrator
-- **Source**: `src/hard.hpp`:142
+- **Source**: `src/hard.hpp`:149
 
 ### `--ar-max-nstep`
 
 - **Type**: `PS::S64`
 - **Default**: `1000000`
 - **Description**: Maximum step allowed for the SDAR sym integrator
-- **Source**: `src/hard.hpp`:143
+- **Source**: `src/hard.hpp`:150
 
 ### `--ar-slowdown-factor`
 
 - **Type**: `PS::F64`
 - **Default**: `1e-4`
 - **Description**: Slowdown perturbation criterion
-- **Source**: `src/hard.hpp`:146
+- **Source**: `src/hard.hpp`:153
 
 ### `--ar-sym-order`
 
 - **Type**: `PS::S64`
 - **Default**: `-6`
 - **Description**: Order of the symplectic integrator for SDAR, should be even number; -6,-8: Yoshida 2nd symplectic method; 4,6,8,...: Yoshida 1st symplectic method
-- **Source**: `src/hard.hpp`:144
+- **Source**: `src/hard.hpp`:151
 
 ### `--b`
 
 - **Type**: `PS::S64`
 - **Default**: `0`
 - **Description**: Number of primordial binaries (n_bin) for initialization (assuming the binaries' IDs are 1,2*n_bin)
-- **Source**: `src/petar.hpp`:152
+- **Source**: `src/petar.hpp`:157
 
 ### `--center-id`
 
 - **Type**: `PS::S64`
 - **Default**: `-1`
 - **Description**: id of the central object for a system like a stellar disk
-- **Source**: `src/hard.hpp`:137
+- **Source**: `src/hard.hpp`:144
 
 ### `--detect-interrupt`
 
 - **Type**: `PS::S64`
 - **Default**: `1`
 - **Description**: Stellar evolution of binaries in SDAR integration; 0: switch off; 1: using BSE based code (if '--stellar-evolution != 0)
-- **Source**: `src/hard.hpp`:155
+- **Source**: `src/hard.hpp`:162
 - **Guards**: `BSE_BASE` → --with-interrupt (bse/mobse/bseEmp), `STELLAR_EVOLUTION` → --with-interrupt
 
 ### `--domain-nstep`
@@ -119,7 +119,7 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::S64`
 - **Default**: `16`
 - **Description**: Number of steps between domain decompositions
-- **Source**: `src/petar.hpp`:177
+- **Source**: `src/petar.hpp`:182
 - **Guards**: `PARTICLE_SIMULATOR_MPI_PARALLEL` → MPI build
 
 ### `--domain-weight-mode`
@@ -127,7 +127,7 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::S64`
 - **Default**: `0`
 - **Description**: Domain decomposition weight mode for MPI parallel; 0: equal weight for each MPI processor; 1: use force calculation time as weight to obtain better load balance with losing simulation reproducibility
-- **Source**: `src/petar.hpp`:176
+- **Source**: `src/petar.hpp`:181
 - **Guards**: `PARTICLE_SIMULATOR_MPI_PARALLEL` → MPI build
 
 ### `--dt-soft-kepler-nstep`
@@ -135,7 +135,7 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::F64`
 - **Default**: `16.0`
 - **Description**: Factor 'nstep' to determine dt_soft by P(r_in)/nstep, see option '-s' and '-r'
-- **Source**: `src/petar.hpp`:161
+- **Source**: `src/petar.hpp`:166
 - **Guards**: `KDKDK_4TH` → 4th-order KDKDK step mode
 
 ### `--dt-soft-sigma-factor`
@@ -143,14 +143,14 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::F64`
 - **Default**: `0.0`
 - **Description**: Factor 'alpha' to determine dt_soft by alpha*r_in/sigma_3D, see option '-s' and '-r'; = 0: not used, apply --dt-soft-kepler-nstep; > 0: use this option instead of '--dt-soft-kepler-nstep'
-- **Source**: `src/petar.hpp`:165
+- **Source**: `src/petar.hpp`:170
 
 ### `--energy-err-hard`
 
 - **Type**: `PS::F64`
 - **Default**: `1e-4`
 - **Description**: Maximum energy error allowed for the hard integrator
-- **Source**: `src/hard.hpp`:121
+- **Source**: `src/hard.hpp`:128
 - **Guards**: `HARD_CHECK_ENERGY` → development debug
 
 ### `--f`
@@ -158,7 +158,7 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `std::string`
 - **Default**: `"data"`
 - **Description**: Prefix of filenames for output data: [prefix].**
-- **Source**: `src/petar.hpp`:179
+- **Source**: `src/petar.hpp`:184
 
 ### `--gdf-decay-time`
 
@@ -196,78 +196,78 @@ Use `<binary> -h` for exact runtime option validation.
 
 - **Type**: `PS::F64`
 - **Default**: `-1.0`
-- **Description**: Square acceleration offset for Hermite time step calculation to avoid too small step when weak acceleration exists; = -1: calculate from mean mass <m> and r_out (G*<m>/r_out^2)^2; = 0: no offset; > 0: custom offset value
-- **Source**: `src/hard.hpp`:130
+- **Description**: Square acceleration offset for Hermite time step calculation to avoid too small step when weak acceleration exists; = -1: calculate from mean mass <m> and r_out (G*<m>/r_out^2)^2; = 0: no offset; > 0: custom offset value; Note: on restart with -s or -r given and this option not, the stored value is re-determined
+- **Source**: `src/hard.hpp`:137
 
 ### `--hermite-de-crit`
 
 - **Type**: `PS::F64`
 - **Default**: `1e-4`
 - **Description**: Ekin change rate criterion for reinitializing hermite time step
-- **Source**: `src/hard.hpp`:151
+- **Source**: `src/hard.hpp`:158
 
 ### `--hermite-dm-crit`
 
 - **Type**: `PS::F64`
 - **Default**: `1e-4`
 - **Description**: Mass change rate criterion for reinitializing hermite time step
-- **Source**: `src/hard.hpp`:150
+- **Source**: `src/hard.hpp`:157
 
 ### `--hermite-dt-max`
 
 - **Type**: `PS::F64`
 - **Default**: `0.0`
-- **Description**: Maximum hermite timestep
-- **Source**: `src/hard.hpp`:140
+- **Description**: Maximum hermite timestep; = 0: auto-determine by one tree drift step;      KDKDK tree step (4th/2nd order): 0.5*dt_soft;      KDK tree step (2nd order): dt_soft; > 0: custom value, must not exceed one tree drift step; Note: on restart with -s or -r given and this option not, the stored value is re-determined
+- **Source**: `src/hard.hpp`:147
 
 ### `--hermite-dt-min-index`
 
 - **Type**: `PS::S64`
 - **Default**: `40`
 - **Description**: Power index n for the smallest timestep (0.5^n) allowed in the Hermite integrator
-- **Source**: `src/hard.hpp`:141
+- **Source**: `src/hard.hpp`:148
 
 ### `--hermite-eta`
 
 - **Type**: `PS::F64`
 - **Default**: `0.1`
 - **Description**: Hermite timestep coefficient eta
-- **Source**: `src/hard.hpp`:138
+- **Source**: `src/hard.hpp`:145
 
 ### `--hermite-eta-init`
 
 - **Type**: `PS::F64`
 - **Default**: `0.001`
 - **Description**: Hermite timestep coefficient eta for initial step in 2nd order
-- **Source**: `src/hard.hpp`:139
+- **Source**: `src/hard.hpp`:146
 
 ### `--hermite-n-neighbor-max`
 
 - **Type**: `PS::S64`
 - **Default**: `300`
 - **Description**: Maximum number of group neighbors to be stored
-- **Source**: `src/hard.hpp`:152
+- **Source**: `src/hard.hpp`:159
 
 ### `--i`
 
 - **Type**: `PS::S64`
 - **Default**: `2`
 - **Description**: Data file reading and writing format; snapshots, status and escaper outputs follow the write mode selected here; 0: read and write in BINARY; 1: read and write in ASCII; 2: read in ASCII, write in BINARY; 3: read in BINARY, write in ASCII
-- **Source**: `src/petar.hpp`:171
+- **Source**: `src/petar.hpp`:176
 
 ### `--id-offset`
 
 - **Type**: `PS::S64`
 - **Default**: `-1`
 - **Description**: Starting ID for artificial particles, total number of real particles must always be smaller than this
-- **Source**: `src/hard.hpp`:136
+- **Source**: `src/hard.hpp`:143
 
 ### `--kdtree-n-particles-min`
 
 - **Type**: `PS::S64`
 - **Default**: `32`
 - **Description**: Minimum number of particles + groups for building kdtree to speed up neighbor search in Hermite-only neighbor force calculation
-- **Source**: `src/hard.hpp`:178
+- **Source**: `src/hard.hpp`:185
 - **Guards**: `HERMITE_ONLY_CALC_NEIGHBOR_FORCE` → --enable-hermite-only-calc-neighbor-force
 
 ### `--keep-tmp-on-startup`
@@ -275,35 +275,35 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::S64`
 - **Default**: `0`
 - **Description**: Startup tmp handling for transactional outputs; 0: auto-remove residual tmp files before run (default); 1: keep residual tmp files and only print warning
-- **Source**: `src/petar.hpp`:174
+- **Source**: `src/petar.hpp`:179
 
 ### `--n`
 
 - **Type**: `PS::S64`
 - **Default**: `100000`
 - **Description**: Total number of particles, used only when the input data filename is __Plummer
-- **Source**: `src/petar.hpp`:156
+- **Source**: `src/petar.hpp`:161
 
 ### `--n-sample-average`
 
 - **Type**: `PS::S64`
 - **Default**: `100`
 - **Description**: Average target number of sample particles per process
-- **Source**: `src/petar.hpp`:151
+- **Source**: `src/petar.hpp`:156
 
 ### `--o`
 
 - **Type**: `PS::F64`
 - **Default**: `1.0`
 - **Description**: Output time interval for particle dataset snapshots
-- **Source**: `src/petar.hpp`:170
+- **Source**: `src/petar.hpp`:175
 
 ### `--os-nsplit`
 
 - **Type**: `PS::S64`
 - **Default**: `4`
 - **Description**: Number of binary sample points for tree perturbation force using orbit-sampling method
-- **Source**: `src/hard.hpp`:134
+- **Source**: `src/hard.hpp`:141
 - **Guards**: `ORBIT_SAMPLING` → --enable-orbit-sampling
 
 ### `--p`
@@ -311,21 +311,21 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `std::string`
 - **Default**: `"input.par"`
 - **Description**: Input parameter file (this option should be used first before any other options)
-- **Source**: `src/petar.hpp`:180
+- **Source**: `src/petar.hpp`:185
 
 ### `--pn-c`
 
 - **Type**: `PS::F64`
 - **Default**: `1`
 - **Description**: speed of light value for Post Newtonian; if -u 1 is used, auto determined
-- **Source**: `src/hard.hpp`:169
+- **Source**: `src/hard.hpp`:176
 
 ### `--pn-crit-ar`
 
 - **Type**: `PS::F64`
 - **Default**: `1e-6`
 - **Description**: AR speed criterion to switch on PN terms, min (v/c)^2
-- **Source**: `src/hard.hpp`:175
+- **Source**: `src/hard.hpp`:182
 - **Guards**: `SDAR_PN` → --with-pn (SDAR)
 
 ### `--pn-crit-hermite`
@@ -333,71 +333,71 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::F64`
 - **Default**: `1e-6`
 - **Description**: Hermite speed criterion to switch on PN terms, min (v/c)^2
-- **Source**: `src/hard.hpp`:172
+- **Source**: `src/hard.hpp`:179
 - **Guards**: `HERMITE_PN` → --with-pn (Hermite)
 
 ### `--r`
 
 - **Type**: `PS::F64`
 - **Default**: `0.0`
-- **Description**: Outer changeover radius (r_out); > 0: custom r_out value and check '-s dt_soft';      dt_soft = 0: calculate dt_soft and then adjust r_out by dt_soft;      dt_soft > 0: use custom r_out directly; = 0 (default): check '--dt-soft-sigma-factor alpha':;      alpha > 0: r_out = alpha*dt_soft*sigma_3D/r-ratio;          sigma_3D: global 3D velocity dispersion;          r-ratio: defined by --r-ratio;      alpha = 0 (default): r_out = a(r_in)/r-ratio;          a(r_in): the binary semi-major axis with the period of nstep*dt_soft;          nstep: defined by --dt-soft-kepler-nstep
-- **Source**: `src/petar.hpp`:158
+- **Description**: Outer changeover radius (r_out); > 0: custom r_out value and check '-s dt_soft';      dt_soft = 0: calculate dt_soft and then adjust r_out by dt_soft;      dt_soft > 0: use custom r_out directly; = 0 (default): check '--dt-soft-sigma-factor alpha':;      alpha > 0: r_out = alpha*dt_soft*sigma_3D/r-ratio;          sigma_3D: global 3D velocity dispersion;          r-ratio: defined by --r-ratio;      alpha = 0 (default): r_out = a(r_in)/r-ratio;          a(r_in): the binary semi-major axis with the period of nstep*dt_soft;          nstep: defined by --dt-soft-kepler-nstep; Note: on restart with this option given, r-search-min, r-search-group, r-group,;      hermite-acc-offset-sq and dt_soft (if -s not given) are re-determined
+- **Source**: `src/petar.hpp`:163
 
 ### `--r-escape`
 
 - **Type**: `PS::F64`
 - **Default**: `PS::LARGE_FLOAT`
 - **Description**: Object escape radius criterion; < 0: remove objects when r>-r_escape; >= 0: remove objects when r>r_escape and energy>0
-- **Source**: `src/petar.hpp`:169
+- **Source**: `src/petar.hpp`:174
 
 ### `--r-group`
 
 - **Type**: `PS::F64`
 - **Default**: `-1.0`
-- **Description**: Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.); = -1: auto-determine by 0.8*r_search_group; = 0: switch off SDAR; > 0: custom criterion value
-- **Source**: `src/hard.hpp`:125
+- **Description**: Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.); = -1: auto-determine by 0.8*r_search_group; = 0: switch off SDAR; > 0: custom criterion value; Note: on restart with -s, -r, --r-ratio or --r-search-group-safety given and this option not, the stored value is re-determined
+- **Source**: `src/hard.hpp`:132
 
 ### `--r-ratio`
 
 - **Type**: `PS::F64`
 - **Default**: `0.1`
-- **Description**: Ratio between inner (r_in) and outer (r_out) changeover radii
-- **Source**: `src/petar.hpp`:159
+- **Description**: Ratio between inner (r_in) and outer (r_out) changeover radii; Note: on restart with this option given, r-search-group and r-group are re-determined
+- **Source**: `src/petar.hpp`:164
 
 ### `--r-search-group`
 
 - **Type**: `PS::F64`
 - **Default**: `-1.0`
-- **Description**: The radial criterion for detecting multiple group candidates; = -1: auto-determine by 1.0*r_in (or by sigma_1D based hard-soft boundary if sigma_1D is provided); = 0: switch off SDAR; > 0: custom criterion value
-- **Source**: `src/hard.hpp`:126
+- **Description**: The radial criterion for detecting multiple group candidates; = -1: auto-determine by 1.0*r_in (or by sigma_1D based hard-soft boundary if sigma_1D is provided); = 0: switch off SDAR; > 0: custom criterion value; Note: on restart with -s, -r, --r-ratio or --r-search-group-safety given and this option not, the stored value is re-determined
+- **Source**: `src/hard.hpp`:133
 
 ### `--r-search-group-safety`
 
 - **Type**: `PS::F64`
 - **Default**: `1.0`
-- **Description**: Safety factor for physics-based SDAR group search: r_search_group = min(r_in, safety * G * m_avg / sigma_1D^2); only used when r-search-group=-1 and sigma_1D is provided
-- **Source**: `src/hard.hpp`:127
+- **Description**: Safety factor for physics-based SDAR group search: r_search_group = min(r_in, safety * G * m_avg / sigma_1D^2); only used when r-search-group=-1 and sigma_1D is provided; Note: on restart with this option given, r-search-group and r-group are re-determined
+- **Source**: `src/hard.hpp`:134
 
 ### `--r-search-min`
 
 - **Type**: `PS::F64`
 - **Default**: `0.0`
-- **Description**: Minimum neighbor search radius for hard clusters; = 0: auto-determine by max(search-vel-factor*sigma_1D*dt_soft + rout, 1.2 r_out); > 0: custom search radius value
-- **Source**: `src/petar.hpp`:168
+- **Description**: Minimum neighbor search radius for hard clusters; = 0: auto-determine by max(search-vel-factor*sigma_1D*dt_soft + rout, 1.2 r_out); > 0: custom search radius value; Note: on restart with -s, -r or --r-search-vel-factor given, the stored value is re-determined
+- **Source**: `src/petar.hpp`:173
 
 ### `--r-search-peri-factor`
 
 - **Type**: `PS::F64`
 - **Default**: `1.5`
 - **Description**: Neighbor search coefficient for periapsis check
-- **Source**: `src/petar.hpp`:167
+- **Source**: `src/petar.hpp`:172
 
 ### `--r-search-vel-factor`
 
 - **Type**: `PS::F64`
 - **Default**: `3.0`
 - **Description**: Neighbor search coefficient for velocity check (v*dt)
-- **Source**: `src/petar.hpp`:166
+- **Source**: `src/petar.hpp`:171
 
 ### `--rand-seed`
 
@@ -418,56 +418,56 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::S64`
 - **Default**: `0`
 - **Description**: Ending of the first id range for hard dump; notice that the ending id is not included in hard dump
-- **Source**: `src/hard.hpp`:165
+- **Source**: `src/hard.hpp`:172
 
 ### `--record-id-end-two`
 
 - **Type**: `PS::S64`
 - **Default**: `0`
 - **Description**: Ending of the 2nd id range for hard dump; notice that the ending id is not included in hard dump
-- **Source**: `src/hard.hpp`:167
+- **Source**: `src/hard.hpp`:174
 
 ### `--record-id-start-one`
 
 - **Type**: `PS::S64`
 - **Default**: `0`
 - **Description**: Starting of the first id range for hard dump recording every tree step, save into files object_[id]
-- **Source**: `src/hard.hpp`:164
+- **Source**: `src/hard.hpp`:171
 
 ### `--record-id-start-two`
 
 - **Type**: `PS::S64`
 - **Default**: `0`
 - **Description**: Starting of the 2nd id range for hard dump recording every tree step
-- **Source**: `src/hard.hpp`:166
+- **Source**: `src/hard.hpp`:173
 
 ### `--s`
 
 - **Type**: `PS::F64`
 - **Default**: `0.0`
-- **Description**: Tree timestep (dt_soft); > 0: custom dt_soft value, regularized to 0.5^n, where n is an integer; = 0: check '-r r_out':;      r_out = 0 (default): dt_soft = 2.6E-4*GM/sigma_3D^3, and is regularized to 0.5^n;          sigma_3D: global 3D velocity dispersion;      r_out > 0: check '--dt-soft-sigma-factor alpha':;          alpha > 0: dt_soft = alpha*r_in/(sqrt(3)*sigma);              r_in: determined by --r-ratio and r_out;          alpha = 0 (default): dt_soft = P(r_in)/nstep;              P(r_in): the binary period with the semi-major axis of r_in;              nstep: defined by --dt-soft-kepler-nstep
-- **Source**: `src/petar.hpp`:157
+- **Description**: Tree timestep (dt_soft); > 0: custom dt_soft value, regularized to 0.5^n, where n is an integer; = 0: check '-r r_out':;      r_out = 0 (default): dt_soft = 2.6E-4*GM/sigma_3D^3, and is regularized to 0.5^n;          sigma_3D: global 3D velocity dispersion;      r_out > 0: check '--dt-soft-sigma-factor alpha':;          alpha > 0: dt_soft = alpha*r_in/(sqrt(3)*sigma);              r_in: determined by --r-ratio and r_out;          alpha = 0 (default): dt_soft = P(r_in)/nstep;              P(r_in): the binary period with the semi-major axis of r_in;              nstep: defined by --dt-soft-kepler-nstep; Note: on restart with this option given, hermite-dt-max, r-search-min and r_out (if -r not given) are re-determined
+- **Source**: `src/petar.hpp`:162
 
 ### `--snap-filename`
 
 - **Type**: `std::string`
 - **Default**: `"__NONE__"`
 - **Description**: Input data file
-- **Source**: `src/petar.hpp`:181
+- **Source**: `src/petar.hpp`:186
 
 ### `--soft-eps`
 
 - **Type**: `PS::F64`
 - **Default**: `0.0`
 - **Description**: Softening epsilon
-- **Source**: `src/hard.hpp`:124
+- **Source**: `src/hard.hpp`:131
 
 ### `--stellar-evolution`
 
 - **Type**: `PS::S64`
 - **Default**: `1`
 - **Description**: Stellar evolution of stars in Hermite and SDAR integration; 0: switch off; >=1: using SSE/BSE based codes; 2: activate dynamical tide and hyperbolic GW radiation
-- **Source**: `src/hard.hpp`:156
+- **Source**: `src/hard.hpp`:163
 - **Guards**: `BSE_BASE` → --with-interrupt (bse/mobse/bseEmp), `STELLAR_EVOLUTION` → --with-interrupt
 
 ### `--t`
@@ -475,14 +475,14 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::F64`
 - **Default**: `10.0`
 - **Description**: End time of simulation
-- **Source**: `src/petar.hpp`:153
+- **Source**: `src/petar.hpp`:158
 
 ### `--tree-ngroup-limit`
 
 - **Type**: `PS::S64`
 - **Default**: `1024`
 - **Description**: Particle-tree group number limit; Optimal value for x86-AVX512 is 1024
-- **Source**: `src/petar.hpp`:146
+- **Source**: `src/petar.hpp`:151
 - **Guards**: `USE__AVX512`
 
 ### `--tree-nleaf-limit`
@@ -490,49 +490,49 @@ Use `<binary> -h` for exact runtime option validation.
 - **Type**: `PS::S64`
 - **Default**: `20`
 - **Description**: Particle-tree leaf number limit; Optimal value should be slightly >= artificial particle number (tidal tensor 8 + anti-force sample 3) + 2 (binary member) + 1 (binary c.m.)
-- **Source**: `src/petar.hpp`:144
+- **Source**: `src/petar.hpp`:149
 
 ### `--tree-nstep-mklist`
 
 - **Type**: `PS::S64`
 - **Default**: `2`
 - **Description**: Particle-tree make-list interval in number of soft-step
-- **Source**: `src/petar.hpp`:150
+- **Source**: `src/petar.hpp`:155
 
 ### `--tt-nstep`
 
 - **Type**: `PS::S64`
 - **Default**: `4`
 - **Description**: Number of steps per slow-down binary orbits (period/dt_soft) for isolated binaries; also the maximum criterion for activating tidal tensor method
-- **Source**: `src/hard.hpp`:131
+- **Source**: `src/hard.hpp`:138
 
 ### `--tt-switch`
 
 - **Type**: `PS::S64`
 - **Default**: `1`
 - **Description**: Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0: off, 1: on
-- **Source**: `src/hard.hpp`:132
+- **Source**: `src/hard.hpp`:139
 
 ### `--u`
 
 - **Type**: `PS::S64`
 - **Default**: `0`
 - **Description**: Input data unit; 0: based on the value of G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr, modify G to fit this unit set
-- **Source**: `src/petar.hpp`:154
+- **Source**: `src/petar.hpp`:159
 
 ### `--w`
 
 - **Type**: `PS::S64`
 - **Default**: `1`
 - **Description**: Data file writing style; 0: no output; 1: write all files separately; 2. write snapshots in status files in one line per step (no MPI support); 3. write files except snapshots
-- **Source**: `src/petar.hpp`:172
+- **Source**: `src/petar.hpp`:177
 
 ### `--write-group-info`
 
 - **Type**: `PS::S64`
 - **Default**: `2`
 - **Description**: Write information of new and end groups; 0: no output; 1: ascii output; 2: binary output, files are [data filename prefix].group.[MPI rank].n[N_member]
-- **Source**: `src/hard.hpp`:162
+- **Source**: `src/hard.hpp`:169
 - **Guards**: `ADJUST_GROUP_PRINT` → --enable-adjust-group-print
 
 ## BSE Interrupt (`--with-interrupt=bse|mobse|bseEmp`)
