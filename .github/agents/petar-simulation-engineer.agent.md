@@ -3,6 +3,7 @@ description: "Use when: handling PeTar configure/build/install problems, configu
 name: "PeTar Simulation Engineer"
 tools: [read, search, execute, web]
 user-invocable: true
+model: [DeepSeek-V4.1-Flash (unify-chat-provider), GLM-5.3 (ZhiPu AI (Coding Plan)) (unify-chat-provider)]
 ---
 
 # PeTar Simulation Engineer

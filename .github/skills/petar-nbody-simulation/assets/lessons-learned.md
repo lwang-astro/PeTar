@@ -260,6 +260,14 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 1. **每个事实一个权威位置**：执行正确性规则 → `SKILL.md`；内部实现/构建细节 → 仓库 `AGENTS.md`；参考型细节（签名、表、模板）→ `assets/`。其余出现处一律改为带路径的指针，不复述。
 2. **常驻文件只放指针**：`AGENTS.md` 不复制 agent 文件、SKILL 规则或 HANDOFF 内容；HANDOFF/`prompt-starters.md` 属 on-demand 维护材料，不得进入常驻必读路径。
 3. **同步新增时对照同一常量的既有取值**：把"X 在此处说 A、在彼处说 B"当作缺陷修复，而不是各自保留。
+
+### 2026-09-17: 规则正文夹杂论证性叙述——agent 文件按调用加载同样吃上下文
+
+**Mistake**: Model Allocation 的 Tier rules 以"规则+论证+示例"的散文体写入 agent 文件（15 行），每次 Developer 调用整体加载；其中论证性内容（钱包枚举理由、家族匹配充分性讨论、失效成本说理）在委派时刻不可执行，且"never escalate well-specified task"与同文件 Delegation Threshold 已有规则重复。
+
+**Root cause**: 把"agent 定义只承载委派规则"理解为只约束**主题**（内容属于委派域即可），未约束**文体**（可执行规则 vs 论证叙述）；且 agent 文件不在"always-loaded"字面范围内，上下文效率要求未被显式适用于它。
+
+**Prevention rule**: 规则正文 = 可执行指令 + 至多一句反直觉理由；论证、历史、示例归 lessons。写入后 grep 同文件相邻 section 去重。该文体约束已固化到 `.github/skills/README.md` Update Rules（agent 定义条 + 预算条）。
 4. 分层口径见 `SKILL_CONTENT_INDEX.md` 的 "Layering Contract"；改动 `SKILL.md` 结构时同步更新该索引。
 5. 注意"看起来像常识"的规则里，**反直觉的领域规则必须保留**（`find.dt` 结果减半、`commands.log`、求解器前确认门、`petar.init` 参数顺序、`--r-ratio` 与 `r_in` 同向），而通用的良好行为（"善用工具"、"简洁作答"、"不存在则创建目录"）保留一处即可。
 
@@ -274,3 +282,39 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 2. 改动的验收条件包含**体积预算**：报告 `SKILL.md`（及 `AGENTS.md`）的行/字节增减；把参考型表格或实测数据加进 `SKILL.md` 视为缺陷——移入 `assets/`，只留一行加指针。
 3. 新增规则后立即 grep 它，其余出现处一律改为 `<path> → "<section>"` 指针。
 4. 设计目标类信息一旦确立即随手落盘到上述规范文件，不要依赖会话记忆。
+
+### 2026-09-17: frontmatter `model:` pin 与 doctrine 矛盾——模型分层只走委派参数，不走 pin
+
+**Mistake**: 工作区（未提交）给 `petar-developer.agent.md` 和 `petar-reviewer.agent.md` 的 frontmatter 重新加了 `model: GLM-5.3 ...` pin，而同一文件的 "Model Allocation" 仍写着 "No agent pins a model in frontmatter"（2026-09-12 移除 pin 的决策记录）。pin 使用的 picker 显示名是否可解析未经验证——正是 2026-09-12 记录的静默回退失效模式，会产生"已强制强模型"的假信心。
+
+**Root cause**: 模型分层的意图（conductor/reviewer 强、executor 高效）没有权威落点，实现时直接改了 frontmatter 而未对照同文件内已有的分配规则；frontmatter 编辑也不会触发阅读正文 doctrine。
+
+**Prevention rule**: 模型分层的唯一权威位置是 `petar-developer.agent.md` 的 "Model Allocation"（委派时 `model` 参数：Reviewer 默认强档、Simulation Engineer 默认 Flash 档 + 根因未知时升档）。不改 frontmatter pin。若确要为"picker 直接调用"加 pin 强制，必须先验证 pin 真实生效，并在同一次改动中更新 Model Allocation 文本，消除矛盾。（同日三探测后修正：pin 机制验证可行，策略见"政策先于验证落盘"一条。）
+
+---
+
+### 2026-09-17: 委派 `model` 参数失效即报错并列出模型目录——Flash 名可探测解析，"never guess" 对委派参数不成立
+
+**Mistake**: 在未经探测的情况下，把 frontmatter pin 的"静默回退"失效模式外推到委派时 `model` 参数上，写成 "never guess — an unresolvable name silently falls back"，并把 Flash 名解析设计为"问用户一次"。四探测验证（继承对照 / 假名 / 猜测名 / 目录精确名）证明：委派参数解析失败是**响亮报错并附完整可用模型目录**（工具层拒绝，零推理成本），不运行任何回退；精确到目录字符串的名字（`GLM-5.3-Flash (ZhiPu AI (Coding Plan)) (unify-chat-provider)`）成功让 subagent 跑在 Flash 上。
+
+**Root cause**: 两种机制（frontmatter pin vs 委派参数）失效模式不同，但 doctrine 只基于 pin 的历史教训（2026-09-12）写作，未区分二者；且假设"委派时无模型目录"，实际目录可通过一次无效名探测免费获得。
+
+**Prevention rule**: 委派参数允许试错——假名以零成本换回完整目录。但**选名不是纯技术决策**：目录混合 Coding Plan / Free / PayGo / copilot 路由 / BSCC 等互不相同的计费来源，同族匹配只是能力约束，不是计费约束；tier→名的映射必须由用户指定（或按其约束表选择），不得由 agent 擅自硬编码。frontmatter pin 的谨慎仍然成立（其静默回退未被推翻）。任何"X 会静默失败"的规则写入配置前，先用零成本探测验证 X 的真实失效模式。
+
+---
+
+### 2026-09-17: 政策先于验证落盘——"不走 pin"一日内两次反转
+
+**Mistake**: 基于未验证的历史教训（2026-09-12 "pin 静默回退"）把 "No agent pins a model in frontmatter" 写成硬规则，并据此移除了用户手工添加的 pin。用户质疑后三探测（T1–T3）确立完整机制：委派参数 > frontmatter pin > 继承；pin 用目录精确字符串完全生效（委派路径亦然）；仅 pin 名失效时静默回退到继承——该降级对成本分层是安全的（回退=强档，成本回退而非正确性故障）。同一条规则一日内两次反转。
+
+**Root cause**: 把历史教训当作当前环境的机制事实，未区分"当时的失效可能源于名字格式"与"机制本身不可用"；移除用户手工配置前未先用其精确值做零成本探测。
+
+**Prevention rule**: 涉及机制行为的配置规则（pin/参数/优先级/失效模式）落盘前必须探测验证；移除用户手工添加的配置前，先验证该配置是否实际生效。验证后的最终策略：Flash 默认 = Simulation Engineer 的 frontmatter pin（用户指定，目录精确字符串，写入后探测一次确认生效）；升档 = 委派参数（覆盖 pin，失效响亮报错）；pin 静默回退可接受，供应商/订阅变更后重测 pin。
+
+### 2026-09-17: AGENTS.md 里的条件指针未被遵循——执行者自己的 agent 定义需要一跳直达指针
+
+**Mistake**: 用户在独立会话中让 Agent 修改 agent 规则文件，"改任何定制文件前先读 `.github/skills/README.md`" 的指针（写在两个 `AGENTS.md`）未被遵循，直接动手修改了文件。
+
+**Root cause**: 指针距执行者两跳（agent 定义 → `AGENTS.md` → README）。`AGENTS.md` 虽常驻加载，但条件式指令（"改 X 前先读 Y"）未被主动对照时约束力是概率性的；而唯一有权修改定制文件的角色（PeTar Developer）自己的定义里没有该指针，Reviewer 的检查清单里也没有对应的验收项。
+
+**Prevention rule**: 把指针直接钉进 `petar-developer.agent.md`（Conductor Rules 2 + Key Reference Files）与 `petar-reviewer.agent.md`（PeTar-Specific Checks 第 5 项），一跳可达。指针不是规则复述，不违反 "维护规则只住在 README" 的归属约束——Design Goal 4 允许 pointer 出现在一切需要的发现点。

@@ -3,6 +3,7 @@ description: "Use when: coordinating or performing PeTar development and mainten
 name: "PeTar Developer"
 tools: [execute, read, agent, ms-python.python/getPythonEnvironmentInfo, ms-python.python/getPythonExecutableCommand, ms-python.python/installPythonPackage, ms-python.python/configurePythonEnvironment, ms-toolsai.jupyter/configureNotebook, ms-toolsai.jupyter/listNotebookPackages, ms-toolsai.jupyter/installNotebookPackages, edit, search, web, 'notebook_tools/*', 'pylance-mcp-server/*', todo]
 user-invocable: true
+model: GLM-5.3 (ZhiPu AI (Coding Plan)) (unify-chat-provider)
 ---
 
 # PeTar Developer Agent
@@ -66,11 +67,16 @@ PeTar routing rule:
 
 ## Model Allocation
 
-No agent pins a model in frontmatter (pins removed 2026-09-12 — an unavailable model name silently falls back to the picker default, so pins did more harm than good). Assign the `model` parameter at delegation time instead:
+Model resolution (probe-verified 2026-09-17): delegation-time `model` parameter > frontmatter `model:` pin > inheritance. Tier by judgment density and failure cost:
 
-- Default specialist delegation → Flash tier.
-- Escalate to Pro only when the root cause is unknown or the task needs open-ended reasoning, e.g. Simulation Engineer debug mode with mysterious runtime failures, or a Reviewer verdict on ambiguous numerical behavior.
-- Never escalate a well-specified mechanical task.
+- **Conductor / PeTar Reviewer → strong tier** (pinned). Downgrade Reviewer to Flash only for mechanical checklist re-checks with no numerical judgment.
+- **PeTar Simulation Engineer → Flash tier** (pinned); escalate to strong via the `model` parameter when the root cause is unknown or open-ended reasoning is required.
+- Unpinned agents (e.g. built-in Explore) inherit the session model.
+
+**Tier rules**:
+
+- Re-designating a pin: PayGo / copilot-routed / BSCC names need explicit user approval; routing preference is unify-chat-provider (gcmp-direct observed unreliable).
+- A bad `model` parameter errors loudly with the full catalog (zero cost, safe to probe); a broken pin silently falls back to inheritance — a cost regression, never a correctness failure. Pin names use exact catalog strings: probe-verify after writing and after any provider/subscription change.
 
 ## Repository Constraints
 
@@ -80,7 +86,7 @@ No agent pins a model in frontmatter (pins removed 2026-09-12 — an unavailable
 
 ## Key Reference Files
 
-`AGENTS.md` · `README.md` · `.github/skills/petar-nbody-simulation/SKILL.md` · `test/functional/README.md` · `test/validation/README.md` · `sample/` · `src/` · `tools/`
+ `AGENTS.md` · `README.md` · `.github/skills/README.md` (customization-maintenance authority — read before editing any customization file) · `.github/skills/petar-nbody-simulation/SKILL.md` · `test/functional/README.md` · `test/validation/README.md` · `sample/` · `src/` · `tools/`
 
 ## Environment Notes
 

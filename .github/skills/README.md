@@ -39,9 +39,9 @@ Rules about maintaining the customization files themselves belong **here** — n
 
 - **Always-loaded files hold rules and pointers only.** `AGENTS.md` must not copy agent-file content, SKILL rules, or HANDOFF material. Maintenance/recovery material (`HANDOFF.md`, `prompt-starters.md`) must never enter the always-loaded read path.
 - **Never restate a fact in a second place.** After adding a rule, grep for it; convert other occurrences into `<path> → "<section>"` pointers.
-- **State the budget in the change**: report the line/byte delta of `SKILL.md` (and of `AGENTS.md` when touched). Adding a reference-style table or benchmark to `SKILL.md` is a defect — move it to an asset and leave one line behind.
+- **State the budget in the change**: report the line/byte delta of `SKILL.md` (and of `AGENTS.md` and `.github/agents/*.md` when touched). Adding a reference-style table or benchmark to `SKILL.md` is a defect — move it to an asset and leave one line behind.
 - **Scenario detail goes to a subset file**, not to the top layer.
-- **Agent definitions** carry role, tool/scope constraints, and delegation rules only — they never restate `SKILL.md`.
+- **Agent definitions** carry role, tool/scope constraints, and delegation rules only — they never restate `SKILL.md`. They load on every invocation of the agent, so they meet the same context-efficiency bar: rules plus at most one clause of counter-intuitive rationale — persuasion, history, and narrative justification belong in `assets/lessons-learned.md`.
 - **Lessons entry titles must be self-contained one-line rules** (`### <date>: <one-line rule>`), so `grep -n '^### ' lessons-learned.md` is a complete index. Do **not** split `lessons-learned.md` into per-lesson files while it stays under the split trigger: the read cost is identical (~index + one entry either way) while splitting adds index drift on every capture. **Split trigger**: file > ~800 lines, one category > ~200 lines, or ambiguous titles.
 
 ## Health-Check Procedure

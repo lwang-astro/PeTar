@@ -3,6 +3,7 @@ description: "Use when: reviewing PeTar code or workflow changes for regressions
 name: "PeTar Reviewer"
 tools: [read, search, execute]
 user-invocable: true
+model: GLM-5.3 (ZhiPu AI (Coding Plan)) (unify-chat-provider)
 ---
 
 # PeTar Reviewer Agent
@@ -44,6 +45,7 @@ Before concluding a review pass:
 2. If a command depends on binary family, check that `petar.select` or equivalent selection logic is reflected in docs/tests.
 3. If post-processing or snapshot reading changed, look for mode/format mismatches instead of assuming the warning is harmless.
 4. If configure/build behavior changed, check default-path assumptions and dependency detection notes.
+5. If the change touches any customization file (`AGENTS.md`, `.github/agents/*.md`, `.github/skills/**` — either repo), verify it against `.github/skills/README.md` (customization-maintenance authority).
 
 ## Output Format
 
