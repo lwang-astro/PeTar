@@ -31,7 +31,10 @@
 ```text
 请对以下请求做“预期输出检查”，不需要实际跑模拟：
 - 用本机可用的 bse+galpy solver（例如 petar.mpi.omp.avx2.bse.galpy）跑，给完整 workflow。
-- 用已有 snapshot 做 restart，不要出现 petar.init。
+- 用已有 snapshot 做 restart，不要出现 petar.init；命令须含 `-p <prefix>.par`、复制**全部** `<prefix>.par.*` 伴随文件的提示、以及二进制快照的 `-i 0`。
+- 用 mcluster 生成星团 IC 时，命令必须带 `-C 5`（取 `test.dat.10`），并在 `petar.init` 后核对 header 的 N 等于请求粒子数。
+- `petar.find.dt` 命令的 `-a` 必须复述生产运行的单位模式（如 `-a "-u 1"`），且 `-o` 与生产线程数一致。
+- 用户对 N≈500 的小集群要求 8 线程时，应先给出实测代价（8 线程约慢 66%）并确认，而不是照单执行。
 - 用户误选 *.hard.debug 时，给出正确 solver 替代建议。
 - 对 `petar.movie` / `petar.data.process` 人为给错 `-i/-t/-s/--snapshot-type` 时，应先识别读取错位警告，停止当前处理，再改参数重试。
 - 对 `petar.get.object.snap` / `petar.galev.process` / `petar.format.transfer.post` 人为给错 `-s` 或快照类型相关参数时，也应按同样机制处理：先识别错位警告或 `utf-8` 错误，停止当前处理，再修正参数；若仍存在，则明确说明输出不可信。

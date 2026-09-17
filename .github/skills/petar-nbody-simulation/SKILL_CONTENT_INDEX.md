@@ -8,6 +8,10 @@ This file tracks where detailed content from earlier long-form skill versions is
 - Preserve traceability of previously documented details.
 - Point agents and maintainers to the authoritative location for each topic.
 
+## Layering Contract
+
+Owned by [../README.md](../README.md) → "Design Goals", "Layering Rules", and "Update Rules". Not restated here.
+
 ## Coverage Map
 
 ### 0. Mandatory execution guardrails and hard constraints
@@ -21,12 +25,17 @@ This file tracks where detailed content from earlier long-form skill versions is
   - unit-consistency guardrails
   - IC-generation completion requirements
   - restart/resume and post-processing blocking rules
+  - `mcluster` must use `-C 5` (default `test.txt` header becomes a ghost particle)
+  - `petar.find.dt -a` must repeat the production unit mode; `-o` must match the production thread count
+  - restart needs all `<prefix>.par.*` companions and a `-i` read format matching the snapshot
+  - thread count scales with N — detail in `assets/script-tools.md` → "Parallel Launch Heuristics"
 
 Status: restored-in-skill
 
 ### 1. Binary selection, capability checks, and option compatibility
 
 - Primary rule (compact): `.github/skills/petar-nbody-simulation/SKILL.md`
+- Binary-suffix → scenario inference and solver vs helper classification: `.github/skills/petar-nbody-simulation/assets/binary-scenario-map.md`
 - Detailed capability inventory: `.github/skills/petar-nbody-simulation/assets/option-matrix.md`
 - Installed tool surfaces and help-derived descriptions: `.github/skills/petar-nbody-simulation/assets/script-tools.md`
 - In-skill coverage now includes:
@@ -39,15 +48,10 @@ Status: covered, with core hard constraints kept in `SKILL.md`
 
 ### 2. Minimal question sets and input collection details
 
-- Compact ask-minimum principle: `.github/skills/petar-nbody-simulation/SKILL.md`
-- Detailed question templates: `.github/skills/petar-nbody-simulation/assets/minimal-question-sets.md`
-- In-skill coverage now includes:
-  - scenario-required inputs must be complete before run commands
-  - BSE metallicity requirement
-  - external-potential model and COM phase-space requirement
-  - star-cluster IC parameter completeness requirement
+- Compact hard gate: `.github/skills/petar-nbody-simulation/SKILL.md` — the mandatory-field list ("Required Input Checklist" → Common) and the star-cluster IC table, which is the **single source of truth** for physics-defining IC parameters
+- Per-scenario extras and the "do not ask if already known" rule: `.github/skills/petar-nbody-simulation/assets/minimal-question-sets.md` (points back to SKILL.md rather than restating the table)
 
-Status: covered, with required-input guardrails kept in `SKILL.md`
+Status: covered, with required-input guardrails kept in `SKILL.md` and scenario detail in the asset
 
 ### 3. Input-source workflow branching (raw/snapshot/restart)
 
@@ -68,7 +72,8 @@ Status: covered, with restart and `petar.init` guardrails kept in `SKILL.md`
 - In-skill coverage now includes:
   - use installed PeTar tools instead of only abstract advice
   - mode matching between producer family and reader/post-processing tool
-  - MPI gather requirement before downstream tools when applicable
+  - no gather step for modern tmp-file runs; `petar.data.gether` only for legacy MPI runs lacking `data.snap.lst`
+  - `--no-auto-resume` for `petar.data.process` in smoke/repeated-run scenarios
 
 Status: covered, with mandatory tool-use and mode-matching rules kept in `SKILL.md`
 
@@ -84,17 +89,18 @@ Status: split between `SKILL.md` guardrails and asset-level detail
 
 - Compact tool-usage rule (use installed tools, mode matching): `.github/skills/petar-nbody-simulation/SKILL.md`
 - Detailed command templates for `petar.get.object.snap` and `petar.format.transfer.post`: `.github/skills/petar-nbody-simulation/assets/script-tools.md`
-- Per-scenario `petar.movie` default arguments: `.github/skills/petar-nbody-simulation/assets/default-postprocessing.md`
+- `petar.find.dt` full flag reference: `.github/skills/petar-nbody-simulation/assets/script-tools.md`
+- Per-scenario `petar.data.process` and `petar.movie` default arguments: `.github/skills/petar-nbody-simulation/assets/default-postprocessing.md`
 
-Status: covered, with tool-specific templates and movie defaults in asset files
+Status: covered, with the "halve the recommended step" rule kept in `SKILL.md` and tool-specific templates in asset files
 
 ### 4c. Python data readback patterns
 
-- Compact reading guidance and keyword-argument table: `.github/skills/petar-nbody-simulation/SKILL.md` (Python Data Analysis Tools section)
-- Detailed readback patterns (10 patterns: lagr, core, status, escaper, SSE/BSE, snapshot offsets, object snap, profile matching, GroupInfo, DSM interrupt): `.github/skills/petar-nbody-simulation/assets/data-readback-patterns.md`
+- Compact reading guidance: `.github/skills/petar-nbody-simulation/SKILL.md` (Python Data Analysis Tools section) — the MUST-READ rule, the one-line file-type → reader-class index, the universal `interrupt_mode`/`external_mode` kwarg table, and the module map
+- Detailed readback patterns (exact constructor kwargs, header offsets including MPFRC variants, `fromfile` vs `loadtxt`/`load` choice, 11 numbered patterns, warning classification): `.github/skills/petar-nbody-simulation/assets/data-readback-patterns.md`
 - Primary tutorial reference: `sample/data_analysis.ipynb`
 
-Status: covered, with SKILL.md providing the compact keyword-argument reference and asset providing full readback strategies
+Status: covered. SKILL.md keeps the safety index and read-first rule (see lessons-learned 2026-07-07); the asset owns all signatures, offsets, and worked examples.
 
 ### 4d. DSM workflow reference
 
@@ -122,7 +128,7 @@ Status: covered
 - Recovery and maintenance notes: `.github/skills/petar-nbody-simulation/HANDOFF.md`
 - Prompt templates: `.github/skills/petar-nbody-simulation/assets/prompt-starters.md`
 
-Status: covered
+Status: covered. Both are **maintenance-only** and are referenced from SKILL.md's "Reference Documents" table under "Skill maintenance / new-machine recovery". They are never part of the simulation read path — `AGENTS.md` deliberately does not list HANDOFF.md as a starting document.
 
 ## What Stays Out Of SKILL.md
 

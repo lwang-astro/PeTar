@@ -10,8 +10,43 @@ These tools are installed from `install_script_tool` in `Makefile.in` and are pa
 - `petar.find.dt`
   Search for a suitable tree time step for a snapshot and launch setup.
 
+  ```
+  petar.find.dt [options] <snapshot-file>
+  ```
+
+  | Flag | Argument | Description | Default |
+  |------|----------|-------------|---------|
+  | `-p` | string | Petar commander name | `petar` |
+  | `-a` | string | Extra petar options, quoted. **Never include `-o`, `-w`, `-t`, `-i`, or `-s`** — those are set internally. **Must repeat the production unit mode** (`-u <mode>`, plus `-G`/scale factors if used), otherwise the benchmark reads the snapshot with the wrong gravitational constant | (none) |
+  | `-r` | string | Custom launcher prefix (e.g. `"srun -N 2"`). When set, `-m` and `-o` are ignored | (none) |
+  | `-m` | int | MPI process count for `mpiexec -n <N>` | MPI not used |
+  | `-o` | int | OpenMP thread count — **must match the intended production thread count**, see "Parallel Launch Heuristics" below | auto |
+  | `-s` | float | Base tree step to start scanning from | auto (from petar initial output) |
+  | `-i` | int | Snapshot format: 0 = binary, 1 = ASCII | 1 |
+  | `-t` | float | Max wall time (seconds) per test run | auto (last run × 3) |
+
+  Canonical form for a `-u 1` production run: `petar.find.dt -a "-u 1 <scenario-opts>" -i 1 input`
+
+  Creates `check.perf.<timestep>.log` files and prints the recommended `-s`. The production run
+  must use **half** that value (see SKILL.md → "Gate 5 — Timestep" and "Timestep Tuning").
+
 - `petar.update.par`
   Update legacy parameter files from old PeTar versions.
+
+## Parallel Launch Heuristics
+
+**Thread count must scale with N — more threads is not more speed.** Per-step parallel overhead (domain decomposition, tree construction, barriers) is independent of N, while force computation grows with N; for small systems the overhead dominates.
+
+| System size | Recommended threads |
+|-------------|--------------------|
+| N ≲ 10³ | **1** (serial or `OMP_NUM_THREADS=1`) — extra threads are *slower* |
+| N ~ 10⁴ | a few (2–8) — benchmark on the target machine |
+| N ≳ 10⁵ | all available cores, MPI ranks × OMP threads per rank |
+
+Measured reference (N=500, 2 Myr production run, one binary): 1 thread 1.13 s, 4 threads 1.35 s (**+19%**), 8 threads 1.88 s (**+66%**). `sample/star_cluster_plummer_N1k.sh` documents the same expectation for N≈10³, and `launch-template-by-scale.sh` encodes this table as a heuristic.
+
+- Applies to **both** `petar.find.dt -o` and the production launch; a mismatch makes the benchmark's recommendation meaningless for the run that follows.
+- If the user requests many threads for a small system, state the measured trade-off and confirm rather than silently overriding their choice.
 
 ## Output management and restart support
 

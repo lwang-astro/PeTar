@@ -33,19 +33,12 @@ Before delegating, ask: is the increment of this task *acquiring new context* or
 
 ## Lessons-Learned Capture
 
-After each non-trivial task (implementation, bug fix, simulation debugging, workflow change):
+The capture process is canonical in [SDAR/AGENTS.md](../../../SDAR/AGENTS.md): reflect → classify → append **Mistake** / **Root cause** / **Prevention rule** in the existing entry style → periodically promote validated patterns into `SKILL.md`. Do the append directly; do not delegate it.
 
-1. **Reflect**: Did anything go wrong during this task? Was there a mistake, a misleading assumption, a silent failure, or a confusing error message?
-2. **Route by content** (PeTar workspaces usually contain SDAR as a sibling repo): if the mistake's root cause and prevention rule live in SDAR code (`SDAR/src/`, `SDAR/sample/AR`, `SDAR/sample/Hermite`, `SDAR/tools/` — integrator, time synchronization, ds control, AR/Hermite samples, Python `sdar` package), append the entry to `SDAR/.github/skills/sdar-fewbody-integration/assets/lessons-learned.md` instead. Only lessons about PeTar surfaces (configure/build, `petar.*` tools, clustering physics, `test/`, workflow) go into `.github/skills/petar-nbody-simulation/assets/lessons-learned.md`; cross-layer cases (discovered in PeTar, rooted in SDAR) are recorded in SDAR with a one-line pointer from the PeTar file if PeTar-specific context matters.
-3. **If yes**: Append the finding directly to the chosen lessons file under the appropriate category (do not delegate this), with:
-   - Date and brief description of the mistake (**Mistake**)
-   - Root cause (what led to the error) (**Root cause**)
-   - Prevention rule (**Prevention rule**)
-   - Match the entry style already present in the file.
-4. **If no**: No action needed.
-5. **Periodically** (or when lessons-learned.md grows significantly): Review entries and promote well-validated patterns to `SKILL.md` as hard rules.
+PeTar routing rule:
 
-This ensures the agent suite learns from mistakes over time without manual intervention.
+- Lessons about PeTar surfaces (configure/build, `petar.*` tools, clustering physics, `test/`, workflow) → `.github/skills/petar-nbody-simulation/assets/lessons-learned.md`
+- Lessons rooted in SDAR code (`SDAR/src/`, `SDAR/sample/*`, `SDAR/tools/`) → SDAR's lessons file, with a one-line pointer from the PeTar file when PeTar-specific context matters.
 
 ## Conductor Rules
 
@@ -62,10 +55,9 @@ This ensures the agent suite learns from mistakes over time without manual inter
    - **When editing SKILL.md or user-facing docs, preserve the target document's existing style (tone, heading depth, list vs prose ratio, code-block conventions) on first edit. Do a final format-consistency pass before declaring the task complete.**
 
 3. **Use PeTar workflow rules**
-   - Prefer `petar.select` over manual binary switching.
-   - Keep fresh IC generation distinct from restart/resume workflows.
+   - SKILL.md owns simulation execution (binary selection, option validation, restart separation, the confirmation gate). Follow it; do not restate it here.
    - Treat `test/functional` as workflow smoke and `test/validation` as numerical regression.
-   - Escalate before launching large or expensive simulations not clearly requested by the user.
+   - Escalate rather than silently launching a large or expensive simulation.
 
 4. **Finish with validation**
    - After implementation, route the smallest executable check first.
@@ -82,23 +74,13 @@ No agent pins a model in frontmatter (pins removed 2026-09-12 — an unavailable
 
 ## Repository Constraints
 
-1. Do not commit or push without user confirmation.
-2. Do not use untracked local files as required test inputs.
-3. Do not add undocumented configure or runtime options without checking repository docs and `-h` output.
-4. Keep repo-local guidance consistent with `.github/skills/petar-nbody-simulation/SKILL.md`.
-5. Remember the workspace is multi-root: PeTar changes may depend on `FDPS/` and `SDAR/`, and some workflows rely on `galpy` or `Agama`.
-6. Bump `VERSION` in every commit: run `(cd tools && bash get_version.sh)` (the script has no executable bit, hence `bash`; it writes `git rev-list --count HEAD` + 1), append the `e` suffix marking the experiment branch (`echo "$(cat VERSION)e" > VERSION`), and stage `VERSION` with the change. Convention: commit #N carries `VERSION` = `Ne`. SDAR follows the same convention via its repo-root `get_version.sh` (run from the root, then add `e`).
+1. **The workspace is multi-root**: PeTar changes may depend on `FDPS/` and `SDAR/`, and some workflows rely on `galpy` or `Agama`. `SDAR/src/` is shared with the standalone SDAR executables, so a change there affects both.
+2. Keep repo-local guidance consistent with `.github/skills/petar-nbody-simulation/SKILL.md`.
+3. Repository-wide rules (commit confirmation, `VERSION` bump, tracked test inputs, undocumented-option check) are in [AGENTS.md](../../AGENTS.md) — do not duplicate them here.
 
 ## Key Reference Files
 
-- `AGENTS.md`
-- `README.md`
-- `.github/skills/petar-nbody-simulation/SKILL.md`
-- `test/functional/README.md`
-- `test/validation/README.md`
-- `sample/`
-- `src/`
-- `tools/`
+`AGENTS.md` · `README.md` · `.github/skills/petar-nbody-simulation/SKILL.md` · `test/functional/README.md` · `test/validation/README.md` · `sample/` · `src/` · `tools/`
 
 ## Environment Notes
 

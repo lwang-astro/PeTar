@@ -77,6 +77,9 @@ lagr.fromfile("data.lagr")
 ```
 
 - `external_mode` controls whether COM-offset columns are present.
+- Structure: `time` + three `Lagrangian` blocks (`single`, `binary`, `all`; binaries counted once at their c.m.), each holding `r`, `m`, `n`, `vel`, `sigma` (+ `epot`/`vr`/`epot_ext` with `calc_energy`).
+- **Column semantics** (per `tools/analysis/lagrangian.py`): **6 columns** — mass fractions `[10%, 30%, 50%, 70%, 90%]` **plus the core radius as the last column** (Casertano & Hut 1985). The velocity keys (`abs`, `x`, `y`, `z`, `rad`, `tan`, `rot`) likewise carry 6 entries, last = core.
+- **`all.m` is the *average stellar mass* per particle within each radius, not a cumulative mass** (cumulative mass is divided by the particle count). Multiply by `all.n` to recover the enclosed mass; under `mode="shell"` both refer to the shell.
 
 ## Pattern 2: Core Properties (`data.core`)
 
@@ -144,11 +147,23 @@ bse_binary_merge.loadtxt("data.bse.binary_merge")
 
 ### Header offset selection
 
-The snapshot header offset depends on whether an external potential was active:
+The snapshot header offset depends on the build features (external potential, MPFRC precision):
+
+| Build | Offset |
+|---|---|
+| default | `petar.HEADER_OFFSET` |
+| `--with-external=galpy\|agama` | `petar.HEADER_OFFSET_WITH_CM` |
+| `--enable-mpfrc` | `petar.HEADER_OFFSET_F128` |
+| `--enable-mpfrc` + external potential | `petar.HEADER_OFFSET_WITH_CM_F128` |
 
 ```python
 offset = petar.HEADER_OFFSET_WITH_CM if external_mode != "none" else petar.HEADER_OFFSET
+# MPFRC builds use the *_F128 variants instead.
 ```
+
+The header itself (time, N, optional COM offset) is read with `petar.PeTarDataHeader`, which also
+takes `external_mode=`. ASCII snapshots (`-u`-independent) have a one-line header — use
+`skiprows=1` with `.loadtxt()`.
 
 ### Reading particles
 

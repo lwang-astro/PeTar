@@ -17,6 +17,7 @@ Periodically reviewed → verified entries are elevated to `SKILL.md` as hard ru
 - [Restart / Resume](#restart--resume)
 - [Documentation](#documentation)
 - [Agent Workflow & Delegation](#agent-workflow--delegation)
+- [Configuration Hygiene](#configuration-hygiene)
 
 ---
 
@@ -32,6 +33,28 @@ Periodically reviewed → verified entries are elevated to `SKILL.md` as hard ru
 1. 改 SDAR/PeTar 头文件后，**不要信任 make 的 up-to-date 判断**：`rm` 目标二进制（或 `make -B <target>`）强制重编，跑前 `md5sum` 确认二进制 mtime/md5 已变；
 2. gdb 验证一段赋值代码是否生效，断点设在块**结束后**的行；打印值与源码预期矛盾时，第一反应先确认二进制含新代码（`md5sum`/反汇编一行），再推演时序；
 3. 长期修复方向：两个 Makefile 补全头依赖（wildcard `$(SDAR_SRC)/*.h` 入依赖表），或改用 compile_commands/化构建。
+
+### 2026-09-17: "最新版安装后仍复现"实为多目标 install 非原子——复现前先核对已安装二进制 mtime
+
+**Mistake**: 用户 12:18 `make install` 后报 `petar.hard.debug` 读 dump 断言"最新版可复现"。排查发现 12:18 install 只更新了主 `petar` 等目标，`petar.hard.debug` 目标 12:28 才重编落地；12:18–12:24 两次"复现"用的都是含旧代码（`hard_debug.cxx` 漏加 `time_offset`，见 Restart/Resume 2026-09-17 条）的陈旧工具二进制。主会话最初按"最新代码仍有 bug"推演窗口边界越界，白耗数轮——直接重跑用户命令却一次通过，才暴露真凶。
+
+**Root cause**: `make install` 一次安装多个目标（petar、hard.debug、dump2test…），编译耗时长的目标落地晚于 symlink 创建时刻；"安装时间戳"≠"全部目标都已更新"。用户与 agent 都以"刚跑过 make install"为准据断言二进制内容。
+
+**Prevention rule**:
+1. 调试"确定可复现"的问题前，`ls -la --time-style=full-iso $(which <bin>)` 与 `readlink -f`，确认**每个用到的**已安装二进制 mtime ≥ 相关源文件 mtime；不符则先重装再谈复现；
+2. "直接重跑一次用户命令"应是与源码推演并列的第一步（本例中它一次就否定了"最新版可复现"前提）；
+3. 源码已修但未 commit 时（git status 出现 M），先看 diff——工作树修复可能已存在，问题只剩"哪个二进制含它"。
+
+### 2026-09-17: 功能冒烟套件 `--phase all` 会原地重 configure 源码树并劫持 petar 符号链接
+
+**Mistake**: 为验证一处修改跑 `python3 test/functional/run_functional_smoke.py --phase all`。该套件每个 case 在**源码树原地** `./configure <case 专用>` + make install（std→merger→dsm→bse→galpy→bse-galpy→bse-agama 依次覆盖），最后一个 case 把 `petar`/`petar.hard.debug` 符号链接与 Makefile/config.status 全部留在 bse-agama 配置——生产 dsm.galpy.gasdrag 状态被静默顶掉。且各 case 的 petar 步骤因 IC ASCII 列数不匹配（20 vs 25）全部 fail，与本修改无关。
+
+**Root cause**: 套件设计为独立全量构建验证，不区分"源码树当前配置"是否是用户生产状态；无恢复步骤。
+
+**Prevention rule**:
+1. 验证单点修改优先用目标二进制直接跑（如 petar.hard.debug 读 dump），不要默认拉全套件；
+2. 若必须跑套件：先记录 `./configure --help` 口径下的生产 configure 参数（可从二进制名反推：`petar.mpi.omp.avx512.64b.dsm.galpy.gasdrag` → `--with-interrupt=dsm --with-external=galpy --with-external-hard=gasdrag --enable-64b`），跑完立即重新 configure + make install 恢复；
+3. 套件 run-phase 失败先看失败机制（启动即读文件格式错 vs 运行中断言），IC 列数类失败与运行时修改无关，不要据此回滚代码。
 
 ---
 
@@ -87,7 +110,29 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 2. 执行后必须核对提示语 `Transfer "<input>" to PeTar input data file "<output>"` 是否符合预期。
 3. 对原始 IC 文件做只读保护：用 `chmod -w <raw_ic>` 或保留一个 `.orig` 备份，防止误覆盖。
 
+### 2026-09-17: mcluster 默认输出 `test.txt` 带表头，被 `petar.init` 吞成幽灵粒子
 
+**Mistake**: 用 mcluster 默认输出生成 N=500 IC，`petar.init` 报 `Skip rows: 0`，把 `#` 表头行解析成零质量、位于原点的粒子——快照变成 N=501，平均质量被稀释。
+
+**Root cause**: `-C` 决定输出格式：`-C 5` 给无表头的 `test.dat.10`，默认给带表头的 `test.txt`。SKILL.md 只记了 `-u`，`-C` 语义仅存在于 sample 脚本注释。
+
+**Prevention rule**: 星团 IC 一律 `-C 5`；转换后核对 `head -1 input` 的第二个字段等于请求粒子数（实测 `-N 10` 默认 → `0 11 0`，`-C 5` → `0 10 0`）。`Skip rows: 0` 两种情况都打印，不是判据。
+
+### 2026-09-17: `petar.find.dt` 漏 `-a "-u 1"` → 以 G=1 解读物理单位 IC
+
+**Mistake**: 对 `-u 1` 快照运行 `petar.find.dt -i 1 input` 而 `-a` 未带 `-u 1`，自引力被放大 ~222 倍、集群假坍缩、group 爆炸（N_all=1520），最终以 `neighbor address list full` 崩溃——错误信息完全不指向单位。
+
+**Root cause**: `petar.find.dt` 会真实启动 solver，`-a` 内一切均按生产参数解释；但 SKILL.md 的示例只举 `--galpy-set`/`-b` 等场景选项，把 `-u` 衬成可省项。
+
+**Prevention rule**: `-a` 须复述单位模式与全部单位定义选项（`petar.find.dt -a "-u 1 <scenario-opts>" -i 1 input`）。遇 `neighbor address list full` 先核对 `-u`/`-G` 与 IC 量级（virial 平衡下 K ≈ |U|/2），再怀疑树/精度参数。
+
+### 2026-09-17: 小 N 用多线程反而更慢——线程数须随 N 缩放
+
+**Mistake**: N=500、t=2 Myr 给 8 线程，比单线程慢 66%（1.88 s vs 1.13 s；4 线程已慢 19%）；`petar.find.dt -o 8` 同样被并行开销拖长。
+
+**Root cause**: 域分解/树构建/barrier 的每步开销与 N 无关，力的计算量才随 N 增长；N~500 时前者压倒后者。SKILL.md 只问“用几线程”而无缩放指引，双方只能“选个好看的数字”。
+
+**Prevention rule**: 按 N 缩放（≲10³ → 1 线程；~10⁴ → 数条；≳10⁵ → 全部核心），对 `petar.find.dt -o` 与生产 launch 一视同仁；用户坚持小系统多线程时先给实测代价再确认。细节：`assets/script-tools.md` → "Parallel Launch Heuristics"。
 
 ---
 
@@ -113,6 +158,14 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: 读 `data.*_h4_*.log` 前必读 `data-readback-patterns.md` Pattern 11：(1) 只用 `petar.HermiteData`，构造参数匹配构建；(2) 先 `awk 'NF>1{c[NF]++}'` 列数直方图，按列数分割后分段读取；(3) 按 time 重置分轮分析；(4) 需要完整粒子视图时 `OMP_NUM_THREADS=1` 重跑（gdb 调试时也必须单线程）。
 
+### 2026-09-17: `data.lagr` 的 `m` 是平均质量而非累计质量
+
+**Mistake**: 把 `lagr.all.m` 当各 Lagrangian 半径内的累计质量使用，得出的 enclosed-mass 剖面自相矛盾，一度怀疑 `petar.data.process` 的粒子计数。
+
+**Root cause**: `data.lagr` 列语义无任何文档。每块 6 列 = 质量分数 `[10%,30%,50%,70%,90%]` + 末列核心半径（Casertano & Hut 1985）；`m` 是平均质量、`n` 是粒子数（`tools/analysis/lagrangian.py`：`mcum[rindex]` 后再除以 `nlagr`）。
+
+**Prevention rule**: 按 `data-readback-patterns.md` Pattern 1 读写；enclosed mass = `m × n`（shell 模式下 `m`/`n` 为壳层值）。下结论前先做一次 `m × n` 与独立求和的自洽检查。
+
 ---
 
 ## Restart / Resume
@@ -127,6 +180,24 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 1. 2026-09-16 起源码已实现重启自动重算（`petar.hpp` `initialParameters()`），且 `-s`/`-r` 互耦（2026-09-17，与首启一致）：只给 `-s` → `r_out` 连同 `hermite-dt-max`、`r-search-min`、`r-search-group`、`r-group`、`hermite-acc-offset-sq` 重算；只给 `-r` → `dt_soft` 连同上述半径参数重算；两者都给则互不重置；`-s 0`/`-r 0` 哨兵是推导请求不触发交叉重置；`--r-ratio`/`--r-search-group-safety` 给出 → 组半径重算。当前命令行显式给出的参数不被重置；关闭特性的 0 值（如 `--r-search-group 0`）永不重置。半径变化时 `update_changeover_flag` 置位，重启逐粒子更新 changeover。重启只需 `petar -p data.par -s <new> [snap]`。
 2. 显式 `--hermite-dt-max` 不得超过一个 tree drift step（KDKDK4 = dt_soft/2），否则会错过时间中断（恒星演化/DSM 事件）引发断言；越界时代码会打印警告。
 3. 组合重启命令时牢记：PeTar 每次启动都会用解析后的参数**覆盖写** data.par*——复现实验之间不要互相复制 par 文件；重启二进制快照默认需 `-i 0`（`i=2` 默认按 ASCII 读会报 "cannot read header" 中止）。
+
+### 2026-09-17: `petar.hard.debug` 读 merger dump 触发 559 断言——`time_interrupt_max` 忘加 `time_offset`
+
+**Mistake**: 用 `petar.hard.debug` 读 DSM merger 触发的 `data.dump_interrupt_t*` 报 `disk_star_merger.hpp:559`（`time_interrupt>=time_record`）断言。HEAD 版 `hard_debug.cxx` 把 `interaction.time_interrupt_max = hard_dump.time_end`——而 dump 头里 `time_end` 是**相对步长**（如 0.0625），粒子 `time_record/time_interrupt/last_mass_change_time` 却是**物理时间**（含 offset，如 6321.0）。`calcMassChange` 收到 `next_dt = 0.0625 - 6321.06 ≈ -6321` → `time_interrupt < time_record` → 断言。另确认 dump 文件格式：`time_offset(F64)@0, time_end(F64)@8, gcm..., n_ptcl(S32)@72`，每粒子记录 192 字节（`time_record@80, time_interrupt@88, star.last_mass_change_time@120`）。
+
+**Root cause**: 与 `-s` 重启同根：`time_interrupt_max` 的不变量是"≥ modifyOneParticle 可能收到的任何 `_time_end`"，但各调用点各自拼装（主运行 `stat.time+dt_drift`、hard_debug `time_end`），只保证窗口通常够用，不保证必然。hard_debug 拼装时漏加 offset 是直接死因。
+
+**Prevention rule**:
+1. 2026-09-17 起 `hard_debug.cxx` 已修为 `time_offset + time_end`，且 `ar_interaction.hpp::modifyOneParticle` 在 DSM/BSE 两分支统一用 `max(time_interrupt_max, _time_end)` 作有效上限——**任何** `_time_end > timax` 的调用点失配（陈旧 par、H4 块步越界、未来新调用点）都不再触发断言，只会把下次检查推迟到窗口末端。
+2. 处理 hard dump 时间字段时记住语义：`time_offset`=物理时刻，`time_end`=相对步宽；粒子时间字段恒为物理时间。凡是与粒子时间比较/相加的量必须先加 offset。
+
+### 2026-09-17: restart 漏掉 `<prefix>.par.*` 伴随文件与 `-i` 读取格式，两次启动即中止
+
+**Mistake**: 只复制 `data.par` 与 `data.60` 重启 → `Cannot open file data.par.hard`；补上后又 `cannot read header` + core dump。两次都误判为“restart 本来就坏”，实为两个独立手续缺失。
+
+**Root cause**: 参数被拆成主文件 `data.par` + 按特性拆分的伴随文件（所有构建都有 `data.par.hard`；BSE 系有 `.par.bse`/`.mobse`/`.bseEmp`；DSM/Galpy/Agama 同）；而快照默认写出二进制，`-i` 默认 2 只读 ASCII。canonical 形式两者都没写，照抄必失败。
+
+**Prevention rule**: 复制 `<prefix>.par` **及全部 `<prefix>.par.*`**；读二进制快照用 `-i 0`（或 `-i 3`）。归属：`assets/input-source-workflows.md` → "Restart / resume"。修正后以“重启区间能量与原始运行逐位一致（ΔE = 0.000e+00）”作为手续齐全的判据。
 
 ---
 
@@ -174,3 +245,32 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 4. 委派前自问：这个任务的增量是“获取新上下文”还是“表达已有上下文”？后者不委派。
 
 落地（2026-09-12）：agent 套件 9 → 3 + 内置 Explore。Planner/Researcher/Implementer/Build & Test Maintainer/Validation Analyst/Documentation Maintainer 移除；职责分别并入 Developer（规划/聚焦编辑/文档/lessons）、Simulation Engineer（configure/Makefile/smoke/validation harness 接线）、Reviewer（验证层级选择/T1-T3/阈值判定）。
+
+---
+
+## Configuration Hygiene
+
+### 2026-09-17: 规则重复与矛盾——同一事实最多被复述 6 次，且存在 4 处互斥表述
+
+**Mistake**: PeTar + SDAR 配置文件系统性健康检查发现：`petar.select` 规则出现 6 处、确认门 4 处、版本一致性检查 2 处（含逐字相同的 bash 块）、"用工具而非空谈" 4 处；必读清单在 `SKILL.md` 与 `assets/minimal-question-sets.md` 之间环形互指；`petar-simulation-engineer.agent.md` 在同一文件内把 assist 输出字段列了两遍。另有 4 处矛盾：SDAR 的 `G` 常量（已记入 SDAR lessons 2026-09-17）、PeTar "不得假设任何默认值" vs "默认 `-u 1`/前缀 `data`"、SKILL "现代运行无需 gather" vs agent "MPI 输出需先 gather"、`petar.select` 规则会在 SDAR-only 任务中被误用。常驻的 `AGENTS.md` 还要求每个会话读 357 行的 `HANDOFF.md`，单条典型执行路径达 ~1690 行。此外 4 个 asset（`binary-scenario-map`、`default-postprocessing`、`input-source-workflows`、`prompt-starters`）从未被 `SKILL.md`/`AGENTS.md` 引用，属死重。
+
+**Root cause**: 规则按"写作时最方便的位置"落笔——首次出现处 + 每个新读者视角各复述一次——缺少"每个事实只有一个权威位置"的约束。`SKILL_CONTENT_INDEX.md` 的覆盖表只记录搬运历史，不校验重复；矛盾片段各自孤立看都正确，从未被并列对照。HANDOFF 等临时性文件被误列入常驻必读。
+
+**Prevention rule**:
+1. **每个事实一个权威位置**：执行正确性规则 → `SKILL.md`；内部实现/构建细节 → 仓库 `AGENTS.md`；参考型细节（签名、表、模板）→ `assets/`。其余出现处一律改为带路径的指针，不复述。
+2. **常驻文件只放指针**：`AGENTS.md` 不复制 agent 文件、SKILL 规则或 HANDOFF 内容；HANDOFF/`prompt-starters.md` 属 on-demand 维护材料，不得进入常驻必读路径。
+3. **同步新增时对照同一常量的既有取值**：把"X 在此处说 A、在彼处说 B"当作缺陷修复，而不是各自保留。
+4. 分层口径见 `SKILL_CONTENT_INDEX.md` 的 "Layering Contract"；改动 `SKILL.md` 结构时同步更新该索引。
+5. 注意"看起来像常识"的规则里，**反直觉的领域规则必须保留**（`find.dt` 结果减半、`commands.log`、求解器前确认门、`petar.init` 参数顺序、`--r-ratio` 与 `r_in` 同向），而通用的良好行为（"善用工具"、"简洁作答"、"不存在则创建目录"）保留一处即可。
+
+### 2026-09-17: 优化设计目标未落盘，跨 session 后部分丢失
+
+**Mistake**: 首次系统性健康检查优化时，用户给出的设计目标（① 减轻规则长度、保证上下文高效；② 层级化——顶层只留必读规则，场景细节下放子集文件；③ 职责清晰——`SKILL.md` 覆盖 PeTar 模拟与数据分析且自足，`AGENTS.md`/subagent 只管代码开发且不复述 SKILL），以及两条简化判据（主流模型必然会做的规则应删；重复/矛盾规则应合并，PeTar+SDAR 共有的下放 SDAR），只存在于那次会话的对话里，**没有写进任何仓库文件**。后续 session 再改 SKILL 时，落点与体积控制全凭临场判断：新增内容把上一轮的压缩成果退回约一半，并制造出同一事实最多 6 处复述。
+
+**Root cause**: "设计目标"与"如何更新这些文件"本身**不属于任何既有文件的职责范围**——`SKILL.md` 是执行时加载的（写进去等于违反目标 ②），agent 定义是调用时加载的，而本应承载它的 `.github/skills/README.md` 当时**未被任何文件引用**（同时是 Hygiene 条点名的死重）。于是"维护这些文件"这一活动没有自己的规范。
+
+**Prevention rule**:
+1. 定制文件（`AGENTS.md`、`.github/agents/*.md`、`.github/skills/**`，两仓）的维护规范归 `.github/skills/README.md`：Design Goals / Simplification Questions / Layering Rules / Update Rules / Health-Check Procedure。两个 `AGENTS.md` 各留一行指针；改动前先读。
+2. 改动的验收条件包含**体积预算**：报告 `SKILL.md`（及 `AGENTS.md`）的行/字节增减；把参考型表格或实测数据加进 `SKILL.md` 视为缺陷——移入 `assets/`，只留一行加指针。
+3. 新增规则后立即 grep 它，其余出现处一律改为 `<path> → "<section>"` 指针。
+4. 设计目标类信息一旦确立即随手落盘到上述规范文件，不要依赖会话记忆。

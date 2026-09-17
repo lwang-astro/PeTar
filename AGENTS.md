@@ -5,10 +5,13 @@ This file is the root entry point for agents working in this repository. Keep it
 ## Start Here
 
 1. [README.md](README.md) for project structure, build/test entry points, and user-facing workflow notes.
-2. [.github/skills/petar-nbody-simulation/SKILL.md](.github/skills/petar-nbody-simulation/SKILL.md) for the executable PeTar workflow rules used by the VS Code skill system.
-3. [.github/skills/petar-nbody-simulation/HANDOFF.md](.github/skills/petar-nbody-simulation/HANDOFF.md) for continuation notes and longer-lived skill context.
-4. [test/functional/README.md](test/functional/README.md) for functional smoke design and current defaults.
-5. [test/validation/README.md](test/validation/README.md) for validation scenarios and thresholds.
+2. [.github/skills/petar-nbody-simulation/SKILL.md](.github/skills/petar-nbody-simulation/SKILL.md) — **authority for running simulations and analysing output**. Self-sufficient: no agent file needs to be read to complete a simulation task.
+3. [test/functional/README.md](test/functional/README.md) for functional smoke design and current defaults.
+4. [test/validation/README.md](test/validation/README.md) for validation scenarios and thresholds.
+
+Skill-maintenance notes and session-recovery context live in [HANDOFF.md](.github/skills/petar-nbody-simulation/HANDOFF.md). Read it only when maintaining the skill — not for ordinary simulation or development tasks.
+
+**Before changing any customization file** (`AGENTS.md`, `.github/agents/*.md`, `.github/skills/**`), read [.github/skills/README.md](.github/skills/README.md) — it owns the design goals, layering rules, update rules, and health-check procedure for this workspace.
 
 ## Repository Map
 
@@ -19,43 +22,37 @@ This file is the root entry point for agents working in this repository. Keep it
 - `test/validation/`: numerical and physics validation coverage.
 - `doc/`: longer-form documentation.
 
-## General Working Rules
+## Scope Split
 
-- Prefer repository-relative tracked files as inputs.
-- Do not depend on untracked local files for committed test logic.
+- **Running simulations / analysing output** → SKILL.md is authoritative and complete on its own.
+- **Developing PeTar** (configure, Makefile/Makefile.in, `src/`, `tools/`, `test/`) → this file plus the agent suite below.
+- **SDAR internals** (integrator, `SDAR/src/`, standalone few-body runs) → [SDAR/AGENTS.md](../SDAR/AGENTS.md) is authoritative. PeTar only routes to it; see the skill's "SDAR deep-dive routing" note.
+
+## Development Rules
+
+- Prefer repository-relative tracked files as inputs; never rely on untracked local files for committed test logic.
 - Treat `test/out/` as generated output only.
-- Use `petar.select` before generating any run command that depends on a specific binary family.
-- Validate custom options against the selected binary help output before using them.
 - Keep restart/resume workflows separate from fresh IC generation.
-- When a task is clearly a simulation or post-processing task, consult the skill and the relevant README before acting.
+- Simulation execution rules (binary selection via `petar.select`, option validation, unit consistency) live in SKILL.md — do not restate or second-guess them here.
+- Do not add undocumented configure or runtime options without checking repository docs and `-h` output.
+- Do not commit or push without user confirmation.
+- Bump `VERSION` in every commit: `(cd tools && bash get_version.sh)`, then append the `e` experiment suffix and stage `VERSION`.
+
+## Custom Agents
+
+Start with **PeTar Developer** for every request. It performs planning and focused edits directly, and routes to **PeTar Simulation Engineer** (all execution) and **PeTar Reviewer** (pre-close review and numerical verdicts). Read-only discovery uses the built-in **Explore**.
+
+Delegation criteria, model allocation, and repository constraints are defined in [`.github/agents/petar-developer.agent.md`](.github/agents/petar-developer.agent.md) — do not restate them here.
+
+## Lessons-Learned Capture
+
+The capture process is canonical in [SDAR/AGENTS.md](../SDAR/AGENTS.md). PeTar routing rule:
+
+- Lessons about PeTar surfaces (configure/build, `petar.*` tools, clustering physics, `test/`) → `.github/skills/petar-nbody-simulation/assets/lessons-learned.md`
+- Lessons rooted in SDAR code (`SDAR/src/`, `SDAR/sample/*`, `SDAR/tools/`) → SDAR's lessons file, with a one-line pointer here if PeTar context matters.
 
 ## Test Organization
 
 - Use `test/functional` to check the toolchain, binary selection, readback paths, and quick post-processing coverage.
 - Use `test/validation` for physics-oriented scenarios and regression thresholds.
 - Keep functional smoke defaults documented in [README.md](README.md) and [test/functional/README.md](test/functional/README.md) rather than duplicating them here.
-
-## Custom Agents
-
-The suite was consolidated on 2026-09-12 (see `.github/skills/petar-nbody-simulation/assets/lessons-learned.md`, "Agent Workflow & Delegation"): delegation is for context isolation and long-output isolation, not for packaging already-derived context.
-
-- [PeTar Developer](.github/agents/petar-developer.agent.md): Conductor. Orchestrates work, writes plans and makes focused code/doc edits directly, and delegates execution and review below.
-- [PeTar Simulation Engineer](.github/agents/petar-simulation-engineer.agent.md): All execution - configure/build/install maintenance, binary-family selection, simulation runs, functional smoke and validation harness execution, post-processing, restart debugging (`assist`/`debug` modes). Absorbs the former Build and Test Maintainer.
-- [PeTar Reviewer](.github/agents/petar-reviewer.agent.md): Pre-close review of non-trivial changes plus numerical validation analysis (validation-layer choice, T1-T3, threshold verdicts). Absorbs the former Validation Analyst.
-
-Read-only discovery uses the built-in **Explore** agent. Planning, focused implementation, and documentation sync are performed directly by PeTar Developer.
-
-## Delegation Pattern
-
-- Start with [PeTar Developer](.github/agents/petar-developer.agent.md) for all requests; it works directly when the context is already established: planning, focused code/script edits, documentation sync, and lessons-learned entries.
-- Use **Explore** (built-in) when owning code or workflow surfaces are unknown and read-heavy discovery is needed.
-- Use [PeTar Simulation Engineer](.github/agents/petar-simulation-engineer.agent.md) for all simulation execution tasks — end-user workflow assistance, build/install checks, binary selection, command composition, functional smoke, post-processing, restart debugging, and runtime troubleshooting. It operates in `assist` mode (conversational, confirmation-driven) or `debug` mode (technical, execution-heavy) as appropriate.
-- Use [PeTar Reviewer](.github/agents/petar-reviewer.agent.md) before closing non-trivial changes, and whenever a verdict on numerical behavior or validation thresholds is required.
-- Delegate only for new-context acquisition or long-output isolation; never to repackage already-derived context.
-
-## If You Need More Detail
-
-- Scenario and command templates: [README.md](README.md)
-- Workflow rules and option constraints: [.github/skills/petar-nbody-simulation/SKILL.md](.github/skills/petar-nbody-simulation/SKILL.md)
-- Cross-session context: [.github/skills/petar-nbody-simulation/HANDOFF.md](.github/skills/petar-nbody-simulation/HANDOFF.md)
-- SDAR close-encounter / few-body subsystem work: consult the SDAR repository's [AGENTS.md](../SDAR/AGENTS.md) and [sdar-fewbody-integration skill](../SDAR/.github/skills/sdar-fewbody-integration/SKILL.md) before replicating a subsystem in standalone SDAR, debugging SDAR group detection, or modifying `SDAR/src/`.

@@ -20,6 +20,9 @@ set -euo pipefail
 #   MPI_RANKS       : force MPI ranks (override heuristic)
 #   OUTPUT_PREFIX   : PeTar output prefix (-f). Auto-selected when empty.
 #   RESTART_MODE    : 0 | 1 (default 0). If 1, avoid silently reusing default `data`.
+#
+# Thread heuristic = "Parallel Launch Heuristics" in assets/script-tools.md.
+# Restart requirements (companions + `-i`) = assets/input-source-workflows.md "Restart / resume".
 
 N_SCALE=${N_SCALE:-1e3}
 BIN_RICHNESS=${BIN_RICHNESS:-none}
