@@ -182,7 +182,7 @@ public:
                      domain_nstep      (input_par_store, 16, "domain-nstep", "Number of steps between domain decompositions"),
 #endif                     
                      fname_snp        (input_par_store, "data", "f", "Prefix of filenames for output data: [prefix].**"),
-                     fname_par        (input_par_store, "input.par", "p", "Input parameter file (this option should be used first before any other options)"),
+                     fname_par        (input_par_store, "data.par", "p", "Input parameter file (this option should be used first before any other options); The auto-determined filename is '[prefix of output filename].par', in default, the prefix is 'data'."),
                      fname_inp        (input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false),
                      print_flag(false), update_changeover_flag(false), update_rsearch_flag(false),
                      dt_soft_opt_flag(false), r_out_opt_flag(false), r_search_min_opt_flag(false) {}

@@ -26,7 +26,7 @@ def convert_line(line):
 
     columns = stripped.split(None, 2)
     if len(columns) != 3:
-        raise ValueError("Line does not match the expected 3-column input.par format")
+        raise ValueError("Line does not match the expected 3-column parameter file (e.g. data.par) format")
 
     value_type, key, value = columns
     if value_type == 'F':

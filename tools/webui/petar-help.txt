@@ -103,7 +103,8 @@ Usage: petar [option] filename
          3: read in BINARY, write in ASCII
   -n  [I] Total number of particles, used only when the input data filename is __Plummer: 100000
   -o  [F] Output time interval for particle dataset snapshots: 1
-  -p  [S] Input parameter file (this option should be used first before any other options): input.par
+  -p  [S] Input parameter file (this option should be used first before any other options): data.par
+         The auto-determined filename is '[prefix of output filename].par', in default, the prefix is 'data'.
   -r  [F] Outer changeover radius (r_out): 0
          > 0: custom r_out value and check '-s dt_soft'
               dt_soft = 0: calculate dt_soft and then adjust r_out by dt_soft

@@ -40,7 +40,7 @@ public:
                      vscale(input_par_store, 1.0, "galpy-vscale", "Velocity scale factor from unit of the input particle data (IN) to Galpy velocity unit (1.0)"),
                      //fscale(input_par_store, 1.0, "galpy-fscale", "Acceleration scale factor (vscale^2/rscale) from unit of the input particle data (IN) to Galpy acceleration unit (1.0)"),
                      //pscale(input_par_store, 1.0, "galpy-pscale", "Potential scale factor (vscale^2) from unit of the input particle data (IN) to Galpy potential unit (1.0)"),
-                     fname_par(input_par_store, "input.par", "p", "Input parameter file for Galpy (this option should be used first before any other options)",NULL,false),
+                     fname_par(input_par_store, "data.par", "p", "Parameter file prefix for Galpy; the parameter file is [prefix].galpy; this option should be used first before any other options; The auto-determined prefix is '[prefix of output filename].par'; in default, it is 'data.par' ('data' is the default output filename prefix)",NULL,false),
                      print_flag(false) {}
 
     //! reading parameters from GNU option API

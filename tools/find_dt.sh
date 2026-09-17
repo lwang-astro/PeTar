@@ -38,8 +38,8 @@ do
             echo '       Sometimes, the best tree step may result in a large changeover in radii, causing the wallclock time for the hard part to increase after some steps.';
             echo '       In such cases, the next smallest choice of tree step (0.5*best one) may be better.';
         echo '    2) For a new simulation, changeover radii (-r) and minimum neighbor search radius (--r-search-min) are automatically determined.';
-        echo '       However, for a restarting simulation where input parameter files (input.par[.bse/.galpy]) exist, these parameters may need to be updated.';
-        echo '       In this case, using -a "-p input.par -r 0" can enable updating based on the new tree step size (the dependent radius parameters are automatically re-determined by petar at the restart).';
+        echo '       However, for a restarting simulation where input parameter files (data.par[.hard/.bse/.galpy/...]) exist, these parameters may need to be updated.';
+        echo '       In this case, using -a "-p data.par -r 0" can enable updating based on the new tree step size (the dependent radius parameters are automatically re-determined by petar at the restart).';
             echo '    3) Files named check.perf.[time step].log and check.perf.test.log will be generated.';
             echo '       If the tool does not work correctly, checking these files can help identify the problems.';
 	    exit;;

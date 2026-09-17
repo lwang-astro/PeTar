@@ -57,7 +57,7 @@ public:
                        decay_time   (input_par_store, 0.0, "gdf-decay-time",  "gas density decay time scale in units of PeTar input, if 0, no decay"),
 #endif
                        gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant", NULL, false),
-                       fname_par    (input_par_store, "input.par", "p", "Input parameter file for external force (this option should be used first before any other options)",NULL,false),
+                       fname_par    (input_par_store, "data.par", "p", "Parameter file prefix for gas drag; the parameter file is [prefix].gasdrag; this option should be used first before any other options; The auto-determined prefix is '[prefix of output filename].par'; in default, it is 'data.par' ('data' is the default output filename prefix)",NULL,false),
                        print_flag(false) {}
 
     //! reading parameters from GNU option API

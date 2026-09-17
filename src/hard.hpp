@@ -184,7 +184,7 @@ public:
 #ifdef HERMITE_ONLY_CALC_NEIGHBOR_FORCE
                     kdtree_n_particles_min(input_par_store, 32, "kdtree-n-particles-min", "Minimum number of particles + groups for building kdtree to speed up neighbor search in Hermite-only neighbor force calculation"),
 #endif                    
-                    fname_par          (input_par_store, "input.par", "p", "Input parameter file for hard (this option should be used first before any other options)",NULL,false),
+                    fname_par          (input_par_store, "data.par", "p", "Parameter file prefix for hard; the parameter file is [prefix].hard; this option should be used first before any other options; The auto-determined prefix is '[prefix of output filename].par'; in default, it is 'data.par' ('data' is the default output filename prefix)",NULL,false),
                     print_flag(false),
                     r_group_opt_flag(false), r_search_group_opt_flag(false), r_search_group_safety_opt_flag(false),
                     acc_offset_sq_opt_flag(false), dt_max_hermite_opt_flag(false) {}

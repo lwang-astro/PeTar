@@ -64,7 +64,7 @@ public:
                               speed_of_light(input_par_store, 1.0, "dsm-speed-of-light", "speed of light"),
                               time_step_factor(input_par_store, 0.001, "dsm-dt-factor", "time step factor for mass change calculation"),
                               redistribute_star_mode(input_par_store, 1, "dsm-new-star-mode", "redistribute star mode, 0: no redistribute; 1: redistribute star position and velocity in random position along a circular orbit with the semi-major axis being the distance to the center; 2: redistribute star by choosing next type 3 star"),
-                              fname_par    (input_par_store, "input.par", "p", "Input parameter file for external force (this option should be used first before any other options)",NULL,false),
+                              fname_par    (input_par_store, "data.par", "p", "Parameter file prefix for disk star merger; the parameter file is [prefix].disk_star_merger; this option should be used first before any other options; The auto-determined prefix is '[prefix of output filename].par'; in default, it is 'data.par' ('data' is the default output filename prefix)",NULL,false),
                               print_flag(false) {}
 
     //! reading parameters from GNU option API

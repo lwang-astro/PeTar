@@ -28,7 +28,7 @@ public:
     IOParamsExternalHard() :
         input_par_store(),
         switcher(input_par_store, 1, "ext-hard-switch", "switch of external hard force; 0: off, 1: on"),
-        fname_par(input_par_store, "input.par", "p", "Input parameter file for external force (this option should be used first before any other options)",NULL,false),
+        fname_par(input_par_store, "data.par", "p", "Parameter file prefix for external hard force; the parameter file is [prefix].exthard; this option should be used first before any other options; The auto-determined prefix is '[prefix of output filename].par'; in default, it is 'data.par' ('data' is the default output filename prefix)",NULL,false),
 #ifdef GAS_DRAG
         gas_drag(),
 #endif

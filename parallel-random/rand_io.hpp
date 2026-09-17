@@ -17,7 +17,7 @@ public:
     IOParamsRand(): input_par_store(),
                     seed  (input_par_store, 0,  "rand-seed",   "Random number seed (positive integer); suppressed when --rand-seedfile is provided; if used, the single integer seed is used to generate multiple seeds for each pair of OpenMP thread and MPI processor", "current cpu time"),
                     seedfile(input_par_store, "__NONE__","rand-seedfile","Name for a file contain random seeds of all threads and MPI processors; For restart the simulation, the randseeds file can be used to restore all seeds", "not used"),
-                    fname_par(input_par_store, "input.par", "p", "Input parameter file for random seed (this option should be used first before any other options)",NULL,false),
+                    fname_par(input_par_store, "data.par", "p", "Parameter file prefix for random seed; the parameter file is [prefix].rand; this option should be used first before any other options; The auto-determined prefix is '[prefix of output filename].par'; in default, it is 'data.par' ('data' is the default output filename prefix)",NULL,false),
                     print_flag(false) {}
 
     //! reading parameters from GNU option API

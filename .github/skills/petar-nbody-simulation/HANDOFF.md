@@ -111,7 +111,7 @@ head -n 40 .github/skills/petar-nbody-simulation/assets/script-tools.md
 - `SKILL.md`：
 	- Sources 补全样例脚本：`star_cluster_plummer_N1k_binaries.sh`、`star_cluster_plummer_N1k_GalpyMWPot.sh`、`star_cluster_plummer_N1k_AgamaMWPotHunter24.sh`。
 	- 工具能力面补充：`petar.galpy.help`、`petar.external.galpy`、`petar.external.agama`。
-	- 新增“外势势场图生成链路”规则：`petar.external.<galpy|agama> -p input.par -m pot_conf` -> `petar.external.pot.movie` / `petar.movie --ext-pot`。
+	- 新增“外势势场图生成链路”规则：`petar.external.<galpy|agama> -p data.par -m pot_conf` -> `petar.external.pot.movie` / `petar.movie --ext-pot`。
 	- Agama 与 BSE+Agama 默认后处理更新为与 sample 对齐：
 		- `petar.data.process -t agama --r-escape tidal -G 0.00449830997959438 data.snap.lst`
 		- `petar.data.process -i bse -t agama --r-escape tidal -G 0.00449830997959438 data.snap.lst`

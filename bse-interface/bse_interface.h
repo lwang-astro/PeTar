@@ -898,7 +898,7 @@ public:
 #else
                    z     (input_par_store, 0.001, "bse-metallicity", "Metallicity Z, ranging from 0.0001 to 0.03"),
 #endif
-                   fname_par(input_par_store, "input.par", "p", "Input parameter file for sse/bse (this option should be used first before any other options)",NULL,false),
+                   fname_par(input_par_store, "data.par", "p", "Parameter file prefix for sse/bse; the parameter file is [prefix].bse (BSE) or [prefix].bseEmp (BSEEMP); this option should be used first before any other options; The auto-determined prefix is '[prefix of output filename].par'; in default, it is 'data.par' ('data' is the default output filename prefix)",NULL,false),
                    print_flag(false) {}
 #elif MOBSE
     IOParamsBSE(): input_par_store(),
@@ -934,7 +934,7 @@ public:
                    mscale(input_par_store, 1.0,     "mobse-msclae", "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
                    vscale(input_par_store, 1.0,     "mobse-vsclae",  "Velocity scale factor from input data unit(IN) to km/s (v[km/s]=v[IN]*vscale)"),
                    z     (input_par_store, 0.001,   "mobse-metallicity",    "Metallicity"),
-                   fname_par(input_par_store, "input.par", "p", "Input parameter file for sse/bse (this option should be used first before any other options)",NULL,false),
+                   fname_par(input_par_store, "data.par", "p", "Parameter file prefix for sse/bse; the parameter file is [prefix].mobse (MOBSE); this option should be used first before any other options; The auto-determined prefix is '[prefix of output filename].par'; in default, it is 'data.par' ('data' is the default output filename prefix)",NULL,false),
                    print_flag(false) {}
 #endif
 

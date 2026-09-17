@@ -309,8 +309,8 @@ Use `<binary> -h` for exact runtime option validation.
 ### `--p`
 
 - **Type**: `std::string`
-- **Default**: `"input.par"`
-- **Description**: Input parameter file (this option should be used first before any other options)
+- **Default**: `"data.par"`
+- **Description**: Input parameter file (this option should be used first before any other options); The auto-determined filename is '[prefix of output filename].par', in default, the prefix is 'data'.
 - **Source**: `src/petar.hpp`:185
 
 ### `--pn-c`
@@ -948,8 +948,8 @@ Use `<binary> -h` for exact runtime option validation.
 ### `--p`
 
 - **Type**: `std::string`
-- **Default**: `"input.par"`
-- **Description**: Input parameter file for sse/bse (this option should be used first before any other options)
+- **Default**: `"data.par"`
+- **Description**: Parameter file prefix for sse/bse; the parameter file is [prefix].bse (BSE) or [prefix].bseEmp (BSEEMP); this option should be used first before any other options; The auto-determined prefix is '[prefix of output filename].par'; in default, it is 'data.par' ('data' is the default output filename prefix)
 - **Source**: `bse-interface/bse_interface.h`:901
 
 ## DSM Interrupt (`--with-interrupt=dsm`)
@@ -1083,8 +1083,8 @@ Use `<binary> -h` for exact runtime option validation.
 ### `--p`
 
 - **Type**: `std::string`
-- **Default**: `"input.par"`
-- **Description**: Input parameter file for external force (this option should be used first before any other options)
+- **Default**: `"data.par"`
+- **Description**: Parameter file prefix for disk star merger; the parameter file is [prefix].disk_star_merger; this option should be used first before any other options; The auto-determined prefix is '[prefix of output filename].par'; in default, it is 'data.par' ('data' is the default output filename prefix)
 - **Source**: `src/disk_star_merger.hpp`:67
 
 ## Galpy External (`--with-external=galpy`)
@@ -1155,8 +1155,8 @@ Use `<binary> -h` for exact runtime option validation.
 ### `--p`
 
 - **Type**: `std::string`
-- **Default**: `"input.par"`
-- **Description**: Input parameter file for Galpy (this option should be used first before any other options)
+- **Default**: `"data.par"`
+- **Description**: Parameter file prefix for Galpy; the parameter file is [prefix].galpy; this option should be used first before any other options; The auto-determined prefix is '[prefix of output filename].par'; in default, it is 'data.par' ('data' is the default output filename prefix)
 - **Source**: `galpy-interface/galpy_interface.h`:43
 
 ## Agama External (`--with-external=agama`)
@@ -1250,8 +1250,8 @@ Use `<binary> -h` for exact runtime option validation.
 ### `--p`
 
 - **Type**: `std::string`
-- **Default**: `"input.par"`
-- **Description**: Input parameter file for external force (this option should be used first before any other options)
+- **Default**: `"data.par"`
+- **Description**: Parameter file prefix for gas drag; the parameter file is [prefix].gasdrag; this option should be used first before any other options; The auto-determined prefix is '[prefix of output filename].par'; in default, it is 'data.par' ('data' is the default output filename prefix)
 - **Source**: `src/gas_drag.hpp`:60
 
 ## External Hard (`--with-external-hard`)
@@ -1266,7 +1266,7 @@ Use `<binary> -h` for exact runtime option validation.
 ### `--p`
 
 - **Type**: `std::string`
-- **Default**: `"input.par"`
-- **Description**: Input parameter file for external force (this option should be used first before any other options)
+- **Default**: `"data.par"`
+- **Description**: Parameter file prefix for external hard force; the parameter file is [prefix].exthard; this option should be used first before any other options; The auto-determined prefix is '[prefix of output filename].par'; in default, it is 'data.par' ('data' is the default output filename prefix)
 - **Source**: `src/external_hard.hpp`:31
 
