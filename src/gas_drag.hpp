@@ -174,10 +174,14 @@ public:
             case 'p':
                 fname_par.value = optarg;
                 if(print_flag) {
-                    std::string fgalpy_par = fname_par.value+".exthard";
+                    // read the gas-drag parameter file written by
+                    // writeModelParamsAscii() (suffix .gasdrag); the old code
+                    // mistakenly read the external-hard file (.exthard), which
+                    // left all gdf-* options at their in-code defaults on restart
+                    std::string fgasdrag_par = fname_par.value+".gasdrag";
                     FILE* fpar_in;
-                    if( (fpar_in = fopen(fgalpy_par.c_str(),"r")) == NULL) {
-                        fprintf(stderr,"Error: Cannot open file %s.\n", fgalpy_par.c_str());
+                    if( (fpar_in = fopen(fgasdrag_par.c_str(),"r")) == NULL) {
+                        fprintf(stderr,"Error: Cannot open file %s.\n", fgasdrag_par.c_str());
                         abort();
                     }
                     input_par_store.readAscii(fpar_in);
