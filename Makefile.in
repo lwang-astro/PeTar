@@ -23,7 +23,7 @@ TARGET=build/@PROG_NAME@ build/@PROG_NAME@.hard.debug build/@PROG_NAME@.format.t
 all: $(TARGET)
 
 SRC = main.cc ${shell ls ./src/*.hpp} 
-HARD_SRC= io.hpp ptcl.hpp particle_base.hpp hard_assert.hpp cluster_list.hpp hard.hpp hard_ptcl.hpp hermite_interaction.hpp hermite_information.hpp hermite_perturber.hpp ar_interaction.hpp ar_perturber.hpp search_group_candidate.hpp artificial_particles.hpp stability.hpp soft_ptcl.hpp static_variables.hpp tidal_tensor.hpp orbit_sampling.hpp pseudoparticle_multipole.hpp
+HARD_SRC= io.hpp ptcl.hpp particle_base.hpp hard_assert.hpp cluster_list.hpp hard.hpp hard_ptcl.hpp hermite_interaction.hpp hermite_information.hpp hermite_perturber.hpp disk_star_merger.hpp ar_interaction.hpp ar_perturber.hpp search_group_candidate.hpp artificial_particles.hpp stability.hpp soft_ptcl.hpp static_variables.hpp tidal_tensor.hpp orbit_sampling.hpp pseudoparticle_multipole.hpp
 
 ifeq ($(use_fdps_comm),yes)
 FDPSFLAGS = -D FDPS_COMM

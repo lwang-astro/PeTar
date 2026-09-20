@@ -318,3 +318,11 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 指针距执行者两跳（agent 定义 → `AGENTS.md` → README）。`AGENTS.md` 虽常驻加载，但条件式指令（"改 X 前先读 Y"）未被主动对照时约束力是概率性的；而唯一有权修改定制文件的角色（PeTar Developer）自己的定义里没有该指针，Reviewer 的检查清单里也没有对应的验收项。
 
 **Prevention rule**: 把指针直接钉进 `petar-developer.agent.md`（Conductor Rules 2 + Key Reference Files）与 `petar-reviewer.agent.md`（PeTar-Specific Checks 第 5 项），一跳可达。指针不是规则复述，不违反 "维护规则只住在 README" 的归属约束——Design Goal 4 允许 pointer 出现在一切需要的发现点。
+
+### 2026-09-20: DSM 并合后零质量粒子与并合残骸精确重合——eps=0 下 0/0=NaN 毒化能量记账
+
+**Mistake**: `calcMergerProperties` 把去活化的零质量粒子 `p0` 停放在 `-pm->pos`（关于 group c.m. 的镜像点）。对双成员 group（AR 在 group c.m. 系积分，质量加权和为零），`pm->pos` 可舍入到精确 0（等质量对必然），镜像点与残骸**逐位重合**；eps_sq=0 时 AR/Hermite 力与能量循环算出 `0/0 = NaN`，依次毒化 `epot_`/`etot_ref_`/`gt_kick_inv_`/`de_change_interrupt_`，group break 时经 `accumDESlowDownChangeBreakGroup` 进入 `energy_.de_cum`，最终触发 `hard.hpp` 的 `ASSERT(!std::isnan(energy.de))`（生产运行表现为并合事件后能量误差永久异常）。2026-09-16 的修复（case 2，残骸重锚定）只覆盖了另一条路径，未覆盖此重合。
+
+**Root cause**: 815af98 用精确镜像替换旧的 `pm->pos*(1+1e-8)+1e-12` 停放时，未考虑双成员 group 中 `pm->pos == 0` 精确成立的情形；NaN 只在**精确**重合时出现（r≠0 时零质量对贡献恰为 0），因此只有个别并合触发——表现为随机、不可必然复现。Makefile 的 `HARD_SRC` 依赖表漏掉 `disk_star_merger.hpp`，头文件改动不会触发重编，也会让"修复未生效"假象。
+
+**Prevention rule**: 任何"停放/重生"粒子的代码必须保证与所有粒子保持有限距离（对零质量粒子，任意 r>0 的相互作用严格为 0，只有 r==0 产生 0/0）；DSM 侧已改为重合时按并合前分离向量偏移 `1e-3*|dr0|`。调试此类"偶发 NaN"用条件 watchpoint（`condition N isnan(*(double*)addr)`，注意用裸地址而非符号名——跨帧求值会失败）。`disk_star_merger.hpp` 已补入 `HARD_SRC`（Makefile 与 Makefile.in 同步）；对仍可能未列入依赖表的头文件，改动后需 `touch` 其 includer 或先对照 `HARD_SRC` 检查。同函数内 `pm->dm` 累加顺序（先加后赋值 mass）已对齐其他质量变更点的模式（2026-09-20 修复，原顺序恒加 0）。

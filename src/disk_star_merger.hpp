@@ -395,11 +395,28 @@ public:
         }
 
         Float mcm = p1->mass + p2->mass;
+        // pre-merger separation, used to offset p0 when pm lands on the frame origin
+        Float dr0[3] = {p1->pos[0] - p2->pos[0], p1->pos[1] - p2->pos[1], p1->pos[2] - p2->pos[2]};
         for (int k=0; k<3; k++) {
             pm->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
             pm->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
             p0->pos[k] = -pm->pos[k];
             p0->vel[k] = -pm->vel[k];
+        }
+
+        // For a two-member group in the c.m. frame, pm can fall exactly on the origin;
+        // the mirrored p0 then coincides with pm and the unsoftened (eps=0) pair
+        // force/energy loops evaluate 0/0 = NaN, poisoning the energy bookkeeping.
+        // Park p0 a small fraction of the pre-merger separation away instead.
+        Float dr0_sq = dr0[0]*dr0[0] + dr0[1]*dr0[1] + dr0[2]*dr0[2];
+        if (dr0_sq == 0.0) {
+            dr0[0] = 1.0;
+            dr0_sq = 1.0;
+        }
+        Float pm_sq = pm->pos[0]*pm->pos[0] + pm->pos[1]*pm->pos[1] + pm->pos[2]*pm->pos[2];
+        if (pm_sq == 0.0) {
+            const Float offset_scale = 1e-3/std::sqrt(dr0_sq);
+            for (int k=0; k<3; k++) p0->pos[k] = pm->pos[k] - offset_scale*dr0[k];
         }
         
         // only increase mass and change radius after time delay
@@ -414,8 +431,8 @@ public:
             else if (pm->star.getType() == StarType::bh) {
                 pm->radius = gravitational_constant * new_mass / (speed_of_light * speed_of_light);
             }
-            pm->mass = new_mass;
             pm->dm += new_mass - pm->mass;
+            pm->mass = new_mass;
         }
 
         p0->dm -= p0->mass;
