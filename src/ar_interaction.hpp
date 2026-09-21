@@ -1016,8 +1016,8 @@ public:
                 
                     // check binary type and print event information
                     int binary_type_final=0;
-                    int nmax = bin_event.getEventNMax();
-                    int binary_type_init = bin_event.getType(bin_event.getEventIndexInit());
+                    int nmax = BinaryEvent::getEventNMax();
+                    int binary_type_init = bin_event.getType(BinaryEvent::getEventIndexInit());
                     for (int i=0; i<nmax; i++) {
                         int binary_type = bin_event.getType(i);
                         if (binary_type>0) {
@@ -1048,8 +1048,8 @@ public:
                             //if (vkick[3]>0||vkick[7]>0) event_flag = 3; // kick
                             if (binary_type>0) event_flag = std::max(event_flag, 1); // type change
                             else if (bse_manager.isMassTransfer(binary_type)) event_flag = std::max(event_flag, 2); // orbit change
-                            else if (bse_manager.isDisrupt(binary_type)) event_flag = std::max(event_flag, 3); // disrupt
-                            else if (bse_manager.isMerger(binary_type) || bse_manager.isNoRemnant(binary_type)) event_flag = std::max(event_flag, 4); // Merger or no Remnant
+                            else if (BSEManager::isDisrupt(binary_type)) event_flag = std::max(event_flag, 3); // disrupt
+                            else if (BSEManager::isMerger(binary_type) || BSEManager::isNoRemnant(binary_type)) event_flag = std::max(event_flag, 4); // Merger or no Remnant
                             binary_type_final = binary_type;
                         }
                         else if(binary_type<0) break;
