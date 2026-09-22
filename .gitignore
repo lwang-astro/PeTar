@@ -64,3 +64,5 @@ PeTar.code-workspace
 
 # clangd compile database: machine-specific, regenerate with `make compile_commands.json`
 compile_commands.json
+# autotools cache
+autom4te.cache/

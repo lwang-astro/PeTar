@@ -92,6 +92,30 @@ Periodically reviewed → verified entries are elevated to `SKILL.md` as hard ru
 6. configure.ac 的 `test x"$FC" == xgfortran` 字面量比较对绝对路径 FC 失效,上游可改成 basename 比较(待办,勿忘);
 7. `bse-interface/Makefile` **同样由 configure 生成**(configure.ac `AC_CONFIG_FILES`,模板 `Makefile.in` 中 `FC=@FC@`/`CXX=@CXX@`/`FCLIBS=@FCLIBS@`),其中的裸编译器绝对路径与空 `FCLIBS` 就是污染环境下 configure 的输出,不是手写硬编码;干净环境重跑 configure 后即生成 `FC=gfortran`/`CXX=mpic++`/`FCLIBS=-lgfortran`。**推论:生成文件(bse-interface/Makefile、根 Makefile)永远靠重跑 configure 修复——手动编辑会被下次 configure 静默覆盖(实测发生过),编辑器 undo 也可能把生成文件退回到污染版本**;判断子目录 Makefile 性质先查 `AC_CONFIG_FILES` 和是否存在 `Makefile.in`,不要凭内容里的绝对路径臆断为手写文件。
 
+### 2026-09-22: sanitizer 可用性必须用链接级测试判定——编译通过≠libasan 可链,且 auto 模式会先被重写成 asan
+
+**Mistake**: configure 原用 `AX_CHECK_COMPILE_FLAG([-fsanitize=address])` 只测编译;oneAPI+gcc8.5(系统缺 libasan RPM)下编译通过、`make install` 在 `hard.debug`/`dump2test` 链接期才炸。首次修复实现还误杀了 auto 模式:auto 在 Linux 下先被重写为 `with_sanitize=asan`,显式失败分支随之触发。
+
+**Root cause**: gcc8 的 `libasan.so` 链接脚本写死 `INPUT(/usr/lib64/libasan.so.5.0.0)`,缺 RPM 即链接失败;编译级测试覆盖不到链接期;`AS_CASE` 分支无法区分"用户显式要求"与"auto 解析结果"(原始值须用重写前记录的 `sanitize_mode_requested`)。
+
+**Prevention rule**: 运行时库可用性检测一律用 `AC_LINK_IFELSE` 走 `$CXX`(同文件 `-no-pie` 检测写法);显式请求失败给可操作报错,auto 失败优雅降级(`auto-no-asan-runtime`,debug 工具不带 sanitizer 照编,`make install` 不再阻断)。三分支已实测:gcc14 链接通过→asan;oneAPI 链接失败→降级;显式 `--with-sanitize=asan`→报错。**加固(同日 review 后)**:链接测试改为手动编译并捕获驱动输出——Intel 经典编译器(icc/icpc)对未知旗标只发 `#10006: ignoring unknown option` 警告仍链接成功,会被链接级测试误判为 asan 可用(实际静默无 sanitizer 且编译警告刷屏);现 grep 该警告判 `no`,icc 栈如实降级 `auto-no-asan-runtime`(实测)。
+
+### 2026-09-22: 站点 GSL 可能带异构 MPI 的 DT_NEEDED——ld "may conflict" 警告必须在 configure 期拦截并自动切静态库
+
+**Mistake**: 本集群 `gsl/2.8` 的 `libgsl.so` 带 `NEEDED libmpi.so.40`(上游 GSL 无 MPI,系站点构建污染);oneAPI/Intel 主 MPI 是 `libmpi.so.12`,纯 oneAPI 运行环境直接 `library not found` 起不来,双 module 挂着则同进程双 MPI 运行时。
+
+**Root cause**: 共享库的 DT_NEEDED 整体进入进程;站点 gsl 在 OpenMPI 环境下构建被污染,集群又无干净 gsl(系统 `/usr/lib64` 亦无)。
+
+**Prevention rule**: configure 已加自动回退:`readelf` 提取 `libgsl.so` 的 `libmpi.so.N`,与 `$CXX` 试链程序的 libmpi soname 比对,失配且存在 `libgsl.a`/`libgslcblas.a` 时自动改用静态归档并打 NOTICE(静态归档无 DT_NEEDED;`nm` 已验证 gsl 无 MPI 符号引用)。oneAPI 2026 与 icc20 两次真实构建 `ldd` 干净。
+
+### 2026-09-22: TARGET 名 token 变化先查 git log 再怀疑 configure 丢参——BTLogH 已无条件编译、目标名不再带 btlogh
+
+**Mistake**: 换 MPI 栈重 configure 后新二进制名少了 `.btlogh`,误判为 configure 旗标丢失(`config.status --config | head -3` 截断多行输出加剧误判),几乎重查 configure 参数。
+
+**Root cause**: commit `197c2b9`("build: compile BTLogH support unconditionally in PeTar")把 BTLogH 改为无条件编译、运行时 `--ar-g-func` 切换,目标名随之去掉 token——二进制名是构建产物命名约定,不是 configure 旗标清单。
+
+**Prevention rule**: 重 configure 后对比新旧 `TARGET` 差异,先 `git log --oneline -- Makefile.in configure.ac` 查命名约定演进;读 `./config.status --config` 输出不要用 `head` 截断。
+
 ---
 
 ## Binary Selection
@@ -169,6 +193,30 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 域分解/树构建/barrier 的每步开销与 N 无关，力的计算量才随 N 增长；N~500 时前者压倒后者。SKILL.md 只问“用几线程”而无缩放指引，双方只能“选个好看的数字”。
 
 **Prevention rule**: 按 N 缩放（≲10³ → 1 线程；~10⁴ → 数条；≳10⁵ → 全部核心），对 `petar.find.dt -o` 与生产 launch 一视同仁；用户坚持小系统多线程时先给实测代价再确认。细节：`assets/script-tools.md` → "Parallel Launch Heuristics"。
+
+### 2026-09-22: 输入快照必须是命令行最后一个参数——PeTar 无条件取 argv[argc-1] 为文件名
+
+**Mistake**: 把 `input.B` 放在选项中间（`petar -u 1 -i 0 input.B -t 0.125`），文件名被解析为 `0.125`，全体 rank 打不开输入文件 MPI_ABORT；用户 `run.sh` 参照命令同样写错。
+
+**Root cause**: `petar.hpp` 的 `read()` 在有剩余位置参数时执行 `fname_inp.value = argv[argc-1]`——文件名永远取最后一个 token，所有选项必须在其前面。
+
+**Prevention rule**: 组 `petar` 命令时输入快照永远放最后（`petar [options] <snapshot>`）；该 run.sh 已修正。（规则已同步入 SKILL.md。）
+
+### 2026-09-22: BSCC-M9 跨节点 MPI 仅经典 Intel MPI 20.4.3 可用——新栈用户态 fabric 与节点驱动失配（rc_mlx5/UD 端点必崩）
+
+**Mistake**: 按常规假设逐栈排查跨节点段错误，多轮作业后才定位到栈级问题：OpenMPI 4.1.0/4.1.8+UCX 1.18 在 `rc_mlx5` inter-node 端点建立即 SIGSEGV（UCX info 日志直接可见）；oneAPI 2022/2026（Intel MPI 2021.5/2021.18）崩溃或 `UD endpoint unhandled timeout` 挂起。`UCX_VFS_ENABLE=n` 全程生效、纯 MPI（1 线程）也崩、单节点全过——排除 VFS bug/OMP 混用/应用与构建问题。
+
+**Root cause**: 集群 inter-node RDMA 用户态栈失配：较新 UCX/libfabric 无法在节点对间建立 RC/UD 连接，而经典 Intel MPI 2020 系自带 fabric 层正常（作业 5394248：跨节点 16×8 ×3 + 16×1 全过；5394302/5394303 完整 0.125 Myr + 快照读回验证通过）。
+
+**Prevention rule**: 该集群跨节点一律 `mpi/intel/20.4.3`（`MPICXX=mpiicpc CC=icc ./configure`）+ `srun` + `I_MPI_PMI_LIBRARY=/opt/slurm/slurm/lib/libpmi2.so`；作业脚本自包含 module；模板 `~/data/N1k/sub.template.sh`，完整证据与工单 `~/data/N1k/ib-crossnode-mpi-failure-report.md`。OpenMPI 若必须用：显式 hostfile + `--oversubscribe`（plm slurm 下槽位推算偏少会拒启）+ `--mca plm slurm`；注意 `hostname` 排布检查不是 MPI 程序，不能证明 wire-up 正常。
+
+### 2026-09-22: sbatch 默认继承提交 shell 的全部环境——同 soname 的 MPI 库会被残留 module 污染
+
+**Mistake**: 会话 shell 残留 oneAPI 2026 的 `LD_LIBRARY_PATH`，`ldd` 与新提交作业把经典 Intel MPI 构建的二进制解析到 oneAPI 的 `libmpi.so.12`（两代 Intel MPI 共享 soname），差点得出错误测试结论。
+
+**Root cause**: `sbatch` 默认导出提交环境；不同代 Intel MPI 的 `libmpi.so.12` 路径不同，`LD_LIBRARY_PATH` 顺序决定胜者。
+
+**Prevention rule**: 提交前清理 shell 无关 module，或在作业脚本内 `module load` 后加 `ldd $(readlink -f $(command -v petar))` 路径断言（模板已内置 `case "$MPIPATH" in *intel/2020*)`）。
 
 ---
 

@@ -65,6 +65,7 @@ This compact version prioritizes execution safety, option correctness, and repro
 
 ### Workflow integrity
 
+- **The input snapshot filename must be the last command-line argument** (`petar [options] <snapshot>`): PeTar takes `argv[argc-1]` as the input filename, so an option placed after it is silently parsed as the filename.
 - Keep fresh IC generation separate from restart/resume paths. **Never use `petar.init` in a restart workflow.**
 - Modern PeTar (tmp-file mechanism) generates `data.snap.lst` at runtime and commits stream outputs automatically — **no gathering step is needed**. `petar.data.gether` is legacy, required only for old MPI runs lacking `snap.lst`; when it is required, gather before downstream processing.
 - Prefer installed PeTar tools over abstract advice whenever the request maps to one (analysis, conversion, movie generation, restart cleanup, external-potential maps).
@@ -77,8 +78,8 @@ This compact version prioritizes execution safety, option correctness, and repro
 ### Environment requirements
 
 - Before any PeTar launch, require `export OMP_STACKSIZE=128M` (and `ulimit -s unlimited` on Linux). Missing this causes segfault on large simulations.
+- For MPI launches in UCX environments, require `export UCX_VFS_ENABLE=n` to avoid a known UCX segfault. This disables the VFS/FUSE feature only — inter-node transport faults (e.g. `rc_mlx5` endpoint crashes) need cluster-side fixes; see lessons-learned cluster entries.
 - For MPI+OpenMP launches, recommend `--bind-to none` to prevent processes being restricted to a single core.
-- For MPI launches in UCX environments, require `export UCX_VFS_ENABLE=n` to avoid a known UCX segfault.
 - When `./configure` runs on a cluster login node, warn that auto-detected SIMD capabilities may differ from compute nodes; suggest verifying with `--enable-avx2` / `--enable-avx512` flags.
 
 ### Configure and toolchain environment

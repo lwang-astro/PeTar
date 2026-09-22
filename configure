@@ -709,7 +709,6 @@ infodir
 docdir
 oldincludedir
 includedir
-runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -811,7 +810,6 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
-runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1064,15 +1062,6 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
-  -runstatedir | --runstatedir | --runstatedi | --runstated \
-  | --runstate | --runstat | --runsta | --runst | --runs \
-  | --run | --ru | --r)
-    ac_prev=runstatedir ;;
-  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
-  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
-  | --run=* | --ru=* | --r=*)
-    runstatedir=$ac_optarg ;;
-
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1210,7 +1199,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir runstatedir
+		libdir localedir mandir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1363,7 +1352,6 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
-  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -1415,8 +1403,9 @@ Optional Packages:
                           Default: no
   --with-sanitize         Sanitizer mode for debug build (auto, asan,
                           asan-ubsan, no). Default: auto; auto disables
-                          sanitizers on WSL and prefers ASan-only on native
-                          Linux
+                          sanitizers on WSL, prefers ASan-only on native
+                          Linux, and falls back to no sanitizer when the asan
+                          runtime cannot be linked
   --with-cpp-std          version of c++ standard (e.g. 11, 17, 20). Default:
                           17
   --with-arch             compile with architecture type (x86, fugaku).
@@ -3671,165 +3660,88 @@ else
 fi
 
 
+# Sanitizer support must be verified by a *link* test: on systems where the
+# libasan runtime is missing (e.g. RHEL8 without the libasan RPM; gcc's libasan.so
+# linker script then points to a nonexistent /usr/lib64/libasan.so.5.0.0),
+# -fsanitize=address still compiles but fails at link time, which used to break
+# 'make install' long after configure had passed (hard.debug/dump2test targets).
+# The compile+link is run manually (not AC_LINK_IFELSE) so the driver output can
+# be inspected: Intel classic compilers (icc/icpc) only WARN and ignore the
+# unknown option (#10006), which would otherwise count as a false positive.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CXX can link with -fsanitize=address" >&5
+$as_echo_n "checking whether $CXX can link with -fsanitize=address... " >&6; }
+echo 'int main() { return 0; }' > conftest.cc
+san_out=`$CXX $CXXFLAGS -fsanitize=address -o conftest_san conftest.cc 2>&1`
+san_rc=$?
+rm -f conftest.cc conftest_san
+if test $san_rc -eq 0 && ! echo "$san_out" | grep -qiE "ignoring unknown option.*sanitize"; then :
+  sanitize_link_asan=yes
+else
+  sanitize_link_asan=no
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $sanitize_link_asan" >&5
+$as_echo "$sanitize_link_asan" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CXX can link with -fsanitize=address,undefined" >&5
+$as_echo_n "checking whether $CXX can link with -fsanitize=address,undefined... " >&6; }
+echo 'int main() { return 0; }' > conftest.cc
+san_out=`$CXX $CXXFLAGS -fsanitize=address,undefined -o conftest_san conftest.cc 2>&1`
+san_rc=$?
+rm -f conftest.cc conftest_san
+if test $san_rc -eq 0 && ! echo "$san_out" | grep -qiE "ignoring unknown option.*sanitize"; then :
+  sanitize_link_asan_ubsan=yes
+else
+  sanitize_link_asan_ubsan=no
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $sanitize_link_asan_ubsan" >&5
+$as_echo "$sanitize_link_asan_ubsan" >&6; }
+
 case $with_sanitize in #(
   auto) :
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -fsanitize=address" >&5
-$as_echo_n "checking whether C++ compiler accepts -fsanitize=address... " >&6; }
-if ${ax_cv_check_cxxflags___fsanitize_address+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-  ax_check_save_flags=$CXXFLAGS
-  CXXFLAGS="$CXXFLAGS  -fsanitize=address"
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_compile "$LINENO"; then :
-  ax_cv_check_cxxflags___fsanitize_address=yes
-else
-  ax_cv_check_cxxflags___fsanitize_address=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  CXXFLAGS=$ax_check_save_flags
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___fsanitize_address" >&5
-$as_echo "$ax_cv_check_cxxflags___fsanitize_address" >&6; }
-if test x"$ax_cv_check_cxxflags___fsanitize_address" = xyes; then :
+    if test x"$sanitize_link_asan" == xyes; then :
   DEBFLAGS=$DEBFLAGS" -fsanitize=address"
-                        use_asan=yes
-                        sanitize_mode=asan
+              use_asan=yes
+              sanitize_mode=asan
 else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -fsanitize=address,undefined" >&5
-$as_echo_n "checking whether C++ compiler accepts -fsanitize=address,undefined... " >&6; }
-if ${ax_cv_check_cxxflags___fsanitize_address_undefined+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-  ax_check_save_flags=$CXXFLAGS
-  CXXFLAGS="$CXXFLAGS  -fsanitize=address,undefined"
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_compile "$LINENO"; then :
-  ax_cv_check_cxxflags___fsanitize_address_undefined=yes
-else
-  ax_cv_check_cxxflags___fsanitize_address_undefined=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  CXXFLAGS=$ax_check_save_flags
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___fsanitize_address_undefined" >&5
-$as_echo "$ax_cv_check_cxxflags___fsanitize_address_undefined" >&6; }
-if test x"$ax_cv_check_cxxflags___fsanitize_address_undefined" = xyes; then :
+  if test x"$sanitize_link_asan_ubsan" == xyes; then :
   DEBFLAGS=$DEBFLAGS" -fsanitize=address,undefined"
-                                           use_asan=yes
-                                           use_asan_ubsan=yes
-                                           sanitize_mode=asan-ubsan
+                     use_asan=yes
+                     use_asan_ubsan=yes
+                     sanitize_mode=asan-ubsan
 else
-  :
+  sanitize_mode=auto-no-asan-runtime
 fi
-
-fi
- ;; #(
+fi ;; #(
   asan) :
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -fsanitize=address" >&5
-$as_echo_n "checking whether C++ compiler accepts -fsanitize=address... " >&6; }
-if ${ax_cv_check_cxxflags___fsanitize_address+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-  ax_check_save_flags=$CXXFLAGS
-  CXXFLAGS="$CXXFLAGS  -fsanitize=address"
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_compile "$LINENO"; then :
-  ax_cv_check_cxxflags___fsanitize_address=yes
-else
-  ax_cv_check_cxxflags___fsanitize_address=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  CXXFLAGS=$ax_check_save_flags
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___fsanitize_address" >&5
-$as_echo "$ax_cv_check_cxxflags___fsanitize_address" >&6; }
-if test x"$ax_cv_check_cxxflags___fsanitize_address" = xyes; then :
+    if test x"$sanitize_link_asan" == xyes; then :
   DEBFLAGS=$DEBFLAGS" -fsanitize=address"
-                        use_asan=yes
-                        sanitize_mode=asan
+              use_asan=yes
+              sanitize_mode=asan
+else
+  if test x"$sanitize_mode_requested" == xauto; then :
+  sanitize_mode=auto-no-asan-runtime
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "--with-sanitize=asan is requested, but -fsanitize=address is not supported by the compiler
+as_fn_error $? "--with-sanitize=asan is requested, but -fsanitize=address cannot be linked with $CXX (missing libasan runtime?). Install the libasan package or use --with-sanitize=no
 See \`config.log' for more details" "$LINENO" 5; }
 fi
- ;; #(
+fi ;; #(
   asan-ubsan) :
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -fsanitize=address,undefined" >&5
-$as_echo_n "checking whether C++ compiler accepts -fsanitize=address,undefined... " >&6; }
-if ${ax_cv_check_cxxflags___fsanitize_address_undefined+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-  ax_check_save_flags=$CXXFLAGS
-  CXXFLAGS="$CXXFLAGS  -fsanitize=address,undefined"
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_compile "$LINENO"; then :
-  ax_cv_check_cxxflags___fsanitize_address_undefined=yes
-else
-  ax_cv_check_cxxflags___fsanitize_address_undefined=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  CXXFLAGS=$ax_check_save_flags
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___fsanitize_address_undefined" >&5
-$as_echo "$ax_cv_check_cxxflags___fsanitize_address_undefined" >&6; }
-if test x"$ax_cv_check_cxxflags___fsanitize_address_undefined" = xyes; then :
+    if test x"$sanitize_link_asan_ubsan" == xyes; then :
   DEBFLAGS=$DEBFLAGS" -fsanitize=address,undefined"
-                        use_asan=yes
-                        use_asan_ubsan=yes
-                        sanitize_mode=asan-ubsan
+              use_asan=yes
+              use_asan_ubsan=yes
+              sanitize_mode=asan-ubsan
+else
+  if test x"$sanitize_mode_requested" == xauto; then :
+  sanitize_mode=auto-no-asan-runtime
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "--with-sanitize=asan-ubsan is requested, but -fsanitize=address,undefined is not supported by the compiler
+as_fn_error $? "--with-sanitize=asan-ubsan is requested, but -fsanitize=address,undefined cannot be linked with $CXX (missing libasan runtime?). Install the libasan package or use --with-sanitize=no
 See \`config.log' for more details" "$LINENO" 5; }
 fi
- ;; #(
+fi ;; #(
   no) :
     if test x"$sanitize_mode" == xnone; then :
   sanitize_mode=no
@@ -6494,6 +6406,51 @@ See \`config.log' for more details" "$LINENO" 5; }
 fi
 
                            GSL_LIBS='-lgsl -lgslcblas'
+fi
+fi
+                    # Site GSL builds occasionally carry a stray DT_NEEDED on an MPI
+                    # runtime (libmpi.so.X) inherited from the GSL build environment
+                    # (upstream GSL has no MPI code). Linking such a shared GSL into
+                    # PeTar pulls a second MPI runtime into the process or breaks
+                    # startup with 'library not found'. If the soname does not match
+                    # the MPI PeTar compiles with, prefer the static archives (which
+                    # carry no DT_NEEDED).
+                    if test x"$GSL_LIBS" != xnone && test x"$GSL_LIBS" != x; then :
+  gsl_libdir=`echo "$GSL_LIBS" | tr ' ' '\n' | sed -n 's/^-L//p' | head -1`
+                           gsl_mpi_needed=""
+                           if test -n "$gsl_libdir" && test -f "$gsl_libdir/libgsl.so"; then :
+  if command -v readelf >/dev/null 2>&1; then :
+  gsl_mpi_needed=`readelf -d "$gsl_libdir/libgsl.so" 2>/dev/null | grep -o 'libmpi\.so\.[0-9]*' | head -1`
+fi
+fi
+                           if test -n "$gsl_mpi_needed"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking which libmpi soname $CXX links against" >&5
+$as_echo_n "checking which libmpi soname $CXX links against... " >&6; }
+                                  echo 'int main() { return 0; }' > conftest.cc
+                                  $CXX $CXXFLAGS -o conftest_mpison conftest.cc >&5 2>&1
+                                  our_mpi_soname=""
+                                  if command -v ldd >/dev/null 2>&1; then :
+  our_mpi_soname=`ldd conftest_mpison 2>/dev/null | grep -o 'libmpi\.so\.[0-9]*' | head -1`
+fi
+                                  rm -f conftest.cc conftest_mpison
+                                  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${our_mpi_soname:-none}" >&5
+$as_echo "${our_mpi_soname:-none}" >&6; }
+                                  if test x"$our_mpi_soname" != x"$gsl_mpi_needed"; then :
+  if test -f "$gsl_libdir/libgsl.a" && test -f "$gsl_libdir/libgslcblas.a"; then :
+  GSL_LIBS_NEW=`echo "$GSL_LIBS" | sed -e "s|-lgslcblas\\b|$gsl_libdir/libgslcblas.a|g" -e "s|-lgsl\\b|$gsl_libdir/libgsl.a|g"`
+                                                if test x"`echo $GSL_LIBS_NEW | grep -c ' -lgsl'`" == x0; then :
+  GSL_LIBS=$GSL_LIBS_NEW
+                                                       { $as_echo "$as_me:${as_lineno-$LINENO}: GSL: shared libgsl.so needs $gsl_mpi_needed, but PeTar links ${our_mpi_soname:-no MPI}; using static GSL archives from $gsl_libdir to avoid pulling a second MPI runtime" >&5
+$as_echo "$as_me: GSL: shared libgsl.so needs $gsl_mpi_needed, but PeTar links ${our_mpi_soname:-no MPI}; using static GSL archives from $gsl_libdir to avoid pulling a second MPI runtime" >&6;}
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: GSL: static switch requested but sed failed to rewrite GSL_LIBS; keeping shared GSL (risk: second MPI runtime or startup failure)" >&5
+$as_echo "$as_me: WARNING: GSL: static switch requested but sed failed to rewrite GSL_LIBS; keeping shared GSL (risk: second MPI runtime or startup failure)" >&2;}
+fi
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: GSL: shared libgsl.so needs $gsl_mpi_needed, but PeTar links ${our_mpi_soname:-no MPI}, and no static libgsl.a/libgslcblas.a exist in $gsl_libdir; the resulting binaries may fail to start ('libmpi not found') or load two MPI runtimes" >&5
+$as_echo "$as_me: WARNING: GSL: shared libgsl.so needs $gsl_mpi_needed, but PeTar links ${our_mpi_soname:-no MPI}, and no static libgsl.a/libgslcblas.a exist in $gsl_libdir; the resulting binaries may fail to start ('libmpi not found') or load two MPI runtimes" >&2;}
+fi
+fi
 fi
 fi
              if test x"$with_external" == xagama; then :

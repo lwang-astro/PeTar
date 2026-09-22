@@ -85,7 +85,7 @@ AC_ARG_WITH([debug],
 
 AC_ARG_WITH([sanitize],
           [AS_HELP_STRING([--with-sanitize],
-                      [Sanitizer mode for debug build (auto, asan, asan-ubsan, no). Default: auto; auto disables sanitizers on WSL and prefers ASan-only on native Linux])],
+                      [Sanitizer mode for debug build (auto, asan, asan-ubsan, no). Default: auto; auto disables sanitizers on WSL, prefers ASan-only on native Linux, and falls back to no sanitizer when the asan runtime cannot be linked])],
           [],
           [with_sanitize=auto])
 
@@ -110,30 +110,60 @@ AX_CHECK_COMPILE_FLAG([-O0],
 AX_CHECK_COMPILE_FLAG([-fbounds-check],
                       [DEBFLAGS=$DEBFLAGS" -fbounds-check"])
 
+# Sanitizer support must be verified by a *link* test: on systems where the
+# libasan runtime is missing (e.g. RHEL8 without the libasan RPM; gcc's libasan.so
+# linker script then points to a nonexistent /usr/lib64/libasan.so.5.0.0),
+# -fsanitize=address still compiles but fails at link time, which used to break
+# 'make install' long after configure had passed (hard.debug/dump2test targets).
+# The compile+link is run manually (not AC_LINK_IFELSE) so the driver output can
+# be inspected: Intel classic compilers (icc/icpc) only WARN and ignore the
+# unknown option (#10006), which would otherwise count as a false positive.
+AC_MSG_CHECKING([whether $CXX can link with -fsanitize=address])
+echo 'int main() { return 0; }' > conftest.cc
+san_out=`$CXX $CXXFLAGS -fsanitize=address -o conftest_san conftest.cc 2>&1`
+san_rc=$?
+rm -f conftest.cc conftest_san
+AS_IF([test $san_rc -eq 0 && ! echo "$san_out" | grep -qiE "ignoring unknown option.*sanitize"],
+      [sanitize_link_asan=yes], [sanitize_link_asan=no])
+AC_MSG_RESULT([$sanitize_link_asan])
+AC_MSG_CHECKING([whether $CXX can link with -fsanitize=address,undefined])
+echo 'int main() { return 0; }' > conftest.cc
+san_out=`$CXX $CXXFLAGS -fsanitize=address,undefined -o conftest_san conftest.cc 2>&1`
+san_rc=$?
+rm -f conftest.cc conftest_san
+AS_IF([test $san_rc -eq 0 && ! echo "$san_out" | grep -qiE "ignoring unknown option.*sanitize"],
+      [sanitize_link_asan_ubsan=yes], [sanitize_link_asan_ubsan=no])
+AC_MSG_RESULT([$sanitize_link_asan_ubsan])
+
 AS_CASE([$with_sanitize],
       [auto],
-      [AX_CHECK_COMPILE_FLAG([-fsanitize=address],
-                         [DEBFLAGS=$DEBFLAGS" -fsanitize=address"
-                        use_asan=yes
-                        sanitize_mode=asan],
-                         [AX_CHECK_COMPILE_FLAG([-fsanitize=address,undefined],
-                                          [DEBFLAGS=$DEBFLAGS" -fsanitize=address,undefined"
-                                           use_asan=yes
-                                           use_asan_ubsan=yes
-                                           sanitize_mode=asan-ubsan])])],
+      [AS_IF([test x"$sanitize_link_asan" == xyes],
+             [DEBFLAGS=$DEBFLAGS" -fsanitize=address"
+              use_asan=yes
+              sanitize_mode=asan],
+             [AS_IF([test x"$sanitize_link_asan_ubsan" == xyes],
+                    [DEBFLAGS=$DEBFLAGS" -fsanitize=address,undefined"
+                     use_asan=yes
+                     use_asan_ubsan=yes
+                     sanitize_mode=asan-ubsan],
+                    [sanitize_mode=auto-no-asan-runtime])])],
       [asan],
-      [AX_CHECK_COMPILE_FLAG([-fsanitize=address],
-                         [DEBFLAGS=$DEBFLAGS" -fsanitize=address"
-                        use_asan=yes
-                        sanitize_mode=asan],
-                         [AC_MSG_FAILURE([--with-sanitize=asan is requested, but -fsanitize=address is not supported by the compiler])])],
+      [AS_IF([test x"$sanitize_link_asan" == xyes],
+             [DEBFLAGS=$DEBFLAGS" -fsanitize=address"
+              use_asan=yes
+              sanitize_mode=asan],
+             [AS_IF([test x"$sanitize_mode_requested" == xauto],
+                    [sanitize_mode=auto-no-asan-runtime],
+                    [AC_MSG_FAILURE([--with-sanitize=asan is requested, but -fsanitize=address cannot be linked with $CXX (missing libasan runtime?). Install the libasan package or use --with-sanitize=no])])])],
       [asan-ubsan],
-      [AX_CHECK_COMPILE_FLAG([-fsanitize=address,undefined],
-                         [DEBFLAGS=$DEBFLAGS" -fsanitize=address,undefined"
-                        use_asan=yes
-                        use_asan_ubsan=yes
-                        sanitize_mode=asan-ubsan],
-                         [AC_MSG_FAILURE([--with-sanitize=asan-ubsan is requested, but -fsanitize=address,undefined is not supported by the compiler])])],
+      [AS_IF([test x"$sanitize_link_asan_ubsan" == xyes],
+             [DEBFLAGS=$DEBFLAGS" -fsanitize=address,undefined"
+              use_asan=yes
+              use_asan_ubsan=yes
+              sanitize_mode=asan-ubsan],
+             [AS_IF([test x"$sanitize_mode_requested" == xauto],
+                    [sanitize_mode=auto-no-asan-runtime],
+                    [AC_MSG_FAILURE([--with-sanitize=asan-ubsan is requested, but -fsanitize=address,undefined cannot be linked with $CXX (missing libasan runtime?). Install the libasan package or use --with-sanitize=no])])])],
       [no],
       [AS_IF([test x"$sanitize_mode" == xnone],
              [sanitize_mode=no])],
@@ -484,6 +514,36 @@ AC_ARG_WITH([external],
                                         [],
                                         [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt install libgsl-dev])],[-lgslcblas])
                            GSL_LIBS='-lgsl -lgslcblas'])])
+                    # Site GSL builds occasionally carry a stray DT_NEEDED on an MPI
+                    # runtime (libmpi.so.X) inherited from the GSL build environment
+                    # (upstream GSL has no MPI code). Linking such a shared GSL into
+                    # PeTar pulls a second MPI runtime into the process or breaks
+                    # startup with 'library not found'. If the soname does not match
+                    # the MPI PeTar compiles with, prefer the static archives (which
+                    # carry no DT_NEEDED).
+                    AS_IF([test x"$GSL_LIBS" != xnone && test x"$GSL_LIBS" != x],
+                          [gsl_libdir=`echo "$GSL_LIBS" | tr ' ' '\n' | sed -n 's/^-L//p' | head -1`
+                           gsl_mpi_needed=""
+                           AS_IF([test -n "$gsl_libdir" && test -f "$gsl_libdir/libgsl.so"],
+                                 [AS_IF([command -v readelf >/dev/null 2>&1],
+                                       [gsl_mpi_needed=`readelf -d "$gsl_libdir/libgsl.so" 2>/dev/null | grep -o 'libmpi\.so\.[[0-9]]*' | head -1`])])
+                           AS_IF([test -n "$gsl_mpi_needed"],
+                                 [AC_MSG_CHECKING([which libmpi soname $CXX links against])
+                                  echo 'int main() { return 0; }' > conftest.cc
+                                  $CXX $CXXFLAGS -o conftest_mpison conftest.cc >&AS_MESSAGE_LOG_FD 2>&1
+                                  our_mpi_soname=""
+                                  AS_IF([command -v ldd >/dev/null 2>&1],
+                                        [our_mpi_soname=`ldd conftest_mpison 2>/dev/null | grep -o 'libmpi\.so\.[[0-9]]*' | head -1`])
+                                  rm -f conftest.cc conftest_mpison
+                                  AC_MSG_RESULT([${our_mpi_soname:-none}])
+                                  AS_IF([test x"$our_mpi_soname" != x"$gsl_mpi_needed"],
+                                        [AS_IF([test -f "$gsl_libdir/libgsl.a" && test -f "$gsl_libdir/libgslcblas.a"],
+                                               [GSL_LIBS_NEW=`echo "$GSL_LIBS" | sed -e "s|-lgslcblas\\b|$gsl_libdir/libgslcblas.a|g" -e "s|-lgsl\\b|$gsl_libdir/libgsl.a|g"`
+                                                AS_IF([test x"`echo $GSL_LIBS_NEW | grep -c ' -lgsl'`" == x0],
+                                                      [GSL_LIBS=$GSL_LIBS_NEW
+                                                       AC_MSG_NOTICE([GSL: shared libgsl.so needs $gsl_mpi_needed, but PeTar links ${our_mpi_soname:-no MPI}; using static GSL archives from $gsl_libdir to avoid pulling a second MPI runtime])],
+                                                      [AC_MSG_WARN([GSL: static switch requested but sed failed to rewrite GSL_LIBS; keeping shared GSL (risk: second MPI runtime or startup failure)])])],
+                                               [AC_MSG_WARN([GSL: shared libgsl.so needs $gsl_mpi_needed, but PeTar links ${our_mpi_soname:-no MPI}, and no static libgsl.a/libgslcblas.a exist in $gsl_libdir; the resulting binaries may fail to start ('libmpi not found') or load two MPI runtimes])])])])])
              AS_IF([test x"$with_external" == xagama],
                    [AS_IF([test x"$agama_prefix" == x__search__],
                           [AC_CHECK_PROG([FIND_CHECK], [find], [find])
