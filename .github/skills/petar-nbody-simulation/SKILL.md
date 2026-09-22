@@ -81,6 +81,17 @@ This compact version prioritizes execution safety, option correctness, and repro
 - For MPI launches in UCX environments, require `export UCX_VFS_ENABLE=n` to avoid a known UCX segfault.
 - When `./configure` runs on a cluster login node, warn that auto-detected SIMD capabilities may differ from compute nodes; suggest verifying with `--enable-avx2` / `--enable-avx512` flags.
 
+### Configure and toolchain environment
+
+- Before running `./configure`, check `env | grep -E '^(CC|CXX|FC)='`. Compiler modules may export bare compiler paths (e.g., `CXX=/.../bin/g++`); these override autoconf detection and produce Makefiles whose `CXX` is a bare `g++` (no MPI wrapper) and whose `FCLIBS` may lose `-lgfortran`. If set, `unset CXX CC FC` in the shell (or pass `CXX=<mpicxx> FC=gfortran` explicitly to configure).
+- After configure, verify the generated Makefile before building: `CXX=` must be an MPI wrapper (`mpicxx`/`mpic++`), and with stellar evolution enabled `FCLIBS` must contain `-lgfortran`. Symptom if skipped: undefined `MPI::`/`_gfortran_*` symbols at link.
+- All Makefiles are configure-generated (`AC_CONFIG_FILES`), **including the sub-Makefiles** (`bse-interface/`, `galpy-interface/`, `parallel-random/`). Never fix build problems by hand-editing them — the next configure run silently overwrites manual edits, and editor undo can regress them to stale content. Fix by re-running `./configure` with a corrected environment.
+- After switching compiler/MPI module stacks, do a full clean rebuild: `make clean`, `make -C bse-interface clean`, `make -C galpy-interface clean`, `make -C parallel-random clean`, and `rm -rf build`. Stale objects from the old toolchain fail to link with misleading symbols (e.g., `MPI::` bindings that current sources do not use).
+- Re-running configure with different flags silently changes the generated `TARGET` names and physics flavor (e.g., dropping `--with-interrupt=bseEmp` downgrades to `bse`). Compare the new Makefile's `TARGET` line against the previously installed binary family before `make install`.
+- Debug-family targets (`*.hard.debug`, `*.dump2test`) link ASan; the toolchain must provide a matching `libasan` at link and runtime (system gcc8 on this cluster lacks the `libasan` RPM; the gcc-14.2 module ships `libasan.so.8`).
+- Linking site libraries built against a different MPI flavor (e.g., a system GSL needing `libmpi.so.40` while PeTar uses Intel MPI's `libmpi.so.12`) pulls two MPI runtimes into one process — treat the `ld` "may conflict" warning as a real hazard; prefer matching stacks or MPI-free library builds.
+- Full incident detail and cluster-specific paths: `assets/lessons-learned.md`, "Build & Configure" entries of 2026-09-21/22.
+
 ### bseEmp-specific
 
 - `bseEmp` requires manually linking `ffbonn` or `ffgeneva` metal-poor track directories before first use. Without this, the binary crashes at initialization with a file-not-found error. Ask the user to set up these links before composing a bseEmp run command.

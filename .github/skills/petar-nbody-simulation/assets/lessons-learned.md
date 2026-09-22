@@ -58,6 +58,42 @@ Periodically reviewed → verified entries are elevated to `SKILL.md` as hard ru
 
 ---
 
+### 2026-09-21: 本机缺 libasan RPM,asan 调试目标链接失败但 configure 通过
+
+**Mistake**: `make`/`make install` 在链接 `petar.hard.debug` 与 `petar.dump2test` 时报 `cannot find /usr/lib64/libasan.so.5.0.0`,误以为 PeTar 代码问题排查多轮;实际是机器环境问题。另外先尝试 `LIBRARY_PATH=$HOME/.local/asan-shim make` 注入影子链接脚本,同样失败——Intel MPI 的 mpicxx 包装器不吃这个变量。
+
+**Root cause**: 1) 本机 RHEL8 系统未安装 `libasan` RPM(`/usr/lib64/libasan*` 不存在),GCC 8 自带的 `libasan.so` 链接脚本写死 `INPUT(/usr/lib64/libasan.so.5.0.0)`;2) configure 的 `AX_CHECK_COMPILE_FLAG([-fsanitize=address])` 只测编译不测链接,asan 默认(auto 模式)启用,于是 configure 通过、make 阶段才炸;3) `TARGET` 含两个 asan 目标且 `install: $(TARGET)`,所以 `make install` 必挂;4) 共享盘 intelpython3 带 GCC 8 同版本(soname .so.5)的 libasan 可借用。
+
+**Prevention rule**:
+1. 该机 asan 目标链接失败(`cannot find /usr/lib64/libasan.so.5.0.0`)时,标准修复路径:确保 `~/.local/asan-shim/libasan.so` 为影子链接脚本 `INPUT ( /publicfs10/fs10-share/soft/share-soft/intel/2020/intelpython3/lib/libasan.so.5.0.0 )`,并在生成的(已 gitignore 的)Makefile `CXXFLAGS=` 行加 `-L$(HOME)/.local/asan-shim`;永久修复是管理员 `dnf install libasan`,装好后移除补丁;
+2. 不要用 `LIBRARY_PATH` 注入——mpicxx(2021.5.0 包装器)会忽略;用命令行/Makefile 内 `-L` 才有效;
+3. 运行 asan 调试二进制需 `LD_LIBRARY_PATH` 含借用 libasan 目录(intelpython3/lib),缺 soname .so.5 的库只能用它,不能拿 gcc-13/14 的 .so.8 混用;
+4. configure 报告编译器支持某 flag ≠ 链接期可用;`AX_CHECK_COMPILE_FLAG` 的局限在解读 configure 结果时要记得。
+
+---
+
+### 2026-09-21: gcc/14.2.0 module 导出绝对路径 CC/CXX/FC,诱发四连坑;工具链切换必须全量清理
+
+**Mistake**: 用户把登录环境从 oneAPI(Intel MPI + gcc8.5)切换到 `gcc/14.2.0 + openmpi/4.1.0-gcc14.2.0 + gsl/2.8` 后,`make` 连环失败,agent 最初按报错逐个修(先 asan,再 Fortran,再 MPI:: 符号),每修一个又冒出下一个;且第一次在长会话终端里测"module 是否接管 PATH"得到误判(残留 PATH 遮蔽,误以为 openmpi module 不导出工具链)。
+
+**Root cause**: 多因叠加:
+1. `gcc/14.2.0` module 会把 `CC/CXX/FC` 导出为**裸编译器绝对路径**(不带 MPI 包装),configure 直接继承 `CXX=<裸 g++14>` → 所有链接缺 `-lmpi/-lmpi_cxx`;
+2. configure.ac 的 `AS_IF([test x"$FC" == xgfortran], [FCLIBS+=' -lgfortran'])` 只认**字面量** `gfortran`,module 导出的绝对路径不匹配 → `-lgfortran` 静默丢失;
+3. `bse-interface/Makefile`(用户此前已提交)硬编码 `CXX=<裸 g++14>` 且 `FCLIBS` 为空,`petar.bse` 链接同时缺 `-lgfortran` 和 `-lmpi*`;
+4. `parallel-random/rand.cxx` 使用 MPI-2 `MPI::` C++ 绑定,链接方必须带 `-lmpi_cxx -lmpi`(OpenMPI 4.1 仍提供 libmpi_cxx,已验证 63 个符号);
+5. 全部旧 `.a`/`.o` 是旧工具链产物,make 头依赖不全静默跳过重编(同 2026-09-13 条目),陈旧 `randc.o` 报出源码里根本不存在的 `MPI::` 引用,误导排查方向。
+
+**Prevention rule**:
+1. 切换工具链/module 栈后,**必须 `make clean` + 子目录 clean + `rm -rf build` 全量重编**,不要信任增量;排查报错前先看 `.o`/`.a` 是否为旧产物(`strings`/`nm` 查它引用的符号源码里是否存在);
+2. 测 module 行为要用 `env -i bash -c 'source ~/.bashrc; ...'` 模拟全新登录 shell,长会话终端的 PATH 残留会得出相反结论;
+3. **根因修复(用户 2026-09-22 修正)**:gcc module 把 `CC/CXX/FC` 导出为裸编译器绝对路径,覆盖了 autoconf 对这三个 precious 变量的自动探测(这是 configure 生成 Makefile 的输入,才是问题实质)。正确做法是在 `.bashrc` 的 `module load` 之后 `unset CXX CC FC`,让 configure 自动探测恢复工作(生成 `CXX=mpic++`、`FCLIBS=-lgfortran`);configure 命令行显式传 `CXX=<mpicxx> FC=gfortran` 只是应急替代,不要作为常规规则;
+4. 换 `--with-interrupt` 等风味参数重跑 configure 时,对比新旧 Makefile 的 MT_FLAGS/TARGET 名(如 bseEmp→bse 被静默降级),确认没丢原有选项;
+5. gcc14 自带 `libasan.so.8`(位于其 install/lib64 且驱动会解析),gcc8 时代"系统缺 libasan RPM"的 shim(`~/.local/asan-shim` + Makefile `-L` 补丁)在新栈下不再需要;
+6. configure.ac 的 `test x"$FC" == xgfortran` 字面量比较对绝对路径 FC 失效,上游可改成 basename 比较(待办,勿忘);
+7. `bse-interface/Makefile` **同样由 configure 生成**(configure.ac `AC_CONFIG_FILES`,模板 `Makefile.in` 中 `FC=@FC@`/`CXX=@CXX@`/`FCLIBS=@FCLIBS@`),其中的裸编译器绝对路径与空 `FCLIBS` 就是污染环境下 configure 的输出,不是手写硬编码;干净环境重跑 configure 后即生成 `FC=gfortran`/`CXX=mpic++`/`FCLIBS=-lgfortran`。**推论:生成文件(bse-interface/Makefile、根 Makefile)永远靠重跑 configure 修复——手动编辑会被下次 configure 静默覆盖(实测发生过),编辑器 undo 也可能把生成文件退回到污染版本**;判断子目录 Makefile 性质先查 `AC_CONFIG_FILES` 和是否存在 `Makefile.in`,不要凭内容里的绝对路径臆断为手写文件。
+
+---
+
 ## Binary Selection
 
 *(No entries yet)*
