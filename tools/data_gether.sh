@@ -1,6 +1,6 @@
 #!/bin/bash
 
-suffixes='esc sse bse mosse mobse sseEmp bseEmp'
+suffixes='esc sse bse mosse mobse sevn sseEmp bseEmp'
 unset rmi
 unset onlylist
 unset groupflag
@@ -74,7 +74,7 @@ do
     fi
 done
 
-sse_opt='.sse .mosse .sseEmp'
+sse_opt='.sse .mosse .sevn .sseEmp'
 for s in $sse_opt
 do
     if [ -e $fout$s ]; then
@@ -84,13 +84,17 @@ do
     fi
 done
 
-bse_opt='.bse .mobse .bseEmp'
+bse_opt='.bse .mobse .sevn .bseEmp'
 for s in $bse_opt
 do
     if [ -e $fout$s ]; then
 	echo 'get '$s' type_change, sn_kick, dynamic_merge, tide'
 	egrep '^Dynamic_merge' $fout$s |sed 's/Dynamic_merge://g' >$fout$s.dynamic_merge.tmp
-	awk '{if (NF==45) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $LINE}' $fout$s.dynamic_merge.tmp > $fout$s.dynamic_merge
+		if [ "$s" = ".sevn" ]; then
+  	    awk '{if (NF==51) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $0}' $fout$s.dynamic_merge.tmp > $fout$s.dynamic_merge
+  	else
+  	    awk '{if (NF==45) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $0}' $fout$s.dynamic_merge.tmp > $fout$s.dynamic_merge
+  	fi
 	rm -f $fout$s.dynamic_merge.tmp
 	egrep '^SN_kick' $fout$s |sed 's/SN_kick//g' >$fout$s.sn_kick
 	egrep '^Tide' $fout$s |sed 's/Tide//g' >$fout$s.tide
@@ -106,7 +110,7 @@ if [ -e $fout.group ]; then
 	for ((i=2;i<=$nmax;i=i+1))
 	do
 	    echo 'get n_member= '$i' in '$fout.group' to '$fout.group.n$i
-	    awk -v n=$i '{if ($2==n) print $LINE}' $fout.group >$fout.group.n$i
+	    awk -v n=$i '{if ($2==n) print $0}' $fout.group >$fout.group.n$i
 	done	    
     fi
 fi
