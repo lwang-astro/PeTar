@@ -124,7 +124,7 @@ The subsequent sections provide detailed explanations of the installation proces
          - [Data Removal after a specified time with `petar.data.clear`](#data-removal-after-a-specified-time)
          - [Data Format Conversion](#data-format-conversion)
          - [Update of Input Parameter File Format](#update-of-input-parameter-file-format)
-         - [Stellar Evolution Tool based on SSE and BSE](#stellar-evolution-tool-based-on-sse-and-bse)
+      - [Stellar Evolution Tool based on SSE/BSE or SEVN](#stellar-evolution-tool-based-on-sse-and-bse)
          - [Galpy tool](#galpy-tool)
     - [References](#references)
     - [Help information](#help-information)
@@ -166,6 +166,16 @@ Please download the two codes from the following GitHub links:
 The latest version of FDPS (v7.1) has a known issue that could lead to a crash of PeTar with an assertion error related to NaN check. After cloning FDPS from Git, in the FDPS directory, switch to the previous release v7.0 using the command:
 ```shell
 git checkout v7.0
+```
+
+### SEVN
+
+To use the _SEVN_ code for stellar evolution, users need to download the _SEVN_ code from the following GitHub
+link: https://gitlab.com/sevncodes/sevn. After cloning the _SEVN_ code from Git, in the _SEVN_ directory, make it with
+
+```shell
+cmake . -DCMAKE_INSTALL_PREFIX=../PeTar/bse-interface/sevn/ -Dstaticlib=ON -Dlinklib=static
+make install
 ```
 
 ### Galpy
@@ -341,22 +351,34 @@ Users can enable stellar evolution for stars and binaries using the following co
 ./configure --with-interrupt=[choices]
 ```
 
-where `[choices]` include `bse`, `mobse`, and `bseEmp`.
+where `[choices]` include `bse`, `mobse`, `sevn` and `bseEmp`.
 In this option name, 'interrupt' refers to the N-body integration being interrupted by external effects on particles.
 
-There are currently three options for stellar evolution packages based on SSE/BSE (Hurley et al. 2000, MNRAS, 315, 543; 2002, MNRAS, 329, 897):
+There are currently four options for stellar evolution packages based on SSE/BSE (Hurley et al. 2000, MNRAS, 315, 543;
+2002, MNRAS, 329, 897) or SEVN (Spera M. et al., 2019, MNRAS, 485, 889; Iorio et al. 2023, MNRAS, 524, 426):
 
 - bse: the updated SSE/BSE version from Banerjee et al. 2020, A&A, 639, A41.
 - mobse: the MOSSE/MOBSE from Giacobbo et al. 2018, MNRAS, 474, 2959.
+- sevn: the SEVN code from Iorio G., Mapelli M., Costa G., Spera M., Escobar G. J., Sgalletta C., Trani A. A., et al.,
+  2023, MNRAS, 524, 426 and Spera M., Mapelli M., Giacobbo N., Trani A. A., Bressan A., Costa G., 2019, MNRAS, 485, 889,
+  implemented in PeTar in Marín Pina et al, in prep.
 - bseEmp: the updated SSE/BSE version from Tanikawa et al. 2020, MNRAS, 495, 4170.
 
 It is important to mention that while all SSE/BSE package names only contain 'bse', the SSE package is also encompassed within them. From now on, the SSE/BSE based package will be denoted in a universal form as '[bse_name]'.
 
 Enabling this option will also compile and install the standalone tool _petar.[bse_name]_. This C++ based tool calls stellar evolution functions to evolve single and binary stars to a specified age and metallicity. OpenMP parallelization is utilized to accelerate calculations when handling a large group of stars and binaries.
 
+To use the SEVN track interpolator, users must compile and install the SEVN code (see
+Section [Dependence](#dependence)).
+
 To use the extreme metal-poor evolution track of bseEmp, users must create a symbolic link in the working directory to either the _ffbonn_ or _ffgeneva_ directory located in 'PeTar/bse-interface/bseEmp/emptrack/', depending on the selected stellar evolution track mode during the execution of PeTar. Failure to do this will lead to a file I/O error, causing the simulation to crash.
 
-When utilizing SSE/BSE packages, users can control whether to activate stellar evolution during the simulation using the `petar` option `--stellar-evolution` and `--detect-interrupt` for single and binary evolution, respectively. When `--stellar-evolution 2` is specified, dynamical tide for binary stars and hyperbolic gravitational wave energy/angular momentum loss for compact binaries are enabled. It's worth noting that the dynamical tide is still an experimental feature, and its results may not always be physically accurate. By default (`--stellar-evolution 1`), dynamical tide remains inactive.
+When utilizing stellar evolution packages, users can control whether to activate stellar evolution during the simulation
+using the `petar` option `--stellar-evolution` and `--detect-interrupt` for single and binary evolution, respectively.
+When `--stellar-evolution 2` is specified, dynamical tide for binary stars and hyperbolic gravitational wave
+energy/angular momentum loss for compact binaries are enabled. It's worth noting that the dynamical tide is still an
+experimental feature, and its results may not always be physically accurate. By default (`--stellar-evolution 1`),
+dynamical tide remains inactive.
 
 ### Using External Potential
 
@@ -662,7 +684,8 @@ When `petar` is running, several pieces of information are displayed at the begi
     Potential type indice: 15 5 9
     Potential arguments: 251.63858935563 1.8 1900 306770418.38589 3000 280 1965095308.1922 16000
     ```
-7. In case the SSE/BSE-based stellar evolution package is employed, common block and global parameters are showcased.
+7. In case the SSE/BSE-based (or SEVN) stellar evolution package is employed, common block and global parameters
+   are showcased.
     ```
      ----- SSE/BSE common block parameter list: -----
      value1: neta:  0.50000000000000000       bwind:   0.0000000000000000       hewind:   1.0000000000000000
@@ -678,7 +701,8 @@ When `petar` is running, several pieces of information are displayed at the begi
     By default, these include:
     - `input.par`: Input parameters of `petar`, useful for restarting the simulation from a snapshot.
     - `input.par.hard`: Input parameters of the hard component (short-range interaction part; Hermite + SDAR), utilized for testing the dumped hard cluster with `_petar.hard.debug_`.
-    - `input.par.[bse_name]`: Parameters for the SSE/BSE-based package, necessary for restarting the simulation and for `petar.hard.debug` if an SSE/BSE-based package is used.
+   - `input.par.[bse_name]`: Parameters for the stellar-evolution package, necessary for restarting the simulation and
+     for `petar.hard.debug` if a stellar-evolution package is used.
     - `input.par.galpy`: Galpy parameters for simulation restart purposes.
 
     After the "Finish parameter initialization" line, the simulation status is updated at each output time interval (defined by the `-o` option). The status content follows a format similar to the example provided below:
@@ -818,7 +842,7 @@ In addition to the printed information provided by the `petar` commander, there 
 |                      | When the `petar` option `-w 2` is utilized, this file includes all particle information similar to the snapshot files. Instead of segregating particles into distinct lines, all particles are consolidated into a single line. |
 | data.prof.rank.[MPI rank]| Offers performance measurements for various parts of the code throughout the simulation.                                  |
 
-When utilizing the SSE/BSE stellar evolution options (--with-interrupt during configure), additional files are generated:
+When utilizing the stellar evolution options (--with-interrupt during configure), additional files are generated:
 
 | File name            | Content                                                                                                                    |
 | :-------------       | ------------------------------------------------------------------------------------------------------------------------   |
@@ -1007,7 +1031,10 @@ petar.format.transfer -g [other options] [snapshot path list filename]
 ```
 This process generates new data in BINARY format. By employing the same tool with the `-b` option, users can convert the BINARY format back to the updated ASCII format.
 
-The formats of input parameter files produced during simulations (including files from SSE/BSE and Galpy) were updated on Oct 18, 2020. To adapt the input files for use with newer versions of PeTar, users can employ [`petar.update.par`](#input-parameter-file-format-update). Post-update, the reading and modification of input parameter files are significantly improved, enhancing the ease of restarting simulations with the latest PeTar versions.
+The formats of input parameter files produced during simulations (including files from stellar evolution and Galpy) were
+updated on Oct 18, 2020. To adapt the input files for use with newer versions of PeTar, users can employ [
+`petar.update.par`](#input-parameter-file-format-update). Post-update, the reading and modification of input parameter
+files are significantly improved, enhancing the ease of restarting simulations with the latest PeTar versions.
 
 ## Useful Tools
 
@@ -1027,7 +1054,11 @@ petar.init [options] [particle data filename]
 ```
 The particle data file should consist of 7 columns: mass, position (3 coordinates), velocity (3 components), with each particle represented in a separate row. Binaries should be listed first, with the two components adjacent to each other. When binaries are present, the `-b [binary number]` option must be included in the `petar` command to ensure accurate initialization of velocity dispersion, tree time step, and changeover radii.
 
-If stellar evolution is activated, the corresponding options `-s [bse_name]` should be used concurrently to generate the correct initial files. In such cases, it is recommended to utilize astronomical units (Solar mass [Msun], parsec [pc], and Million years [Myr]) for the initial data. The velocity unit should be specified as pc/Myr, ensuring a mass scaling factor of 1.0 between PeTar units and SSE/BSE-based code. Additionally, the `-u 1` option should be added to the `petar` command to adopt this astronomical unit set.
+If stellar evolution is activated, the corresponding options `-s [bse_name]` should be used concurrently to generate the
+correct initial files. In such cases, it is recommended to utilize astronomical units (Solar mass [Msun], parsec [pc],
+and Million years [Myr]) for the initial data. The velocity unit should be specified as pc/Myr, ensuring a mass scaling
+factor of 1.0 between PeTar units and stellar-evolution code. Additionally, the `-u 1` option should be added to the
+`petar` command to adopt this astronomical unit set.
 
 Similarly, when external mode (potential) is enabled, the `-t` option should be utilized to ensure the correct number of columns is generated.
 
@@ -1079,20 +1110,20 @@ Several options can control the gathered data; use `petar.data.gether -h` to rev
 
 Below is a table detailing the files generated by the tool and the corresponding Python analysis classes for reading (refer to [Python Data Analysis Module](#python-data-analysis-module)):
 
-| Original files                | Output files                  | Content                                     | Python classes initialization for reading |
-| :--------------               | :------------                 | :---------                                  | :-------------------------------------    |
-| data.group.[MPI rank]         | data.group                    | all groups                                  | None                                      |
-|                               | data.group.n2                 | binaries, hyperbolic systems                 | petar.GroupInfo(N=2)                      |
-|                               | data.group.n3                 | triples                                     | petar.GroupInfo(N=3)                      |
-|                               | ...                           | multiple systems...                         | ...                                       |
-| data.esc.[MPI_rank]           | data.esc                      | escapers                                    | petar.SingleEscaper(interrupt_mode=[\*], external_mode=[\*]) |
-| data.[sse_name].[MPI rank]    | data.[sse_name]               | full single stellar evolution records       | None                                      |
-|                               | data.[sse_name].type_change   | single stellar evolution type change events | petar.SSETypeChange()                     |
-|                               | data.[sse_name].sn_kick       | supernova natal kick of single star         | petar.SSESNKick()                         |
-| data.[bse_name].[MPI rank]    | data.[bse_name]               | full binary stellar evolution records       | None                                      |
-|                               | data.[bse_name].type_change   | binary stellar evolution type change events | petar.BSETypeChange()                     |
-|                               | data.[bse_name].sn_kick       | supernova natal kick in binaries            | petar.BSESNKick()                         |
-|                               | data.[bse_name].dynamic_merge | dynamical-driven (hyperbolic) mergers       | petar.BSEDynamicMerge(less_output=[\*])   |
+| Original files             | Output files                  | Content                                     | Python classes initialization for reading                    |
+|:---------------------------|:------------------------------|:--------------------------------------------|:-------------------------------------------------------------|
+| data.group.[MPI rank]      | data.group                    | all groups                                  | None                                                         |
+|                            | data.group.n2                 | binaries, hyperbolic systems                | petar.GroupInfo(N=2)                                         |
+|                            | data.group.n3                 | triples                                     | petar.GroupInfo(N=3)                                         |
+|                            | ...                           | multiple systems...                         | ...                                                          |
+| data.esc.[MPI_rank]        | data.esc                      | escapers                                    | petar.SingleEscaper(interrupt_mode=[\*], external_mode=[\*]) |
+| data.[sse_name].[MPI rank] | data.[sse_name]               | full single stellar evolution records       | None                                                         |
+|                            | data.[sse_name].type_change   | single stellar evolution type change events | petar.SSETypeChange(interrupt_mode=[\*])                     |
+|                            | data.[sse_name].sn_kick       | supernova natal kick of single star         | petar.SSESNKick(interrupt_mode=[\*])                         |
+| data.[bse_name].[MPI rank] | data.[bse_name]               | full binary stellar evolution records       | None                                                         |
+|                            | data.[bse_name].type_change   | binary stellar evolution type change events | petar.BSETypeChange(interrupt_mode=[\*])                     |
+|                            | data.[bse_name].sn_kick       | supernova natal kick in binaries            | petar.BSESNKick(interrupt_mode=[\*])                         |
+|                            | data.[bse_name].dynamic_merge | dynamical-driven (hyperbolic) mergers       | petar.BSEDynamicMerge(less_output=[\*], interrupt_mode=[\*]) |
 
 Here, [\*] represents arguments that depend on the configuration options used for compilation.
 
@@ -1118,7 +1149,12 @@ ls | egrep '^data.[0-9]+$' | sort -n -k 1.6 > snap.lst
 ```
 This command finds all data files in the current directory, sorts them based on the suffix (values after 'data.') in increasing order, and saves the list to the file 'snap.lst'. The `-n` flag specifies that the values to sort are floating-point numbers, and `-k` defines the starting position of the number for sorting.
 
-Users should ensure to set the correct options for gravitational constant (`-G`), interrupt mode (`-i`), and external mode (`-t`) for `petar.data.process`. This is crucial for reading snapshots and calculating Kepler orbital parameters of binaries. For simulations using astronomical units (`-u 1` in the `petar` command), the gravitational constant `-G 0.00449830997959438` should be used for `petar.data.process`. If using a package like SSE/BSE, the interrupt mode option `-i [bse_name]` can set the correct value of G. When an external mode like Galpy is employed, the external mode option `-t galpy` is necessary.
+Users should ensure to set the correct options for gravitational constant (`-G`), interrupt mode (`-i`), and external
+mode (`-t`) for `petar.data.process`. This is crucial for reading snapshots and calculating Kepler orbital parameters of
+binaries. For simulations using astronomical units (`-u 1` in the `petar` command), the gravitational constant
+`-G 0.00449830997959438` should be used for `petar.data.process`. If using a stellar evolution package, the interrupt
+mode option `-i [bse_name]` can set the correct value of G. When an external mode like Galpy is employed, the external
+mode option `-t galpy` is necessary.
 
 Below is a table showing the files generated by `petar.data.process` and the corresponding Python modules (classes) for reading them. The default filename prefix 'data' is assumed.
 
@@ -1145,7 +1181,13 @@ When snapshot files are in BINARY format, the option `-s binary` can be used for
 
 Additionally, the `petar` code can remove escapers and store the data of escapers using energy and distance criteria (in files [data filename prefix].esc.[MPI rank], see [Output files](#output-files)). All escapers during the simulations are not stored in the original snapshot files. The `petar` code only applies a simple constant escape radial criterion. The post-processing by `petar.data.process` can calculate the tidal radius and detect escapers, which are then stored in the post-generated escape files: "data.esc\_single" and "data.esc\_binary". These escapers are not removed from the post-generated snapshot files: data.[index].single and data.[index].binary.
 
-For Lagrangian properties, 'data.lagr' includes radius, average mass, number of objects, different components of velocity, and dispersions within different Lagrangian radii. The mass fractions of Lagrangian radii are 0.1, 0.3, 0.5, 0.7, and 0.9 by default. The core radius property is added at the end. There is an option in `petar.data.process` to define an arbitrary set of mass functions. When using the SSE/BSE-based stellar evolution package, an additional option `--add-star-type` can be used to calculate Lagrangian properties for specific types of stars. When `--add-star-type` is used, the reading function should have consistent keyword arguments. An example of reading 'data.lagr' is provided in [Reading Lagrangian data](#reading-lagrangian-data).
+For Lagrangian properties, 'data.lagr' includes radius, average mass, number of objects, different components of
+velocity, and dispersions within different Lagrangian radii. The mass fractions of Lagrangian radii are 0.1, 0.3, 0.5,
+0.7, and 0.9 by default. The core radius property is added at the end. There is an option in `petar.data.process` to
+define an arbitrary set of mass functions. When using a stellar evolution package, an additional option
+`--add-star-type` can be used to calculate Lagrangian properties for specific types of stars. When `--add-star-type` is
+used, the reading function should have consistent keyword arguments. An example of reading 'data.lagr' is provided
+in [Reading Lagrangian data](#reading-lagrangian-data).
 
 When `--calc-energy` is used, potential energy, external potential energy, and virial ratio for each Lagrangian radii are calculated. However, when an external potential is used, the virial ratio may not be accurately estimated in disrupted phases.
 
@@ -1164,7 +1206,9 @@ Similar to configuring `petar.data.process`, users should ensure the correct set
 
 ### Movie Generator
 
-The `petar.movie` tool is a convenient utility for creating movies from snapshot files. It can generate movies showcasing the positions (x, y) of stars, the HR diagram if stellar evolution (SSE/BSE) is enabled, and the 2D distribution of semi-major axis and eccentricity of binaries. To generate a movie, a list of snapshot files is required.
+The `petar.movie` tool is a convenient utility for creating movies from snapshot files. It can generate movies
+showcasing the positions (x, y) of stars, the HR diagram if stellar evolution is enabled, and the 2D distribution of
+semi-major axis and eccentricity of binaries. To generate a movie, a list of snapshot files is required.
 
 The basic usage of `petar.movie` is as follows:
 ```shell
@@ -1219,13 +1263,18 @@ The formats of input parameter files generated during simulations, including fil
 ```shell
 petar.update.par [options] [input parameter filename]
 ```
-By employing options such as `-p`, `-b`, and `-t`, users can update input parameters from PeTar, SSE/BSE, and Galpy, respectively. Additional options cater to different features selected in the configuration.
+
+By employing options such as `-p`, `-b`, and `-t`, users can update input parameters from PeTar, SSE/BSE/SEVN, and
+Galpy, respectively. Additional options cater to different features selected in the configuration.
 
 Post-update, the new input parameter files are more user-friendly. They consist of three columns defined as (1) the data type of the argument, (2) option names, and (3) argument values. The reference for the first two columns can be accessed using the command `petar -h`. Users can directly modify the argument values in the file. Furthermore, it is not necessary to list all options in the file. Consequently, if new options are introduced in future versions, there is no necessity to update the file again unless existing option names undergo changes.
 
-### Stellar Evolution Tool based on SSE and BSE
+### Stellar Evolution Tool based on SSE/BSE or SEVN
 
-The `petar.[bse_name]` tool is generated when utilizing the SSE/BSE based stellar evolution package (--with-interrupt=[bse_name]) during configuration, where `[bse_name]` can be 'bse', 'bseEmp' and 'mobse'. This tool functions as a standalone application for evolving stars and binaries up to a specified time. All essential global parameters can be configured through options.
+The `petar.[bse_name]` tool is generated when utilizing a stellar evolution package (--with-interrupt=[bse_name]) during
+configuration, where `[bse_name]` can be 'bse', 'bseEmp', 'sevn', and 'mobse'. This tool functions as a standalone
+application for evolving stars and binaries up to a specified time. All essential global parameters can be configured
+through options.
 
 To evolve a group of stars using the tool:
 ```shell
@@ -1309,7 +1358,9 @@ For instance, the `petar.Particle` class is used for reading snapshot files outp
 
 The class also contains a member `pos`, a $N\times3$ 2D NumPy array where the first dimension represents the number of particles, and the second dimension represents the position vector of each particle.
 
-If the SSE/BSE is activated, the class includes a member `star`, a subclass of type `petar.SSEStarParameter` that stores the stellar evolution parameters of particles.
+If the SSE/BSE is activated, the class includes a member `star`, a subclass of type `petar.SSEStarParameter` that stores
+the stellar evolution parameters of particles. If SEVN is activated, the subclass has more output and is called
+`petar.SEVNStarParameter`
 
 All classes have special members like `size`, `ncols`, `keys`, and `host`. These members signify:
 - `size`: the data size, equivalent to the size of a 1D array member.
@@ -1343,7 +1394,7 @@ For convenience, the output file prefix used in the following filenames is 'data
 | Profile  | Performance metrics of code parts   | GPU usage: `use_gpu=[True, False]`   | data.prof.rank.[MPI rank]                                   |
 | GroupInfo| Multiple systems (binary, triple ...)        | Number of members in systems: `N=[2, 3, ...]`             | data.group.n[number of members]                             |
 
-- Outputs from `petar`  or `petar.[bse name]` with SSE/BSE stellar evolution:
+- Outputs from `petar`  or `petar.[bse name]` with SSE/BSE or SEVN stellar evolution:
 
 | Class name           | Description                                  |   Corresponding file      |
 | :------------        | :---------------------------------           | :------------------------ |
@@ -1417,7 +1468,11 @@ particle = petar.Particle(interrupt_mode='bse')
 particle.loadtxt('data.0', skiprows=1)
 ```
 
-Here, the keyword argument `interrupt_mode` is crucial for proper snapshot reading. The column definitions in snapshots depend on the stellar evolution option (`--with-interrupt`) and the external potential option (`--with-external`) used during configuration. The argument `bse` indicates that the updated SSE/BSE is used, so external columns exist in the snapshots. In this case, `particle` contains a member `star` with the class type `petar.SSEStarParameter`. Similarly, if an external potential is added, one more column `pot_ext` is included.
+Here, the keyword argument `interrupt_mode` is crucial for proper snapshot reading. The column definitions in snapshots
+depend on the stellar evolution option (`--with-interrupt`) and the external potential option (`--with-external`) used
+during configuration. The argument `bse` indicates that the updated SSE/BSE is used, so external columns exist in the
+snapshots. In this case, `particle` contains a member `star` with the class type `petar.SSEStarParameter` (or
+`petar.SEVNStarParameter`). Similarly, if an external potential is added, one more column `pot_ext` is included.
 
 Since the first line in the snapshot file is the header, `skiprows=1` is used to skip this line when reading data.
 
