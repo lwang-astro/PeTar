@@ -1,0 +1,10 @@
+RESULT base rep1 rc=0 wall_s=74.4 finished=1
+RESULT auto rep1 rc=0 wall_s=75.0 finished=1
+RESULT neon rep1 rc=0 wall_s=48.0 finished=1
+RESULT base rep2 rc=0 wall_s=72.6 finished=1
+RESULT auto rep2 rc=0 wall_s=74.3 finished=1
+RESULT neon rep2 rc=0 wall_s=45.9 finished=1
+RESULT base rep3 rc=0 wall_s=84.0 finished=1
+RESULT auto rep3 rc=0 wall_s=72.6 finished=1
+RESULT neon rep3 rc=0 wall_s=50.0 finished=1
+ALL_DONE

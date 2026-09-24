@@ -1,0 +1,5 @@
+L1 16KB      n=      2048      1.54 ns/access  thp=1
+L2 256KB     n=     32768      4.66 ns/access  thp=1
+L3 8MB       n=   1048576     28.41 ns/access  thp=1
+DRAM 512MB   n=  67108864     82.02 ns/access  thp=1
+  AnonHugePages:         0 kB

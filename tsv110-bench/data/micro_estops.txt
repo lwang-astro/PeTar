@@ -1,0 +1,8 @@
+rsqrte32  threads= 1 N=200000000 time=0.3469 s  1.735 ns/vector-instr  -> 0.576 Gvector-instr/s
+recpe32   threads= 1 N=200000000 time=0.2506 s  1.253 ns/vector-instr  -> 0.798 Gvector-instr/s
+sqrt32    threads= 1 N=100000000 time=0.9041 s  9.041 ns/vector-instr  -> 0.111 Gvector-instr/s
+div32     threads= 1 N=100000000 time=0.8853 s  8.853 ns/vector-instr  -> 0.113 Gvector-instr/s
+rsqrte64  threads= 1 N=200000000 time=0.1928 s  0.964 ns/vector-instr  -> 1.037 Gvector-instr/s
+recpe64   threads= 1 N=200000000 time=0.1928 s  0.964 ns/vector-instr  -> 1.037 Gvector-instr/s
+sqrt64    threads= 1 N=100000000 time=1.4746 s  14.746 ns/vector-instr  -> 0.068 Gvector-instr/s
+div64     threads= 1 N=100000000 time=1.3871 s  13.871 ns/vector-instr  -> 0.072 Gvector-instr/s

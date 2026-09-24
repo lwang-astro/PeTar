@@ -1,0 +1,2 @@
+MASSZERO,neon_cubic,1000,2000,753029982,acc_max=6.836040e-06,pot_max=4.177221e-07,acc_mean=2.740734e-07,pot_mean=1.132376e-07,nnb_mismatch_vs_filtered=0,nnb_mismatch_unfiltered_nosimd_vs_filtered=782
+MASSZERO,neon_newton,1000,2000,753029982,acc_max=6.836040e-06,pot_max=4.177221e-07,acc_mean=2.740734e-07,pot_mean=1.132376e-07,nnb_mismatch_vs_filtered=0,nnb_mismatch_unfiltered_nosimd_vs_filtered=782

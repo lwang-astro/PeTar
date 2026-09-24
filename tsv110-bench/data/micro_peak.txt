@@ -1,0 +1,14 @@
+threads 24 pmccntr_ok 0
+cntfrq=100.005 MHz (sink 19999999.900)
+---FMA32_1T
+fma32     threads= 1 N=200000000 time=0.7709 s  0.385 ns/vector-instr  -> 20.76 GFLOP/s (20.76 /thread)
+---FMA32_24T
+fma32     threads=24 N=5000000000 time=0.8346 s  0.017 ns/vector-instr  -> 479.29 GFLOP/s (19.97 /thread)
+---FMA64_1T
+fma64     threads= 1 N=200000000 time=0.8137 s  0.407 ns/vector-instr  -> 9.83 GFLOP/s (9.83 /thread)
+---FMA64_24T
+fma64     threads=24 N=5000000000 time=0.8515 s  0.017 ns/vector-instr  -> 234.87 GFLOP/s (9.79 /thread)
+---LAT32
+lat32     threads= 1 N=200000000 time=0.3084 s  1.542 ns/vector-instr  -> 0.649 Gvector-instr/s
+---LAT64
+lat64     threads= 1 N=200000000 time=0.3856 s  1.928 ns/vector-instr  -> 0.519 Gvector-instr/s

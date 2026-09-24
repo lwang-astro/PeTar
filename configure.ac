@@ -126,7 +126,7 @@ AS_IF([test x"$use_omp" != xno],
 # x86
 AC_ARG_WITH([arch],
 	    [AS_HELP_STRING([--with-arch],
-                            [compile with architecture type (x86, fugaku). Default: x86])],
+                            [compile with architecture type (x86, fugaku, tsv110). Default: x86])],
             [],
 	    [with_arch=x86])
 
@@ -172,6 +172,11 @@ AS_IF([test x"$with_arch" == xfugaku],
       [AX_CHECK_COMPILE_FLAG(['-Kfast -Nclang'],
                              [OPTFLAGS=$OPTFLAGS" -Kfast -Nclang"])
        PROG_NAME=$PROG_NAME".fugaku"])
+
+AS_IF([test x"$with_arch" == xtsv110],
+      [AX_CHECK_COMPILE_FLAG([-mcpu=tsv110],
+                             [OPTFLAGS=$OPTFLAGS" -mcpu=tsv110"])
+       PROG_NAME=$PROG_NAME".tsv110"])
 
 AC_ARG_ENABLE([simd-64],
               [AS_HELP_STRING([--enable-simd-64],
@@ -373,6 +378,9 @@ AC_ARG_WITH([external],
                     AS_IF([test x"$with_arch" == xfugaku],
                           [AX_CHECK_COMPILE_FLAG(['-Kfast -Nclang'],
                                                  [COPTFLAGS=$COPTFLAGS" -Kfast -Nclang"])])
+                    AS_IF([test x"$with_arch" == xtsv110],
+                          [AX_CHECK_COMPILE_FLAG([-mcpu=tsv110],
+                                                 [COPTFLAGS=$COPTFLAGS" -mcpu=tsv110"])])
                     AS_IF([test x"$galpy_prefix" == x__search__],
                           [AC_CHECK_PROG([FIND_CHECK], [find], [find])
 			   AS_IF([test x"$FIND_CHECK" == xfind],

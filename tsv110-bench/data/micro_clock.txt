@@ -1,0 +1,3 @@
+dependent int add : 0.7710 ns/op  -> clock=1.297 GHz (if latency=1 cyc)
+dependent fadd    : 1.5418 ns/op  (4.01 cyc @2.6GHz)
+dependent scalar fmadd: 1.9274 ns/op  (5.01 cyc @2.6GHz)

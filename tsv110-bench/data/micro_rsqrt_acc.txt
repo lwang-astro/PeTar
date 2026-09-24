@@ -1,0 +1,9 @@
+=== rsqrt f32 (2-lane NEON est) vs exact, N=2000000 ===
+vrsqrte          : max_rel=3.277e-03 mean_rel=9.671e-04
++1 NR            : max_rel=1.614e-05 mean_rel=2.093e-06
++2 NR            : max_rel=1.439e-07 mean_rel=3.741e-08
++1 cubic(Fugaku) : max_rel=1.663e-07 mean_rel=2.717e-08
+=== rsqrt f64 (1-lane NEON est) ===
+vrsqrte          : max_rel=3.276e-03 mean_rel=9.679e-04
++1 NR            : max_rel=1.612e-05 mean_rel=2.094e-06
++2 NR            : max_rel=3.898e-10 mean_rel=1.594e-11

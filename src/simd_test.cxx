@@ -39,6 +39,9 @@
 #ifdef USE_FUGAKU
 #include "force_fugaku.hpp"
 #endif
+#ifdef USE_NEON_KERNEL
+#include "force_tsv110.hpp"
+#endif
 #endif
 
 void setSpj(const PS::F64 N, SPJSoft& sp) {
@@ -104,6 +107,11 @@ int main(int argc, char **argv){
     ForceSoft force_sp_fgk[Nepi];
     ForceSoft force_nb_fgk[Nepi];
 #endif
+#ifdef USE_NEON_KERNEL
+    ForceSoft force_neon[Nepi];
+    ForceSoft force_sp_neon[Nepi];
+    ForceSoft force_nb_neon[Nepi];
+#endif
 
     for (int i=0; i<N; i++) ptcl[i].calcRSearch(1.0/2048.0);
 
@@ -123,6 +131,11 @@ int main(int argc, char **argv){
         force_fgk[i].clear();
         force_sp_fgk[i].clear();
         force_nb_fgk[i].clear();
+#endif
+#ifdef USE_NEON_KERNEL
+        force_neon[i].clear();
+        force_sp_neon[i].clear();
+        force_nb_neon[i].clear();
 #endif
     }
     for (int i=0; i<Nepj; i++) 
@@ -211,6 +224,33 @@ int main(int argc, char **argv){
     f_nb_fgk(epi, Nepi, epj, Nepj, force_nb_fgk);
     t_nb_fgk += PS::GetWtime();
 #endif
+#ifdef USE_NEON_KERNEL
+    std::cout<<"calc Ep Ep neon\n";
+    tsv110::CalcForceEpEpWithLinearCutoffNeon f_ep_ep_neon(EPISoft::eps*EPISoft::eps, EPISoft::r_out*EPISoft::r_out, ForceSoft::grav_const);
+    PS::F64 t_ep_neon=0;
+    t_ep_neon -= PS::GetWtime();
+    f_ep_ep_neon(epi, Nepi, epj, Nepj, force_neon);
+    t_ep_neon += PS::GetWtime();
+
+#ifdef USE_QUAD
+    std::cout<<"calc Ep Sp quad neon\n";
+    tsv110::CalcForceEpSpQuadNeon<SPJSoft> f_ep_sp_neon(EPISoft::eps*EPISoft::eps, ForceSoft::grav_const);
+#else
+    std::cout<<"calc Ep Sp mono neon\n";
+    tsv110::CalcForceEpSpMonoNeon<SPJSoft> f_ep_sp_neon(EPISoft::eps*EPISoft::eps, ForceSoft::grav_const);
+#endif
+    PS::F64 t_sp_neon=0;
+    t_sp_neon -= PS::GetWtime();
+    f_ep_sp_neon(epi, Nepi, spj, Nspj, force_sp_neon);
+    t_sp_neon += PS::GetWtime();
+
+    std::cout<<"neighbor search neon\n";
+    tsv110::SearchNeighborEpEpNeon f_nb_neon;
+    PS::F64 t_nb_neon=0;
+    t_nb_neon -= PS::GetWtime();
+    f_nb_neon(epi, Nepi, epj, Nepj, force_nb_neon);
+    t_nb_neon += PS::GetWtime();
+#endif
 
     std::cout<<"calc Ep Ep\n";
     CalcForceEpEpWithLinearCutoffNoSimd f_ep_ep;
@@ -257,6 +297,11 @@ int main(int argc, char **argv){
     PS::F64 dsmax_fgk=0,dspmax_fgk=0;
     PS::F64 nbcount_ave_fgk=0;
 #endif
+#ifdef USE_NEON_KERNEL
+    PS::F64 dfmax_neon=0,dfpmax_neon=0;
+    PS::F64 dsmax_neon=0,dspmax_neon=0;
+    PS::F64 nbcount_ave_neon=0;
+#endif
     PS::F64 df;
 
     for(int i=0; i<Nepi; i++) {
@@ -282,6 +327,15 @@ int main(int argc, char **argv){
             df=(force_sp[i].acc[j]-force_sp_fgk[i].acc[j])/force_sp[i].acc[j];
             dsmax_fgk = std::max(dsmax_fgk, df);
             if(df>DF_MAX) std::cerr<<"Force sp diff: i="<<i<<" nosimd["<<j<<"] "<<force_sp[i].acc[j]<<" fugaku["<<j<<"] "<<force_sp_fgk[i].acc[j]<<std::endl;
+#endif
+#ifdef USE_NEON_KERNEL
+            df=(force[i].acc[j]-force_neon[i].acc[j])/force[i].acc[j];
+            dfmax_neon = std::max(dfmax_neon, df);
+            if(df>DF_MAX) std::cerr<<"Force diff: i="<<i<<" nosimd["<<j<<"] "<<force[i].acc[j]<<" neon["<<j<<"] "<<force_neon[i].acc[j]<<std::endl;
+
+            df=(force_sp[i].acc[j]-force_sp_neon[i].acc[j])/force_sp[i].acc[j];
+            dsmax_neon = std::max(dsmax_neon, df);
+            if(df>DF_MAX) std::cerr<<"Force sp diff: i="<<i<<" nosimd["<<j<<"] "<<force_sp[i].acc[j]<<" neon["<<j<<"] "<<force_sp_neon[i].acc[j]<<std::endl;
 #endif
         }
 #ifdef USE_SIMD
@@ -316,6 +370,18 @@ int main(int argc, char **argv){
         }
         nbcount_ave_fgk += force_fgk[i].n_ngb;
 #endif
+#ifdef USE_NEON_KERNEL
+        dfpmax_neon = std::max(dfpmax_neon, (force[i].pot-force_neon[i].pot)/force[i].pot);
+        dspmax_neon = std::max(dspmax_neon, (force_sp[i].pot-force_sp_neon[i].pot)/force_sp[i].pot);
+
+        if(force[i].n_ngb!=force_neon[i].n_ngb) {
+            std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" neon "<<force_neon[i].n_ngb<<std::endl;
+        }
+        if(force_nb[i].n_ngb!=force_nb_neon[i].n_ngb) {
+            std::cerr<<"NB search diff: i="<<i<<" nosimd "<<force_nb[i].n_ngb<<" neon "<<force_nb_neon[i].n_ngb<<std::endl;
+        }
+        nbcount_ave_neon += force_neon[i].n_ngb;
+#endif
         nbcount_ave += force[i].n_ngb;
         if (force[i].n_ngb<20) nbcount[force[i].n_ngb]++;
     }
@@ -332,6 +398,13 @@ int main(int argc, char **argv){
     std::cout<<" FUGAKU_quad";
 #else
     std::cout<<" FUGAKU_mono";
+#endif
+#endif
+#ifdef USE_NEON_KERNEL
+#ifdef USE_QUAD
+    std::cout<<" NEON_quad";
+#else
+    std::cout<<" NEON_mono";
 #endif
 #endif
 #ifdef USE_GPU
@@ -377,6 +450,10 @@ int main(int argc, char **argv){
     std::cout<<"Fugaku EP-EP diff max: "<<dfmax_fgk<<" Pot diff max: "<<dfpmax_fgk<<std::endl;
     std::cout<<"Fugaku EP-SP diff max: "<<dsmax_fgk<<" Pot diff max: "<<dspmax_fgk<<std::endl;
 #endif
+#ifdef USE_NEON_KERNEL
+    std::cout<<"NEON EP-EP diff max: "<<dfmax_neon<<" Pot diff max: "<<dfpmax_neon<<std::endl;
+    std::cout<<"NEON EP-SP diff max: "<<dsmax_neon<<" Pot diff max: "<<dspmax_neon<<std::endl;
+#endif
 
     for (int i=0; i<20; i++)
       if (nbcount[i]>0) std::cout<<"NNB: "<<i<<" "<<nbcount[i]<<std::endl;
@@ -391,6 +468,9 @@ int main(int argc, char **argv){
 #ifdef USE_FUGAKU
     std::cout<<" fugaku: "<<nbcount_ave_fgk;
 #endif
+#ifdef USE_NEON_KERNEL
+    std::cout<<" neon: "<<nbcount_ave_neon;
+#endif
     std::cout<<std::endl;
     
 #ifdef USE_SIMD
@@ -403,6 +483,10 @@ int main(int argc, char **argv){
 #ifdef USE_FUGAKU
     std::cout<<"Time: fugaku ="<<t_ep_fgk<<" no="<<t_ep_no<<" ratio="<<t_ep_no/t_ep_fgk<<std::endl;
     std::cout<<"Time: fugaku ="<<t_sp_fgk<<" no="<<t_sp_no<<" ratio="<<t_sp_no/t_sp_fgk<<std::endl;
+#endif
+#ifdef USE_NEON_KERNEL
+    std::cout<<"Time: neon ="<<t_ep_neon<<" no="<<t_ep_no<<" ratio="<<t_ep_no/t_ep_neon<<std::endl;
+    std::cout<<"Time: neon ="<<t_sp_neon<<" no="<<t_sp_no<<" ratio="<<t_sp_no/t_sp_neon<<std::endl;
 #endif
 
     return 0;

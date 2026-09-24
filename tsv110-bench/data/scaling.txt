@@ -1,0 +1,7 @@
+SCAL N=2000 base wall=5.9s rc=0 ok=1 steps=1024 total_step=0.0053028s tree_force=0.0036021s tree_nb=0.00038011s fdps_calcforce=0.0027652s nb_calcforce=3.8659e-05s
+SCAL N=2000 neon wall=3.7s rc=0 ok=1 steps=1024 total_step=0.003105s tree_force=0.0019478s tree_nb=0.00037124s fdps_calcforce=0.00082477s nb_calcforce=2.4515e-05s
+SCAL N=5000 base wall=49.1s rc=0 ok=1 steps=2048 total_step=0.023953s tree_force=0.017944s tree_nb=0.00092634s fdps_calcforce=0.014155s nb_calcforce=0.00023347s
+SCAL N=5000 neon wall=24.5s rc=0 ok=1 steps=2048 total_step=0.011747s tree_force=0.0088813s tree_nb=0.0008384s fdps_calcforce=0.0044676s nb_calcforce=0.00013418s
+SCAL N=10000 base wall=277.6s rc=0 ok=1 steps=4096 total_step=0.066421s tree_force=0.055805s tree_nb=0.0015132s fdps_calcforce=0.045941s nb_calcforce=0.00099108s
+SCAL N=10000 neon wall=123.5s rc=0 ok=1 steps=4096 total_step=0.029582s tree_force=0.024867s tree_nb=0.0012333s fdps_calcforce=0.015091s nb_calcforce=0.0004439s
+SCAL_DONE
