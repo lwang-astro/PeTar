@@ -1,9 +1,10 @@
 #!/bin/bash
-# build the quad Newton study (NEON/AArch64 required)
+# build the quad Newton study (AArch64 + NEON required)
 set -e
-PETAR=${PETAR:-$HOME/tests/PeTar-project/PeTar}
-FDPS=${FDPS:-$HOME/tests/PeTar-project/FDPS}
-SDAR=${SDAR:-$HOME/tests/PeTar-project/SDAR}
+# PETAR must point to the PeTar source tree; FDPS/SDAR default to its siblings.
+PETAR=${PETAR:?please set PETAR to the PeTar source directory}
+FDPS=${FDPS:-$PETAR/../FDPS}
+SDAR=${SDAR:-$PETAR/../SDAR}
 INC="-I$PETAR/src -I$FDPS/src -I$SDAR/src"
 COMMON="-O3 -Wall -std=c++17 -mcpu=tsv110 -D USE_QUAD -D USE_NEON_KERNEL $INC -fopenmp"
 

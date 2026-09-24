@@ -6,8 +6,9 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-D = os.path.expanduser('~/tsv110-bench/data/')
-FIG = os.path.expanduser('~/tsv110-bench/figs/')
+HERE = os.path.dirname(os.path.abspath(__file__))
+D = HERE + os.sep
+FIG = os.path.join(HERE, '..', 'figs') + os.sep
 os.makedirs(FIG, exist_ok=True)
 plt.rcParams.update({'figure.dpi':130, 'savefig.dpi':150, 'font.size':9})
 

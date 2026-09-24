@@ -15,9 +15,8 @@ Contents:
   quadrupole kernel should adopt the extra half Newton step used by the Fugaku
   kernel. Result: keep the cubic-only `rsqrt4` (no accuracy gain, ~20% slower).
 - `figs/` — performance comparison figures used in the main report.
-- `data/` — raw benchmark data (CSV/TXT), benchmark sources and reproduction
-  scripts (micro-benchmarks, kernel benchmark driver, PeTar integration patch
-  script, plotting script, NEON kernel prototype).
+- `data/` — raw benchmark data (CSV/TXT) and the benchmark sources
+  (micro-benchmarks, kernel benchmark driver, plotting script).
 
 Post-report changes to `src/force_tsv110.hpp`:
 

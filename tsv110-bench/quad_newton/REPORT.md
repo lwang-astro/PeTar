@@ -1,7 +1,7 @@
 # NEON 四极内核：rsqrt 额外半步 Newton 的代价与精度对比
 
 - 日期：2026-09-24
-- 机器：tsv110（HiSilicon Kunpeng-920 / TSV110，24 核，~2.59 GHz）
+- 测试平台：HiSilicon Kunpeng-920（TSV110 核，24 核，~2.59 GHz）
 - 对象：`src/force_tsv110.hpp` 中 `CalcForceEpSpQuadNeon` 使用的倒数平方根
   - **cubic**：`rsqrt4()` = `vrsqrteq_f32` + 三次修正 $r=r_0[1+h(\tfrac12+\tfrac38h)]$
   - **newton**：cubic + 一步半步 Newton $r \leftarrow r(3-x r^2)/2$（与 `force_fugaku.hpp:829-833, 1112-1116` 完全一致）
@@ -33,7 +33,7 @@ flowchart LR
 | 内核计时 | `qn_cubic` / `qn_newton` | 5×5 尺寸网格（n_i∈{4…1024}，n_j∈{8…2048}），每次调用整函子（含打包/选择器），取 8 次扫描的中位数 |
 | mass>0 对齐 | `qn_cubic` + `masszero` | EP-EP：1/3 的 EPJ 质量为零，检验 NEON 与“过滤后的 NoSimd”一致 |
 
-复现：`bash build.sh && bash run.sh && python3 make_figs.py`（需 AArch64 + NEON；用 `PETAR=...` 指向含新 `force_tsv110.hpp` 的 PeTar 源码）。
+基准源码与原始数据见 `data/`（需 AArch64 + NEON）。
 
 ## 3. 结果
 
@@ -114,13 +114,4 @@ MASSZERO,neon_cubic,1000,2000,...,acc_max=6.84e-06,pot_max=4.18e-07,
 
 **决策：`NEON_QUAD_NEWTON` 默认保持 0（cubic）。** 理由是实测无精度收益、有明显性能代价；宏与 `rsqrt4_quad()` 保留在代码中并附本报告，供需要与 Fugaku 逐位对齐时使用（`-DNEON_QUAD_NEWTON=1`）。
 
-## 5. 复现
-
-```bash
-cd tsv110-bench/quad_newton
-PETAR=/path/to/PeTar-with-force_tsv110 bash build.sh
-bash run.sh
-python3 make_figs.py
-```
-
-原始数据在 `data/`：`rsinv_*.csv`、`errors.csv`、`errdump_*.csv`、`timing.csv`、`masszero.csv`、`epep_old.csv`/`epep_new.csv`。
+原始数据与基准源码在 `data/`：`rsinv_*.csv`、`errors.csv`、`errdump_*.csv`、`timing.csv`、`masszero.csv`、`epep_old.csv`/`epep_new.csv`。

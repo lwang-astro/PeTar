@@ -1,9 +1,9 @@
 # tsv110（Kunpeng-920 / TSV110）PeTar 特化优化测试报告
 
 - 日期：2026-09-24
-- 机器：tsv110 (`resbi@tsv110`)，HiSilicon Kunpeng-920，Ubuntu 24.04
+- 测试平台：HiSilicon Kunpeng-920（TSV110 核），24 核，Ubuntu 24.04，GCC 13.3
 - 代码：PeTar `9e408fb`（`1259_297`）+ FDPS v7.0 + SDAR 297；对比基准为现有 `petar.mpi.omp`
-- 运行配置：24 MPI ranks × 1 OpenMP 线程，`--bind-to none`（与 `TEST.md` 推荐一致）
+- 运行配置：24 MPI ranks × 1 OpenMP 线程，`--bind-to none`（24 核机器的推荐配置）
 - 数据/图/脚本：`data/`、`figs/`（本目录内所有图均由原始数据自动生成）
 - **重要更正**：本报告第 2.2 节的缓存延迟采用修正后的方法（见 2.2.1）。第一版测量（未固定核、4 字节索引链、未用大页）把 L1 高估 ~30%、DRAM 高估 ~77%，相关原因与修正结果已写入报告。
 
@@ -45,7 +45,7 @@
 
 ### 1.2 方法与限制
 
-1. **微基准**：自写 C + NEON intrinsics（`micro/`），编译 `-O3 -mcpu=tsv110`；每个测例取 3 次最优。
+1. **微基准**：自写 C + NEON intrinsics（源码见 `data/`），编译 `-O3 -mcpu=tsv110`；每个测例取 3 次最优。
 2. **时钟**：依赖 ALU 链反推（`clock_probe.c`），并用 FMA 吞吐交叉验证；不能读取 PMCCNTR（用户态被禁）。
 3. **无硬件计数器**：无法给出 IPC、cache-miss 等 PMU 指标；改用「指针追逐延迟 + STREAM 带宽 + 反汇编」评估瓶颈。
 4. **内核基准**：独立驱动程序直接调用 PeTar 的 `EPISoft/EPJSoft/SPJQuadrupoleInAndOut` 与 `soft_force.hpp` 标量内核（与产品完全相同的头文件/类型），编译三种二进制：
@@ -145,7 +145,7 @@ $$
 | 精度保护 | EP-SP/邻居搜索沿用 Fugaku 的**原点平移**（减去 `epi[0].pos`） | F32 下避免大坐标相减的灾难性抵消 |
 | 过滤语义 | 只处理 `EPI.type==1` 与 `EPJ.mass>0`（与 x86 SIMD/Fugaku 内核一致；NoSimd 不过滤） | 与既有 SIMD 行为对齐 |
 
-代码骨架（完整源码见 `data/force_tsv110.hpp`）：
+代码骨架（完整源码见 `src/force_tsv110.hpp`）：
 
 ```cpp
 static inline float32x4_t rsqrt4(float32x4_t x){
@@ -271,7 +271,7 @@ F32 树力使 10 Myr 能量漂移从 ~10⁻⁷ 升到 ~10⁻⁴（相对），�
 
 ### O1（核心）用 NEON F32 内核替换标量树力内核
 - 证据：内核 geomean 3.97×（EP-EP）/4.65×（四极）；端到端 1.55–2.25×；`soft_force.hpp` 零向量化。
-- 做法：新增 `src/force_tsv110.hpp`（原型已提供），`petar.hpp` 增加 `#elif defined(USE_NEON_KERNEL)` 分支（已在此次 E2E 验证）。
+- 做法：新增 `src/force_tsv110.hpp`（已集成在仓库中），`petar.hpp` 增加 `#elif defined(USE_NEON_KERNEL)` 分支（已集成并验证）。
 - 收益：N≥5000 时 **2.0–2.3×**；N=2000 双星场景 1.55×。
 - 验收：`simd_test` 式对比（力/势 <7×10⁻³、邻居数相等）+ 短 demo 墙钟。
 
@@ -339,7 +339,7 @@ F32 树力使 10 Myr 能量漂移从 ~10⁻⁷ 升到 ~10⁻⁴（相对），�
 - 生产版把 `std::vector` 换成 `thread_local` 复用缓冲（当前原型每次调用分配，估计有 5–15% 额外开销）。
 
 ### O12 运行配置维持现状
-- 证据：24×1 已是 `TEST.md` 扫描最优；树力为访存型，SMT 不存在。
+- 证据：24×1 为并行配置扫描的最优档；树力为访存型，该 CPU 无 SMT。
 - 做法：保持 `OMP_NUM_THREADS=1`、`--bind-to none`；`OMP_STACKSIZE=128M`。
 - 收益：避免 MPI/OpenMP 混合开销。
 
@@ -370,15 +370,16 @@ tsv110 的 `arm_sve.h` 即使可用（GCC 头文件存在），编译产物含 S
 
 ---
 
-## 7. 集成验证（本次端到端所用的补丁）
+## 7. 集成方式
 
-在 `~/tsv110-bench/e2e/PeTar-neon` 中对源码副本做了 3 处最小改动（脚本 `data/e2e_setup.sh`）：
+本特性已集成到 PeTar 源码中，共 4 处改动：
 
-1. 新增 `src/force_tsv110.hpp`（原型）；
+1. 新增 `src/force_tsv110.hpp`（NEON 内核）；
 2. `src/petar.hpp`：
    - include 段增加 `#ifdef USE_NEON_KERNEL #include "force_tsv110.hpp" #endif`；
    - `treeNeighborSearch()` 与 `treeForce()` 各插入一个 `#elif defined(USE_NEON_KERNEL)` 分支（调用 `tsv110::SearchNeighborEpEpNeon` / `CalcForceEpEpWithLinearCutoffNeon` / `CalcForceEpSpQuadNeon<...>`）；
-3. `Makefile` 追加 `CXXFLAGS += -D USE_NEON_KERNEL`。
+3. `configure.ac` / `configure`：新增 `--with-arch=tsv110`（检查 `-mcpu=tsv110`、程序名后缀 `.tsv110`）；
+4. `Makefile.in`：`ifeq ($(use_arch),tsv110)` → `CXXFLAGS += -D USE_NEON_KERNEL`；`src/simd_test.cxx` 增加 NEON 校验段。
 
 ```mermaid
 flowchart LR
@@ -416,35 +417,14 @@ flowchart LR
 | `figs/fig5_e2e.png` | 2000 星 demo 3 次重复墙钟 |
 | `figs/fig6_rsqrt.png` | 快速 rsqrt 精度台阶 |
 | `figs/fig7_scaling.png` | N=2000/5000/10000 端到端扩展 |
-| `data/force_tsv110.hpp` | NEON 内核原型（4 个内核 × 2 方向） |
 | `data/bench_kernels.cxx` | 内核基准驱动（NoSimd/NEON/自校验） |
 | `data/kernel_g.csv` `kernel_a.csv` `kernel_n.csv` | 三档编译的 5×5 网格原始计时 |
 | `data/scaling.txt` | N 扩展原始结果 |
 | `data/e2e_timing.txt` | demo 3×3 次墙钟 |
 | `data/micro_*.txt` | 微基准原始输出（峰值/延迟/带宽/精度/时钟） |
-| `data/*.c` `data/*.sh` | 微基准/内核基准/E2E/绘图全部源码与脚本 |
-| `data/e2e_setup.sh` `data/e2e_run2.sh` `data/make_figs.py` | 复现脚本 |
+| `data/*.c` `data/build.sh` `data/make_figs.py` | 微基准与内核基准源码、构建与绘图脚本 |
 
-## 附录 B：复现命令（在 tsv110 上）
-
-```bash
-# 微基准
-cd ~/tsv110-bench/micro && bash build.sh
-./clock_probe; ./cache_lat2 1; OMP_NUM_THREADS=1 ./mem_bw; ./rsqrt_acc; ./fma_peak fma32 2e8
-
-# 内核基准
-cd ~/tsv110-bench/kernel && bash build.sh
-./bench_n check                    # 正确性（误差/邻居数）
-./bench_n scan > ../data/kernel_n.csv
-
-# 端到端（NEON 集成构建 + 基准）
-bash ~/tsv110-bench/e2e_setup.sh
-cd ~/tsv110-bench/e2e/PeTar-neon && make -j2 OPTFLAGS="-O3 -Wall -std=c++17 -mcpu=tsv110"
-bash ~/tsv110-bench/e2e_run2.sh    # demo 3×
-bash ~/tsv110-bench/scal_run.sh    # N=2000/5000/10000
-```
-
-## 附录 C：关键公式速查
+## 附录 B：关键公式速查
 
 - 峰值估算 $P = n_\text{core} \times (1\,\text{FMA/cycle}) \times \text{lanes} \times 2 \times f$，F32 lane=4、F64 lane=2，$f\approx2.594$ GHz。
 - Fugaku 式 rsqrt 修正：$h=1-xr_0^2$，$r=r_0[1+h(\tfrac12+\tfrac38h)]$（2.3 节）。
