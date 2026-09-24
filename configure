@@ -1421,8 +1421,8 @@ Optional Packages:
                           support; assert: enable assertion; no: none).
                           Default: no
   --with-cpp-std          version of c++ standard (11, 17). Default: 17
-  --with-arch             compile with architecture type (x86, fugaku).
-                          Default: x86
+  --with-arch             compile with architecture type (x86, fugaku,
+                          tsv110). Default: x86
   --with-simd             compile with x86 architecture support (avx, avx2,
                           avx512). Default: auto
   --with-cuda-prefix      Prefix of your CUDA installation
@@ -4716,6 +4716,49 @@ fi
        PROG_NAME=$PROG_NAME".fugaku"
 fi
 
+if test x"$with_arch" == xtsv110
+then :
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -mcpu=tsv110" >&5
+printf %s "checking whether C++ compiler accepts -mcpu=tsv110... " >&6; }
+if test ${ax_cv_check_cxxflags___mcpu_tsv110+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+  ax_check_save_flags=$CXXFLAGS
+  CXXFLAGS="$CXXFLAGS  -mcpu=tsv110"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main (void)
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"
+then :
+  ax_cv_check_cxxflags___mcpu_tsv110=yes
+else $as_nop
+  ax_cv_check_cxxflags___mcpu_tsv110=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+  CXXFLAGS=$ax_check_save_flags
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___mcpu_tsv110" >&5
+printf "%s\n" "$ax_cv_check_cxxflags___mcpu_tsv110" >&6; }
+if test x"$ax_cv_check_cxxflags___mcpu_tsv110" = xyes
+then :
+  OPTFLAGS=$OPTFLAGS" -mcpu=tsv110"
+else $as_nop
+  :
+fi
+
+       PROG_NAME=$PROG_NAME".tsv110"
+fi
+
 # Check whether --enable-simd-64 was given.
 if test ${enable_simd_64+y}
 then :
@@ -6814,6 +6857,47 @@ printf "%s\n" "$ac_res" >&6; }
 if test x"`eval 'as_val=${'$as_CACHEVAR'};printf "%s\n" "$as_val"'`" = xyes
 then :
   COPTFLAGS=$COPTFLAGS" -Kfast -Nclang"
+else $as_nop
+  :
+fi
+
+fi
+                    if test x"$with_arch" == xtsv110
+then :
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether C compiler accepts -mcpu=tsv110" >&5
+printf %s "checking whether C compiler accepts -mcpu=tsv110... " >&6; }
+if test ${ax_cv_check_cflags___mcpu_tsv110+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+  ax_check_save_flags=$CFLAGS
+  CFLAGS="$CFLAGS  -mcpu=tsv110"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main (void)
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  ax_cv_check_cflags___mcpu_tsv110=yes
+else $as_nop
+  ax_cv_check_cflags___mcpu_tsv110=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+  CFLAGS=$ax_check_save_flags
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cflags___mcpu_tsv110" >&5
+printf "%s\n" "$ax_cv_check_cflags___mcpu_tsv110" >&6; }
+if test x"$ax_cv_check_cflags___mcpu_tsv110" = xyes
+then :
+  COPTFLAGS=$COPTFLAGS" -mcpu=tsv110"
 else $as_nop
   :
 fi

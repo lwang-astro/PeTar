@@ -68,6 +68,9 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #ifdef USE_FUGAKU
 #include "force_fugaku.hpp"
 #endif
+#ifdef USE_NEON_KERNEL
+#include "force_tsv110.hpp"
+#endif
 #include"energy.hpp"
 #include"hard.hpp"
 #include"io.hpp"
@@ -774,6 +777,8 @@ public:
         tree_nb.calcForceAllAndWriteBack(SearchNeighborEpEpSimd(), system_soft, dinfo);
 #elif USE_FUGAKU
         tree_nb.calcForceAllAndWriteBack(SearchNeighborEpEpFugaku(), system_soft, dinfo);
+#elif defined(USE_NEON_KERNEL)
+        tree_nb.calcForceAllAndWriteBack(tsv110::SearchNeighborEpEpNeon(), system_soft, dinfo);
 #else
         tree_nb.calcForceAllAndWriteBack(SearchNeighborEpEpNoSimd(), system_soft, dinfo);
 #endif
@@ -916,6 +921,19 @@ public:
 #else // no quad
                                            CalcForceEpSpMonoFugaku(eps2, G),
 #endif // end quad
+                                           system_soft,
+                                           dinfo);
+        
+#elif defined(USE_NEON_KERNEL)
+        PS::F64 eps2 = EPISoft::eps*EPISoft::eps;
+        PS::F64 rout2 = EPISoft::r_out*EPISoft::r_out;
+        PS::F64 G= ForceSoft::grav_const;
+        tree_soft.calcForceAllAndWriteBack(tsv110::CalcForceEpEpWithLinearCutoffNeon(eps2, rout2, G),
+#ifdef USE_QUAD
+                                           tsv110::CalcForceEpSpQuadNeon<PS::SPJQuadrupoleInAndOut>(eps2, G),
+#else
+                                           tsv110::CalcForceEpSpMonoNeon<PS::SPJMonopoleInAndOut>(eps2, G),
+#endif
                                            system_soft,
                                            dinfo);
         
@@ -2525,6 +2543,10 @@ public:
 
 #ifdef USE_FUGAKU
         fout<<"Use Fugaku\n";
+#endif
+
+#ifdef USE_NEON_KERNEL
+        fout<<"Use NEON (TSV110)\n";
 #endif
 
 #ifdef USE_GPU

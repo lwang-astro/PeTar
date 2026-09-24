@@ -204,6 +204,11 @@ CXXFLAGS += -D USE_FUGAKU
 endif # fugaku
 
 #-------------------------------------
+ifeq ($(use_arch),tsv110)
+CXXFLAGS += -D USE_NEON_KERNEL
+endif # tsv110
+
+#-------------------------------------
 ifeq ($(use_gperf),yes)
 CXXFLAGS += @GPERFFLAGS@
 CXXFLAGS += -D GPERF_PROFILE
