@@ -1,117 +1,117 @@
-# NEON 四极内核：rsqrt 额外半步 Newton 的代价与精度对比
+# NEON quadrupole kernel: cost and accuracy of the extra half Newton step in rsqrt
 
-- 日期：2026-09-24
-- 测试平台：HiSilicon Kunpeng-920（TSV110 核，24 核，~2.59 GHz）
-- 对象：`src/force_tsv110.hpp` 中 `CalcForceEpSpQuadNeon` 使用的倒数平方根
-  - **cubic**：`rsqrt4()` = `vrsqrteq_f32` + 三次修正 $r=r_0[1+h(\tfrac12+\tfrac38h)]$
-  - **newton**：cubic + 一步半步 Newton $r \leftarrow r(3-x r^2)/2$（与 `force_fugaku.hpp:829-833, 1112-1116` 完全一致）
-- 实现：编译期宏 `NEON_QUAD_NEWTON`（默认 0），代码见 `force_tsv110.hpp` 的 `rsqrt4_quad()`
-- 结论：**保持默认关闭（cubic）**——半步 Newton 不提升精度（已到 F32 舍入极限），却使四极内核变慢约 **20%**
+- Date: 2026-09-24
+- Platform: HiSilicon Kunpeng-920 (TSV110 core, 24 cores, ~2.59 GHz)
+- Object: the reciprocal square root used by `CalcForceEpSpQuadNeon` in `src/force_tsv110.hpp`
+  - **cubic**: `rsqrt4()` = `vrsqrteq_f32` + cubic correction $r=r_0[1+h(\tfrac12+\tfrac38h)]$
+  - **newton**: cubic + one half Newton step $r \leftarrow r(3-x r^2)/2$ (identical to `force_fugaku.hpp:829-833, 1112-1116`)
+- Implementation: compile-time macro `NEON_QUAD_NEWTON` (default 0), see `rsqrt4_quad()` in `force_tsv110.hpp`
+- Conclusion: **keep it disabled (cubic) by default** -- the half Newton step does not improve accuracy (the cubic correction already reaches the F32 rounding limit) but makes the quadrupole kernel about **20% slower**
 
 ---
 
-## 1. 背景
+## 1. Background
 
-Fugaku 的四极内核在三次修正后又加了一步半步 Newton。NEON 版此前只做了三次修正。两者都是 F32，问题在于：这额外一步对精度是否有帮助、代价多大？为此建立本子模块做独立对比。
+The Fugaku quadrupole kernel adds a half Newton step after the cubic correction, while the NEON version originally used the cubic correction only. Both are F32; the question is whether the extra step helps accuracy and what it costs. This standalone study was set up to answer that question.
 
 ```mermaid
 flowchart LR
-    A["x = r²+ε²"] --> B["vrsqrteq_f32<br/>初值 ~1e-3"]
-    B --> C["三次修正<br/>→ ~1.5e-7"]
+    A["x = r^2 + eps^2"] --> B["vrsqrteq_f32<br/>estimate ~1e-3"]
+    B --> C["cubic correction<br/>-> ~1.5e-7"]
     C --> D{"NEON_QUAD_NEWTON?"}
     D -- 0 --> E["r_inv (cubic)"]
-    D -- 1 --> F["半步 Newton<br/>r*(3-xr²)/2"] --> G["r_inv (newton)"]
+    D -- 1 --> F["half Newton step<br/>r*(3-xr^2)/2"] --> G["r_inv (newton)"]
 ```
 
-## 2. 测试方法
+## 2. Test Method
 
-| 测试 | 程序 | 内容 |
+| Test | Program | Content |
 |---|---|---|
-| r_inv 精度 | `rsinv` | x 对数均匀取自 $[10^{-4},10^4]$，n=2×10⁶，对比 `1/sqrt(x)`（F64）；输出 max/mean/RMS/p50/p90/p99 与 CDF 直方图 |
-| r_inv 吞吐 | `rsinv` | 8 路独立操作循环，5×10⁸ 次，取墙钟 ns/op |
-| 力/势误差 | `qn_cubic` / `qn_newton` | 与 `CalcForceEpSpQuadNoSimd`（F64 参考）逐粒子比较；3 组动态范围（scale=1/10、offset=0/10⁶）× 3 个随机种子；输出 max/mean/RMS/分位数 |
-| 内核计时 | `qn_cubic` / `qn_newton` | 5×5 尺寸网格（n_i∈{4…1024}，n_j∈{8…2048}），每次调用整函子（含打包/选择器），取 8 次扫描的中位数 |
-| mass>0 对齐 | `qn_cubic` + `masszero` | EP-EP：1/3 的 EPJ 质量为零，检验 NEON 与“过滤后的 NoSimd”一致 |
+| r_inv accuracy | `rsinv` | x log-uniform in $[10^{-4},10^4]$, n=2x10^6, compared with `1/sqrt(x)` (F64); reports max/mean/RMS/p50/p90/p99 and a CDF histogram |
+| r_inv throughput | `rsinv` | 8 independent chains, 5x10^8 iterations, wall-clock ns/op |
+| Force/potential error | `qn_cubic` / `qn_newton` | Per-particle comparison against `CalcForceEpSpQuadNoSimd` (F64 reference); 3 dynamic-range configurations (scale=1/10, offset=0/10^6) x 3 random seeds; reports max/mean/RMS/percentiles |
+| Kernel timing | `qn_cubic` / `qn_newton` | 5x5 size grid (n_i in {4...1024}, n_j in {8...2048}), timing the whole functor call (including packing/selector), median of 8 scans |
+| mass>0 alignment | `qn_cubic` + `masszero` | EP-EP: one third of the EPJ entries have zero mass; checks that NEON matches the "filtered NoSimd" reference |
 
-基准源码与原始数据见 `data/`（需 AArch64 + NEON）。
+The benchmark sources and raw data are under `data/` (AArch64 + NEON required).
 
-## 3. 结果
+## 3. Results
 
-### 3.1 r_inv 精度：两者都已达到 F32 舍入极限
+### 3.1 r_inv accuracy: both variants already sit at the F32 rounding limit
 
 ![fig1](figs/fig1_rsinv_cdf.png)
 
-| 方法 | max | mean | RMS | p50 | p90 | p99 |
+| Method | max | mean | RMS | p50 | p90 | p99 |
 |---|---|---|---|---|---|---|
-| cubic | 1.46×10⁻⁷ | 2.51×10⁻⁸ | 3.06×10⁻⁸ | 2.23×10⁻⁸ | 4.93×10⁻⁸ | 7.38×10⁻⁸ |
-| cubic + 半步 Newton | 1.25×10⁻⁷ | 2.65×10⁻⁸ | 3.34×10⁻⁸ | 2.23×10⁻⁸ | 5.48×10⁻⁸ | 8.83×10⁻⁸ |
+| cubic | 1.46x10^-7 | 2.51x10^-8 | 3.06x10^-8 | 2.23x10^-8 | 4.93x10^-8 | 7.38x10^-8 |
+| cubic + half Newton | 1.25x10^-7 | 2.65x10^-8 | 3.34x10^-8 | 2.23x10^-8 | 5.48x10^-8 | 8.83x10^-8 |
 
-- 两条 CDF 曲线基本重合；半步 Newton 的 max 略小、mean/p90/p99 略大——差异纯属额外舍入，**没有系统性收益**。
-- 原因：三次修正后误差已 ~10⁻⁷（F32 eps≈1.2×10⁻⁷），半步 Newton 的修正量被舍入噪声淹没；该步骤对初值误差 ~10⁻³ 的原始估计才有意义。
-- 距离内核容差 7×10⁻³ 有 5 个数量级余量。
+- The two CDF curves almost coincide; the half Newton step has a slightly smaller max but slightly larger mean/p90/p99 -- pure extra rounding, **no systematic benefit**.
+- Reason: after the cubic correction the error is already ~10^-7 (F32 eps is about 1.2x10^-7), so the correction computed by the half Newton step is buried in rounding noise. That step only makes sense for a raw estimate with an error of ~10^-3.
+- Both are five orders of magnitude below the kernel tolerance of 7x10^-3.
 
-### 3.2 r_inv 吞吐：额外依赖链很贵
+### 3.2 r_inv throughput: the extra dependency chain is expensive
 
-| 方法 | ns/vector-op（4 lane） |
+| Method | ns per vector op (4 lanes) |
 |---|---|
 | cubic | 3.68 |
-| cubic + 半步 Newton | 6.89（**×1.87**） |
+| cubic + half Newton | 6.89 (**1.87x**) |
 
-半步 Newton 的 3 条指令落在 `r_inv` 的关键依赖链上（估计→修正→r²→修正量→乘回），在 TSV110 上直接使该序列接近翻倍。
+The three instructions of the half Newton step sit on the critical dependency chain of `r_inv` (estimate -> correction -> r^2 -> correction term -> multiply back), which on the TSV110 almost doubles the cost of that sequence.
 
-### 3.3 力/势误差：与 NoSimd F64 对比无差别
+### 3.3 Force/potential error: indistinguishable from the NoSimd F64 reference
 
 ![fig2](figs/fig2_force_error_cdf.png)
 
 ![fig3](figs/fig3_error_bars.png)
 
-代表性数据（n_i=1000, n_sp=2000，max 相对误差）：
+Representative data (n_i=1000, n_sp=2000, maximum relative error):
 
-| 配置 | cubic \|acc\| | newton \|acc\| | cubic pot | newton pot |
+| Configuration | cubic \|acc\| | newton \|acc\| | cubic pot | newton pot |
 |---|---|---|---|---|
-| scale=1, seed=1 | 2.85×10⁻⁵ | 3.01×10⁻⁵ | 1.08×10⁻⁴ | 1.17×10⁻⁴ |
-| scale=1, seed=2 | 1.99×10⁻⁵ | 1.99×10⁻⁵ | 5.07×10⁻⁴ | 4.87×10⁻⁴ |
-| scale=1, seed=3 | 1.39×10⁻⁵ | 1.39×10⁻⁵ | 1.24×10⁻⁴ | 1.24×10⁻⁴ |
-| scale=10, seed=2 | 1.71×10⁻⁵ | 1.71×10⁻⁵ | 6.78×10⁻⁴ | 6.78×10⁻⁴ |
-| offset=10⁶（平移项） | 与 offset=0 逐位一致 | 同左 | 同左 | 同左 |
+| scale=1, seed=1 | 2.85x10^-5 | 3.01x10^-5 | 1.08x10^-4 | 1.17x10^-4 |
+| scale=1, seed=2 | 1.99x10^-5 | 1.99x10^-5 | 5.07x10^-4 | 4.87x10^-4 |
+| scale=1, seed=3 | 1.39x10^-5 | 1.39x10^-5 | 1.24x10^-4 | 1.24x10^-4 |
+| scale=10, seed=2 | 1.71x10^-5 | 1.71x10^-5 | 6.78x10^-4 | 6.78x10^-4 |
+| offset=10^6 (shift term) | bit-identical to offset=0 | same | same | same |
 
-- 两种变体的误差分布几乎重合，差异在 ±5% 的舍入噪声内，且有时 newton 更大。
-- 误差量级由其他 F32 舍入（四极项的组合/求和）主导，`r_inv` 精度不是瓶颈。
-- `offset=10⁶` 与 `offset=0` 的**逐位一致**结果同时验证了 SP 内核的原点平移有效。
+- The two error distributions almost coincide; the differences are within the +/-5% rounding noise, and newton is sometimes worse.
+- The error magnitude is dominated by other F32 roundings (the combination and summation of the quadrupole terms); `r_inv` accuracy is not the bottleneck.
+- The **bit-identical** results for offset=10^6 and offset=0 also confirm that the origin shift of the SP kernel works.
 
-### 3.4 内核计时：真实尺寸下 +17%…+25%
+### 3.4 Kernel timing: +17%...+25% at realistic sizes
 
 ![fig4](figs/fig4_timing.png)
 
-- 比值热图（newton/cubic，8 次扫描中位数）：
-  - 极小尺寸（(4,8)/(4,32)/(16,8)，走 I4_J1 或固定开销主导）：0.999–1.001（无差别）
-  - 所有 n_j≥128 的格子：**1.170–1.253**
-  - 全网格几何平均：**1.198**
-- 左图（n_i=256）：cubic 每交互 ~7.5–11 ns，newton ~9.5–12.5 ns；NoSimd F64 约 44 ns（未变）。
-- 换算到端到端：四极内核占树力约一半、树力在大 N 占每步约 50–70%，预计总时间增加 ~6–10%；无任何精度回报。
+- Ratio heatmap (newton/cubic, median of 8 scans):
+  - tiny sizes ((4,8)/(4,32)/(16,8), I4_J1 or fixed-overhead dominated): 0.999-1.001 (no difference)
+  - every cell with n_j>=128: **1.170-1.253**
+  - geometric mean over the whole grid: **1.198**
+- Left panel (n_i=256): cubic ~7.5-11 ns per interaction, newton ~9.5-12.5 ns; NoSimd F64 stays at about 44 ns.
+- Scaling to the full simulation: the quadrupole kernel is roughly half of the tree force, and the tree force is 50-70% of a step at large N, so the expected total increase is ~6-10% with no accuracy return whatsoever.
 
-### 3.5 附：EP-EP 的 mass>0 对齐
+### 3.5 Side note: the EP-EP mass>0 alignment
 
-按 Fugaku/x86 SIMD 语义，NEON EP-EP 现在跳过 `mass<=0` 的 EPJ（I4_J1 先压缩、I1_J4 过滤+打包一趟完成）。验证（n_i=1000，n_j=2000，1/3 零质量）：
+Following the Fugaku/x86 SIMD semantics, the NEON EP-EP kernels now skip EPJ entries with `mass<=0` (I4_J1 compacts first; I1_J4 filters and packs in a single pass). Validation (n_i=1000, n_j=2000, one third of the entries massless):
 
 ```
 MASSZERO,neon_cubic,1000,2000,...,acc_max=6.84e-06,pot_max=4.18e-07,
   nnb_mismatch_vs_filtered=0, nnb_mismatch_unfiltered_nosimd_vs_filtered=782
 ```
 
-- NEON 与“过滤后的 NoSimd 参考”**邻居数完全一致**（0/1000 失配）；
-- 未过滤的旧语义会让 782/1000 个粒子的邻居数不同 → 对齐改变了预期行为；
-- 性能代价：过滤前后 EP-EP 内核计时几何平均比值 **1.0002**（最大 1.004）——可忽略。
+- NEON matches the "filtered NoSimd reference" exactly in the neighbor counts (0/1000 mismatches);
+- the old, unfiltered semantics would give a different neighbor count for 782/1000 particles, so the alignment does change the expected behavior;
+- cost: the geometric-mean ratio of the EP-EP kernel timing before and after the filter is **1.0002** (max 1.004) -- negligible.
 
-## 4. 结论与决策
+## 4. Conclusion and Decision
 
-| | cubic（默认） | cubic + 半步 Newton |
+| | cubic (default) | cubic + half Newton |
 |---|---|---|
-| r_inv max 误差 | 1.46×10⁻⁷ | 1.25×10⁻⁷ |
-| 力/势误差 | 基准 | 无改善（±舍入） |
-| 四极内核耗时 | 基准 | **+20%（1.17–1.25×）** |
-| 与 Fugaku 位级一致 | 否 | 是 |
+| r_inv max error | 1.46x10^-7 | 1.25x10^-7 |
+| force/potential error | baseline | no improvement (within rounding) |
+| quadrupole kernel time | baseline | **+20% (1.17-1.25x)** |
+| bit-level agreement with Fugaku | no | yes |
 
-**决策：`NEON_QUAD_NEWTON` 默认保持 0（cubic）。** 理由是实测无精度收益、有明显性能代价；宏与 `rsqrt4_quad()` 保留在代码中并附本报告，供需要与 Fugaku 逐位对齐时使用（`-DNEON_QUAD_NEWTON=1`）。
+**Decision: keep `NEON_QUAD_NEWTON` at its default of 0 (cubic).** The measurements show no accuracy benefit and a clear performance cost; the macro and `rsqrt4_quad()` remain in the code with this report for cases that need bit-level agreement with Fugaku (`-DNEON_QUAD_NEWTON=1`).
 
-原始数据与基准源码在 `data/`：`rsinv_*.csv`、`errors.csv`、`errdump_*.csv`、`timing.csv`、`masszero.csv`、`epep_old.csv`/`epep_new.csv`。
+Raw data and benchmark sources are in `data/`: `rsinv_*.csv`, `errors.csv`, `errdump_*.csv`, `timing.csv`, `masszero.csv`, `epep_old.csv`/`epep_new.csv`.

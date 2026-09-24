@@ -1,126 +1,126 @@
-# tsv110（Kunpeng-920 / TSV110）PeTar 特化优化测试报告
+# PeTar on Kunpeng-920 / TSV110: NEON Tree-Force Kernel Optimization and Benchmark Report
 
-- 日期：2026-09-24
-- 测试平台：HiSilicon Kunpeng-920（TSV110 核），24 核，Ubuntu 24.04，GCC 13.3
-- 代码：PeTar `9e408fb`（`1259_297`）+ FDPS v7.0 + SDAR 297；对比基准为现有 `petar.mpi.omp`
-- 运行配置：24 MPI ranks × 1 OpenMP 线程，`--bind-to none`（24 核机器的推荐配置）
-- 数据/图/脚本：`data/`、`figs/`（本目录内所有图均由原始数据自动生成）
-- **重要更正**：本报告第 2.2 节的缓存延迟采用修正后的方法（见 2.2.1）。第一版测量（未固定核、4 字节索引链、未用大页）把 L1 高估 ~30%、DRAM 高估 ~77%，相关原因与修正结果已写入报告。
+- Date: 2026-09-24
+- Platform: HiSilicon Kunpeng-920 (TSV110 core), 24 cores, Ubuntu 24.04, GCC 13.3
+- Code: PeTar `9e408fb` (`1259_297`) + FDPS v7.0 + SDAR 297; the pre-existing `petar.mpi.omp` binary serves as the baseline
+- Runtime configuration: 24 MPI ranks x 1 OpenMP thread, `--bind-to none` (the recommended setup on a 24-core machine)
+- Data/figures/scripts: `data/` and `figs/` (all figures in this directory are generated from the raw data)
+- **Correction notice**: the cache latencies in section 2.2 use a corrected measurement method (section 2.2.1). The first version (4-byte indices, no CPU pinning, no huge pages) overestimated L1 by ~30% and DRAM by ~77%; the causes and corrected values are documented below.
 
 ---
 
-## 0. 执行摘要
+## 0. Executive Summary
 
-| 指标 | 结果 |
+| Metric | Result |
 |---|---|
-| 单核 FP32 峰值 | 20.8 GFLOP/s（1×128-bit FMA/cycle，~2.59 GHz） |
-| 24 核 FP32 峰值 | 479 GFLOP/s（理想值 498，达成 96%） |
-| NEON 树力内核加速（geomean，5×5 尺寸网格） | 邻居搜索 2.35×；EP-EP 3.97×；EP-SP 单极 3.28×；EP-SP 四极 4.65× |
-| 内核数值误差（vs NoSimd F64，N=500/2000） | 力 max 2.3×10⁻⁵，势 max 3.5×10⁻⁶，邻居计数 **0 失配** |
-| 端到端 2000 星 demo（100 Myr→10 Myr，24×1） | 74.4 s → **48.0 s（1.55×）** |
-| 端到端 N 扩展（无原生双星，t=2 Myr） | N=2000: 1.59×；N=5000: 2.00×；N=10000: **2.25×** |
-| PeTar 内置计时器（FDPS `Calc_force`） | 3.04–3.40×（N=2000…10000） |
-| GCC 自动向量化 | 标量内核 **0 条循环被向量化**；`-mcpu=tsv110` 单独使用端到端无收益（74.3 vs 74.4 s） |
-| 物理一致性（10 Myr） | N、质量守恒一致；能量相对误差 7.9×10⁻⁸ → 7.7×10⁻⁵（F32 副作用，仍 <10⁻⁴） |
+| Single-core FP32 peak | 20.8 GFLOP/s (1x 128-bit FMA/cycle, ~2.59 GHz) |
+| 24-core FP32 peak | 479 GFLOP/s (96% of the 498 GFLOP/s ideal) |
+| NEON tree-force kernel speedup (geomean over a 5x5 size grid) | neighbor search 2.35x; EP-EP 3.97x; EP-SP monopole 3.28x; EP-SP quadrupole 4.65x |
+| Numerical error vs NoSimd F64 (N=500/2000) | max force error 2.3x10^-5, max potential error 3.5x10^-6, **zero neighbor-count mismatches** |
+| End-to-end 2000-star demo (t=10 Myr, 24x1) | 74.4 s -> **48.0 s (1.55x)** |
+| End-to-end N scaling (single stars, t=2 Myr) | N=2000: 1.59x; N=5000: 2.00x; N=10000: **2.25x** |
+| PeTar built-in timer (FDPS `Calc_force`) | 3.04-3.40x (N=2000...10000) |
+| GCC auto-vectorization | **zero loops vectorized** in the scalar kernels; `-mcpu=tsv110` alone gives no end-to-end gain (74.3 s vs 74.4 s) |
+| Physical consistency (10 Myr) | N and mass conserved; relative energy error 7.9x10^-8 -> 7.7x10^-5 (an F32 side effect, still <10^-4) |
 
-**结论**：tsv110 无 SVE，Fugaku 内核（`force_fugaku.hpp`）不可复用；但用 128-bit NEON + F32 + 快速 `rsqrt` 重写树力内核，可在不改物理模型的前提下获得 **1.6–2.3× 端到端加速**（N 越大收益越高），树力计算部分本身加速约 **3.0–3.4×**。
+**Conclusion**: the TSV110 has no SVE, so the Fugaku kernels (`force_fugaku.hpp`) cannot be reused. Rewriting the tree-force kernels with 128-bit NEON, F32 arithmetic and a fast `rsqrt` yields **1.6-2.3x end-to-end speedup** (the larger N, the larger the gain) without changing the physical model, while the tree-force computation itself runs about **3.0-3.4x faster**.
 
 ---
 
-## 1. 测试环境与方法
+## 1. Test Environment and Methodology
 
-### 1.1 硬件实测
+### 1.1 Measured Hardware Characteristics
 
-| 项目 | 实测值 | 说明 |
+| Item | Measured value | Notes |
 |---|---|---|
-| CPU | HiSilicon Kunpeng-920，CPU part `0xd01`（TSV110 核） | 24 核，1 socket，1 NUMA，无 SMT |
-| ISA | 128-bit NEON/ASIMD；fp16、dotprod、fhm、fcma、atomics；**无 SVE/SVE2** | `/proc/cpuinfo` Features 无 `sve` |
-| 时钟 | **~2.594 GHz** | 由依赖链反推：向量 FMA 吞吐 0.385 ns/条 = 1/cycle；int add 0.771 ns（2c）、FP add 1.542 ns（4c）、标量 FMA 1.927 ns（5c）全部自洽 |
-| L1D / L1I | 64 KB / 64 KB，4-way，64 B line | 每核私有 |
-| L2 | 512 KB，8-way，64 B line | 每核私有 |
-| L3 | 32 MB，15-way，共享 24 核 | `shared_cpu_list=0-23` |
-| DRAM | 31 GB，4 KB 基础页，THP=`madvise` | 单 NUMA |
-| 软件 | GCC 13.3.0、Clang 18.1.3、OpenMPI 4.1.6 | GCC 支持 `-mcpu=tsv110` |
-| profiler | `perf` 6.8 存在，但 `perf_event_paranoid=4` 且无 sudo | **无法使用硬件计数器**，用时钟/墙钟替代 |
+| CPU | HiSilicon Kunpeng-920, CPU part `0xd01` (TSV110 core) | 24 cores, 1 socket, 1 NUMA node, no SMT |
+| ISA | 128-bit NEON/ASIMD; fp16, dotprod, fhm, fcma, atomics; **no SVE/SVE2** | `/proc/cpuinfo` Features lists no `sve` |
+| Clock | **~2.594 GHz** | Inferred from dependent chains and fully self-consistent: vector FMA throughput 0.385 ns/instr = 1/cycle; int add 0.771 ns (2 cycles), FP add 1.542 ns (4 cycles), scalar FMA 1.927 ns (5 cycles) |
+| L1D / L1I | 64 KB / 64 KB, 4-way, 64 B lines | private per core |
+| L2 | 512 KB, 8-way, 64 B lines | private per core |
+| L3 | 32 MB, 15-way, shared by all 24 cores | `shared_cpu_list=0-23` |
+| DRAM | 31 GB, 4 KB base pages, THP=`madvise` | single NUMA node |
+| Toolchain | GCC 13.3.0, Clang 18.1.3, OpenMPI 4.1.6 | GCC supports `-mcpu=tsv110` |
+| Profiler | `perf` 6.8 is present, but `perf_event_paranoid=4` and no sudo | **hardware counters unavailable**; clock and wall-clock proxies were used instead |
 
-### 1.2 方法与限制
+### 1.2 Methodology and Limitations
 
-1. **微基准**：自写 C + NEON intrinsics（源码见 `data/`），编译 `-O3 -mcpu=tsv110`；每个测例取 3 次最优。
-2. **时钟**：依赖 ALU 链反推（`clock_probe.c`），并用 FMA 吞吐交叉验证；不能读取 PMCCNTR（用户态被禁）。
-3. **无硬件计数器**：无法给出 IPC、cache-miss 等 PMU 指标；改用「指针追逐延迟 + STREAM 带宽 + 反汇编」评估瓶颈。
-4. **内核基准**：独立驱动程序直接调用 PeTar 的 `EPISoft/EPJSoft/SPJQuadrupoleInAndOut` 与 `soft_force.hpp` 标量内核（与产品完全相同的头文件/类型），编译三种二进制：
-   - `bench_g`：generic `-O3`（等价当前产品）
-   - `bench_a`：`-O3 -mcpu=tsv110`（自动向量化档）
-   - `bench_n`：`-O3 -mcpu=tsv110 -D USE_NEON_KERNEL`（NEON 原型）
-5. **端到端**：在源码副本上构建 `PeTar-auto`（仅 `-mcpu=tsv110`）与 `PeTar-neon`（`-mcpu=tsv110` + NEON 内核，patch 见 7 节），用交叉编译的同一场景跑 3 次取中位数；同时抽取 PeTar 内置 profile（每步各项耗时、FDPS `Calc_force`）与守恒量。
-6. **误差口径**：与 PeTar `simd_test.cxx` 相同——最大相对力/势误差 <7×10⁻³、邻居数严格相等。
+1. **Micro-benchmarks**: hand-written C with NEON intrinsics (sources under `data/`), compiled with `-O3 -mcpu=tsv110`; best of 3 runs per case.
+2. **Clock**: derived from dependent ALU chains (`clock_probe.c`) and cross-checked against FMA throughput; PMCCNTR is not readable from user space (trapped).
+3. **No hardware counters**: PMU metrics such as IPC and cache misses could not be collected, so bottlenecks were assessed with pointer-chase latency, STREAM-like bandwidth and disassembly instead.
+4. **Kernel benchmarks**: a standalone driver calls PeTar's `EPISoft/EPJSoft/SPJQuadrupoleInAndOut` types and the `soft_force.hpp` scalar kernels (identical headers and types as production). Three binaries were built:
+   - `bench_g`: generic `-O3` (equivalent to the current production build)
+   - `bench_a`: `-O3 -mcpu=tsv110` (auto-vectorization variant)
+   - `bench_n`: `-O3 -mcpu=tsv110 -D USE_NEON_KERNEL` (NEON prototype)
+5. **End-to-end runs**: `PeTar-auto` (only `-mcpu=tsv110`) and `PeTar-neon` (`-mcpu=tsv110` plus the NEON kernels; integration described in section 7) were built from source copies and the same scenario was run 3 times, taking the median. PeTar's built-in profile (per-step breakdown, FDPS `Calc_force`) and conserved quantities were extracted at the same time.
+6. **Error metric**: as in PeTar's `simd_test.cxx` -- maximum relative force/potential error < 7x10^-3 and exactly matching neighbor counts.
 
 ---
 
-## 2. 微基准结果
+## 2. Micro-Benchmark Results
 
-### 2.1 算力：FMA 峰值与指令成本
+### 2.1 Compute: FMA Peak and Instruction Cost
 
 ![fig1](figs/fig1_cpu_peak.png)
 
-| 测例 | 单核 | 24 核 | 备注 |
+| Case | Single core | 24 cores | Notes |
 |---|---|---|---|
-| FP32 向量 FMA | 20.76 GFLOP/s | 479.3 GFLOP/s（96%） | 128-bit FMA = 4 lane × 2 FLOP |
-| FP64 向量 FMA | 9.83 GFLOP/s | 234.9 GFLOP/s | FP32 : FP64 = **2 : 1** |
+| FP32 vector FMA | 20.76 GFLOP/s | 479.3 GFLOP/s (96%) | 128-bit FMA = 4 lanes x 2 FLOP |
+| FP64 vector FMA | 9.83 GFLOP/s | 234.9 GFLOP/s | FP32 : FP64 = **2 : 1** |
 
-单条指令成本（独立、单线程）：`vfma` 0.385 ns（4-lane）、`vrsqrte` 1.74 ns、`vrecpe` 1.25 ns、`vsqrt` 9.04 ns、`vdiv` 8.85 ns。
+Cost of a single instruction (independent, single thread): `vfma` 0.385 ns (4 lanes), `vrsqrte` 1.74 ns, `vrecpe` 1.25 ns, `vsqrt` 9.04 ns, `vdiv` 8.85 ns.
 
-**结论**
+**Takeaways**
 
-- F32 是唯一正确的树力精度选择：相对 F64 有 2× 峰值，且树力精度容忍度高（见 3.3 与 4.3）。
-- `vsqrt/vdiv` 比 FMA 贵 **23 倍**。串行 `1.0/sqrt(r2)` 正是当前标量内核的隐藏大头。
-- 快速倒数 `vrsqrteq` 只值 ~4.5 个 FMA，配合 1–2 次 Newton 修正即可全精度（见 2.3）。
+- F32 is the right precision for the tree force: it doubles the peak throughput relative to F64, and the tree force tolerates the reduced precision well (sections 3.3 and 4.3).
+- `vsqrt`/`vdiv` cost **23x** an FMA. The scalar `1.0/sqrt(r2)` is precisely the hidden hotspot of the current kernels.
+- The fast reciprocal `vrsqrteq` costs only ~4.5 FMAs and reaches full F32 precision with 1-2 Newton refinements (section 2.3).
 
-### 2.2 访存：延迟与带宽
+### 2.2 Memory Access: Latency and Bandwidth
 
 ![fig2](figs/fig2_latency_bw.png)
 
-#### 2.2.1 缓存延迟测量修正（对用户反馈的回应）
+#### 2.2.1 Correction to the Cache-Latency Measurements
 
-第一版用「4 字节下标 + 随机置换 + 未绑定核」测量：L1 2.06、L2 5.58、L3 42.95、DRAM 151.6 ns，确实偏高。修正后的方法：**纯 8 字节指针链**（无地址扩展/移位）、`sched_setaffinity` 绑定核 0、`MADV_HUGEPAGE` 并验证 `AnonHugePages`、3 次取最优：
+The first version (4-byte indices, random permutation, no CPU pinning) gave L1 2.06 ns, L2 5.58 ns, L3 42.95 ns and DRAM 151.6 ns -- all inflated. The corrected method uses a **pure 8-byte pointer chain** (no zero-extension/shift), pins the thread with `sched_setaffinity`, applies `MADV_HUGEPAGE` (verified through `AnonHugePages`) and takes the best of 3 runs:
 
-| 层级 | 第一版（4B 下标，未绑定） | 修正后（4 KB 页） | 修正后（THP 2 MB） | 修正后 cycles（@2.594 GHz, THP） |
+| Level | First version (4 B indices, unpinned) | Corrected (4 KB pages) | Corrected (THP 2 MB) | Corrected cycles (@2.594 GHz, THP) |
 |---|---|---|---|---|
 | L1 16 KB | 2.06 ns | **1.54 ns** | 1.54 ns | 4.0 |
 | L2 256 KB | 5.58 ns | **4.66 ns** | 4.66 ns | 12.1 |
 | L3 8 MB | 42.95 ns | 40.27 ns | **28.23 ns** | 73 |
 | DRAM 512 MB | 151.58 ns | 145.11 ns | **82.02 ns** | 213 |
 
-偏差来源：
+Sources of the discrepancy:
 
-1. 4 字节下标的加载结果要先零扩展/移位再作地址 → 链上多 ~1 周期，对 L1/L2 相对影响最大；
-2. 未绑核导致迁移与频率抖动；
-3. L3/DRAM 随机访问在 4 KB 页下**每次访问都带 TLB miss/页表行走**，THP 后 DRAM 延迟几乎减半（145→82 ns）。因此旧值应理解为「4K 页 worst-case 有效延迟」，不是纯 cache hit latency。
+1. the loaded 4-byte index had to be zero-extended/shifted before address generation, adding ~1 cycle to the chain (the largest relative effect for L1/L2);
+2. the lack of CPU pinning caused migration and frequency jitter;
+3. with 4 KB pages, every L3/DRAM access incurred a TLB miss/page-table walk; with THP the DRAM latency nearly halved (145 -> 82 ns). The old numbers should therefore be read as 4 KB-page worst-case effective latencies, not pure cache-hit latencies.
 
-#### 2.2.2 带宽
+#### 2.2.2 Bandwidth
 
-| 工作集 | 1 线程 copy / triad | 24 线程 copy / triad |
+| Working set | 1 thread copy / triad | 24 threads copy / triad |
 |---|---|---|
-| L1 16 KB | 17.6 / 38.8 GB/s | （线程争用，无意义） |
+| L1 16 KB | 17.6 / 38.8 GB/s | (thread contention, not meaningful) |
 | L2 512 KB | 15.6 / 26.5 GB/s | 36.9 / 107.2 GB/s |
 | L3 4 MB | 10.2 / 19.4 GB/s | 142.5 / 327.6 GB/s |
 | DRAM 256 MB | 6.7 / 12.3 GB/s | **14.5 / 30.9 GB/s** |
 
-**结论**：整机 DRAM 带宽仅 ~31 GB/s（24 核 triad），单核 ~12 GB/s；L3 共享 32 MB、单核 L3 延迟 73 c 偏高。这是后续大规模 N 时树力/树构建的上限约束（见 5 节 O8）。
+**Takeaway**: aggregate DRAM bandwidth is only ~31 GB/s (24-thread triad), about 12 GB/s per thread; together with the 32 MB shared L3 and the rather high 73-cycle L3 latency, this caps tree-force and tree-build performance at large N (section 5, O8).
 
-### 2.3 快速倒数平方根精度
+### 2.3 Accuracy of the Fast Reciprocal Square Root
 
 ![fig6](figs/fig6_rsqrt.png)
 
-| 方法 | F32 max 相对误差 | 说明 |
+| Method | F32 max relative error | Notes |
 |---|---|---|
-| `vrsqrteq` 初值 | 3.28×10⁻³ | 8–12 bit |
-| +1 Newton | 1.61×10⁻⁵ | 3 条 FMA |
-| +2 Newton | 1.44×10⁻⁷ | 6 条 FMA |
-| **+1 三次修正（Fugaku 式）** | **1.66×10⁻⁷** | 5 条 FMA，成本最低达到 F32 极限 |
-| F64 +2 Newton | 3.90×10⁻¹⁰ | 精度冗余，无必要 |
+| `vrsqrteq` estimate | 3.28x10^-3 | 8-12 bit |
+| +1 Newton | 1.61x10^-5 | 3 FMAs |
+| +2 Newton | 1.44x10^-7 | 6 FMAs |
+| **+1 cubic correction (Fugaku style)** | **1.66x10^-7** | 5 FMAs, the cheapest way to reach the F32 limit |
+| F64 +2 Newton | 3.90x10^-10 | unnecessarily accurate |
 
-采用 Fugaku 同款三次修正：
+The Fugaku cubic correction is adopted:
 
 $$
 h = 1 - x r_0^2,\qquad
@@ -130,22 +130,22 @@ $$
 
 ---
 
-## 3. 内核级基准（NoSimd vs NEON 原型）
+## 3. Kernel-Level Benchmarks (NoSimd vs NEON Prototype)
 
-### 3.1 NEON 原型设计
+### 3.1 NEON Prototype Design
 
-`force_tsv110.hpp`（本报告 `data/` 内附源码）与 `force_fugaku.hpp` 结构对应，但适配 128-bit NEON：
+`force_tsv110.hpp` mirrors the structure of `force_fugaku.hpp` but targets 128-bit NEON:
 
-| 设计点 | 做法 | 原因 |
+| Design point | Implementation | Rationale |
 |---|---|---|
-| 数据布局 | 压缩为 F32 AoS：EPI 16 B(pos,rs)、EPJ 20 B(pos,m,rs)、SPJ 40 B(pos,m,Q)、力累加器局部 SoA | `vld4q_f32` 可一条指令把 4 个 EPI 解交织成 SoA；j 侧打包一次摊销 |
-| 向量化方向 | `I4_J1`（i 方向 4 lane）与 `I1_J4`（j 方向 4 lane） | 与 Fugaku 的 I16_J1/I1_J16 同理，按 ni/nj 形状取舍 |
-| 倒数平方根 | `vrsqrteq_f32` + 三次修正（2.2 节公式） | 比 `vsqrt`+`vdiv` 快 ~6× |
-| 尾块/填充 | j 数组补齐到 4 的倍数，填充位置 `1e15`、质量 0 | 大坐标平方仍为有限值，避免 `inf×0=NaN` |
-| 精度保护 | EP-SP/邻居搜索沿用 Fugaku 的**原点平移**（减去 `epi[0].pos`） | F32 下避免大坐标相减的灾难性抵消 |
-| 过滤语义 | 只处理 `EPI.type==1` 与 `EPJ.mass>0`（与 x86 SIMD/Fugaku 内核一致；NoSimd 不过滤） | 与既有 SIMD 行为对齐 |
+| Data layout | Compact F32 AoS: EPI 16 B (pos, rs), EPJ 20 B (pos, m, rs), SPJ 40 B (pos, m, Q); force accumulators in local SoA | `vld4q_f32` de-interleaves four EPI records into SoA in a single instruction; the j-side packing cost is amortized |
+| Vectorization direction | `I4_J1` (4 lanes over i) and `I1_J4` (4 lanes over j) | Same rationale as Fugaku's I16_J1/I1_J16; choice depends on the ni/nj shape |
+| Reciprocal square root | `vrsqrteq_f32` + cubic correction (formula in section 2.2) | ~6x faster than `vsqrt`+`vdiv` |
+| Tail/padding | j arrays are padded to a multiple of 4 with position `1e15` and mass 0 | squares of large coordinates remain finite, avoiding `inf*0=NaN` |
+| Precision safeguard | EP-SP and neighbor search keep Fugaku's **origin shift** (subtract `epi[0].pos`) | avoids catastrophic cancellation of large coordinates in F32 |
+| Filtering semantics | only `EPI.type==1` and `EPJ.mass>0` are processed (as in the x86 SIMD/Fugaku kernels; NoSimd does not filter) | parity with the established SIMD behavior |
 
-代码骨架（完整源码见 `src/force_tsv110.hpp`）：
+Code skeleton (full source in `src/force_tsv110.hpp`):
 
 ```cpp
 static inline float32x4_t rsqrt4(float32x4_t x){
@@ -154,279 +154,281 @@ static inline float32x4_t rsqrt4(float32x4_t x){
     h = vfmsq_f32(vdupq_n_f32(1.0f), h, r);              // h = 1 - x r^2
     float32x4_t p = vfmaq_n_f32(vdupq_n_f32(0.5f), h, 0.375f);
     p = vmulq_f32(p, h);
-    return vfmaq_f32(r, r, p);                            // 三次修正
+    return vfmaq_f32(r, r, p);                           // cubic correction
 }
-// I4_J1: xi = vld4q_f32(&ip[ib]); j 广播
+// I4_J1: xi = vld4q_f32(&ip[ib]); j is broadcast
 //   r2 -> r2c = max(r2+eps2, rcut2) -> ri = rsqrt4(r2c)
 //   acc = vfmsq_f32(acc, ri2*mi*ri, dx)   pot = vfmsq_f32(pot, mi*ri, 1)
-// I1_J4: j 打包为 SoA，主循环 vld1q_f32 + vaddvq_f32 归约
+// I1_J4: j is packed into SoA; main loop uses vld1q_f32 + vaddvq_f32 reduction
 ```
 
-### 3.2 正确性校验（对 NoSimd F64）
+### 3.2 Correctness (against NoSimd F64)
 
-N=500（EPI）/2000（EPJ）/1000（SPJ），`eps=1e-4`、`r_out=0.01`、`G=1`：
+N=500 (EPI) / 2000 (EPJ) / 1000 (SPJ), `eps=1e-4`, `r_out=0.01`, `G=1`:
 
-| 内核 | 力 max 相对误差 | 势 max 相对误差 | 邻居数失配 |
+| Kernel | Max relative force error | Max relative potential error | Neighbor-count mismatch |
 |---|---|---|---|
-| 邻居搜索 | — | — | **0** |
-| EP-EP | 4.06×10⁻⁶ | 1.65×10⁻⁶ | 0 |
-| EP-SP 四极 | 2.22×10⁻⁵ | 1.84×10⁻⁵ | — |
-| 三者合并 | 2.30×10⁻⁵ | 3.52×10⁻⁶ | 0 |
+| Neighbor search | -- | -- | **0** |
+| EP-EP | 4.06x10^-6 | 1.65x10^-6 | 0 |
+| EP-SP quadrupole | 2.22x10^-5 | 1.84x10^-5 | -- |
+| All combined | 2.30x10^-5 | 3.52x10^-6 | 0 |
 
-远低于 PeTar `simd_test` 阈值 7×10⁻³（富余约 300 倍）。
+This is far below PeTar's `simd_test` threshold of 7x10^-3 (about a 300x margin).
 
-### 3.3 速度对比
+### 3.3 Speed Comparison
 
 ![fig3](figs/fig3_kernel_speedup.png)
 
-5×5 尺寸网格（ni∈{4…1024}，nj∈{8…2048}）下 NEON（两方向取优）相对同二进制 NoSimd 的加速比：
+Speedup of NEON (best of the two directions) relative to NoSimd in the same binary, over a 5x5 size grid (ni in {4...1024}, nj in {8...2048}):
 
-| 内核 | geomean | min | max |
+| Kernel | geomean | min | max |
 |---|---|---|---|
-| 邻居搜索 | 2.35× | 0.42× | 5.36× |
-| EP-EP | **3.97×** | 1.61× | 5.19× |
-| EP-SP 单极 | 3.28× | 1.30× | 4.33× |
-| EP-SP 四极 | **4.65×** | 2.53× | 5.62× |
+| Neighbor search | 2.35x | 0.42x | 5.36x |
+| EP-EP | **3.97x** | 1.61x | 5.19x |
+| EP-SP monopole | 3.28x | 1.30x | 4.33x |
+| EP-SP quadrupole | **4.65x** | 2.53x | 5.62x |
 
 ![fig4](figs/fig4_kernel_lines.png)
 
-每交互时间（ni=1024，nj=2048，单核）：EP-EP NoSimd 18.5 ns → NEON 3.6 ns；四极 42.4 ns → 7.6 ns。
+Time per interaction (ni=1024, nj=2048, single core): EP-EP NoSimd 18.5 ns -> NEON 3.6 ns; quadrupole 42.4 ns -> 7.6 ns.
 
-**方向选择规律**（来自逐格胜负统计）：
+**Orientation selection rule** (from per-cell win counts):
 
 ```
-I4_J1 胜出：nj ≤ 8，或 ni ≤ 4        （j 打包成本无法摊销）
-I1_J4 胜出：nj ≥ 32 的绝大多数格子    （对 j 向量化 + 摊销打包）
+I4_J1 wins: nj <= 8, or ni <= 4              (the j-packing cost cannot be amortized)
+I1_J4 wins: almost all cells with nj >= 32   (vectorize over j with amortized packing)
 ```
-例如 EP-EP 在 (ni,nj)=(1024,2048)：I4_J1 9.46 ms，I1_J4 7.48 ms；四极 19.4 ms vs 15.8 ms。
+For example, EP-EP at (ni,nj)=(1024,2048): I4_J1 9.46 ms vs I1_J4 7.48 ms; quadrupole 19.4 ms vs 15.8 ms.
 
-**小尺寸回归**：邻居搜索在 (4,8) 只有 0.42×、(16,8) 0.71×——内核太轻（无浮点除），压缩/填充开销占主导。**生产版必须加 `ni*nj` 阈值回退标量**。
+**Small-size regression**: neighbor search reaches only 0.42x at (4,8) and 0.71x at (16,8) -- the kernel is too light (no floating-point division) and compaction/padding overhead dominates. **Production code must fall back to the scalar kernel below an `ni*nj` threshold.**
 
-### 3.4 GCC 自动向量化的证据
+### 3.4 Evidence on GCC Auto-Vectorization
 
-- `-fopt-info-vec`：`soft_force.hpp` 中被向量化的循环数 = **0**。
-- 反汇编 NoSimd EP-EP 函数：浮点指令 10 条，其中向量 FP 指令 **0** 条（全部标量 `fmla/fdiv...`）。
-- 端到端 `-mcpu=tsv110`（`bench_a`/`PeTar-auto`）相对 generic：74.3 s vs 74.4 s，**无收益**。
+- `-fopt-info-vec`: the number of vectorized loops in `soft_force.hpp` is **0**.
+- Disassembly of the NoSimd EP-EP function: 10 floating-point instructions, of which **0** are vector FP instructions (all scalar `fmla/fdiv...`).
+- End-to-end with `-mcpu=tsv110` (`bench_a`/`PeTar-auto`) vs generic: 74.3 s vs 74.4 s -- **no gain**.
 
-结论：**不能指望编译器自动向量化 PeTar 标量内核**（变长栈数组、AoS、分支过滤、无 `-ffast-math`），必须手写 intrinsics。
+Conclusion: **the compiler cannot be expected to auto-vectorize PeTar's scalar kernels** (variable-length stack arrays, AoS layout, branch filtering, no `-ffast-math`); the intrinsics must be written by hand.
 
 ---
 
-## 4. 端到端结果
+## 4. End-to-End Results
 
-### 4.1 2000 星 demo（含 500 原生双星，t=10 Myr）
+### 4.1 2000-Star Demo (500 primordial binaries, t=10 Myr)
 
 ![fig5](figs/fig5_e2e.png)
 
-| 版本 | 3 次墙钟 | 中位数 | 说明 |
+| Version | 3 wall-clock runs | Median | Notes |
 |---|---|---|---|
-| base（现有安装二进制） | 74.4 / 72.6 / 84.0 s | **74.4 s** | generic `-O3` |
-| auto（重新构建 `-mcpu=tsv110`） | 75.0 / 74.3 / 72.6 s | 74.3 s | 无收益 |
-| neon（NEON 内核） | 48.0 / 45.9 / 50.0 s | **48.0 s** | **1.55×** |
+| base (existing installed binary) | 74.4 / 72.6 / 84.0 s | **74.4 s** | generic `-O3` |
+| auto (rebuilt with `-mcpu=tsv110`) | 75.0 / 74.3 / 72.6 s | 74.3 s | no gain |
+| neon (NEON kernels) | 48.0 / 45.9 / 50.0 s | **48.0 s** | **1.55x** |
 
-所有 24 ranks 正常结束（`FDPS has successfully finished.`），快照/状态文件齐全。
+All 24 ranks exited normally (`FDPS has successfully finished.`); snapshots and status files are complete.
 
-PeTar 内置 profile（最后一步，local min）： | base | neon | 加速
----|---:|---:|---:
-每步 Total | 14.063 ms | 8.265 ms | **1.70×**
-Tree_Force | 5.889 ms | 3.262 ms | 1.81×
-FDPS `Calc_force` | 4.248 ms | **1.250 ms** | **3.40×**
-Tree_NB | 0.730 ms | 0.696 ms | 1.05×
-`Calc_force` 占每步 | 30.2% | 15.1% | —
+PeTar built-in profile (last step, local min):
 
-Amdahl 视角：本例双星多、硬计算占比大，树力仅 ~30%；即便如此仍有 1.55× 总体收益。
+| Item | base | neon | speedup |
+|---|---:|---:|---:|
+| Total per step | 14.063 ms | 8.265 ms | **1.70x** |
+| Tree_Force | 5.889 ms | 3.262 ms | 1.81x |
+| FDPS `Calc_force` | 4.248 ms | **1.250 ms** | **3.40x** |
+| Tree_NB | 0.730 ms | 0.696 ms | 1.05x |
+| `Calc_force` share of the step | 30.2% | 15.1% | -- |
 
-### 4.2 N 扩展（无原生双星，t=2 Myr）
+From an Amdahl perspective: this case is binary-rich and dominated by hard (few-body) computation, so the tree force accounts for only ~30% of a step; even so the overall gain is 1.55x.
+
+### 4.2 N Scaling (single stars, no primordial binaries, t=2 Myr)
 
 ![fig7](figs/fig7_scaling.png)
 
-| N | base 墙钟 | neon 墙钟 | E2E 加速 | base 每步 | neon 每步 | 每步加速 | base `Calc_force` | neon `Calc_force` | 内核加速 | base 力占比 → neon |
+| N | base wall | neon wall | E2E speedup | base per step | neon per step | step speedup | base `Calc_force` | neon `Calc_force` | kernel speedup | force share, base -> neon |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 2000 | 5.9 s | 3.7 s | 1.59× | 5.303 ms | 3.105 ms | 1.71× | 2.765 ms | 0.825 ms | 3.35× | 52.1% → 26.6% |
-| 5000 | 49.1 s | 24.5 s | 2.00× | 23.95 ms | 11.75 ms | 2.04× | 14.16 ms | 4.47 ms | 3.17× | 59.1% → 38.0% |
-| 10000 | 277.6 s | 123.5 s | **2.25×** | 66.42 ms | 29.58 ms | 2.25× | 45.94 ms | 15.09 ms | 3.04× | **69.2% → 51.0%** |
+| 2000 | 5.9 s | 3.7 s | 1.59x | 5.303 ms | 3.105 ms | 1.71x | 2.765 ms | 0.825 ms | 3.35x | 52.1% -> 26.6% |
+| 5000 | 49.1 s | 24.5 s | 2.00x | 23.95 ms | 11.75 ms | 2.04x | 14.16 ms | 4.47 ms | 3.17x | 59.1% -> 38.0% |
+| 10000 | 277.6 s | 123.5 s | **2.25x** | 66.42 ms | 29.58 ms | 2.25x | 45.94 ms | 15.09 ms | 3.04x | **69.2% -> 51.0%** |
 
-- 内核加速稳定在 **3.0–3.4×**；端到端加速随 N 增大（树力占比上升）从 1.59× 升到 **2.25×**。
-- N=10000 时树力仍占 neon 剩余时间的 51%，下一步瓶颈会转向树构建/邻居/通信与内存带宽（O7/O8）。
+- The kernel speedup is stable at **3.0-3.4x**; the end-to-end speedup grows with N (as the tree-force share rises) from 1.59x to **2.25x**.
+- At N=10000 the tree force still accounts for 51% of the remaining per-step time; the next bottlenecks will be tree construction, neighbor search, communication and memory bandwidth (O7/O8).
 
-### 4.3 物理一致性（2000 星 demo，t=10 Myr）
+### 4.3 Physical Consistency (2000-star demo, t=10 Myr)
 
-| 量 | base | neon |
+| Quantity | base | neon |
 |---|---|---|
 | N_real(glb) / N_all(glb) | 2000 / 2912 | 2000 / 2912 |
 | N_remove / N_escape | 0 / 0 | 0 / 0 |
-| 能量相对误差 | -7.9×10⁻⁸ | -7.7×10⁻⁵ |
-| 角动量 \|L\| 误差 | 1.75×10⁻³ | 1.28×10⁻³ |
-| 束团成员统计 | 500 双星 | 499 双星（混沌） |
+| Relative energy error | -7.9x10^-8 | -7.7x10^-5 |
+| Angular-momentum \|L\| error | 1.75x10^-3 | 1.28x10^-3 |
+| Bound binaries | 500 | 499 (chaotic) |
 
-F32 树力使 10 Myr 能量漂移从 ~10⁻⁷ 升到 ~10⁻⁴（相对），仍低于常见 10⁻³ 验收线；如需严格能量守恒的长时间积分，可切换到 F64 NEON（2 lane，预计内核收益减半）或只对 EP-SP 用 F32。
+With F32 tree forces the 10 Myr energy drift grows from ~10^-7 to ~10^-4 (relative), still below the usual 10^-3 acceptance level; for long integrations that demand strict energy conservation, an F64 NEON variant (2 lanes, roughly half the speedup) or F32 only for EP-SP can be used.
 
-> 注：混沌系统轨迹不可逐点比较；上表只验证守恒量与统计量，逐点对比已在 3.2 的内核级完成。
-
----
-
-## 5. 逐点优化建议
-
-> 每条给出：证据 → 原因 → 做法 → 预期收益 → 验收方式。按收益排序。
-
-### O1（核心）用 NEON F32 内核替换标量树力内核
-- 证据：内核 geomean 3.97×（EP-EP）/4.65×（四极）；端到端 1.55–2.25×；`soft_force.hpp` 零向量化。
-- 做法：新增 `src/force_tsv110.hpp`（已集成在仓库中），`petar.hpp` 增加 `#elif defined(USE_NEON_KERNEL)` 分支（已集成并验证）。
-- 收益：N≥5000 时 **2.0–2.3×**；N=2000 双星场景 1.55×。
-- 验收：`simd_test` 式对比（力/势 <7×10⁻³、邻居数相等）+ 短 demo 墙钟。
-
-### O2 快速倒数平方根（禁止 vsqrt/vdiv）
-- 证据：`vsqrt/vdiv` 9 ns vs `vrsqrte` 1.7 ns；三次修正后精度 1.7×10⁻⁷。
-- 做法：统一 `rsqrt4()`；四极的 $r^{-3..-5}$ 直接由 $r_\text{inv}$ 自乘得到，不调用 `sqrt`。
-- 收益：EP-EP 内核单这一项约省 30–40%（相对「估计值+2NR」再省 ~15%）。
-- 验收：对随机区间扫描 `vrsqrte + 修正` 的最大相对误差 <few×10⁻⁷。
-
-### O3 双方向内核 + 尺寸选择器
-- 证据：`I1_J4` 在 nj≥32 基本全胜；`I4_J1` 仅在 nj≤8 或 ni≤4 胜出（打包成本）。
-- 做法：运行期按 `nj` 与 `ni` 选择：`if (nj<=8 || ni<=4) I4_J1 else I1_J4`。
-- 收益：相对单方向再省 10–20%（大 nj 时 I1_J4 明显更好）。
-- 验收：逐尺寸网格与两方向最优值的差 <5%。
-
-### O4 极小交互回退标量
-- 证据：邻居搜索 (4,8)=0.42×、(16,8)=0.71×。
-- 做法：`if (ni*nj < 256) NoSimd(...)`（搜索阈值可更高，如 512）。
-- 收益：消除负优化；搜索整体仍有 2×。
-- 验收：无 <1.0× 的格子。
-
-### O5 为粒子数组启用大页（THP）
-- 证据：DRAM 延迟 145→82 ns（THP）；L3 40→28 ns。
-- 做法：在 PeTar 内存池/粒子数组分配处 `madvise(MADV_HUGEPAGE)`；或 `MALLOC_MMAP_THRESHOLD_` + `THP=madvise`（当前系统已是 `madvise`，只需申请）。
-- 收益：树遍历随机访存延迟最多降 ~45%，估计整体 5–15%（大 N 更明显）。
-- 验收：跑同一 demo 前后墙钟；`/proc/self/smaps_rollup` 确认 AnonHugePages>0。
-
-### O6 不要依赖自动向量化，也不要迷信 `-mcpu`
-- 证据：`-fopt-info-vec` 向量化 0 条；`-mcpu=tsv110` 端到端 74.3 s（与 generic 74.4 s 持平）。
-- 做法：`-mcpu=tsv110` 只用于使 intrinsics 可用；保持 `-O3`、无 `-ffast-math`（保证可复现）。
-- 验收：固定随机种子下内核输出逐位稳定。
-
-### O7 优化瓶颈的接力
-- 证据：N=10000 时 neon 剩余每步 29.6 ms，其中树力 15.1 ms（51%）、树构建+邻居+通信+其他 ~14.5 ms。
-- 做法：下一步按剩余时间排序：树力遍历框架（FDPS 树走步、消除小调用）、树构建的 SoA/中断、MPI 通信与负载均衡。
-- 收益：若树力再加速 3×，按 Amdahl $S = 1/[(1-p)+p/s]$（$p=0.51$）估算，每步还可再快 **~1.5×**。
-- 验收：PeTar 内置 profile 各项占比变化。
-
-### O8 关注内存带宽天花板
-- 证据：整机 triad 仅 30.9 GB/s；单核 EP-EP NEON 每交互约 20 B EPJ + 16 B EPI 读，带宽受限场景不可忽视。
-- 做法：j 侧数据一次打包多次复用（当前 I1_J4 每次调用打包，可做 block 复用）；大 N 时提高 `theta`/`r_out` 探针；必要时按 L2=512 KB 做分块。
-- 收益：避免「算力加速了但被带宽吃回去」。
-- 验收：24 线程并行内核吞吐相对单核×24 的效率曲线。
-
-### O9 精度策略分级
-- 证据：F32 内核误差 2.3×10⁻⁵，能量漂移 1e-4/10Myr。
-- 做法（可选）：默认 F32；对严格守恒场景提供 `USE_NEON_F64`（2 lane）。
-- 收益/代价：F64 内核约损失一半理论加速（FP64 峰值是 FP32 的一半）。
-- 验收：能量漂移与 `simd_test` 双档位对比。
-
-### O10 正式集成（替代「静默无效的 `--with-arch=tsv110`」）
-- 证据：当前 `--with-arch=tsv110` 是未知字符串，既不进 x86 也不进 fugaku 分支，最终走 NoSimd。
-- 做法：
-  1. `configure.ac` 增加 `fugaku` 同级的 `tsv110` 分支：`OPTFLAGS += -mcpu=tsv110`（可选）、`PROG_NAME += .tsv110`；
-  2. `Makefile.in`：`ifeq ($(use_arch),tsv110) CXXFLAGS += -D USE_NEON_KERNEL endif`；
-  3. `src/force_tsv110.hpp` + `petar.hpp` 分派（本次已在副本验证可行，见 7 节）；
-  4. 保留 NoSimd 回退，`force_tsv110.hpp` 自包含。
-- 收益：一条 configure 选项即可复现 1.6–2.3×。
-- 验收：`make build/petar.simd.test` + 短 demo。
-
-### O11 NEON 实现细节（已踩过的坑）
-- EP-SP/邻居必须保留原点平移，否则 F32 相对误差爆炸；
-- j 填充用有限大值（1e15），避免 `inf*0=NaN`；
-- 累加器用局部 SoA/寄存器，回写时才乘 `G` 并加到 F64（保证跨调用累加精度）；
-- 生产版把 `std::vector` 换成 `thread_local` 复用缓冲（当前原型每次调用分配，估计有 5–15% 额外开销）。
-
-### O12 运行配置维持现状
-- 证据：24×1 为并行配置扫描的最优档；树力为访存型，该 CPU 无 SMT。
-- 做法：保持 `OMP_NUM_THREADS=1`、`--bind-to none`；`OMP_STACKSIZE=128M`。
-- 收益：避免 MPI/OpenMP 混合开销。
+> Note: trajectories in a chaotic system cannot be compared pointwise; the table above validates conserved quantities and statistics only. The pointwise comparison was carried out at kernel level in section 3.2.
 
 ---
 
-## 6. 为什么不能直接复用 `force_fugaku.hpp`
+## 5. Point-by-Point Optimization Recommendations
+
+> Each item lists: evidence -> reason -> method -> expected gain -> validation. Ordered by gain.
+
+### O1 (Core) Replace the scalar tree-force kernels with NEON F32 kernels
+- Evidence: kernel geomean 3.97x (EP-EP) / 4.65x (quadrupole); end-to-end 1.55-2.25x; zero vectorization in `soft_force.hpp`.
+- Method: add `src/force_tsv110.hpp` (already integrated in the repository) and an `#elif defined(USE_NEON_KERNEL)` branch in `petar.hpp` (integrated and validated).
+- Gain: **2.0-2.3x** for N>=5000; 1.55x for the binary-rich N=2000 scenario.
+- Validation: `simd_test`-style comparison (force/potential < 7x10^-3, identical neighbor counts) plus short demo wall-clock runs.
+
+### O2 Fast reciprocal square root (avoid vsqrt/vdiv)
+- Evidence: `vsqrt`/`vdiv` 9 ns vs `vrsqrte` 1.7 ns; 1.7x10^-7 after the cubic correction.
+- Method: use `rsqrt4()` everywhere; obtain the quadrupole powers $r^{-3..-5}$ by multiplying $r_\text{inv}$ instead of calling `sqrt`.
+- Gain: this single change saves roughly 30-40% of the EP-EP kernel (and ~15% more relative to an estimate + 2 Newton steps).
+- Validation: scan a random interval and check that the maximum relative error of `vrsqrte + correction` is < few x 10^-7.
+
+### O3 Two kernel orientations with a size-based selector
+- Evidence: `I1_J4` wins essentially everywhere for nj>=32; `I4_J1` wins only for nj<=8 or ni<=4 (packing cost).
+- Method: select at runtime from `nj` and `ni`: `if (nj<=8 || ni<=4) I4_J1 else I1_J4`.
+- Gain: a further 10-20% relative to a single orientation (I1_J4 is clearly better at large nj).
+- Validation: per-size grid compared with the best of the two orientations, difference < 5%.
+
+### O4 Fall back to the scalar kernel for tiny interactions
+- Evidence: neighbor search (4,8)=0.42x, (16,8)=0.71x.
+- Method: `if (ni*nj < 256) NoSimd(...)` (the search threshold can be higher, e.g. 512).
+- Gain: removes negative speedups while search still gains ~2x overall.
+- Validation: no cell below 1.0x.
+
+### O5 Enable huge pages (THP) for the particle arrays
+- Evidence: DRAM latency 145 -> 82 ns with THP; L3 40 -> 28 ns.
+- Method: call `madvise(MADV_HUGEPAGE)` on the PeTar memory pool/particle arrays, or combine `MALLOC_MMAP_THRESHOLD_` with `THP=madvise` (the system already uses `madvise`; the allocation only has to request it).
+- Gain: up to ~45% lower latency for random tree-walk accesses, estimated 5-15% overall (larger at large N).
+- Validation: wall-clock of the same demo before/after; `/proc/self/smaps_rollup` confirms AnonHugePages > 0.
+
+### O6 Do not rely on auto-vectorization, and do not over-trust `-mcpu`
+- Evidence: `-fopt-info-vec` reports 0 vectorized loops; `-mcpu=tsv110` gives 74.3 s end-to-end (on par with 74.4 s for generic).
+- Method: use `-mcpu=tsv110` only to make the intrinsics available; keep `-O3` and no `-ffast-math` (for reproducibility).
+- Validation: bitwise-stable kernel output with a fixed random seed.
+
+### O7 The next bottleneck in line
+- Evidence: at N=10000 the remaining neon step time is 29.6 ms, of which tree force is 15.1 ms (51%) and tree build + neighbor + communication + other ~14.5 ms.
+- Method: tackle the remaining items in order of time: tree-force traversal framework (FDPS walk, removing small calls), tree-build SoA/interruption, MPI communication and load balancing.
+- Gain: if the tree force were accelerated by another 3x, Amdahl's law $S = 1/[(1-p)+p/s]$ with $p=0.51$ suggests a further **~1.5x** per step.
+- Validation: changes in the shares reported by PeTar's built-in profile.
+
+### O8 Watch the memory-bandwidth ceiling
+- Evidence: aggregate triad bandwidth is only 30.9 GB/s; a single-core NEON EP-EP interaction reads ~20 B of EPJ plus 16 B of EPI, so bandwidth-limited scenarios cannot be ignored.
+- Method: pack the j-side data once and reuse it across blocks (the current I1_J4 packs on every call); use larger `theta`/`r_out` probes at large N; block by the 512 KB L2 when needed.
+- Gain: avoids "compute got faster but bandwidth eats the gain".
+- Validation: efficiency curve of 24-thread kernel throughput relative to single-core x 24.
+
+### O9 Tiered precision strategy
+- Evidence: F32 kernel error 2.3x10^-5, energy drift ~1e-4 per 10 Myr.
+- Method (optional): F32 by default; provide `USE_NEON_F64` (2 lanes) for runs with strict conservation requirements.
+- Gain/cost: an F64 kernel gives up about half of the theoretical speedup (the FP64 peak is half the FP32 peak).
+- Validation: energy drift and `simd_test` comparison for both tiers.
+
+### O10 Proper integration (replacing the silently ineffective `--with-arch=tsv110`)
+- Evidence: previously `--with-arch=tsv110` was an unknown string that selected neither the x86 nor the Fugaku branch, silently falling back to NoSimd.
+- Method:
+  1. add a `tsv110` branch in `configure.ac` next to `fugaku`: `OPTFLAGS += -mcpu=tsv110` (optional) and `PROG_NAME += .tsv110`;
+  2. `Makefile.in`: `ifeq ($(use_arch),tsv110) CXXFLAGS += -D USE_NEON_KERNEL endif`;
+  3. add `src/force_tsv110.hpp` and the `petar.hpp` dispatch (validated in this work, see section 7);
+  4. keep the NoSimd fallback; `force_tsv110.hpp` is self-contained.
+- Gain: a single configure option reproduces the 1.6-2.3x speedup.
+- Validation: `make build/petar.simd.test` plus a short demo.
+
+### O11 NEON implementation pitfalls (lessons learned)
+- EP-SP and neighbor search must keep the origin shift; otherwise the F32 relative error explodes.
+- Pad j entries with a finite large value (1e15) to avoid `inf*0=NaN`.
+- Keep accumulators in local SoA/registers and apply `G` only when writing back into the F64 `ForceSoft` array (to preserve accuracy across calls).
+- Replace the prototype's per-call `std::vector` allocations with thread-local reusable buffers (the prototype pays an estimated 5-15% overhead).
+
+### O12 Keep the current runtime configuration
+- Evidence: 24x1 is the best configuration found by the parallel scan; the tree force is memory-bound and this CPU has no SMT.
+- Method: keep `OMP_NUM_THREADS=1`, `--bind-to none` and `OMP_STACKSIZE=128M`.
+- Gain: avoids MPI/OpenMP interference.
+
+---
+
+## 6. Why `force_fugaku.hpp` Cannot Be Reused Directly
 
 ```mermaid
 flowchart TD
-    A["PeTar ARM64 优化需求"] --> B{"硬件有 SVE?"}
-    B -- "Fugaku A64FX：有" --> C["arm_sve.h + 512-bit VL"]
+    A["PeTar optimization for ARM64"] --> B{"SVE available?"}
+    B -- "Fugaku A64FX: yes" --> C["arm_sve.h + 512-bit VL"]
     C --> D["Fujitsu fcc -Kfast -Nclang"]
-    D --> E["USE_FUGAKU 内核<br/>16 lane 索引表"]
-    B -- "tsv110：无，仅 NEON" --> F["无法编译/运行 SVE 代码"]
-    F --> G["新写 force_tsv110.hpp<br/>128-bit, 4 lane"]
+    D --> E["USE_FUGAKU kernels<br/>16-lane index tables"]
+    B -- "TSV110: no, NEON only" --> F["Cannot compile/run SVE code"]
+    F --> G["Write force_tsv110.hpp<br/>128-bit, 4 lanes"]
     G --> H["GCC -mcpu=tsv110 + intrinsics"]
 ```
 
-| 依赖 | Fugaku 内核 | tsv110 |
+| Dependency | Fugaku kernel | TSV110 |
 |---|---|---|
-| 指令集 | SVE（512-bit，16×F32 lane） | NEON（128-bit，4×F32 lane） |
-| 头文件 | `arm_sve.h` | `arm_neon.h` |
-| 编译器 | Fujitsu `-Kfast -Nclang` | GCC/Clang |
-| 索引表 | 固定 16 项、步长 16（硬编码 VL=512） | 4 项、步长 4 |
-| gather/scatter | SVE gather/scatter 指令 | `vld4q` 解交织 / SoA 打包 |
+| Instruction set | SVE (512-bit, 16x F32 lanes) | NEON (128-bit, 4x F32 lanes) |
+| Header | `arm_sve.h` | `arm_neon.h` |
+| Compiler | Fujitsu `-Kfast -Nclang` | GCC/Clang |
+| Index tables | fixed 16 entries, stride 16 (hard-coded VL=512) | 4 entries, stride 4 |
+| gather/scatter | SVE gather/scatter instructions | `vld4q` de-interleaving / SoA packing |
 
-tsv110 的 `arm_sve.h` 即使可用（GCC 头文件存在），编译产物含 SVE 指令，在无 SVE 的硬件上会 **SIGILL**，因此不能「降级复用」，必须新写。
+Even if `arm_sve.h` were available on the TSV110 (GCC ships the header), the resulting binary would contain SVE instructions and would **SIGILL** on non-SVE hardware. The code therefore cannot be "downgraded" and has to be rewritten.
 
 ---
 
-## 7. 集成方式
+## 7. Integration
 
-本特性已集成到 PeTar 源码中，共 4 处改动：
+The feature is integrated into the PeTar sources in four places:
 
-1. 新增 `src/force_tsv110.hpp`（NEON 内核）；
-2. `src/petar.hpp`：
-   - include 段增加 `#ifdef USE_NEON_KERNEL #include "force_tsv110.hpp" #endif`；
-   - `treeNeighborSearch()` 与 `treeForce()` 各插入一个 `#elif defined(USE_NEON_KERNEL)` 分支（调用 `tsv110::SearchNeighborEpEpNeon` / `CalcForceEpEpWithLinearCutoffNeon` / `CalcForceEpSpQuadNeon<...>`）；
-3. `configure.ac` / `configure`：新增 `--with-arch=tsv110`（检查 `-mcpu=tsv110`、程序名后缀 `.tsv110`）；
-4. `Makefile.in`：`ifeq ($(use_arch),tsv110)` → `CXXFLAGS += -D USE_NEON_KERNEL`；`src/simd_test.cxx` 增加 NEON 校验段。
+1. new `src/force_tsv110.hpp` (NEON kernels);
+2. `src/petar.hpp`:
+   - an include guard block `#ifdef USE_NEON_KERNEL #include "force_tsv110.hpp" #endif`;
+   - one `#elif defined(USE_NEON_KERNEL)` branch each in `treeNeighborSearch()` and `treeForce()` (calling `tsv110::SearchNeighborEpEpNeon`, `CalcForceEpEpWithLinearCutoffNeon` and `CalcForceEpSpQuadNeon<...>`);
+3. `configure.ac` / `configure`: the `--with-arch=tsv110` option (checks `-mcpu=tsv110`, appends the `.tsv110` program-name suffix);
+4. `Makefile.in`: `ifeq ($(use_arch),tsv110)` -> `CXXFLAGS += -D USE_NEON_KERNEL`; plus a NEON validation section in `src/simd_test.cxx`.
 
 ```mermaid
 flowchart LR
     A["configure --with-arch=tsv110"] --> B["Makefile: -D USE_NEON_KERNEL"]
-    B --> C["petar.hpp 分派"]
+    B --> C["petar.hpp dispatch"]
     C --> D["SearchNeighborEpEpNeon"]
     C --> E["CalcForceEpEpWithLinearCutoffNeon"]
     C --> F["CalcForceEpSpQuadNeon / MonoNeon"]
-    D & E & F --> G["精度/邻居数校验"]
-    G --> H["短 demo 墙钟对比"]
+    D & E & F --> G["force/neighbor-count validation"]
+    G --> H["short demo wall-clock comparison"]
 ```
 
 ---
 
-## 8. 风险、局限与后续
+## 8. Risks, Limitations and Follow-up
 
-1. **无硬件计数器**：`perf_event_paranoid=4` 且无 sudo，未能测量 IPC/cache-miss/分支失败率；如需深入，请管理员调到 ≤1。
-2. **混沌**：端到端只能比守恒量与统计量；逐点正确性全靠内核级对比（3.2）。
-3. **F32 能量漂移**：10 Myr 达 ~10⁻⁴ 相对，短时/守恒要求高的场景建议 F64 档（O9）。
-4. **测量环境**：单 socket、24 核独占、DRAM 带宽实测偏低（31 GB/s），大 N 时的扩展性受此限制；未测多节点 MPI。
-5. **内核原型开销**：每次调用 `std::vector` 分配 + j 打包；生产化需 thread-local 复用（O11）。
-6. **内存带宽方法学**：`copy/triad` 为顺序访问，L3/DRAM 数值含页表/预取效应；大页已单独验证。
-7. **下一步建议**：按 O1→O2/O3→O4→O5→O7 顺序落地；每步用 `simd_test` + N=10000 t=2 Myr 短跑做回归。
+1. **No hardware counters**: `perf_event_paranoid=4` and no sudo prevented IPC/cache-miss/branch-miss measurements; a deeper analysis needs the administrator to lower it to <= 1.
+2. **Chaos**: end-to-end runs can only be compared through conserved quantities and statistics; pointwise correctness relies on the kernel-level comparison (3.2).
+3. **F32 energy drift**: ~10^-4 relative over 10 Myr; use the F64 tier (O9) for short or conservation-critical runs.
+4. **Measurement environment**: single socket, 24 dedicated cores, and a low measured DRAM bandwidth (31 GB/s) limit large-N scaling; multi-node MPI was not tested.
+5. **Kernel prototype overhead**: per-call `std::vector` allocations plus j packing; production needs thread-local reuse (O11).
+6. **Memory-bandwidth methodology**: copy/triad use sequential access; the L3/DRAM numbers include page-table and prefetch effects. Huge pages were validated separately.
+7. **Next steps**: land O1 -> O2/O3 -> O4 -> O5 -> O7 in order, using `simd_test` plus a short N=10000, t=2 Myr run as regression.
 
 ---
 
-## 附录 A：文件清单
+## Appendix A: File List
 
-| 文件 | 说明 |
+| File | Description |
 |---|---|
-| `figs/fig1_cpu_peak.png` | FMA 峰值与指令成本 |
-| `figs/fig2_latency_bw.png` | 访存延迟（含修正前后）与带宽 |
-| `figs/fig3_kernel_speedup.png` | 4 个内核 × 5×5 尺寸的 NEON 加速热图 |
-| `figs/fig4_kernel_lines.png` | 每交互时间 vs nj（ni=1024，含 generic/auto/NEON） |
-| `figs/fig5_e2e.png` | 2000 星 demo 3 次重复墙钟 |
-| `figs/fig6_rsqrt.png` | 快速 rsqrt 精度台阶 |
-| `figs/fig7_scaling.png` | N=2000/5000/10000 端到端扩展 |
-| `data/bench_kernels.cxx` | 内核基准驱动（NoSimd/NEON/自校验） |
-| `data/kernel_g.csv` `kernel_a.csv` `kernel_n.csv` | 三档编译的 5×5 网格原始计时 |
-| `data/scaling.txt` | N 扩展原始结果 |
-| `data/e2e_timing.txt` | demo 3×3 次墙钟 |
-| `data/micro_*.txt` | 微基准原始输出（峰值/延迟/带宽/精度/时钟） |
-| `data/*.c` `data/build.sh` `data/make_figs.py` | 微基准与内核基准源码、构建与绘图脚本 |
+| `figs/fig1_cpu_peak.png` | FMA peak and instruction cost |
+| `figs/fig2_latency_bw.png` | memory latency (before/after the correction) and bandwidth |
+| `figs/fig3_kernel_speedup.png` | NEON speedup heatmaps for the four kernels over the 5x5 grid |
+| `figs/fig4_kernel_lines.png` | time per interaction vs nj (ni=1024; generic/auto/NEON) |
+| `figs/fig5_e2e.png` | wall-clock of the 2000-star demo (3 runs) |
+| `figs/fig6_rsqrt.png` | accuracy ladder of the fast rsqrt |
+| `figs/fig7_scaling.png` | end-to-end scaling for N=2000/5000/10000 |
+| `data/bench_kernels.cxx` | kernel benchmark driver (NoSimd/NEON/self-check) |
+| `data/kernel_g.csv` `kernel_a.csv` `kernel_n.csv` | raw 5x5 grid timings for the three builds |
+| `data/scaling.txt` | raw N-scaling results |
+| `data/e2e_timing.txt` | demo wall-clock (3 runs per version) |
+| `data/micro_*.txt` | raw micro-benchmark output (peak/latency/bandwidth/accuracy/clock) |
+| `data/*.c` `data/build.sh` `data/make_figs.py` | micro- and kernel-benchmark sources, build and plotting scripts |
 
-## 附录 B：关键公式速查
+## Appendix B: Formula Quick Reference
 
-- 峰值估算 $P = n_\text{core} \times (1\,\text{FMA/cycle}) \times \text{lanes} \times 2 \times f$，F32 lane=4、F64 lane=2，$f\approx2.594$ GHz。
-- Fugaku 式 rsqrt 修正：$h=1-xr_0^2$，$r=r_0[1+h(\tfrac12+\tfrac38h)]$（2.3 节）。
-- 内核加速 vs 步级加速（N=10000）：FDPS `Calc_force` 3.04×，PeTar `Tree_Force`/每步总时间均为 2.25×——遍历、通信与同步开销未随内核等比缩小，因此步级加速低于内核加速；后续优化的目标是缩小这两个数字的差距（O7）。
-- 单向带宽约束：$t_\text{min} = \frac{B_\text{byte}}{BW}$；整机 BW≈31 GB/s（triad），树力每交互读 ~20 B（EPJ）＋ 16 B（EPI）。
+- Peak estimate: $P = n_\text{core} \times (1\,\text{FMA/cycle}) \times \text{lanes} \times 2 \times f$, with 4 F32 lanes or 2 F64 lanes and $f\approx2.594$ GHz.
+- Fugaku-style rsqrt correction: $h=1-xr_0^2$, $r=r_0[1+h(\tfrac12+\tfrac38h)]$ (section 2.3).
+- Kernel speedup vs step-level speedup (N=10000): FDPS `Calc_force` 3.04x, while PeTar `Tree_Force` and the total per-step time both improve by 2.25x -- traversal, communication and synchronization costs do not shrink in proportion to the kernel, so the step-level speedup is lower; narrowing this gap is the goal of O7.
+- Bandwidth bound: $t_\text{min} = B_\text{byte}/BW$; aggregate BW is ~31 GB/s (triad) and a tree-force interaction reads ~20 B (EPJ) plus 16 B (EPI).

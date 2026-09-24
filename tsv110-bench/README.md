@@ -9,7 +9,7 @@ This directory contains the benchmark harness and the test report for the
 
 Contents:
 
-- `REPORT.md` — full test report (in Chinese): hardware characterization,
+- `REPORT.md` — full test report: hardware characterization,
   kernel/end-to-end benchmarks, figures and a point-by-point optimization list.
 - `quad_newton/` — follow-up study (report + code + figures) on whether the
   quadrupole kernel should adopt the extra half Newton step used by the Fugaku
