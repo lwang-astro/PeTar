@@ -11,10 +11,21 @@ Contents:
 
 - `REPORT.md` — full test report (in Chinese): hardware characterization,
   kernel/end-to-end benchmarks, figures and a point-by-point optimization list.
-- `figs/` — performance comparison figures used in the report.
+- `quad_newton/` — follow-up study (report + code + figures) on whether the
+  quadrupole kernel should adopt the extra half Newton step used by the Fugaku
+  kernel. Result: keep the cubic-only `rsqrt4` (no accuracy gain, ~20% slower).
+- `figs/` — performance comparison figures used in the main report.
 - `data/` — raw benchmark data (CSV/TXT), benchmark sources and reproduction
   scripts (micro-benchmarks, kernel benchmark driver, PeTar integration patch
   script, plotting script, NEON kernel prototype).
+
+Post-report changes to `src/force_tsv110.hpp`:
+
+- the EP-EP kernels now skip `mass <= 0` EPJ entries, matching the x86 SIMD and
+  Fugaku kernels (measured cost ~1.000x, see `quad_newton/REPORT.md` §3.5);
+- `NEON_QUAD_NEWTON` (default 0) selects the optional Fugaku-style extra half
+  Newton step for the quadrupole kernels, with the cost/accuracy study in
+  `quad_newton/`.
 
 Key results on tsv110 (24 MPI ranks x 1 OpenMP thread, GCC 13.3, ~2.59 GHz):
 

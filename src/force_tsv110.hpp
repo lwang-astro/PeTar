@@ -41,14 +41,35 @@ static inline float32x4_t rsqrt4(float32x4_t x){
     return vfmaq_f32(r, r, p);
 }
 
+/* Optional extra refinement used by the Fugaku quadrupole kernels:
+   one half Newton step  r <- r (3 - x r^2)/2  after the cubic correction.
+   Selected at compile time for the quadrupole kernels only:
+     0 = cubic correction only (default)
+     1 = cubic correction + half Newton step (Fugaku-identical)
+   See tsv110-bench/quad_newton/REPORT.md for the cost/accuracy study. */
+#ifndef NEON_QUAD_NEWTON
+#define NEON_QUAD_NEWTON 0
+#endif
+static inline float32x4_t rsqrt4_quad(float32x4_t x){
+    float32x4_t r = rsqrt4(x);
+#if NEON_QUAD_NEWTON
+    float32x4_t h = vmulq_f32(r, r);
+    h = vfmsq_f32(vdupq_n_f32(3.0f), x, h);              /* 3 - x r^2 */
+    r = vmulq_f32(r, vmulq_f32(h, vdupq_n_f32(0.5f)));   /* r *= 0.5 h  */
+#endif
+    return r;
+}
+
 /* ------------------------------------------------------------------ */
 /*  compact layouts and per-thread scratch buffers                     */
 /* ------------------------------------------------------------------ */
 struct P1 { float x, y, z, rs; };                      // EPI compact: 16 B
+struct P2 { float x, y, z, m, rs; };                   // EPJ compact: 20 B
 
 struct Scratch {
     std::vector<int>   lst;                            // original indices of active i
     std::vector<P1>    iloc;                           // compact i (padded to multiple of 4)
+    std::vector<P2>    jloc;                           // compact j (EP-EP force, mass>0 only)
     std::vector<float> jx, jy, jz, jm, jrs;            // compact j for I1_J4
     std::vector<float> qxx, qyy, qzz, qxy, qxz, qyz;   // compact super-particle quadrupole
 };
@@ -71,6 +92,20 @@ static inline void compact_i(const EPISoft* epi, const int ni, std::vector<int>&
         lst.push_back(i); loc.push_back(p);
     }
     while(loc.size()%4) loc.push_back(P1{0.f,0.f,0.f,0.f});
+}
+
+/* compact the EPJ list for the EP-EP force, skipping zero-mass entries
+   (same behaviour as the x86 SIMD and Fugaku kernels) */
+static inline int compact_j_ep(const EPJSoft* epj, const int nj, std::vector<P2>& loc){
+    loc.clear();
+    for(int j=0;j<nj;j++){
+        if(epj[j].mass<=0.0) continue;
+        P2 p;
+        p.x=(float)epj[j].pos.x; p.y=(float)epj[j].pos.y; p.z=(float)epj[j].pos.z;
+        p.m=(float)epj[j].mass;  p.rs=(float)epj[j].r_search;
+        loc.push_back(p);
+    }
+    return (int)loc.size();
 }
 
 /* orientation selector: vectorize over i (I4_J1) or over j (I1_J4) */
@@ -163,6 +198,7 @@ struct CalcForceEpEpWithLinearCutoffNeon {
         Scratch& S = scratch();
         compact_i(epi,ni,S.lst,S.iloc,false,0,0,0);
         const int na=(int)S.lst.size();
+        const int nja=compact_j_ep(epj,nj,S.jloc);
         const float32x4_t e2v=vdupq_n_f32(eps2), rcv=vdupq_n_f32(rcut2), one=vdupq_n_f32(1.f);
         for(int ib=0; ib<na; ib+=4){
             float32x4x4_t t = vld4q_f32((const float*)&S.iloc[ib]);
@@ -170,11 +206,12 @@ struct CalcForceEpEpWithLinearCutoffNeon {
             float32x4_t rsi2=vmulq_f32(rsi,rsi);
             float32x4_t ax=vdupq_n_f32(0.f), ay=ax, az=ax, ap=ax;
             int32x4_t nn=vdupq_n_s32(0);
-            for(int j=0;j<nj;j++){
-                float mj=(float)epj[j].mass;
-                float32x4_t dx=vsubq_f32(xi,vdupq_n_f32((float)epj[j].pos.x));
-                float32x4_t dy=vsubq_f32(yi,vdupq_n_f32((float)epj[j].pos.y));
-                float32x4_t dz=vsubq_f32(zi,vdupq_n_f32((float)epj[j].pos.z));
+            for(int j=0;j<nja;j++){
+                const P2& q=S.jloc[j];
+                float mj=q.m;
+                float32x4_t dx=vsubq_f32(xi,vdupq_n_f32(q.x));
+                float32x4_t dy=vsubq_f32(yi,vdupq_n_f32(q.y));
+                float32x4_t dz=vsubq_f32(zi,vdupq_n_f32(q.z));
                 float32x4_t r2=vfmaq_f32(vfmaq_f32(vmulq_f32(dx,dx),dy,dy),dz,dz);
                 float32x4_t rc=vmaxq_f32(vaddq_f32(r2,e2v),rcv);
                 float32x4_t ri=rsqrt4(rc);
@@ -185,7 +222,7 @@ struct CalcForceEpEpWithLinearCutoffNeon {
                 ay=vfmsq_f32(ay,mr3,dy);
                 az=vfmsq_f32(az,mr3,dz);
                 ap=vfmsq_f32(ap,mr,one);
-                float rs2=(float)(epj[j].r_search*epj[j].r_search);
+                float rs2=q.rs*q.rs;
                 uint32x4_t cmp=vcltq_f32(r2,vmaxq_f32(rsi2,vdupq_n_f32(rs2)));
                 nn=vsubq_s32(nn,vreinterpretq_s32_u32(cmp));
             }
@@ -206,13 +243,17 @@ struct CalcForceEpEpWithLinearCutoffNeon {
         Scratch& S = scratch();
         compact_i(epi,ni,S.lst,S.iloc,false,0,0,0);
         const int na=(int)S.lst.size();
-        const int n4=(nj+3)/4*4;
-        S.jx.resize(n4); S.jy.resize(n4); S.jz.resize(n4); S.jm.resize(n4); S.jrs.resize(n4);
+        /* single pass: filter mass>0 and pack SoA */
+        S.jx.resize(nj+3); S.jy.resize(nj+3); S.jz.resize(nj+3); S.jm.resize(nj+3); S.jrs.resize(nj+3);
+        int nja=0;
         for(int j=0;j<nj;j++){
-            S.jx[j]=(float)epj[j].pos.x; S.jy[j]=(float)epj[j].pos.y; S.jz[j]=(float)epj[j].pos.z;
-            S.jm[j]=(float)epj[j].mass;  S.jrs[j]=(float)epj[j].r_search;
+            if(epj[j].mass<=0.0) continue;
+            S.jx[nja]=(float)epj[j].pos.x; S.jy[nja]=(float)epj[j].pos.y; S.jz[nja]=(float)epj[j].pos.z;
+            S.jm[nja]=(float)epj[j].mass;  S.jrs[nja]=(float)epj[j].r_search;
+            nja++;
         }
-        for(int j=nj;j<n4;j++){ S.jx[j]=1e15f; S.jy[j]=1e15f; S.jz[j]=1e15f; S.jm[j]=0.f; S.jrs[j]=0.f; }
+        const int n4=(nja+3)/4*4;
+        for(int j=nja;j<n4;j++){ S.jx[j]=1e15f; S.jy[j]=1e15f; S.jz[j]=1e15f; S.jm[j]=0.f; S.jrs[j]=0.f; }
         const float32x4_t e2v=vdupq_n_f32(eps2), rcv=vdupq_n_f32(rcut2), one=vdupq_n_f32(1.f);
         for(int ii=0; ii<na; ii++){
             const float xi=S.iloc[ii].x, yi=S.iloc[ii].y, zi=S.iloc[ii].z, rsi=S.iloc[ii].rs;
@@ -370,7 +411,7 @@ struct CalcForceEpSpQuadNeon {
                 float32x4_t dy=vsubq_f32(yi,vdupq_n_f32((float)(q.pos.y-cy)));
                 float32x4_t dz=vsubq_f32(zi,vdupq_n_f32((float)(q.pos.z-cz)));
                 float32x4_t r2=vaddq_f32(vfmaq_f32(vfmaq_f32(vmulq_f32(dx,dx),dy,dy),dz,dz),e2v);
-                float32x4_t ri=rsqrt4(r2);
+                float32x4_t ri=rsqrt4_quad(r2);
                 float32x4_t ri2=vmulq_f32(ri,ri);
                 float32x4_t ri3=vmulq_f32(ri2,ri);
                 float32x4_t r5=vmulq_f32(vmulq_f32(ri2,ri3),vdupq_n_f32(1.5f));
@@ -433,7 +474,7 @@ struct CalcForceEpSpQuadNeon {
                 float32x4_t dy=vsubq_f32(yv,vld1q_f32(&S.jy[j]));
                 float32x4_t dz=vsubq_f32(zv,vld1q_f32(&S.jz[j]));
                 float32x4_t r2=vaddq_f32(vfmaq_f32(vfmaq_f32(vmulq_f32(dx,dx),dy,dy),dz,dz),e2v);
-                float32x4_t ri=rsqrt4(r2);
+                float32x4_t ri=rsqrt4_quad(r2);
                 float32x4_t ri2=vmulq_f32(ri,ri);
                 float32x4_t ri3=vmulq_f32(ri2,ri);
                 float32x4_t r5=vmulq_f32(vmulq_f32(ri2,ri3),vdupq_n_f32(1.5f));
