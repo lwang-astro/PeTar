@@ -20,6 +20,15 @@ BSE_BINARY_TYPE_INDEX={0:'Unset', 1:'Initial', 2:'Type_change', 3:'Start_Roche',
                        7:'End_Symbiotic', 8:'Common_envelope', 9:'Giant',
                        10:'Coalescence', 11:'Blue_straggler', 12:'No_remain', 13:'Disrupt'}
 
+SEVN_STAR_TYPE_INDEX={'PreMainSequence':0, 'MainSequence':1, 'TerminalMainSequence':2, 'ShellHBurning':3,
+                      'CoreHeBurning':4, 'TerminalCoreHeBurning':5, 'ShellHeBurning':6, 'Remnant':7}
+
+SEVN_STAR_TYPE_NAME={0:'PreMainSequence', 1:'MainSequence', 2:'TerminalMainSequence', 3:'ShellHBurning',
+                     4:'CoreHeBurning', 5:'TerminalCoreHeBurning', 6:'ShellHeBurning', 7:'Remnant'}
+
+SEVN_REMNANT_TYPE_INDEX={'NotARemnant':0, 'HeWD':1, 'COWD':2, 'ONeWD':3, 'NS_ECSN':4, 'NS_CCSN':5, 'BH':6, 'Empty':-1}
+
+SEVN_REMNANT_TYPE_NAME={0:'NotARemnant', 1:'HeWD', 2:'COWD', 3:'ONeWD', 4:'NS_ECSN', 5:'NS_CCSN', 6:'BH', -1:'Empty'}
 
 class SSEStarParameter(DictNpArrayMix):
     """ SSE star parameter class from bse_interface.h
@@ -41,18 +50,60 @@ class SSEStarParameter(DictNpArrayMix):
         keys = [['type',np.int64],['mass0',np.float64],['mass',np.float64],['rad',np.float64],['mcore',np.float64],['rcore',np.float64],['spin',np.float64],['epoch',np.float64],['time',np.float64],['lum',np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
+class SEVNStarParameter(DictNpArrayMix):
+    """ SEVN star parameter class from bse_interface.h
+    The first members correspond to the equivalent SSE star parameters, while members with "_SEVN" are the extra fields
+    Keys: (class members)
+        type  (1D):            SSE stellar type, see help(petar.SSEType)
+        mass0 (1D):            initial mass at each evolution stage (Msun)
+        mass  (1D):            current mass (Msun)
+        rad   (1D):            stellar radius (Rsun)
+        mcore (1D):            core mass (Msun)
+        rcore (1D):            core radius (Rsun)
+        spin  (1D):            stellar rotation
+        epoch (1D):            time offset at each evolution stage (Myr)
+        time  (1D):            current physical time (Myr)
+        lum   (1D):            bolometric luminosity (Lsun)
+        Mzams_SEVN (1D):       Mass at the ZAMS of the current stellar track in solar units (not necessarily equal to the actual ZAMS mass due to change of tracks) (Msun)
+        MHE_SEVN (1D):         Mass of the Helium core (includes also the CO core) (Msun)
+        MCO_SEVN (1D):         Mass of the CO core (Msun)
+        Plife_SEVN (1D):       Percentage of life in the current evolutionary phase
+        Phase_SEVN (1D):       Current evolutionary phase (in the SEVN classification)
+        RemnantType_SEVN (1D): Remnant type (in the SEVN classification)
+    """
+
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+        """
+        keys = [['type', np.int64], ['mass0', np.float64], ['mass', np.float64], ['rad', np.float64],
+                ['mcore', np.float64], ['rcore', np.float64], ['spin', np.float64], ['epoch', np.float64],
+                ['time', np.float64], ['lum', np.float64], ['Mzams_SEVN', np.float64], ['MHE_SEVN', np.float64],
+                ['MCO_SEVN', np.float64], ['Plife_SEVN', np.float64], ['Phase_SEVN', np.int64],
+                ['RemnantType_SEVN', np.int64]]
+
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+
 
 class SSETypeChange(DictNpArrayMix):
     """ SSE type change output data from PeTar
     Keys: (class members)
         id (1D): particle id
-        init (SSEStarParameter): initial status of star
-        final (SSEStarParameter): final status of star after stellar evolution
+        init (SSEStarParameter or SEVNStarParameter): initial status of star
+        final (SSEStarParameter or SEVNStarParameter): final status of star after stellar evolution
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [['id',np.int64],['init',SSEStarParameter],['final',SSEStarParameter]]
+        if 'interrupt_mode' in kwargs.keys():
+            self.interrupt_mode = kwargs['interrupt_mode']
+        else:
+            self.interrupt_mode = "bse" # Defaults to BSE
+
+        if 'sevn' in self.interrupt_mode:
+            keys = [['id',np.int64],['init',SEVNStarParameter],['final',SEVNStarParameter]]
+        else:
+            keys = [['id',np.int64],['init',SSEStarParameter],['final',SSEStarParameter]]
+
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
     def printTable(self, column_format = 'final', print_title = True):
@@ -78,12 +129,23 @@ class SSETypeChange(DictNpArrayMix):
         """
         
         if (column_format == 'final'):
-            column_format = [('id', '%10d', 'id'),
-                             ('final.time','%12.4g','timef[Myr]'),('final.type','%4d','kf'),
-                             ('final.mass0','%10.3f','mass0[M*]'),('final.mass','%10.3f','mass[M*]'), 
-                             ('final.rad','%8.2g','r[R*]'),('final.lum','%8.2g','Lf[L*]'),
-                             ('final.mcore','%9.3f','mcf[M*]'),('final.rcore','%8.2g','rcf[R*]'),
-                             ('final.spin','%8.2g','spinf'),('final.epoch','%11.3g','epoch[Myr]')]
+            if 'sevn' in self.interrupt_mode:
+                column_format = [('id', '%10d', 'id'),
+                                 ('final.time','%12.4g','timef[Myr]'),('final.type','%4d','kf'),
+                                 ('final.mass0','%10.3f','mass0[M*]'),('final.mass','%10.3f','mass[M*]'),
+                                 ('final.rad','%8.2g','r[R*]'),('final.lum','%8.2g','Lf[L*]'),
+                                 ('final.mcore','%9.3f','mcf[M*]'),('final.rcore','%8.2g','rcf[R*]'),
+                                 ('final.spin','%8.2g','spinf'),('final.epoch','%11.3g','epoch[Myr]'),
+                                 ('final.Mzams_SEVN','%15.2f','Mzams_SEVN[M*]'),('final.MHE_SEVN','%13.2f','MHE_SEVN[M*]'),
+                                 ('final.MCO_SEVN','%13.2f','MCO_SEVN[M*]'),('final.Plife_SEVN','%11.2f','Plife_SEVN'),
+                                 ('final.Phase_SEVN','%11d','Phase_SEVN'),('final.RemnantType_SEVN','%17d','RemnantType_SEVN'),]
+            else:
+                column_format = [('id', '%10d', 'id'),
+                                 ('final.time','%12.4g','timef[Myr]'),('final.type','%4d','kf'),
+                                 ('final.mass0','%10.3f','mass0[M*]'),('final.mass','%10.3f','mass[M*]'),
+                                 ('final.rad','%8.2g','r[R*]'),('final.lum','%8.2g','Lf[L*]'),
+                                 ('final.mcore','%9.3f','mcf[M*]'),('final.rcore','%8.2g','rcf[R*]'),
+                                 ('final.spin','%8.2g','spinf'),('final.epoch','%11.3g','epoch[Myr]')]
 
         elif (column_format =='init-final'):
             column_format = [('id', '%10d', 'id'),
@@ -101,12 +163,16 @@ class SSESNKick(DictNpArrayMix):
     Keys: (class members)
         id (1D): particle id
         vkick (1D): kick velocity value (km/s)
-        star (SSEStarParameter): final status of star after stellar evolution
+        star (SSEStarParameter or SEVNStarParameter): final status of star after stellar evolution
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [['id',np.int64],['vkick',np.float64],['star',SSEStarParameter]]
+        if 'sevn' in self.interrupt_mode:
+            keys = [['id',np.int64],['vkick',np.float64],['star',SEVNStarParameter]]
+        else:
+            keys = [['id',np.int64],['vkick',np.float64],['star',SSEStarParameter]]
+
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 class SSEType(DictNpArrayMix):
@@ -173,7 +239,11 @@ class BSEBinaryEvent(DictNpArrayMix):
         """
         keys_base = [['time',np.float64],['m1',np.float64],['m2',np.float64],['type1',np.float64],['type2',np.float64],['semi',np.float64],['ecc',np.float64],['radro1',np.float64],['radro2',np.float64],['binary_type',np.float64]]
         keys_add = [['lum1', np.float64],['lum2', np.float64],['rad1', np.float64],['rad2', np.float64],['mcore1',np.float64],['mcore2',np.float64],['rcore1',np.float64],['rcore2',np.float64],['spin1',np.float64],['spin2',np.float64]]
-        keys = keys_base + keys_add
+        if 'interrupt_mode' in kwargs.keys() and 'sevn' in kwargs['interrupt_mode']:
+            keys_sevn = [['Mzams_SEVN1', np.float64],['Mzams_SEVN2', np.float64],['MHE_SEVN1', np.float64],['MHE_SEVN2',np.float64],['MCO_SEVN1',np.float64],['MCO_SEVN2',np.float64],['Plife_SEVN1',np.float64],['Plife_SEVN2',np.float64],['Phase_SEVN1',np.int64],['Phase_SEVN2',np.int64],['RemnantType_SEVN1',np.int64],['RemnantType_SEVN2',np.int64],['BEvent_SEVN',np.int64]]
+            keys = keys_base + keys_add + keys_sevn
+        else:
+            keys = keys_base + keys_add
         if ('base_output' in kwargs.keys()):
             if kwargs['base_output']:
                 keys = keys_base
@@ -193,6 +263,11 @@ class BSETypeChange(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
+        if 'interrupt_mode' in kwargs.keys():
+            self.interrupt_mode = kwargs['interrupt_mode']
+        else:
+            self.interrupt_mode = "bse" # Defaults to BSE
+
         keys = [['type',np.int64],['init',BSEBinaryEvent],['final',BSEBinaryEvent],['id1',np.int64],['id2',np.int64],['drdv',np.float64],['dr',np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
@@ -209,7 +284,7 @@ class BSETypeChange(DictNpArrayMix):
         Parameters:
         ----------
         column_format: a list of column label (class member name), format and column title, enclosed by tuple, for sub-member, use . to access
-                       For exmaple: [(key1,'%s',title1), (key2,'%12.7f',title2), (key3.subkey1,'%d',title3), (key3.subkey2,'%e',title4)]
+                       For example: [(key1,'%s',title1), (key2,'%12.7f',title2), (key3.subkey1,'%d',title3), (key3.subkey2,'%e',title4)]
                        Some pre-defined choices (default: final):
                        init-final: [('type', '%3d', 'kb'), ('init.type1','%4d','k1i'),('init.type2','%4d','k2i'),
                                     ('init.time','%12.4g','timei[Myr]'),('init.m1','%11.4f','m1i[M*]'),('init.m2','%11.4f','m2i[M*]'),
@@ -226,12 +301,26 @@ class BSETypeChange(DictNpArrayMix):
         print_title: print title of keys (default: True)
         """
         if (column_format == 'final'):
-            column_format = [('type', '%3d', 'kb'), ('id1','%9d','id1'), ('id2','%9d','id2'),
-                             ('final.time','%12.4g','timef[Myr]'), ('final.type1','%4d','k1f'),('final.type2','%4d','k2f'), 
-                             ('final.m1','%10.3f','m1f[M*]'),('final.m2','%10.3f','m2f[M*]'),('final.semi','%8.2g','af[R*]'),('final.ecc','%13.8f','eccf'),
-                             ('final.rad1','%8.2g','r1[R*]'),('final.rad2','%8.2g','r2[R*]'),#('final.lum1','%8.2g','L1f[L*]'),('final.lum2','%8.2g','L2f[L*]'),
-                             ('final.mcore1','%9.3f','mc1f[M*]'),('final.mcore2','%9.3f','mc2f[M*]'),#('final.rcore1','%9.2g','rc1f[R*]'),('final.rcore2','%9.2g','rc2f[R*]'),
-                             ('final.spin1','%8.2g','spin1f'),('final.spin2','%8.2g','spin2f')]
+            if 'sevn' in self.interrupt_mode:
+                column_format = [('type', '%3d', 'kb'), ('id1','%9d','id1'), ('id2','%9d','id2'),
+                                 ('final.time','%12.4g','timef[Myr]'), ('final.type1','%4d','k1f'),('final.type2','%4d','k2f'),
+                                 ('final.m1','%10.3f','m1f[M*]'),('final.m2','%10.3f','m2f[M*]'),('final.semi','%8.2g','af[R*]'),('final.ecc','%13.8f','eccf'),
+                                 ('final.rad1','%8.2g','r1[R*]'),('final.rad2','%8.2g','r2[R*]'),#('final.lum1','%8.2g','L1f[L*]'),('final.lum2','%8.2g','L2f[L*]'),
+                                 ('final.mcore1','%9.3f','mc1f[M*]'),('final.mcore2','%9.3f','mc2f[M*]'),#('final.rcore1','%9.2g','rc1f[R*]'),('final.rcore2','%9.2g','rc2f[R*]'),
+                                 ('final.spin1','%8.2g','spin1f'),('final.spin2','%8.2g','spin2f'),
+                                 ('final.Mzams_SEVN1','%16.2f','Mzams_SEVN1[M*]'),('final.Mzams_SEVN2','%16.2f','Mzams_SEVN2[M*]'),
+                                 ('final.MHE_SEVN1','%14.2f','MHE_SEVN1[M*]'),('final.MHE_SEVN2','%14.2f','MHE_SEVN2[M*]'),
+                                 ('final.MCO_SEVN1','%14.2f','MCO_SEVN1[M*]'),('final.MCO_SEVN2','%14.2f','MCO_SEVN2[M*]'),
+                                 ('final.Plife_SEVN1','%12.2g','Plife_SEVN1'),('final.Plife_SEVN2','%12.2g','Plife_SEVN2'),
+                                 ('final.Phase_SEVN1','%18d','Phase_SEVN1'),('final.Phase_SEVN2','%15d','Phase_SEVN2'),
+                                 ('final.RemnantType_SEVN1','%18d','RemnantType_SEVN1'),('final.RemnantType_SEVN2','%18d','RemnantType_SEVN2')]
+            else:
+                column_format = [('type', '%3d', 'kb'), ('id1','%9d','id1'), ('id2','%9d','id2'),
+                                 ('final.time','%12.4g','timef[Myr]'), ('final.type1','%4d','k1f'),('final.type2','%4d','k2f'),
+                                 ('final.m1','%10.3f','m1f[M*]'),('final.m2','%10.3f','m2f[M*]'),('final.semi','%8.2g','af[R*]'),('final.ecc','%13.8f','eccf'),
+                                 ('final.rad1','%8.2g','r1[R*]'),('final.rad2','%8.2g','r2[R*]'),#('final.lum1','%8.2g','L1f[L*]'),('final.lum2','%8.2g','L2f[L*]'),
+                                 ('final.mcore1','%9.3f','mc1f[M*]'),('final.mcore2','%9.3f','mc2f[M*]'),#('final.rcore1','%9.2g','rc1f[R*]'),('final.rcore2','%9.2g','rc2f[R*]'),
+                                 ('final.spin1','%8.2g','spin1f'),('final.spin2','%8.2g','spin2f')]
 
         elif (column_format =='init-final'):
             column_format = [('type', '%3d', 'kb'), ('id1','%8d','id1'), ('id2','%8d','id2'), 
@@ -251,12 +340,15 @@ class BSESNKick(DictNpArrayMix):
         id2 (1D): particle id of component 2
         kindex (1D): index of component which has SN kick
         vkick (1D): kick velocity (km/s)
-        star (SSEStarParameter): final status of kicked star after binary stellar evolution
+        star (SSEStarParameter or SEVNStarParameter): final status of kicked star after binary stellar evolution
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [['id1',np.int64],['id2',np.int64],['kindex',np.int64],['vkick',np.float64],['star',SSEStarParameter]]
+        if 'interrupt_mode' in kwargs.keys():
+            keys = [['id1',np.int64],['id2',np.int64],['kindex',np.int64],['vkick',np.float64],['star',SEVNStarParameter]]
+        else:
+            keys = [['id1',np.int64],['id2',np.int64],['kindex',np.int64],['vkick',np.float64],['star',SSEStarParameter]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
     def generateBinaryID(self):
@@ -276,7 +368,15 @@ class SSEStarParameterPair(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [['p1',SSEStarParameter],['p2',SSEStarParameter]]
+        if 'interrupt_mode' in kwargs.keys():
+            self.interrupt_mode = kwargs['interrupt_mode']
+        else:
+            self.interrupt_mode = "bse" # Defaults to BSE
+
+        if 'sevn' in self.interrupt_mode:
+            keys = [['p1',SEVNStarParameter],['p2',SEVNStarParameter]]
+        else:
+            keys = [['p1',SSEStarParameter],['p2',SSEStarParameter]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 class BSEDynamicMerge(DictNpArrayMix):
@@ -473,14 +573,17 @@ class SSEISO(DictNpArrayMix):
     """ Binary stellar evolution tool petar.(mo)bse output for single stars
     Keys: (class members)
         mass_init (1D): initial mass at zero age
-        star (SSEStarParameter): SSE star parameter 
-        out (SSEStarParameterOut): SSE star parameter output 
+        star (SSEStarParameter or SEVNStarParameter): SSE star parameter
+        out (SSEStarParameterOut): SSE star parameter output
     """
     
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [['mass_init',np.float64],['star',SSEStarParameter],['out',SSEStarParameterOut]]
+        if 'sevn' in self.interrupt_mode:
+            keys = [['mass_init',np.float64],['star',SEVNStarParameter],['out',SSEStarParameterOut]]
+        else:
+            keys = [['mass_init',np.float64],['star',SSEStarParameter],['out',SSEStarParameterOut]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
     
 
@@ -502,7 +605,10 @@ class BSEISO(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [['m1_init',np.float64],['m2_init',np.float64],['period_init',np.float64],['ecc_init',np.float64],['period_final',np.float64],['ecc_final',np.float64],['star1',SSEStarParameter],['out1',SSEStarParameterOut],['star2',SSEStarParameter],['out2',SSEStarParameterOut]]
+        if 'sevn' in self.interrupt_mode:
+            keys = [['m1_init',np.float64],['m2_init',np.float64],['period_init',np.float64],['ecc_init',np.float64],['period_final',np.float64],['ecc_final',np.float64],['star1',SEVNStarParameter],['out1',SSEStarParameterOut],['star2',SEVNStarParameter],['out2',SSEStarParameterOut]]
+        else:
+            keys = [['m1_init',np.float64],['m2_init',np.float64],['period_init',np.float64],['ecc_init',np.float64],['period_final',np.float64],['ecc_final',np.float64],['star1',SSEStarParameter],['out1',SSEStarParameterOut],['star2',SSEStarParameter],['out2',SSEStarParameterOut]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 class BSEMerge(DictNpArrayMix):

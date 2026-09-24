@@ -380,7 +380,7 @@ class Particle(SimpleParticle):
             particle_type: string (soft)
                basic particle type: hermite, hard, soft
             interrupt_mode: string (none)
-               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               PeTar interrupt mode (set in configure): base, bse, mobse, sevn, none
                This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
                PeTar external mode (set in configure): galpy, none 
@@ -408,7 +408,9 @@ class Particle(SimpleParticle):
                 keys = keys_bstat+keys_se+keys_end
             elif ('bse' in kwargs['interrupt_mode']):
                 keys = keys_bstat+keys_se+[['star',SSEStarParameter]]+keys_end
-            
+            elif ('sevn' in kwargs['interrupt_mode']):
+                keys = keys_bstat+keys_se+[['star', SEVNStarParameter]]+keys_end
+
         SimpleParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
 
