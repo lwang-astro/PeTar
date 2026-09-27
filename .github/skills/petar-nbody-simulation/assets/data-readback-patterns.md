@@ -51,7 +51,7 @@ When any reader warns or errors on column count/shape (`mismatches the number of
 | `npy` | `.npy` | **`.load(path)`** | `.save(f)` |
 | `ascii` | (none) | `.loadtxt(path)` | `.savetxt(f)` |
 
-When reading post-processed files, **check the file extension** to determine the format. If the file ends with `.npy`, use `.load()` instead of `.fromfile()`. Otherwise, use the method matching the table above.
+When reading post-processed files, **check the file extension** to determine the format. If the file ends with `.npy`, use `.load()` instead of `.fromfile()`. Otherwise, use the method matching the table above. Calling `.loadtxt()` on a BINARY file raises a clear `ValueError` (use `fromfile()`).
 
 ### Unit conversion (critical for scientific correctness)
 
@@ -323,9 +323,9 @@ interrupt = petar.InterruptBinary(
     particle_type=petar.HardParticle,
     interrupt_mode="dsm",
 )
-interrupt.fromfile("data.interrupt")
+interrupt.fromfile("data.interrupt", strict_mismatch=False)
 
-# Check: records > 0 is a valid read; dtype warnings are expected and non-blocking
+# Check: records > 0 is a valid read; a trailing-byte warning is expected and non-blocking
 ```
 
 ## Warning Classification
@@ -334,7 +334,7 @@ When running read checks, warnings fall into two categories:
 
 ### Blocking (treat as read failure)
 
-- `Binary file size is not aligned with dtype itemsize` — format/schema mismatch
+- `Binary file size is not aligned with dtype itemsize` — binary schema mismatch; raises `ValueError` by default with reader-kwargs hints
 - `not aligned with dtype itemsize` — binary layout mismatch
 - `File may be truncated` — incomplete snapshot
 - `dtype mismatch` — column schema mismatch
@@ -345,7 +345,7 @@ These indicate a mode-flag or format mismatch. Stop, correct flags, retry. If co
 ### Non-blocking (record but do not fail)
 
 - `ffmpeg` macro-block resize warnings from `petar.movie`
-- Trailing-byte warnings on `data.interrupt` in DSM mode (`strict_mismatch=False`)
+- Trailing-byte tolerance via `strict_mismatch=False` (reads complete records, warns once): DSM `data.interrupt`, and `petar.data` crash-recovery partial files
 
 ## Complete Workflow Pattern
 

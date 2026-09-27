@@ -274,6 +274,17 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Update（同日）**: 崩溃点已在 SDAR 侧修复——`DictNpArrayMix.readArray` 列数不匹配由 warning 改为抛带类名、列数与 reader kwargs 的描述性 `ValueError`（含 legacy 提示），列过剩静默丢列一并消除；详见 SDAR lessons-learned 2026-09-27「Python Tools」条目。
 
+### 2026-09-27: petar.data.process 三层误导错误的根因是错位读取宽容 + auto-resume 无可观测性
+
+**Mistake**: 漏 `-i bse` 的 `petar.data.process` 崩在 `np.histogram` "bins must increase monotonically"，与根因（interrupt 模式不匹配）相距三层：错位读取仅警告 → 垃圾"双星" c.m. 除零 NaN → histogram 表面报错。崩溃残留的 realtime partial 又被后续重跑的 auto-resume 静默合并追加，多轮日志呈现"不同失败"，成为排查耗时主因。
+
+**Root cause**: 二进制字节错位在 sdar `fromfile` 中只警告不终止（已于 SDAR 侧改为默认抛错）；恢复/去重/跳过全程不打印记录数与时间范围，跨 key（lagr/core/tidal/bse_status）时间集不一致也无任何提示。
+
+**Prevention rule**:
+1. 错位读取现第一步即抛带 kwargs 提示的 `ValueError`；`Lagrangian.calcOneSnapshot` 计算前校验质量 NaN/inf——错位但字节碰巧对齐时也能早失败。
+2. `petar.data` 恢复时打印每 key 记录数与时间范围；输出 key 文件时间覆盖不一致时显式警告（多由不同 flags 的中断运行造成）。
+3. 排查 data.process 崩溃先看第一条 warning 而非最后的 traceback；重跑前清理 `.parallel.*` partial 并核对恢复日志。
+
 ---
 
 ## Restart / Resume

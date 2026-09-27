@@ -21,7 +21,7 @@ def clearParallelRealtimeFiles(filename_prefix, save_keys):
                 os.remove(fname)
 
 
-def readMixDataByKey(key, filename, output_format, kwargs):
+def readMixDataByKey(key, filename, output_format, kwargs, strict=True):
     if (key == 'lagr'):
         data = petar.LagrangianMultiple(**kwargs)
     elif (key == 'core'):
@@ -36,7 +36,7 @@ def readMixDataByKey(key, filename, output_format, kwargs):
     if (output_format == 'ascii'):
         data.loadtxt(filename)
     elif (output_format == 'binary'):
-        data.fromfile(filename)
+        data.fromfile(filename, strict_mismatch=strict)
     elif (output_format == 'npy'):
         data.load(filename)
     else:
@@ -95,7 +95,8 @@ def recoverParallelRealtimeFiles(filename_prefix, save_keys, output_format, kwar
         data_temp = []
         for fname in flist:
             if os.path.getsize(fname) > 0:
-                data_temp.append(readMixDataByKey(key, fname, output_format, kwargs))
+                # crash-left partials may end with a truncated record: read complete records only
+                data_temp.append(readMixDataByKey(key, fname, output_format, kwargs, strict=False))
 
         if (len(data_temp) == 0):
             continue
@@ -110,6 +111,11 @@ def recoverParallelRealtimeFiles(filename_prefix, save_keys, output_format, kwar
             data_merge = petar.join(data_old, data_merge)
 
         data_merge = deduplicateByTime(data_merge)
+
+        if (hasattr(data_merge, 'time') and data_merge.size > 0):
+            print("Recovered key '%s': %d records, time range [%.12g, %.12g]" % (key, data_merge.size, data_merge.time.min(), data_merge.time.max()))
+        else:
+            print("Recovered key '%s': 0 records after merge" % key)
 
         writeMixData(data_merge, key_filename, output_format)
         recovered_keys.append(key)
@@ -129,6 +135,7 @@ def getProcessedTimeSet(filename_prefix, output_format, kwargs):
         required_keys.append('tidal')
 
     processed_time = None
+    key_coverage = []
     for key in required_keys:
         key_filename = filename_prefix + '.' + key
         if (not os.path.exists(key_filename)):
@@ -141,6 +148,7 @@ def getProcessedTimeSet(filename_prefix, output_format, kwargs):
             return set()
 
         time_set = set(np.round(data.time, 12))
+        key_coverage.append((key, int(data.size), len(time_set)))
         if (processed_time is None):
             processed_time = time_set
         else:
@@ -148,6 +156,11 @@ def getProcessedTimeSet(filename_prefix, output_format, kwargs):
 
         if (len(processed_time) == 0):
             return set()
+
+    if (len(processed_time) > 0) and any(c[2] != len(processed_time) for c in key_coverage):
+        print('Warning: output key files have inconsistent time coverage: '
+              + ', '.join("'%s': %d records / %d times" % c for c in key_coverage)
+              + '; only the common %d times are treated as processed. This can result from interrupted runs with different flags.' % len(processed_time))
 
     return processed_time
 

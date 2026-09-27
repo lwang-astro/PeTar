@@ -378,6 +378,8 @@ class Lagrangian(DictNpArrayMix):
             self.sigma.size += 1
             r = np.sqrt(_particle.r2)
             rindex=np.array([])
+            if (not np.isfinite(_particle.mass).all()):
+                raise ValueError('Non-finite (NaN/inf) particle masses in Lagrangian calculation; the reader keyword arguments likely mismatch the snapshot schema (e.g. missing interrupt_mode/external_mode) or the data is corrupted')
             mcum=_particle.mass.cumsum()
             if ('read_rlagr' in kwargs.keys()):
                 rbin = np.append(0,kwargs['read_rlagr'])

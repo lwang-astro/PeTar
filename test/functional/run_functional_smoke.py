@@ -598,9 +598,9 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
             particle_type=petar.HardParticle,
             interrupt_mode=interrupt_mode,
         )
-        interrupt.fromfile(str(path))
+        interrupt.fromfile(str(path), strict_mismatch=False)
         return {
-            "command": f"petar.InterruptBinary(particle_type=petar.HardParticle, interrupt_mode={interrupt_mode}).fromfile(path)",
+            "command": f"petar.InterruptBinary(particle_type=petar.HardParticle, interrupt_mode={interrupt_mode}).fromfile(path, strict_mismatch=False)",
             "details": {"records": int(interrupt.size), "ncols": int(interrupt.ncols)},
         }
 
