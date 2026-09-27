@@ -97,7 +97,7 @@ Status: covered, with the "halve the recommended step" rule kept in `SKILL.md` a
 ### 4c. Python data readback patterns
 
 - Compact reading guidance: `.github/skills/petar-nbody-simulation/SKILL.md` (Python Data Analysis Tools section) — the MUST-READ rule, the one-line file-type → reader-class index, the universal `interrupt_mode`/`external_mode` kwarg table, and the module map
-- Detailed readback patterns (exact constructor kwargs, header offsets including MPFRC variants, `fromfile` vs `loadtxt`/`load` choice, 11 numbered patterns, warning classification): `.github/skills/petar-nbody-simulation/assets/data-readback-patterns.md`
+- Detailed readback patterns (layout-kwargs table including legacy flags `spin_3d`/`less_output`, column-mismatch stop rules, exact constructor kwargs, header offsets including MPFRC variants, `fromfile` vs `loadtxt`/`load` choice, 11 numbered patterns, warning classification): `.github/skills/petar-nbody-simulation/assets/data-readback-patterns.md`
 - Primary tutorial reference: `sample/data_analysis.ipynb`
 
 Status: covered. SKILL.md keeps the safety index and read-first rule (see lessons-learned 2026-07-07); the asset owns all signatures, offsets, and worked examples.

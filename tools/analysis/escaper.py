@@ -26,6 +26,10 @@ class SingleEscaper(Particle):
                This option indicates whether the column of externa potential exist
             use_mpfrc: bool (False)
                 If true, add three columns of pos_high indicating the high-precision parts of position
+            collect_sp_acc: bool (False)
+                If true, the superparticle acceleration is collected and the column acc_sp exists
+            spin_3d: bool (True)
+                when interrupt_mode is bse/bseEmp/mobse: width of the star.spin column; use False for pre-Dec-2024 outputs
         """
         
         DictNpArrayMix.__init__(self, [['time',np.float64]], _dat, _offset, _append, **kwargs)
@@ -94,6 +98,10 @@ class BinaryEscaper(Binary):
                This option indicates whether the column of externa potential exist
             use_mpfrc: bool (False)
                 If true, add three columns of pos_high indicating the high-precision parts of position
+            collect_sp_acc: bool (False)
+                If true, the superparticle acceleration is collected and the column acc_sp exists
+            spin_3d: bool (True)
+                when interrupt_mode is bse/bseEmp/mobse: width of the member star.spin column; use False for pre-Dec-2024 outputs
             simple_mode: bool (True)
                 If True, only calculate semi and ecc, save computing time significantly
             member_particle_type: type (Particle)

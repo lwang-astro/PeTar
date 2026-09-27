@@ -250,6 +250,30 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: 按 `data-readback-patterns.md` Pattern 1 读写；enclosed mass = `m × n`（shell 模式下 `m`/`n` 为壳层值）。下结论前先做一次 `m × n` 与独立求和的自洽检查。
 
+### 2026-09-27: 列数不匹配穷举 kwargs 后必须停下上报——读取入口文档须自带终局规则，仅指针不够
+
+**Mistake**: Pal5 会话读 2021 年 `data.status`（73 列 vs bse+galpy 期望 75 列）时，穷举 interrupt×external 组合仍不匹配后没有停下上报，而是两次自写 workaround（先 `np.loadtxt` 手工取列；被用户指出后改为裁剪到 global 块宽 + `readArray`）。SKILL.md「Snapshot Read-Mismatch Policy」明确禁止此做法，但未被遵守。
+
+**Root cause**: 政策硬规则只存在于 SKILL.md 尾部；Python 读取的强制入口 `data-readback-patterns.md` 只有 kwargs 匹配说明加一行指向政策的指针（2026-06 已存在，事故仍发生），其 Warning Classification 只写 "Stop, correct flags, retry" 而无终局上报步骤，且 "Column-count mismatch fallback" 示范了裁列读取（Profile 专用但无作用域限定），直接诱导同类做法。
+
+**Prevention rule**:
+1. patterns 文档「Common Parameters」现自带「Column mismatch: stop rules」：穷举 kwargs（含版本相关行）→ 仍不匹配 → 停止并上报（文件模式、reader 类、kwargs、报错原文）；禁止自写 parser 或裁列；Profile fallback 已显式限定仅 `data.profile`。
+2. 写读取代码前通读 patterns 文档含 stop rules，不能只看 kwargs 表。
+3. SKILL.md 政策段已声明同样适用于旧版本输出（schema 代差按 reader/producing-solver 版本缺口上报，而非 mode flags 错误）。
+
+### 2026-09-27: 旧格式列差先做 git 考古——pre-2024-12 输出的 +2 列是 star.spin 1D→3D，官方读法是 spin_3d=False
+
+**Mistake**: 初步诊断把 2 列差怀疑为 `mass_bk`/`status`、`r_in`/`r_out`、`pot_*`（全部错误——这些字段 2021 已存在），未先做 git 历史 diff，险些立项开发"旧格式读取器"。
+
+**Root cause**: 差异实际在嵌套块 `SSEStarParameter` 内部：`spin` 1D（SSE 块 10 列）→ 3D（12 列），C++ 侧 2024-12-23 引入（`5c96ac1`）；Python 侧 2026-02-03 已加 `spin_3d=False` 读取选项（`669b6cb`），但 `Status`/`Particle`/escaper/`GroupInfo` 的 docstring 与 patterns 文档 kwargs 表均未提及，按文档穷举 kwargs 永远试不到它。
+
+**Prevention rule**:
+1. 列数差鉴定：`git show <同期 commit>:tools/analysis/<file>.py` 对比 keys 列表；优先检查嵌套子块的版本开关（`SSEStarParameter`/`BSEBinaryEvent` 的 `spin_3d`、`BSEDynamicMerge` 的 `less_output`）。
+2. 已知 legacy 读取项：pre-2024-12 BSE 系输出 → `spin_3d=False`；pre-2020-09 并合记录 → `less_output=True`；pre-2020-12 galpy 快照 → `petar.format.transfer -c`；pre-2020 group data → `-g`。
+3. 新增影响列布局的 kwargs 时，同步补齐所有 kwargs 转发容器的 docstring 与 patterns 文档 kwargs 表，并检查 `petar.data` / `petar.get.object.snap` 等 CLI 是否透传（本次已补 `spin_3d`/`collect_sp_acc` 文档，CLI 增加 `--spin-1d`）。
+
+**Update（同日）**: 崩溃点已在 SDAR 侧修复——`DictNpArrayMix.readArray` 列数不匹配由 warning 改为抛带类名、列数与 reader kwargs 的描述性 `ValueError`（含 legacy 提示），列过剩静默丢列一并消除；详见 SDAR lessons-learned 2026-09-27「Python Tools」条目。
+
 ---
 
 ## Restart / Resume

@@ -16,6 +16,7 @@ if __name__ == '__main__':
     interrupt_mode='none'
     external_mode='none'
     use_mpfrc=False
+    spin_3d=True
     simple_binary=True
     write_option='w'
     core_file='data.core'
@@ -107,6 +108,7 @@ if __name__ == '__main__':
         print("       Notice that when the external mode is not none and the mode is not custom,")
         print("       the position and velocity offset from the header are added for single and binary snapshots.")
         print("  -P(--use_mpfrc)           Include three columns of high-precision parts of particle position x, y, z.")
+        print("       --spin-1d             Stellar evolution data use 1D spin (one column) instead of 3D; for PeTar outputs before Dec 2024.")
         print("  -s(--snapshot-format) [S]  Reading snapshot format: ascii, binary, npy [%s]" % snapshot_format)
         print("       ascii:  All snapshots are in ascii format.")
         print("       binary: All snapshots are in binary format.")
@@ -130,7 +132,7 @@ if __name__ == '__main__':
         print("     --core-format [S]  Format of core data file: ascii, binary, npy [follow snapshot-format '-s']")
     try:
         shortargs = 'p:f:Bt:i:Ps:o:c:C:m:ah'
-        longargs = ['append','snapshot-type','full-binary','filename-prefix=','mode=','external-mode=','interrupt-mode=','use-mpfrc','snapshot-format=','output-format=','cm-mode=','core-file=','core-format=','help']
+        longargs = ['append','snapshot-type','full-binary','filename-prefix=','mode=','external-mode=','interrupt-mode=','use-mpfrc','spin-1d','snapshot-format=','output-format=','cm-mode=','core-file=','core-format=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -156,6 +158,8 @@ if __name__ == '__main__':
                 external_mode = arg
             elif opt in ('-P','--use_mpfrc'):
                 use_mpfrc = True
+            elif opt in ('--spin-1d'):
+                spin_3d = False
             elif opt in ('-s','--snapshot-format'):
                 snapshot_format = arg
             elif opt in ('-o','--output-format'):
@@ -245,6 +249,7 @@ if __name__ == '__main__':
     snap_kwargs['snapshot_format'] = snapshot_format
     snap_kwargs['simple_mode'] = simple_binary
     snap_kwargs['use_mpfrc'] = use_mpfrc
+    snap_kwargs['spin_3d'] = spin_3d
 
     for key, item in snap_kwargs.items(): print(key,':',item)
     for key, item in kwargs.items(): print(key,':',item)
@@ -448,4 +453,4 @@ if __name__ == '__main__':
                 else:
                     raise ValueError('Output format %s is unknown, should be ascii, binary or npy.' % output_format)
                 f.flush()
-    
+

@@ -92,6 +92,10 @@ class Status(DictNpArrayMix):
                 PeTar external mode (set in configure): galpy, agama, none 
             use_mpfrc: bool (False)
                 Include three columns of high-precsion parts of particle position x, y, z
+            collect_sp_acc: bool (False)
+                If true, the superparticle acceleration is collected and the column acc_sp exists
+            spin_3d: bool (True)
+                when interrupt_mode is bse/bseEmp/mobse: width of the star.spin column; use False for pre-Dec-2024 outputs
             N_particle int (0)
                 Number of particles
         """

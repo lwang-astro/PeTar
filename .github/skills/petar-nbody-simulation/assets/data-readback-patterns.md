@@ -17,14 +17,29 @@ import numpy as np
 
 ### Keyword arguments
 
-Two keyword arguments control column layout and must match the producing solver:
+Keyword arguments control column layout and must match the producing solver:
 
 | Argument | Values | Purpose |
 |----------|--------|---------|
-| `interrupt_mode` | `none`, `merger`, `bse`, `mobse`, `dsm` | Must match solver `--with-interrupt` |
-| `external_mode` | `none`, `galpy`, `agama` | Must match solver `--with-external` |
+| `interrupt_mode` | `none`, `merger`, `bse`, `bseEmp`, `mobse`, `dsm` | Must match solver `--with-interrupt` |
+| `external_mode` | `none`, `galpy`, `agama` | Must match solver `--with-external`; adds `pot_ext` (and snapshot header c.m. offsets) |
+| `spin_3d` | bool (`True`) | BSE-family `star.spin` width: 3 columns (current) vs 1 column. **Legacy outputs (before 2024-12): use `spin_3d=False`** |
+| `use_mpfrc` | bool (`False`) | MPFR build: adds `pos_high` (3 columns) |
+| `collect_sp_acc` | bool (`False`) | Solver built with superparticle acc collection: adds `acc_sp` (3 columns) |
+| `N_particle` | int (`0`) | `Status` only: number of per-particle blocks appended after the global block |
+| `N` | int | `GroupInfo` only: group member count encoded in the filename (`data.group.n<N>`) |
 
-Pass these consistently to all readers. See `Snapshot Read-Mismatch Policy` in `SKILL.md` for how to diagnose mismatches.
+These apply to every particle-composing reader (`Particle`, `Status`, `SingleEscaper`/`BinaryEscaper`, `GroupInfo`, `Binary` members). Profile and Lagrangian readers take their own layout kwargs (`use_gpu`, `FDPS_version`, `old_version`, `group_count`; `mass_fraction`, `calc_energy`, `add_star_type`, `add_mass_range`) — see the class docstrings.
+
+Pass these consistently to all readers.
+
+### Column mismatch: stop rules
+
+When any reader warns or errors on column count/shape (`mismatches the number of columns`, `IndexError` on the column axis, dtype-alignment warnings):
+
+1. Enumerate the kwargs table above against the producing solver, **including the version-dependent rows** (`spin_3d`, `old_version`-style flags).
+2. If no kwargs combination matches, **stop the analysis and report to the user** with the file pattern, reader class, kwargs tried, and error text. The file is likely from a PeTar version with a different output schema. Known legacy options: pre-2024-12 BSE-family outputs → `spin_3d=False`; pre-2020-09 BSE merger records (`BSEDynamicMerge`) → `less_output=True`; pre-2020-12 galpy snapshots → `petar.format.transfer -c`; pre-2020 group data → `petar.format.transfer -g`.
+3. **Never write a custom parser or trim/slice columns as a workaround** for snapshot/status/escaper/group files — silent misalignment corrupts physics results. This restates `Snapshot Read-Mismatch Policy` in `SKILL.md`, which owns the full policy.
 
 ### Input/output format: choosing the right read method
 
@@ -94,6 +109,9 @@ core.fromfile("data.core")
 status = petar.Status()
 status.fromfile("data.status")
 ```
+
+- Add `N_particle=<n>` when the run wrote per-particle blocks after the global block (e.g. single-particle orbit tests use `N_particle=1`); the blocks appear as `status.particles.p<i>`.
+- Legacy BSE-family outputs (before 2024-12) additionally need `spin_3d=False` — see "Column mismatch: stop rules".
 
 ## Pattern 4: Escapers
 
@@ -258,6 +276,8 @@ for kwargs in candidates:
 
 ### Column-count mismatch fallback
 
+**Scope: `data.profile` files only** — never generalize this column trim to snapshot/status/escaper/group files (see "Column mismatch: stop rules").
+
 If a profile has additional diagnostic columns in later rows (after a consistent numeric prefix), parse the minimum common column count:
 
 ```python
@@ -320,7 +340,7 @@ When running read checks, warnings fall into two categories:
 - `dtype mismatch` — column schema mismatch
 - `column` mismatch (shape, column count, column dtype) — column layout mismatch
 
-These indicate a mode-flag or format mismatch. Stop, correct flags, retry.
+These indicate a mode-flag or format mismatch. Stop, correct flags, retry. If corrected flags still mismatch, follow **Column mismatch: stop rules** — report, do not work around.
 
 ### Non-blocking (record but do not fail)
 

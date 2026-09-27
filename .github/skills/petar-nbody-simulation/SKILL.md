@@ -502,6 +502,8 @@ Recovery sequence:
 4. Retry with corrected mode.
 5. **Do not write a custom binary/ASCII parser as a workaround.** PeTar output formats are intentionally covered by the installed Python readers; a column mismatch almost always means the reader mode/flags are wrong. If the mode/flags are verified and the mismatch persists, treat it as a potential bug in the reader or the producing solver, stop the analysis, and report the issue to the user with the exact file pattern, reader class, kwargs, and error message.
 
+**Legacy-version outputs follow the same policy.** A mismatch that survives kwargs enumeration is a reader/producing-solver schema gap, not a mode-flag error — report it as a version gap. Documented legacy reader flags (`spin_3d=False` for pre-2024-12 BSE-family outputs; `less_output=True` for pre-2020-09 merger records; `petar.format.transfer -c/-g` for older snapshots) are legitimate reader options, not workarounds; the full layout-kwargs table and stop rules live in `assets/data-readback-patterns.md` → "Column mismatch: stop rules".
+
 ## Preferred Sources in This Repository
 
 Use these as primary references:

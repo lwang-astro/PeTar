@@ -236,6 +236,7 @@ if __name__ == '__main__':
         print("  -i(--interrupt-mode)  [S] The interruption mode used in petar; choices: no, merger, base, bse, mobse, bseEmp (default: no).")
         print("  -t(--external-mode)   [S] External mode used in petar; choices: galpy, no (default: no).")
         print("  -P(--use_mpfrc)           Include three columns of high-precision parts of particle position x, y, z.")
+        print("     --spin-1d               Stellar evolution data use 1D spin (one column) instead of 3D; for PeTar outputs before Dec 2024.")
         print(f"  -s(--snapshot-format) [S] Input snapshot data format: binary, ascii (default: binary).")
         print("                             Refer to the '-i' option of petar.")
         print("     --esc-snapshot-format [S] Set escaper snapshot data format for reading: binary, ascii, npy (follows -s).")
@@ -314,7 +315,7 @@ if __name__ == '__main__':
         print("  3) '--add-star-type' functionality is only available when SSE/BSE is used.")
     try:
         shortargs = 'p:m:G:b:MBAea:rt:i:Ps:o:cn:h'
-        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','use-mpfrc','snapshot-format=','output-format=','m-ext=','add-star-type=','add-mass-range=','calc-multi-rc','n-cpu=','recover-parallel-only','no-auto-resume','resume-from-time=','help']
+        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','use-mpfrc','spin-1d','snapshot-format=','output-format=','m-ext=','add-star-type=','add-mass-range=','calc-multi-rc','n-cpu=','recover-parallel-only','no-auto-resume','resume-from-time=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -348,6 +349,8 @@ if __name__ == '__main__':
                 kwargs['external_mode'] = arg
             elif opt in ('-P','--use_mpfrc'):
                 kwargs['use_mpfrc'] = True
+            elif opt in ('--spin-1d'):
+                kwargs['spin_3d'] = False
             elif opt in ('-s','--snapshot-format'):
                 kwargs['snapshot_format'] = arg
                 if (not 'esc_snapshot_format' in kwargs.keys()):

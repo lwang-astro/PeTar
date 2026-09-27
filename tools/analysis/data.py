@@ -261,6 +261,9 @@ class BaseParticle(SimpleParticle):
                This option indicates whether columns of stellar evolution exist
             use_mpfrc: bool (False)
                 if true, add three columns of pos_high indicating the high-precision parts of position
+            spin_3d: bool (True)
+                when interrupt_mode is bse/bseEmp/mobse: width of the star.spin column, 3 (current) or 1;
+                use False for outputs produced before Dec 2024 (1D spin)
             float_type: type (np.float64)
                 floating point data type
         """
@@ -306,6 +309,8 @@ class HardParticle(BaseParticle):
                This option indicates whether columns of stellar evolution exist
             use_mpfrc: bool (False)
                 if true, add three columns of pos_high indicating the high-precision parts of position
+            spin_3d: bool (True)
+                when interrupt_mode is bse/bseEmp/mobse: width of the star.spin column; use False for pre-Dec-2024 outputs
             float_type: type (np.float64)
                 floating point data type
         """
@@ -340,6 +345,8 @@ class HermiteParticle(HardParticle):
                This option indicates whether columns of stellar evolution exist
             use_mpfrc: bool (False)
                 if true, add three columns of pos_high indicating the high-precision parts of position
+            spin_3d: bool (True)
+                when interrupt_mode is bse/bseEmp/mobse: width of the star.spin column; use False for pre-Dec-2024 outputs
             float_type: type (np.float64)
                 floating point data type
         """
@@ -386,8 +393,8 @@ class Particle(HardParticle):
             use_mpfrc: bool (False)
                If true, add three columns of pos_high indicating the high-precision parts of position
             collect_sp_acc: bool (False)
-               If true, the superparticle acceleration is collected and the column acc_sp exists
-            float_type: type (np.float64)
+               If true, the superparticle acceleration is collected and the column acc_sp exists            spin_3d: bool (True)
+                when interrupt_mode is bse/bseEmp/mobse: width of the star.spin column; use False for pre-Dec-2024 outputs            float_type: type (np.float64)
                 floating point data type
         """
         if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
@@ -577,6 +584,8 @@ class GroupInfo(hermite_group.GroupInfo):
                     This option indicates whether the column of external potential exist
                 use_mpfrc: bool (False)
                     If true, add three columns of pos_high indicating the high-precision parts of position
+                spin_3d: bool (True)
+                    when interrupt_mode is bse/bseEmp/mobse: width of the star.spin column; use False for pre-Dec-2024 outputs
                 float_type: type (np.float64)
                     floating point data type
                 N: int (2)
