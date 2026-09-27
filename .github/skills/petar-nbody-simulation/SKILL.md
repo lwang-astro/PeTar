@@ -79,7 +79,7 @@ This compact version prioritizes execution safety, option correctness, and repro
 
 - Before any PeTar launch, require `export OMP_STACKSIZE=128M` (and `ulimit -s unlimited` on Linux). Missing this causes segfault on large simulations.
 - For MPI launches in UCX environments, require `export UCX_VFS_ENABLE=n` to avoid a known UCX segfault. This disables the VFS/FUSE feature only — inter-node transport faults (e.g. `rc_mlx5` endpoint crashes) need cluster-side fixes; see lessons-learned cluster entries.
-- For MPI+OpenMP launches, recommend `--bind-to none` to prevent processes being restricted to a single core.
+- For MPI+OpenMP launches, use explicit core binding (`srun --cpu-bind=cores` with `-c <threads>`); `--bind-to none` prevents single-core restriction but on multi-NUMA AMD nodes costs 2–3× (measured 2026-09-23, see lessons-learned "Simulation Execution").
 - When `./configure` runs on a cluster login node, warn that auto-detected SIMD capabilities may differ from compute nodes; suggest verifying with `--enable-avx2` / `--enable-avx512` flags.
 
 ### Configure and toolchain environment

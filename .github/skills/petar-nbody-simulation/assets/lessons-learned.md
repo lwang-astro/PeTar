@@ -220,6 +220,48 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 ---
 
+### 2026-09-23: BSCC-M9 上多个 PeTar 作业并发互相拖慢 10–40×——基准与生产须串行/错峰
+
+**Mistake**: N=10⁶ 基准时 6 个配置作业同时提交（各自独占节点，互不同节点）。全部作业每步 2–7 s（同配置单独跑仅 0.15 s），两轮（none/cores 绑定）皆然，几乎废弃全部数据。各 rank Total 逐位一致（全体同步等待签名），计算相位（PP_single/Tree_Force）与单独跑完全一致，膨胀全在未计时残差（hard 部分同步等待），突发式波动。
+
+**Root cause**: 共享资源争用（最可能 publicfs10 共享文件系统元数据：每步每作业 ~50 个文件追加写 × 6 作业；petar 自己的 Output 计时不覆盖该等待）。作业独占节点不能隔离共享 FS/基础设施；该集群按核调度、夜间批处理重载（421/522 节点占用）时风险更高。
+
+**Prevention rule**: 该集群上基准作业一律串行执行（`sbatch --dependency=afterok` 链，模板 `~/data/N1m/submit_seq.sh`）；生产运行避免多作业同时写同一共享 FS；对比实验若出现"各 rank 同步变慢 + 计算相位不变 + 残差膨胀"签名，先怀疑并发/共享 FS 干扰，再用单作业复测。
+
+### 2026-09-23: MPI+OMP 启动显式 `--cpu-bind=cores`——`none` 在多 NUMA AMD 节点慢 2–3×；OMP 每 rank 多线程已验证有效
+
+**Mistake**: 沿用 SKILL 旧建议 `--bind-to none`（防单核限制），N=10⁶ 基准实测 32×8 配置下 none 比 cores 慢 2–3×（稳态 ~0.5 vs ~0.16 s/步）。历史上"设 OMP=8 每 MPI 最多 2 线程"的担忧在本栈（Intel MPI 20.4.3 + icc + libiomp）未复现：探针实测每 rank 9 线程（1主+8 OMP）、全节点 32×8=256 线程、线程分散不同 CPU；8×32（32 线程/rank）是 256 核最快配置（134 ms/步 vs 32×8 的 180 ms），线程失效时这不可能。
+
+**Root cause**: `--cpu-bind=none` 下线程在 256 核多 NUMA 域间浮动，缓存/NUMA 亲和反复失效；显式 cores 绑定每 rank 固定 8/16/32 个互不重叠 CPU。线程创建与亲和限制本身无问题（旧故障应为当年 mpirun 默认绑定到单核所致，非 OMP 本身）。
+
+**Prevention rule**: 该集群 MPI+OMP 一律 `srun --cpu-bind=cores`（配合 `-c <线程数>`）；`--cpu-bind=none` 仅作 cores 异常时的对照。验证线程是否真并行：作业内 `ps -eo pid,comm | awk '$2 ~ /^petar/'` 取 pid 后读 `/proc/<pid>/status` 的 Threads 与 Cpus_allowed_list + `ps -L` 逐线程 psr（勿用 /proc/<pid>/exe readlink，见同日条目）。N=10⁶ 规模每 rank 线程越多越快（8×32 ≥ 16×16 > 32×8）。
+
+### 2026-09-23: BSCC-M9 跨节点"能跑"≠可用——N=10⁶ 同核数拆双节点即慢 6×（512 核比 64 核慢 5×）
+
+**Mistake**: 基于 N1k 结论"经典 Intel MPI 20.4.3 跨节点可用"直接把 512 核基准排成 2 节点；实测 64×8 每步 1.9 s，比单节点 256 核慢 10×、比 64 核还慢 5×。对照实验（32×8 同 256 核拆双节点）确认：计算相位不变，全部膨胀在跨节点同步等待残差，每 rank 8 线程仅 ~200% CPU 占用（多数时间阻塞）。复测一致，非环境波动。
+
+**Root cause**: N1k 的"可用"只验证了正确性（N=10³ 通信量极小）；该集群 inter-node RDMA 用户态栈故障（见 `~/data/N1k/ib-crossnode-mpi-failure-report.md`）在经典 Intel MPI 下表现为能通信但性能严重受损——N=10⁶ 每步大量跨节点集合通信将其放大为每步秒级等待。
+
+**Prevention rule**: 该集群上 N=10⁶ 生产运行与基准以单节点（≤256 核）为上限；跨节点方案须等集群 IB 工单解决并重测（对照法：同核数 1 节点 vs 2 节点，比值即跨节点代价）。N1k 小规模跨节点验证结论不可外推到大 N 性能场景。确需跨节点时的应用层缓解：**低 rank 高线程布局**——2 节点 8×32（4 rank/节点×32 线程）实测 359–458 ms/步 vs 32×8 的 ~1000–1120 ms（快 ~2.3×；管理员扫描 2026-09-23，`~/data/N1m.opt.20260923/optimization.report.20260923.md`）；但计算相位不变、残差仍 ~0.32 s/步，比单节点同布局（134 ms）慢 ~3×——缓解非根治，rank 数决定跨节点通信量。
+
+### 2026-09-23: `petar.find.dt` 外层勿用 srun 启动（会起 N 份）；profile `Total` 列=每步墙钟非累计
+
+**Mistake**: 作业里写 `srun -n 32 petar.find.dt ...`——find.dt 是 bash 包装器，srun 起 32 份各自内部再 srun，互相争抢 allocation（发现于 finddt.log 出现 32 行 commander）。又因 N1k 目录的 profile 只有一行（单次输出），误判 `Total` 列为累计值，用相邻行差分得到负数/巨幅波动。
+
+**Root cause**: 包装器脚本无 MPI 感知；profile `Total` 实为"自上次输出以来的每步墙钟"（输出块标题 "Wallclock time per step"），`N_steps` 列在此构建恒为常量 2 不可用；hard/Hermite 无独立计时列，其耗时 = Total − Σ(列出的相位) 残差。
+
+**Prevention rule**: find.dt 在作业内直接 `petar.find.dt -r "srun -n N" ...`（-r 指定内部前缀，不用外层 srun）；解析 profile 主块行用 `Time ≈ k·DT 且严格递增` 过滤（尾部 FDPS 附加块的 Time 列会撞上小数值）；每步耗时直接取 Total（-o=DT 时每行恰一步），不要差分。
+
+### 2026-09-23: 作业脚本内检测 rank 进程用 ps comm 匹配——`/proc/<pid>/exe` readlink 受 yama ptrace_scope 限制；sbatch --export 变量勿被位置参数覆盖
+
+**Mistake**: 采样器用 `readlink /proc/<pid>/exe` 匹配 petar 进程，登录节点自测通过（假进程是 shell 子进程），作业内却 0 命中（srun 进程由 slurmd 派生，非采样 shell 后代）。另一次脚本里 `TAG=$1` 把 `--export=ALL,TAG=...` 传入的环境变量覆盖为空（sbatch 不传位置参数），探针静默失败一轮。
+
+**Root cause**: yama ptrace_scope=1 下 `/proc/<pid>/exe` 的 readlink 需 PTRACE_MODE_READ，仅对调用者的后代进程开放；`ps -eo pid,comm` 读 /proc 公开字段无此限制（comm 截断为 "petar.mpi.omp."，用前缀匹配）。
+
+**Prevention rule**: 作业内进程检测用 `ps -eo pid,comm | awk '$2 ~ /^petar/'`；`--export` 传参的脚本直接引用环境变量，禁止 `X=$1` 形式；登录节点自测进程检测逻辑时须用非后代进程（否则结果不可信）。
+
+---
+
 ## Post-Processing
 
 ### 2026-09-14: 读 PeTar 二进制快照漏掉 `offset=HEADER_OFFSET` 且未指定 `interrupt_mode`
