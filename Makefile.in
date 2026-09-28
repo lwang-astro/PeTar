@@ -264,6 +264,10 @@ ifeq ($(debug_flag),g)
 OPTFLAGS += -D SANITY_CHECK_REALLOCATABLE_ARRAY
 endif
 
+# enable hard_assert.hpp ASSERT (print+abort) in the main binary independent of
+# debug_mode: hot-path asserts are invariant/watchdog class (ISNAN/ISINF/bounds),
+# <1% overhead; *.hard.debug targets keep the full debug set via HARD_DEBFLAGS
+DEBFLAGS += -D HARD_DEBUG
 DEBFLAGS += -D AR_DEBUG_DUMP
 DEBFLAGS += -D HARD_DUMP
 

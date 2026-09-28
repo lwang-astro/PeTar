@@ -487,3 +487,11 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 815af98 用精确镜像替换旧的 `pm->pos*(1+1e-8)+1e-12` 停放时，未考虑双成员 group 中 `pm->pos == 0` 精确成立的情形；NaN 只在**精确**重合时出现（r≠0 时零质量对贡献恰为 0），因此只有个别并合触发——表现为随机、不可必然复现。Makefile 的 `HARD_SRC` 依赖表漏掉 `disk_star_merger.hpp`，头文件改动不会触发重编，也会让"修复未生效"假象。
 
 **Prevention rule**: 任何"停放/重生"粒子的代码必须保证与所有粒子保持有限距离（对零质量粒子，任意 r>0 的相互作用严格为 0，只有 r==0 产生 0/0）；DSM 侧已改为重合时按并合前分离向量偏移 `1e-3*|dr0|`。调试此类"偶发 NaN"用条件 watchpoint（`condition N isnan(*(double*)addr)`，注意用裸地址而非符号名——跨帧求值会失败）。`disk_star_merger.hpp` 已补入 `HARD_SRC`（Makefile 与 Makefile.in 同步）；对仍可能未列入依赖表的头文件，改动后需 `touch` 其 includer 或先对照 `HARD_SRC` 检查。同函数内 `pm->dm` 累加顺序（先加后赋值 mass）已对齐其他质量变更点的模式（2026-09-20 修复，原顺序恒加 0）。
+
+### 2026-09-28: Makefile DEBFLAGS 的 += 块在 `ifneq(debug_mode,no)` 内默认全灭——改编译宏必须 `make -pn` 验证生效值
+
+**Mistake**: 欲在生产主程序开启 hard_assert 的 ASSERT（`-D HARD_DEBUG`），先把宏加进 DEBFLAGS 的 `+=` 块（Makefile 238-250 行），重编后二进制零断言字符串；`make -pn | grep ^DEBFLAGS` 才发现该块整体位于 `ifneq ($(debug_mode),no)` 内，默认 configure（debug_mode=no）下全部无效，实际生效的只有块外无条件的 `-D AR_DEBUG_DUMP -D HARD_DUMP`。此前"生产构建带 AR_DEBUG（kickVelIter 精确质量求和断言激活）"的推断同样基于这块死代码，均为错误。
+
+**Root cause**: 条件赋值与无条件赋值混排的 Makefile 里，读片段推断生效 flags 不可靠；块内本就有 HARD_DEBUG（hard.debug 语义），易误以为生产目标继承。
+
+**Prevention rule**: 增删编译宏后必须 `make -pn | grep ^DEBFLAGS` 验证生效值，并 `strings <binary> | grep '!ISNAN(dt)'` 确认断言表达式真正嵌入（`__FILE__`/表达式字符串是活断言的标志）。HARD_DEBUG 现已移入无条件区（`DEBFLAGS += -D HARD_DEBUG`，AR_DEBUG_DUMP/HARD_DUMP 旁）。A/B 实测（functional `std` 双并合用例，N=100, -u 1, -b 4）：断言版死于 `ASSERT(!ISNAN(integration_error_rel_abs))`，而无断言旧版同点位 `|Int_err/E|` 已是 nan——watchdog 类断言无误报，抓到的是真实损坏；同时实测确认负 dt 无条件缩减（2026-09-28 SDAR 提交）让新版越过旧版致死的 negative-dt streak abort。该用例当前仍红：interval 1 内出现真 NaN（旧版亦有，早于本周所有改动；疑与 2026-09-20 DSM 0/0 同族），待用 SDAR 恒等式残差 gdb 法定位。
