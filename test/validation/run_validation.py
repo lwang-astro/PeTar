@@ -262,7 +262,7 @@ def resolve_status_path_from_command(command: str, workdir: Path) -> Path | None
     return run_dir.resolve() / f"{prefix}.status"
 
 
-def extract_orbital_drift_from_status(status_path: Path, repo_root: Path, n_particle: int) -> Dict[str, float]:
+def extract_orbital_drift_from_status(status_path: Path, repo_root: Path, n_particle: int, interrupt_mode: str = "none") -> Dict[str, float]:
     if n_particle < 2:
         return {}
 
@@ -272,7 +272,9 @@ def extract_orbital_drift_from_status(status_path: Path, repo_root: Path, n_part
 
     from analysis.status import Status  # pylint: disable=import-outside-toplevel  # pyright: ignore[reportMissingImports]
 
-    st = Status(N_particle=n_particle)
+    # interrupt_mode must match the producing solver's feature set, otherwise
+    # the binary status dtype misaligns (bse columns shift every record)
+    st = Status(N_particle=n_particle, interrupt_mode=interrupt_mode)
     with warnings.catch_warnings(record=True) as warn_list:
         warnings.simplefilter("always", category=UserWarning)
         st.fromfile(str(status_path))
@@ -346,7 +348,7 @@ def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any], command: str
     if status_n_particle >= 2:
         status_path = resolve_status_path_from_command(command, workdir)
         if status_path is not None and status_path.exists():
-            orbital_metrics = extract_orbital_drift_from_status(status_path, repo_root=repo_root, n_particle=status_n_particle)
+            orbital_metrics = extract_orbital_drift_from_status(status_path, repo_root=repo_root, n_particle=status_n_particle, interrupt_mode=str(extract_cfg.get("interrupt_mode", "none")))
 
     max_n_real_glb = max((row["n_real_glb"] for row in count_rows), default=0.0)
     max_n_all_glb = max((row["n_all_glb"] for row in count_rows), default=0.0)

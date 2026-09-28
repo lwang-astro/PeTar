@@ -5,7 +5,7 @@
   "setup_commands": [
     "mkdir -p test/out/work/t3",
     "python3 test/validation/make_ic.py --case t2 --output test/out/work/t3/input.base",
-    "cd test/out/work/t3 && petar.init -f input input.base"
+    "cd test/out/work/t3 && petar.init -s bse -f input input.base"
   ],
   "extract": {
     "period": 0.028256534656,
@@ -16,7 +16,8 @@
       "hard_energy_significant": "Hard energy significant",
       "large_step_warning": "Large step",
       "hard_dump": "hard_large_energy\\."
-    }
+    },
+    "interrupt_mode": "bse"
   },
   "runs": [
     {

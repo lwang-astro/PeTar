@@ -5,7 +5,7 @@
   "setup_commands": [
     "mkdir -p test/validation/work/t4",
     "python3 test/validation/make_ic.py --case t4 --output test/validation/work/t4/input.base",
-    "cd test/validation/work/t4 && petar.init -f input input.base"
+    "cd test/validation/work/t4 && petar.init -s bse -f input input.base"
   ],
   "extract": {
     "period": 0.02962478305322229,
@@ -17,7 +17,8 @@
       "large_step_warning": "Large step",
       "hard_dump": "hard_large_energy\\.",
       "runtime_abort": "Segmentation fault|Assertion|Aborted"
-    }
+    },
+    "interrupt_mode": "bse"
   },
   "runs": [
     {
@@ -52,7 +53,7 @@
       "type": "max_threshold",
       "run_id": "m1_pure_sdar_ref",
       "metric": "max_abs_error_over_total",
-      "threshold": 1e-8
+      "threshold": 1e-08
     },
     {
       "name": "m3_tidal_tensor_effective",

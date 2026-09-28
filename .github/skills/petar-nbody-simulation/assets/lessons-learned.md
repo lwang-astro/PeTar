@@ -495,3 +495,11 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 条件赋值与无条件赋值混排的 Makefile 里，读片段推断生效 flags 不可靠；块内本就有 HARD_DEBUG（hard.debug 语义），易误以为生产目标继承。
 
 **Prevention rule**: 增删编译宏后必须 `make -pn | grep ^DEBFLAGS` 验证生效值，并 `strings <binary> | grep '!ISNAN(dt)'` 确认断言表达式真正嵌入（`__FILE__`/表达式字符串是活断言的标志）。HARD_DEBUG 现已移入无条件区（`DEBFLAGS += -D HARD_DEBUG`，AR_DEBUG_DUMP/HARD_DUMP 旁）。A/B 实测（functional `std` 双并合用例，N=100, -u 1, -b 4）：断言版死于 `ASSERT(!ISNAN(integration_error_rel_abs))`，而无断言旧版同点位 `|Int_err/E|` 已是 nan——watchdog 类断言无误报，抓到的是真实损坏；同时实测确认负 dt 无条件缩减（2026-09-28 SDAR 提交）让新版越过旧版致死的 negative-dt streak abort。该用例当前仍红：interval 1 内出现真 NaN（旧版亦有，早于本周所有改动；疑与 2026-09-20 DSM 0/0 同族），待用 SDAR 恒等式残差 gdb 法定位。
+
+### 2026-09-28: T3/T4 验证管线对 `-b 1` 场景三处断裂——petar.init 缺 `-s bse`、管线强制重选 plain 家族、Status reader 缺 interrupt_mode
+
+**Mistake**: 为验证 SDAR ds 改动跑验证层矩阵：T2 直接全绿，但 T3/T4 管线全断——(1) 场景 setup 的 `petar.init -f input input.base` 未加 `-s bse`，而运行命令全部带 `-b 1`，输入列数在读取期即不匹配（"requiring 4, only obtain 2"）；(2) `run_validation.py` 的 `_select_or_build_petar` 每次调用 `petar.select --optional avx2,omp` 把用户事先选好的 bse 家族切回 plain（症状同上但更隐蔽——手动选好后管线内部又改掉）；(3) 分析端 `Status(N_particle=...)` 不带 `interrupt_mode`，bse 列使 dtype 错位。另：`-f` 前缀残留旧输出时 petar 自动重启，HARD_DEBUG 断言 `id>0` 拦截损坏 status（正确行为，但排障时需先清 `t3_*/t4_*` 残留）。
+
+**Root cause**: T3/T4 场景定义于 bse 化运行命令，但管线从选二进制、生成输入到读输出全链路都默认 plain 特性集——三层没有任何一处校验特性一致性；套件长期只被 plain 家族跑过（T2），bse 路径从未端到端通过。
+
+**Prevention rule**: (1) t3/t4 场景 setup 已补 `petar.init -s bse`；extract 配置新增 `"interrupt_mode": "bse"`，`extract_orbital_drift_from_status` 增加 interrupt_mode 参数透传给 Status reader；(2) 跑 T3/T4 需用场景模式显式指定二进制：`run_validation.py --scenario <json> --var petar_bin_switch=<bse二进制>`（管线包装器的自动选择与此类场景不兼容，待加 per-scenario 家族声明）；(3) A/B 基线构建时警惕 configure 状态漂移：验证管线自身的 `_select_or_build_petar` 会静默 `./configure` 重置根 Makefile 特性集（本次两次"基线"二进制因此作废）；(4) 排障 `-f` 前缀运行先清残留输出。
