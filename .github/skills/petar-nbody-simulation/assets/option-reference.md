@@ -3,7 +3,7 @@
 All possible PeTar command-line options across every configure variant.
 Generated from source headers — no binary compilation needed.
 
-> Generated: 2026-09-17 02:13 UTC
+> Generated: 2026-09-29 05:53 UTC
 > Regenerate: `python3 .github/skills/petar-nbody-simulation/assets/generate_option_reference.py`
 
 See [`option-matrix.md`](option-matrix.md) for currently installed binaries.
@@ -431,7 +431,7 @@ Use `<binary> -h` for exact runtime option validation.
 
 - **Type**: `PS::S64`
 - **Default**: `0`
-- **Description**: Starting of the first id range for hard dump recording every tree step, save into files object_[id]
+- **Description**: Starting of the first id range for hard dump recording every tree step, save into files <prefix>.object_[id]
 - **Source**: `src/hard.hpp`:171
 
 ### `--record-id-start-two`

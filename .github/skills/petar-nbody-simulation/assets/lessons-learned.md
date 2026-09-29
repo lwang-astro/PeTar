@@ -260,6 +260,22 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: 作业内进程检测用 `ps -eo pid,comm | awk '$2 ~ /^petar/'`；`--export` 传参的脚本直接引用环境变量，禁止 `X=$1` 形式；登录节点自测进程检测逻辑时须用非后代进程（否则结果不可信）。
 
+### 2026-09-29: `petar.hard.debug` 的 dump 文件名是位置参数；ASan+Intel MPI 必须 `setarch -R`
+
+**Mistake**: 用 `--dump-filename <file>` 传 dump 文件名——该选项不在 getopt 表内被静默忽略，回退默认 `hard_dump` 后 "Error: filename hard_dump cannot be open!" 中止。首次直接运行又撞 "Shadow memory range interleaves with an existing memory mapping. ASan cannot proceed"。
+
+**Root cause**: `IOParamsHardDebug::read` 的 getopt 串只有 `-m:n:p:h`，dump 文件名取 `argv[argc-1]`（位置参数，用法 `petar.hard.debug -p data.par <dumpfile>`）；ASan shadow 与 Intel MPI so 映射冲突是 ASLR 相关（ELF_ET_DYN_BASE）。
+
+**Prevention rule**: 调用形式固定为 `setarch $(uname -m) -R petar.<family>.hard.debug -p <prefix> <dump文件>`；参数文件用 `<prefix>.par*`（需含 `hermite-acc-offset-sq`、`hermite-dt-max` 的持久化值）。重现结果与生产日志逐位可比（本次 N210k Pal5 dump `dE_SD/Etot_SD` 复现 -1.64123）。
+
+### 2026-09-29: 多线程 stderr 的 message↔文件名配对会错位——按线程交错，须以文件系统为准
+
+**Mistake**: 从 `output` 日志解析 1648 条 "Hard energy significant !"+"Dump file:" 相邻两行当作同一事件，据"最差 |ratio|=998"去 run/ 找对应 dump 文件——文件名不存在（n/t/O/c 均对不上）。
+
+**Root cause**: OpenMP 多线程写同一 stderr，message 行与其 Dump 文件名行可被其他线程插入隔开；相邻行配对随机错位。
+
+**Prevention rule**: 分析 dump 事件时以 run/ 实际文件清单为准（文件数=事件数可先核对），日志只用来取 ratio/dE_SD 分布；需要 message↔文件精确配对时按线程号聚合连续行并对照文件名校验。
+
 ---
 
 ## Post-Processing

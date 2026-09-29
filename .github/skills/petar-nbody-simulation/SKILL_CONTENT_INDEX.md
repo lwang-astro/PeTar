@@ -109,6 +109,14 @@ Status: covered. SKILL.md keeps the safety index and read-first rule (see lesson
 
 Status: covered, with hard rules in SKILL.md and detailed reference in asset
 
+### 4e. Hard dump reproduction and analysis (petar.hard.debug)
+
+- Invocation and correctness rules (positional dump filename, `setarch -R` on ASan+Intel MPI, full `.par*` set in a scratch dir, family/version match, filesystem-authoritative dump selection, `dE_SD` vs `dE` reading): `.github/skills/petar-nbody-simulation/SKILL.md` (Hard Dump Analysis section)
+- Command template, dump-name taxonomy table (warning vs abort classes), filename field decoding, and log interpretation notes: `.github/skills/petar-nbody-simulation/assets/script-tools.md` ("Hard dump debugging")
+- Per-step `_h4_*.log` reading: `.github/skills/petar-nbody-simulation/assets/data-readback-patterns.md` (Pattern 11)
+
+Status: covered (added 2026-09-29 after the Pal5 N210k `hard_large_energy` diagnosis)
+
 ### 5. Functional smoke defaults and test-specific policies
 
 - User-facing summary and current defaults: `README.md` (Automated Test Layers -> Functional smoke tests)

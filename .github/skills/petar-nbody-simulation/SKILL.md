@@ -504,6 +504,17 @@ Recovery sequence:
 
 **Legacy-version outputs follow the same policy.** A mismatch that survives kwargs enumeration is a reader/producing-solver schema gap, not a mode-flag error — report it as a version gap. Documented legacy reader flags (`spin_3d=False` for pre-2024-12 BSE-family outputs; `less_output=True` for pre-2020-09 merger records; `petar.format.transfer -c/-g` for older snapshots) are legitimate reader options, not workarounds; the full layout-kwargs table and stop rules live in `assets/data-readback-patterns.md` → "Column mismatch: stop rules".
 
+## Hard Dump Analysis (petar.hard.debug)
+
+When a production run emits hard-integrator dump files: `data.hard_large_energy*` (per-tree-step energy-error **warning**), `data.dump_large_step*` / `data.dump_large_cluster*` (step-count / oversized-system **warnings**), `data.hard_dump*` (Hermite-SDAR integration **error → abort**, likely bug), `data.dump_sse_error` / `data.dump_bse_error` (**abort**), `data.dump_interrupt` / `data.dump_binary_merger` / `data.dump_<message>` (interrupt diagnostics). All builds with `HARD_DUMP`; warning-class dumps leave the run running. Full trigger table and field decoding: `assets/script-tools.md` → "Hard dump debugging"; user-facing explanation: `README.md` → "Troubleshooting".
+
+- **Reproduce with `petar.hard.debug` of the same binary family, never the solver binary.** Invocation form: `setarch $(uname -m) -R petar.<family>.hard.debug -p <prefix> [selectors] <dump-file> > <dump>.log 2>&1`. The dump filename is the **last command-line argument** (`argv[argc-1]`; `--dump-filename` is not in the getopt table and is silently ignored, and any option placed after the filename is silently taken as the filename); `setarch -R` is mandatory on ASan+Intel MPI builds (otherwise "Shadow memory range interleaves … ABORTING").
+- Copy **all** of `<prefix>.par*` (`.hard`/`.bse`/`.galpy`/`.rand`) from the producing run into a scratch directory; never debug inside the production run directory.
+- Match binary family and version to the producing solver (Gate 4) — dump layout and integration behavior are family- and version-specific; the reproduced `dE_SD/Etot_SD` should match the run log bit-for-bit when they do.
+- **Select dump files from the directory listing, not by pairing stderr lines** — OpenMP threads interleave the `Hard energy significant !` and `Dump file:` lines, so adjacent-line pairing misattributes events.
+- **Object dumps are per-particle evolution tracking, not errors**: solver options `--record-id-{start,end}-{one,two}` (end-exclusive) append one dump record of the whole hard cluster containing each in-range particle per tree step. Replay slices it with `--istart/--iend` (record index) or `--tstart/--tend` (physical-time window) placed **before** the filename. Naming and restart caveats: `assets/script-tools.md` → "Hard dump debugging".
+- Interpretation: `dE_SD` is the slowdown-transformed Hamiltonian error (its denominator `|Etot_SD|` is systematically small for slowed-down tight binaries); the physical error is `dE` on the `Hard Energy:` line. Per-step `_h4_*.log` records: `assets/data-readback-patterns.md` (Pattern 11).
+
 ## Preferred Sources in This Repository
 
 Use these as primary references:

@@ -858,7 +858,8 @@ public:
             const std::string rank_suffix = "." + std::to_string(my_rank);
             const auto register_object_range = [&](const PS::S64 id_start, const PS::S64 id_end) {
                 for (PS::S64 id = id_start; id < id_end; ++id) {
-                    const std::string object_final = std::string("object_") + std::to_string(id);
+                    // dumpThread prefixes DATADUMPAPP names with fname_snp, so tmp/final must carry the same prefix
+                    const std::string object_final = fname_snp + ".object_" + std::to_string(id);
                     const std::string object_tmp = object_final + rank_suffix + ".tmp";
                     output_commit_manager.registerTmp("object_id", my_rank, object_tmp, object_final, OutputCommitManager::CommitMode::Append);
                 }
