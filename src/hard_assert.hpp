@@ -3,6 +3,7 @@
 #include <cassert>
 #include <string>
 #include <vector>
+#include <map>
 #include "hard_ptcl.hpp"
 #include "Hermite/hermite_particle.h"
 #include "soft_ptcl.hpp"
@@ -223,6 +224,8 @@ public:
 #endif
     HardDump* hard_dump;
     std::vector<PendingRenameRecord> pending_rename_records;
+    std::map<PS::S64, PS::F64> event_dump_last_time;
+    PS::F64 event_dump_interval;
 
     HardDumpList(): size(0), mpi_rank(0), omp_level(0), dump_number(0), output_prefix(), 
 #ifdef EXTERNAL_HARD
@@ -231,7 +234,33 @@ public:
                     galpy_manager(NULL),
 #endif
 #endif
-                    hard_dump(NULL), pending_rename_records() {}
+                    hard_dump(NULL), pending_rename_records(), event_dump_last_time(), event_dump_interval(0.0) {}
+
+    //! set the per-system event-dump gate interval (e.g. the snapshot output interval)
+    void setEventDumpInterval(const PS::F64 _interval) { event_dump_interval = _interval; }
+
+    //! event-dump suppression: allow the 1st event of a key and the 1st of every
+    //! subsequent event_dump_interval (one dump per output interval per system);
+    /*! interval <= 0 disables suppression (every event dumps) */
+    bool allowEventDump(const PS::S64 key, const PS::F64 time_now) {
+        if (event_dump_interval<=0.0) return true;
+        bool allow;
+#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
+#pragma omp critical(HardDumpCounter)
+#endif
+        {
+            auto it = event_dump_last_time.find(key);
+            if (it==event_dump_last_time.end()) {
+                event_dump_last_time[key] = time_now;
+                allow = true;
+            }
+            else {
+                allow = (time_now - it->second >= event_dump_interval);
+                if (allow) it->second = time_now;
+            }
+        }
+        return allow;
+    }
 
     void initial(const int _nthread, const int _rank=0, const std::string& _output_prefix=std::string()) {
         size = _nthread;
@@ -239,6 +268,7 @@ public:
         dump_number = 0;
         output_prefix = _output_prefix;
         pending_rename_records.clear();
+        event_dump_last_time.clear();
         hard_dump = new HardDump[_nthread];
     }
 

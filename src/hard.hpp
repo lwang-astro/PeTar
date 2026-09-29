@@ -4,6 +4,7 @@
 #endif
 
 #include"cstdlib"
+#include <cstdio>
 #include <algorithm>
 #include<cmath>
 #include <limits>
@@ -2208,12 +2209,42 @@ public:
                      <<" dE_SD/Etot_SD: "<<energy.de_sd/(ekin_sd+epot_sd)
                      <<std::endl;
 #ifdef HARD_DUMP
-            std::string dump_name = "hard_large_energy";
-            if (use_sym_int)
-                dump_name += "_ar_" + std::to_string(sym_int.particles.getSize());
-            else
-                dump_name += "_h4_n" + std::to_string(h4_int.particles.getSize()) + "_g" + std::to_string(h4_int.getNGroup());
-            DATADUMP(dump_name.c_str());
+            // one pathological system can trip this every tree step; dump at most
+            // once per system per output interval (set from -o in petar.hpp).
+            // Fingerprint = order-independent 64-bit hash of the bound-group member
+            // ids (all cluster ids when no group exists): distinct from other
+            // systems yet stable against single-particle membership wobble
+            auto splitmix64 = [](PS::S64 x) -> PS::S64 {
+                x += 0x9e3779b97f4a7c15LL;
+                x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9LL;
+                x = (x ^ (x >> 27)) * 0x94d049bb133111ebLL;
+                return x ^ (x >> 31);
+            };
+            PS::S64 event_key = 0;
+            if (!use_sym_int && h4_int.getNGroup()>0) {
+                for (int k=0; k<h4_int.getNGroup(); k++) {
+                    auto& groupk = h4_int.groups[k];
+                    for (int j=0; j<groupk.particles.getSize(); j++)
+                        event_key += splitmix64(static_cast<PtclH4*>(groupk.particles.getMemberOriginAddress(j))->id);
+                }
+            }
+            else {
+                const int n_event = use_sym_int ? sym_int.particles.getSize() : h4_int.particles.getSize();
+                for (int i=0; i<n_event; i++) event_key += splitmix64(ptcl_origin[i].id);
+            }
+            if (hard_dump.allowEventDump(event_key, time_origin)) {
+                // expose the system fingerprint in the filename to distinguish events of different systems
+                char key_hex[19];
+                std::snprintf(key_hex, sizeof(key_hex), "%016llx", static_cast<unsigned long long>(event_key));
+                std::string dump_name = "hard_large_energy";
+                if (use_sym_int)
+                    dump_name += "_ar_" + std::to_string(sym_int.particles.getSize());
+                else
+                    dump_name += "_h4_n" + std::to_string(h4_int.particles.getSize()) + "_g" + std::to_string(h4_int.getNGroup());
+                dump_name += "_k";
+                dump_name += key_hex;
+                DATADUMP(dump_name.c_str());
+            }
 #endif
             //abort();
         }

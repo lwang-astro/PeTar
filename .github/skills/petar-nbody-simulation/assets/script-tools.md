@@ -233,7 +233,7 @@ Reference detail:
 
 | Dump name (after `<prefix>.`) | Trigger | Run continues? |
 |---|---|---|
-| `hard_large_energy_ar_n<N>` / `hard_large_energy_h4_n<N>_g<G>` | per tree step, `\|dE_SD\|/max(1,\|Etot_SD\|) > --energy-err-hard` (default 1e-4) — `hard.hpp` final-step check | yes (warning) |
+| `hard_large_energy_ar_n<N>` / `hard_large_energy_h4_n<N>_g<G>` | per tree step, `\|dE_SD\|/max(1,\|Etot_SD\|) > --energy-err-hard` (default 1e-4) — `hard.hpp` final-step check. Since 2026-09-29 repeats are suppressed: at most one dump per system (fingerprint = order-independent hash of bound-group member ids, all cluster ids when no group) per output interval (`-o`); note each cluster-step supports only one dump — an earlier in-step event (e.g. `dump_binary_merger`) silently consumes it | yes (warning) |
 | `dump_large_step_ar_n<N>` | isolated-binary AR group step count > `--ar-max-nstep` (`hard.hpp`, PROFILE builds); SDAR-internal step anomalies (`symplectic_integrator.h`, AR_DEBUG_DUMP builds) | yes (performance warning) |
 | `dump_large_step_h4_n<N>_g<G>` | H4-AR cumulative AR step count > `--ar-max-nstep` (`hard.hpp`, PROFILE builds) | yes (performance warning) |
 | `hard_dump` | (a) per-integration-call energy check inside a tree step (`HARD_DEBUG_PRINT` builds only); (b) group time-sync step count > 10000 (`hard.hpp`); (c) Hermite block-timestep anomaly (SDAR `block_time_step.h`); (d) any `ASSERT` failure (`HARD_DEBUG` builds) | (a–c) yes; (d) **no — abort, likely bug** |
@@ -243,7 +243,7 @@ Reference detail:
 | `dump_binary_merger` | merger produced a zero-mass particle (diagnostic) | yes |
 | `dump_<message>` | named interrupt diagnostics (non-BSE builds) | yes |
 
-User-facing explanation of the three common classes (energy warning, large step, `hard_dump`-with-error): `README.md` → "Troubleshooting".
+User-facing explanation of the three common classes (energy warning, large step, `hard_dump`-with-error): `README.md` → "Troubleshooting". False-positive note: with SDAR ≥ `a197875` (2026-09-28, sd-energy epot-jump fix) the slowdown-bookkeeping artifacts vanish — Pal5 N210k dump replays showed all extreme-ratio events (up to `|dE_SD/Etot_SD|`≈1000 with physical error ~1e-7) become clean; remaining warnings are genuine 1e-4–3e-3 per-step errors.
 
 **Object dumps (per-particle evolution tracking)**: solver options `--record-id-start/end-one` and `--record-id-start-two/--record-id-end-two` (ending ID excluded; 0 disables) make the run append one binary record of the **whole hard cluster** containing each in-range particle at **every tree step** it participates in a hard system (`hard.hpp` `DATADUMPAPP`). Naming: `<prefix>.object_<id>.<rank>.tmp` — append mode, no `_t…` suffix, one file per (ID, MPI rank), records in file order are chronological. Replay:
 
@@ -254,7 +254,7 @@ setarch $(uname -m) -R petar.<family>.hard.debug -p data.par --istart 1 --iend 1
 
 Caveats (2026-09-29, N=300 test): (i) object files commit to `<prefix>.object_<id>` at each output window; a residual `<prefix>.object_<id>.<rank>.tmp` holding the tail after the last commit is normal (same as `data.esc`) — **collect object files out of the run directory before any restart**, since restart auto-removes residual tmp by default (`--keep-tmp-on-startup 0`); (ii) binaries before the 2026-09-29 fix (committer registered prefix-less names) never commit object files — they remain as unmerged `.tmp` and are silently dropped at restart; (iii) selectors must precede the filename (invocation rule above: the filename is `argv[argc-1]`).
 
-**Filename suffix fields** (`DATADUMP` → `dumpThread`, e.g. `data.hard_large_energy_h4_n104_g1_t512.501953_M5_O19_c22_s1790627650`): `n<N>`/`g<G>` = particle/group number embedded in some names; `_t` = physical time; `_M` = MPI rank; `_O` = OMP thread; `_c` = global dump counter; `_s` = **Unix wall-clock seconds at dump** (not a random seed — random seeds are restored from inside the dump). Error-class dump files are staged as `*.tmp` and renamed at the output commit (object dumps are append-mode and follow the separate rules above); GALPY builds write a `<name>.galpy` sidecar (potential parameters) that `petar.hard.debug` reads when present. Bursts of files with steadily increasing `c`/`_s` at nearly fixed `t` = one pathological system re-flagged every global step.
+**Filename suffix fields** (`DATADUMP` → `dumpThread`, e.g. `data.hard_large_energy_h4_n104_g1_k85b3f0e1d2c3a4b5_t512.501953_M5_O19_c22_s1790627650`): `n<N>`/`g<G>` = particle/group number embedded in some names; `_k` = system fingerprint (order-independent hash of the group member ids, hex; same `_k` = same bound system — groups events by system); `_t` = physical time; `_M` = MPI rank; `_O` = OMP thread; `_c` = global dump counter; `_s` = **Unix wall-clock seconds at dump** (not a random seed — random seeds are restored from inside the dump). Error-class dump files are staged as `*.tmp` and renamed at the output commit (object dumps are append-mode and follow the separate rules above); GALPY builds write a `<name>.galpy` sidecar (potential parameters) that `petar.hard.debug` reads when present. Bursts of files with steadily increasing `c`/`_s` at nearly fixed `t` = one pathological system re-flagged every global step (pre-suppression runs only; since 2026-09-29 such repeats dump only once per 1000 events).
 
 **Template**:
 

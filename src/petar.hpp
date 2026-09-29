@@ -3212,6 +3212,8 @@ public:
         // initial hard_dump 
         const PS::S32 num_thread = PS::Comm::getNumberOfThread();
         hard_dump.initial(num_thread, my_rank, input_parameters.fname_snp.value);
+        // gate repeated event dumps (e.g. hard_large_energy) to once per system per output interval
+        hard_dump.setEventDumpInterval(input_parameters.dt_snap.value);
 #ifdef EXTERNAL_HARD
         hard_dump.center = &hard_manager.center;
 #endif        

@@ -276,6 +276,14 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: 分析 dump 事件时以 run/ 实际文件清单为准（文件数=事件数可先核对），日志只用来取 ratio/dE_SD 分布；需要 message↔文件精确配对时按线程号聚合连续行并对照文件名校验。
 
+### 2026-09-29: DATADUMP 的 backup 每 cluster-步只支撑一次写盘——先发事件会静默消耗掉后续 dump
+
+**Mistake**: 给 `hard_large_energy` 加重复抑制后，冷坍缩测试首例事件 `allow=1` 却既无文件也无 "Dump file:" 打印，一度怀疑 map/关键键逻辑；更早还把 `dumpThread` 的 `dump_once_flag` 误当死参数（只读了函数前半）。
+
+**Root cause**: `dumpThread` 尾部 `if (dump_once_flag) hard_dump[ith].backup_flag = false;`——backup 在 `driveForMultiCluster` 每 cluster 每 tree 步取一次，之后**第一个** DATADUMP 写盘并清零 backup_flag；同步内后续任何 DATADUMP 静默 no-op（无警告、无打印）。测试中 `dump_binary_merger` 在积分中途先触发，把步末能量检查的 dump 吃掉。
+
+**Prevention rule**: 排查"DATADUMP 无产物"先确认本步该 cluster 是否已有更早 dump 事件（grep 同线程相邻 "Dump file:" 行）；读 `dumpThread` 必须读全——副作用在函数尾部。临时打印 key/allow 一轮即可定位此类问题。
+
 ---
 
 ## Post-Processing
