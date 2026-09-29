@@ -28,10 +28,36 @@ These tools are installed from `install_script_tool` in `Makefile.in` and are pa
   Canonical form for a `-u 1` production run: `petar.find.dt -a "-u 1 <scenario-opts>" -i 1 input`
 
   Creates `check.perf.<timestep>.log` files and prints the recommended `-s`. The production run
-  must use **half** that value (see SKILL.md → "Gate 5 — Timestep" and "Timestep Tuning").
+  must use **half** that value (SKILL.md → "Gate 5 — Timestep").
 
 - `petar.update.par`
   Update legacy parameter files from old PeTar versions.
+
+## Timestep tuning workflow (petar.find.dt)
+
+PeTar's auto-estimated tree time step (`-s`) is conservative and often suboptimal for production;
+tuning typically gives **2–5× speedup** at negligible benchmark cost (seconds to a minute).
+
+`petar.find.dt` only benchmarks the **first 6 solver steps**. In many simulations the optimal tree
+time step for the initial configuration leads to increasingly large changeover radii as the cluster
+evolves (half-mass radius grows from mass loss, binaries harden), causing the direct-integration
+(hard) part to slow down significantly later. Using **`s_rec / 2`** (the next smaller regularized
+step) provides a safety margin: ~2× more tree steps, but avoids the hard solver becoming the
+bottleneck.
+
+Workflow position — **between IC preparation and the production run**:
+
+```
+IC generation (mcluster) → petar.init → petar.select → petar.find.dt → petar (production)
+```
+
+1. Generate IC and convert with `petar.init`.
+2. `petar.select` the solver binary matching the scenario.
+3. Run `petar.find.dt` directly on the input snapshot — it handles all internal test runs:
+   `petar.find.dt -a "-u 1 <scenario-opts>" -i 1 input`. Pass the unit mode plus all
+   scenario-specific options (e.g. `--galpy-set`, `--bse-metallicity`, `-b`) inside `-a "..."`.
+4. **Halve** the recommended `s` value (next regularized step, ×0.5).
+5. Launch the production run with `-s <halved-value>` plus the other options.
 
 ## Parallel Launch Heuristics
 
@@ -39,7 +65,7 @@ These tools are installed from `install_script_tool` in `Makefile.in` and are pa
 
 | System size | Recommended threads |
 |-------------|--------------------|
-| N ≲ 10³ | **1** (serial or `OMP_NUM_THREADS=1`) — extra threads are *slower* |
+| N ≲ 10³ | **1** (serial or `OMP_NUM_THREADS=1`) — extra threads are *slower*; binaries-rich exception: 2–4, see "Parallel sizing quick rule" |
 | N ~ 10⁴ | a few (2–8) — benchmark on the target machine |
 | N ≳ 10⁵ | all available cores, MPI ranks × OMP threads per rank |
 
@@ -124,6 +150,28 @@ Measured reference (N=500, 2 Myr production run, one binary): 1 thread 1.13 s, 4
 - `petar.external.galpy` / `petar.external.agama`
   Generate external potential map snapshots from run parameter files for visualization workflows.
 
+## Solver-adjacent binaries and standalone tools
+
+Purpose inventory for the remaining installed binaries — none of the helper binaries can replace the solver. Each family helper also installs a generic `petar.<name>` symlink (e.g. `petar.hard.debug`, `petar.dump2test`, `petar.format.transfer`) pointing to the default family build; same purpose, prefer the family-matched name when reproducing a specific run:
+
+- `petar.<family>.hard.debug`
+  **Dump-file replay tool.** Its input is a hard-integrator dump file produced by a run (last command-line argument); it re-integrates only the dumped system over its one global step for diagnosis. It is **not** a debug build of the solver: it cannot start a simulation from a snapshot and must never be used to "run with debugging". See "Hard dump debugging" below.
+
+- `petar.<family>.dump2test`
+  Converts hard dump files into `petar.hard.test`-compatible input snapshots (record selectors `-p`, `--istart/--iend`, `--tstart/--tend`, `-n`, `--n-crit-group`). Feeds the test driver; not a solver.
+
+- `petar.hard.test`
+  Standalone hard-integrator test driver — `petar.hard.test [options] [data filename]` integrates a prepared hard-system input file (e.g. produced by `dump2test`) without the tree/PT part. For reproducing run dumps prefer `hard.debug`; `hard.test` is for constructing dedicated test cases.
+
+- `petar.<family>.format.transfer`
+  Snapshot format conversion for solver output, including legacy reads (pre-2020-12 galpy snapshots with `-c`, pre-2020 group data with `-g`).
+
+- `petar.bse` / `petar.mobse` / `petar.bseEmp`
+  Standalone BSE-family stellar-evolution integrators — the only binaries for the standalone-bse scenario (no IC generation, no `petar.init`, metallicity required); not cluster N-body solvers.
+
+- `petar.get.init.binary.bse`
+  BSE-specific variant of `petar.get.init.binary` for generating initial binary tables.
+
 ## Skill usage rule
 
 When the user asks for one of these tasks, the skill should suggest the corresponding tool command, not only the main solver binary.
@@ -146,8 +194,9 @@ Keep launch recommendations consistent with `sample/` scripts:
   default to single thread (`OMP_NUM_THREADS=1`) unless benchmark shows benefit.
 - Binaries-rich, small-`N` (`N~10^3` with many primordial binaries) examples:
   do not hard-cap to one thread; suggest trying moderate OpenMP (for example `OMP_NUM_THREADS=2-4`) and benchmarking.
-- In all cases:
-  set `OMP_STACKSIZE=128M`, set `OMP_NUM_THREADS` explicitly when user asks for a concrete launch layout, and avoid leaving thread count implicit in final tuned commands.
+- In all cases: environment and thread rules are owned by `SKILL.md` → "Environment
+  requirements" (`OMP_STACKSIZE=128M`; `OMP_NUM_THREADS` explicit in every launch command);
+  sizing per the two cases above.
 
 ## Snapshot reader warning rule
 
@@ -161,7 +210,24 @@ When these appear, stop the current processing command, correct format/schema pa
 
 ## Hard dump debugging
 
-Invocation rules (positional dump filename, `setarch -R`, par-file set, version matching) live in `SKILL.md` → "Hard Dump Analysis (petar.hard.debug)". Reference detail:
+**Reproduce with `petar.<family>.hard.debug` of the same binary family, never the solver binary.**
+Invocation rules:
+
+- The dump filename is the **last command-line argument** (`argv[argc-1]`; `--dump-filename` is not
+  in the getopt table and is silently ignored, and any option placed after the filename is silently
+  taken as the filename). Selectors (`--istart/--iend/--tstart/--tend`) go **before** it.
+- The `setarch $(uname -m) -R` prefix is **mandatory** on ASan+Intel MPI builds — without it,
+  "Shadow memory range interleaves … ABORTING".
+- Copy **all** of `<prefix>.par*` (`.hard`/`.bse`/`.galpy`/`.rand`) from the producing run into a
+  scratch directory; **never debug inside the production run directory**.
+- Match binary family and version to the producing solver — dump layout and integration behavior
+  are family- and version-specific; when they match, the reproduced `dE_SD/Etot_SD` matches the
+  run log bit-for-bit.
+- **Select dump files from the directory listing, not by pairing stderr lines** — OpenMP threads
+  interleave the `Hard energy significant !` and `Dump file:` lines, so adjacent-line pairing
+  misattributes events.
+
+Reference detail:
 
 **Dump taxonomy** (all sites gated by the `HARD_DUMP` build flag; names from `src/hard.hpp`, `src/ar_interaction.hpp`, `src/hard_assert.hpp`, SDAR `src/AR/symplectic_integrator.h`, `src/Hermite/block_time_step.h`):
 
@@ -186,7 +252,7 @@ setarch $(uname -m) -R petar.<family>.hard.debug -p data.par --istart 1 --iend 1
 # --tstart <t> --tend <t> selects a physical-time window instead; -n N / --n-crit-group G filter records by particle/group count
 ```
 
-Caveats (2026-09-29, N=300 test): (i) object files commit to `<prefix>.object_<id>` at each output window; a residual `<prefix>.object_<id>.<rank>.tmp` holding the tail after the last commit is normal (same as `data.esc`) — **collect object files out of the run directory before any restart**, since restart auto-removes residual tmp by default (`--keep-tmp-on-startup 0`); (ii) binaries before the 2026-09-29 fix (committer registered prefix-less names) never commit object files — they remain as unmerged `.tmp` and are silently dropped at restart; (iii) selectors must precede the filename (the filename is `argv[argc-1]`).
+Caveats (2026-09-29, N=300 test): (i) object files commit to `<prefix>.object_<id>` at each output window; a residual `<prefix>.object_<id>.<rank>.tmp` holding the tail after the last commit is normal (same as `data.esc`) — **collect object files out of the run directory before any restart**, since restart auto-removes residual tmp by default (`--keep-tmp-on-startup 0`); (ii) binaries before the 2026-09-29 fix (committer registered prefix-less names) never commit object files — they remain as unmerged `.tmp` and are silently dropped at restart; (iii) selectors must precede the filename (invocation rule above: the filename is `argv[argc-1]`).
 
 **Filename suffix fields** (`DATADUMP` → `dumpThread`, e.g. `data.hard_large_energy_h4_n104_g1_t512.501953_M5_O19_c22_s1790627650`): `n<N>`/`g<G>` = particle/group number embedded in some names; `_t` = physical time; `_M` = MPI rank; `_O` = OMP thread; `_c` = global dump counter; `_s` = **Unix wall-clock seconds at dump** (not a random seed — random seeds are restored from inside the dump). Error-class dump files are staged as `*.tmp` and renamed at the output commit (object dumps are append-mode and follow the separate rules above); GALPY builds write a `<name>.galpy` sidecar (potential parameters) that `petar.hard.debug` reads when present. Bursts of files with steadily increasing `c`/`_s` at nearly fixed `t` = one pathological system re-flagged every global step.
 

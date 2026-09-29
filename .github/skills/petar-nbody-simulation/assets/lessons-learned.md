@@ -519,3 +519,43 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: T3/T4 场景定义于 bse 化运行命令，但管线从选二进制、生成输入到读输出全链路都默认 plain 特性集——三层没有任何一处校验特性一致性；套件长期只被 plain 家族跑过（T2），bse 路径从未端到端通过。
 
 **Prevention rule**: (1) t3/t4 场景 setup 已补 `petar.init -s bse`；extract 配置新增 `"interrupt_mode": "bse"`，`extract_orbital_drift_from_status` 增加 interrupt_mode 参数透传给 Status reader；(2) 跑 T3/T4 需用场景模式显式指定二进制：`run_validation.py --scenario <json> --var petar_bin_switch=<bse二进制>`（管线包装器的自动选择与此类场景不兼容，待加 per-scenario 家族声明）；(3) A/B 基线构建时警惕 configure 状态漂移：验证管线自身的 `_select_or_build_petar` 会静默 `./configure` 重置根 Makefile 特性集（本次两次"基线"二进制因此作废）；(4) 排障 `-f` 前缀运行先清残留输出。
+
+### 2026-09-29: 精确文本替换在 Markdown 行尾双空格（硬换行）上两次失败——先 `cat -A` 诊断再改编辑策略
+
+**Mistake**: 批量下沉 SKILL.md 章节到资产文件时，两处大段 `replace_string_in_file` 连续失败（find.dt 工作流段、hard dump 段），第一次失败后仍按原思路整段重试，浪费两轮；根因是段落内某行以两个行尾空格（Markdown 硬换行 `for binary.␣␣$`）结尾，整段 oldString 无法逐字节匹配。
+
+**Root cause**: Markdown 硬换行的行尾双空格在普通读取视图中不可见；整段替换对隐藏空白零容错。
+
+**Prevention rule**: 整段精确替换失败一次后，立即 `sed -n 'A,Bp' <file> | cat -A` 检查目标区间的隐藏空白/制表符，再决定：把编辑拆成以问题行为边界的两段，或改用智能编辑工具；不要原样重试。另记录本次分层下沉预算（复查修正后终值，供下次健康检查对比）：SKILL.md 565 行/46.6 KB → 387 行/33.3 KB（-32%/-29%），新增资产 ic-generation / changeover-tuning / build-toolchain / controlled-experiments，DSM 硬规则并入 dsm-workflow，hard dump 调用规则并入 script-tools，场景问询表去重后单一家园为 minimal-question-sets.md。
+
+### 2026-09-29: dsm-workflow `--radius` 示例值与换算节自相矛盾（差 20×）——单位示例必须与同文件换算表核对
+
+**Mistake**: SKILL 分层下沉后的实测（5 个全新上下文子代理纸面演练，追踪读取路径）发现 `assets/dsm-workflow.md` 的 `--radius` 旗标表示例值 `4.5092203040509496e-08` 标注 "(0.2 au in pc)"，与同文件 "Radius calculation" 节的 0.2 au = 9.69627362e-07 pc 矛盾（示例值实为 ~0.0093 au）；照抄示例会把盘外缘缩小 20×。同批发现并修复：default-postprocessing 的 `petar.movie -i` 枚举漏 `dsm`；changeover-tuning 缺孤立双星 r_in 定尺寸规则与 Gate 5 优先级说明（已补）。
+
+**Root cause**: 同一物理量在两节各自写数值、从未并列对照；分层重组时只搬运未做数值一致性核对。实测还暴露的已知残留（未修，待决）：`-G 0.00449830997959438`（default-postprocessing 模板）与 `petar.G_MSUN_PC_MYR = 0.004498502…`（data-readback）不一致；binary-scenario-map 无 DSM 条目；`petar.HardData`（主 debug.log）在 11 个 Pattern 中无覆盖。
+
+**Prevention rule**: 搬运或新增任何带物理数值的示例时，grep 同文件/同主题文件中该量的其他出现并对照；数值不一致即缺陷，当次修掉。纸面演练（新上下文子代理 + 读取路径追踪 + "将执行的命令"对照规则原文）是验证 skill 路由与规则保留的低成本手段，重组/大改后应跑。
+
+### 2026-09-29: OMP_NUM_THREADS 规则藏在资产层且为条件式——反直觉环境规则必须无条件进常载层
+
+**Mistake**: 实际会话中小 N 模拟未设 `OMP_NUM_THREADS`，OpenMP 默认吃满全部核心，占用巨大计算资源且效率更低。"Parallel Launch Heuristics"（N≲10³→1 线程）与实测数据（N=500：4 线程 +19%、8 线程 +66%）早已在 `script-tools.md`，但 (1) 常载层 "Environment requirements" 只要求 `OMP_STACKSIZE`；(2) 资产层措辞是条件式——"set OMP_NUM_THREADS explicitly **when user asks for a concrete launch layout**"——用户不主动问就不设。
+
+**Root cause**: 反直觉规则（OpenMP 默认全核对小 N 是负优化）停留在按需读取的资产层且带触发条件；主流模型默认不设置线程数，任何条件化都会让规则在"简单运行"场景静默失效。
+
+**Prevention rule**: 执行安全类环境规则（线程数、栈大小）必须无条件写入 SKILL.md 常载层并进入 Gate 3 确认摘要的可视项；资产层只保留 N→线程数对照表与实测数据。已落实：Environment requirements 新增无条件硬规则、Gate 3 摘要第 2 项显式含 `OMP_NUM_THREADS`、script-tools 条件式措辞改为 "every launch command"。
+
+### 2026-09-29: "not a production solver" 只说不是、没说是——hard.debug 被误用为主程序 debug 版
+
+**Mistake**: 实际使用中 `petar.hard.debug` 被误当作"主程序的 debug 版"用于跑/调试模拟，而非其真实用途：重放运行产生的 dump 文件（输入是 dump 文件，不能从快照启动模拟）。binary-scenario-map 的 Helper 条目只写 "diagnostics and hard-integrator debugging; not a production simulation executable"——负面否定 + 模糊正面描述正是误用诱因；且 script-tools 工具清单缺少 `hard.debug`/`dump2test`/`hard.test`/`format.transfer`/`petar.bse` 系的逐条用途条目。
+
+**Root cause**: 工具分类采用"不是什么"而非"是什么 + 输入形态"；清单以常用工具为主，helper 与 standalone 工具无正向用途描述，模型只能按名字猜测语义（"debug" 后缀天然诱导"调试版主程序"解读）。
+
+**Prevention rule**: 每个已安装工具必须有正向用途 + 输入形态描述（输入是什么文件、能否从快照启动模拟），helper 条目同时保留"不可替代 solver"的否定句。已落实：Gate 4 显式声明 hard.debug 是 dump 重放工具、binary-scenario-map Helper/standalone 条目重写为正向用途、script-tools 新增 "Solver-adjacent binaries and standalone tools" 一节（用途经源码 usage 文本核实）。
+
+### 2026-09-29: 新硬规则须与同主题既有规则并列对照——never-delete 规则资产层只留指针
+
+**Mistake**: 独立复查（Reviewer 对照 skills README 契约，8 项必查）抓出两类问题：(1) OMP 硬规则补写时写 "N ≲ 10³ 用 1 线程" 未加 binaries-rich 限定，与同仓 "Parallel sizing quick rule"（双星多的小 N 建议 2–4 线程）及 sample 脚本相抵，且实测样本（N=500 含 1 个双星）不支持无条件推广；(2) ic-generation.md 下沉时把三条 never-delete 规则全文复制进资产并与 SKILL.md 双向声明所有权（"restated"/"owns the detail"），违反 "Never restate a fact in a second place"。另抓出 6 项建议（机制细节复述、quick rule 回声、controlled-experiments 复述 gates、lessons 预算数字未随微调回写、README 章节名指针错误）。全部已修。
+
+**Root cause**: 增写规则时只对照触发事故本身，未 grep 主题关键词把同主题全部既有表述拉出来并列对照（矛盾/张力在孤立看各自都正确）；下沉时用"复制+互指"代替"指针+增量"，把单一家园契约软化成了双家园。
+
+**Prevention rule**: (1) 新增或修改任何规则前，grep 主题关键词（如线程数、-C 5、hard.debug）把所有出现并列对照，矛盾或未限定的一般化即缺陷；(2) never-delete 规则的唯一全文在 SKILL.md 常载层，资产层只允许指针加不超过一行的增量说明；(3) 记录在 lessons 的预算/测量数字在后续微调后必须回写；(4) 结构性改动（分层、下沉、规则强化）完成后跑一次独立复查（Reviewer 按 skills README 健康检查程序）。

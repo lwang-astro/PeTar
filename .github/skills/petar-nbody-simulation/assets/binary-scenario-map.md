@@ -31,12 +31,21 @@ This note documents the default scenario inference used by the skill.
 ## Helper tools
 
 - `*.hard.debug`
-  Purpose: diagnostics and hard-integrator debugging
-  Not a production simulation executable
+  Purpose: replay and analyse a **dump file produced by a run**. Not a debug build of the solver — it cannot start a simulation from a snapshot. See `script-tools.md` → "Hard dump debugging".
 
 - `*.format.transfer`
-  Purpose: format conversion helper
-  Not a production simulation executable
+  Purpose: solver-snapshot format conversion (including legacy `-c`/`-g` reads). Not a production simulation executable.
+
+- `*.dump2test`
+  Purpose: convert hard dump files into `petar.hard.test` input snapshots. Not a solver.
+
+- `petar.hard.test`
+  Purpose: standalone hard-integrator test driver on prepared input files. Not a solver.
+
+## Standalone stellar-evolution tools
+
+- `petar.bse` / `petar.mobse` / `petar.bseEmp`
+  Valid executables only for the standalone-bse scenario (stellar evolution without N-body); not cluster solvers.
 
 ## Skill behavior
 

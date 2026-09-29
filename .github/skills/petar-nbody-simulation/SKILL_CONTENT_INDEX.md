@@ -29,6 +29,7 @@ Owned by [../README.md](../README.md) → "Design Goals", "Layering Rules", and 
   - `petar.find.dt -a` must repeat the production unit mode; `-o` must match the production thread count
   - restart needs all `<prefix>.par.*` companions and a `-i` read format matching the snapshot
   - thread count scales with N — detail in `assets/script-tools.md` → "Parallel Launch Heuristics"
+- Moved to assets (2026-09-29 compaction): configure/toolchain-environment rules → `assets/build-toolchain.md`; find.dt rationale and workflow → `assets/script-tools.md` → "Timestep tuning workflow"
 
 Status: restored-in-skill
 
@@ -48,10 +49,32 @@ Status: covered, with core hard constraints kept in `SKILL.md`
 
 ### 2. Minimal question sets and input collection details
 
-- Compact hard gate: `.github/skills/petar-nbody-simulation/SKILL.md` — the mandatory-field list ("Required Input Checklist" → Common) and the star-cluster IC table, which is the **single source of truth** for physics-defining IC parameters
-- Per-scenario extras and the "do not ask if already known" rule: `.github/skills/petar-nbody-simulation/assets/minimal-question-sets.md` (points back to SKILL.md rather than restating the table)
+- Compact hard gate: `.github/skills/petar-nbody-simulation/SKILL.md` — the mandatory-field list ("Required Input Checklist" → Common) plus a keyword-index pointer to the per-scenario lists
+- Per-scenario ask-minimum lists (single home since 2026-09-29, including the Galpy ≤ 1.10.2 constraint, bseEmp `ffbonn`/`ffgeneva` track links, and the standalone-bse no-`petar.init` rule): `.github/skills/petar-nbody-simulation/assets/minimal-question-sets.md`
+- Star-cluster IC parameter table (**single source of truth** for physics-defining IC parameters): `.github/skills/petar-nbody-simulation/assets/ic-generation.md` → "Star-Cluster Generation Inputs"
 
-Status: covered, with required-input guardrails kept in `SKILL.md` and scenario detail in the asset
+Status: covered, with required-input guardrails kept in `SKILL.md` and scenario detail in the assets
+
+### 2a. IC generation workflow (generator availability, units, petar.init)
+
+- Compact always-apply rules (`mcluster -C 5`, `petar.init -f` argument order, unit confirmation): `.github/skills/petar-nbody-simulation/SKILL.md` ("IC and Unit Rules")
+- Generator availability, mcluster→PeTar unit conversion, full IC checklist, `petar.init` invocation detail: `.github/skills/petar-nbody-simulation/assets/ic-generation.md`
+
+Status: covered (split out 2026-09-29)
+
+### 2b. Changeover radius and timestep physics selection
+
+- Compact hard rules (parameter table, `--r-ratio` ↔ `r_in` same-direction coupling, `r_group < r_in`, do-not-confuse, auto-detection chain, SDAR deep-dive routing): `.github/skills/petar-nbody-simulation/SKILL.md` ("Changeover Radius and Tree Time Step")
+- Switching-criterion selection, per-environment strategies, related-parameter trade-offs, multi-body SDAR accuracy limits, worked examples: `.github/skills/petar-nbody-simulation/assets/changeover-tuning.md`
+
+Status: covered (split out 2026-09-29)
+
+### 2c. Reconfigure and rebuild toolchain environment
+
+- Gate 4 rebuild-flag derivation: `.github/skills/petar-nbody-simulation/SKILL.md` (Gate 4)
+- Toolchain environment checks, Makefile verification, clean-rebuild procedure, libasan/MPI-flavor hazards: `.github/skills/petar-nbody-simulation/assets/build-toolchain.md`
+
+Status: covered (split out 2026-09-29)
 
 ### 3. Input-source workflow branching (raw/snapshot/restart)
 
@@ -89,10 +112,17 @@ Status: split between `SKILL.md` guardrails and asset-level detail
 
 - Compact tool-usage rule (use installed tools, mode matching): `.github/skills/petar-nbody-simulation/SKILL.md`
 - Detailed command templates for `petar.get.object.snap` and `petar.format.transfer.post`: `.github/skills/petar-nbody-simulation/assets/script-tools.md`
-- `petar.find.dt` full flag reference: `.github/skills/petar-nbody-simulation/assets/script-tools.md`
-- Per-scenario `petar.data.process` and `petar.movie` default arguments: `.github/skills/petar-nbody-simulation/assets/default-postprocessing.md`
+- `petar.find.dt` full flag reference and tuning workflow/rationale: `.github/skills/petar-nbody-simulation/assets/script-tools.md` → "Timestep tuning workflow (petar.find.dt)"
+- `petar.movie` mode-flag table, quick examples, snapshot-format matching, and per-scenario defaults: `.github/skills/petar-nbody-simulation/assets/default-postprocessing.md`
+- Per-scenario `petar.data.process` default arguments: `.github/skills/petar-nbody-simulation/assets/default-postprocessing.md`
 
 Status: covered, with the "halve the recommended step" rule kept in `SKILL.md` and tool-specific templates in asset files
+
+### 4b-2. Controlled experiment checklist
+
+- Pre-scan general checks and scenario routing: `.github/skills/petar-nbody-simulation/assets/controlled-experiments.md`
+
+Status: covered (split out 2026-09-29; routed from SKILL.md "Reference Documents (Must Read)")
 
 ### 4c. Python data readback patterns
 
@@ -104,18 +134,18 @@ Status: covered. SKILL.md keeps the safety index and read-first rule (see lesson
 
 ### 4d. DSM workflow reference
 
-- Compact DSM rules (init, runtime, post-processing): `.github/skills/petar-nbody-simulation/SKILL.md` (DSM-specific section)
-- Detailed DSM workflow (IC prep, radius calculation, parameter reasoning, artifact checklist): `.github/skills/petar-nbody-simulation/assets/dsm-workflow.md`
+- All DSM rules (init, runtime, post-processing, output reading) plus the detailed workflow (IC prep, radius calculation, parameter reasoning, artifact checklist): `.github/skills/petar-nbody-simulation/assets/dsm-workflow.md`
+- Routing: `SKILL.md` → "Reference Documents (Must Read)" row "DSM workflow"
 
-Status: covered, with hard rules in SKILL.md and detailed reference in asset
+Status: covered (hard rules consolidated into the asset 2026-09-29; the former SKILL.md "DSM-specific" section was a duplicate)
 
 ### 4e. Hard dump reproduction and analysis (petar.hard.debug)
 
-- Invocation and correctness rules (positional dump filename, `setarch -R` on ASan+Intel MPI, full `.par*` set in a scratch dir, family/version match, filesystem-authoritative dump selection, `dE_SD` vs `dE` reading): `.github/skills/petar-nbody-simulation/SKILL.md` (Hard Dump Analysis section)
-- Command template, dump-name taxonomy table (warning vs abort classes), filename field decoding, and log interpretation notes: `.github/skills/petar-nbody-simulation/assets/script-tools.md` ("Hard dump debugging")
+- Compact trigger and routing (dump-file taxonomy one-liner, never the solver binary, directory-listing selection): `.github/skills/petar-nbody-simulation/SKILL.md` (Hard Dump Analysis section)
+- Invocation and correctness rules (positional dump filename, `setarch -R` on ASan+Intel MPI, full `.par*` set in a scratch dir, family/version match), command template, dump-name taxonomy table (warning vs abort classes), filename field decoding, object-dump replay, and log interpretation notes: `.github/skills/petar-nbody-simulation/assets/script-tools.md` ("Hard dump debugging")
 - Per-step `_h4_*.log` reading: `.github/skills/petar-nbody-simulation/assets/data-readback-patterns.md` (Pattern 11)
 
-Status: covered (added 2026-09-29 after the Pal5 N210k `hard_large_energy` diagnosis)
+Status: covered (added 2026-09-29 after the Pal5 N210k `hard_large_energy` diagnosis; invocation rules moved from SKILL.md to script-tools.md the same day)
 
 ### 5. Functional smoke defaults and test-specific policies
 

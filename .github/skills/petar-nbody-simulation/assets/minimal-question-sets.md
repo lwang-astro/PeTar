@@ -20,10 +20,11 @@ scenario-specific entries:
 
 | Scenario | Ask in addition |
 |---|---|
-| **Isolated cluster** | when IC generation is required (no existing snapshot): every row of the "Star-Cluster Generation Inputs" table in `SKILL.md` |
-| **BSE / SSE** | primordial binary count (`-b`); metallicity (`--bse-metallicity`); and the IC table above when generating ICs |
+| **Isolated cluster** | when IC generation is required (no existing snapshot): every row of the "Star-Cluster Generation Inputs" table in `assets/ic-generation.md` |
+| **BSE / SSE** | primordial binary count (`-b`); metallicity (`--bse-metallicity` or family-equivalent flag); and the IC table in `assets/ic-generation.md` when generating ICs |
+| **bseEmp** | everything in BSE / SSE; plus confirm the `ffbonn`/`ffgeneva` metal-poor track directories are manually linked before first use — without these links the binary crashes at initialization |
 | **DSM** | only the DSM controls the user wants to override (e.g. `--dsm-seed-mass`, `--dsm-he-disk`, `--dsm-lambda0`, `--dsm-dt-factor`); matching external-potential inputs if Galpy/Agama is also enabled |
-| **Galpy** | cluster COM position and velocity for `petar.init -c`; one of `--galpy-set` / `--galpy-conf-file` / `--galpy-type-arg`; optional `--galpy-rscale`, `--galpy-vscale`; plus `-b` and metallicity if BSE is also enabled |
+| **Galpy** | cluster COM position and velocity for `petar.init -c`; one of `--galpy-set` / `--galpy-conf-file` / `--galpy-type-arg`; optional `--galpy-rscale`, `--galpy-vscale`; plus `-b` and metallicity if BSE is also enabled. PeTar supports Galpy ≤ 1.10.2 only |
 | **Agama** | cluster COM position and velocity for `petar.init -c`; `--agama-conf-file`; optional `--agama-rscale`, `--agama-vscale`; plus `-b` and metallicity if BSE is also enabled |
 | **Restart** | restart snapshot filename; parameter file after `-p`; options being overridden; append/overwrite mode (`-a`); companion-file and `-i` requirements are owned by `input-source-workflows.md` → "Restart / resume" |
 | **standalone-bse** | no IC generation and no `petar.init` — confirm the target binary (`petar.bse` / `petar.mobse` / `petar.bseEmp`) and its metallicity |

@@ -1,6 +1,6 @@
 # DSM Workflow Reference
 
-Disk Star Merger (DSM) specific workflow. The hard rules are in `SKILL.md`; this file provides the detailed parameter reasoning and example walkthrough.
+Disk Star Merger (DSM) workflow — owns **all** DSM rules (IC preparation, runtime flags, post-processing modes, output reading), plus the detailed parameter reasoning and example walkthrough. Routed from `SKILL.md` → "Reference Documents (Must Read)" when scenario = DSM.
 
 ## Overview
 
@@ -18,7 +18,7 @@ petar.init -s dsm --type <type> --radius <radius> -v <vel_conversion> -f input <
 |------|---------|---------|
 | `-s dsm` | Enable DSM initialisation mode | Mandatory |
 | `--type` | Particle type column format | `--type 2` (type in column 7) |
-| `--radius` | Disk outer edge in simulation-length units (pc for `-u 1`) | `--radius 4.5092203040509496e-08` (0.2 au in pc) |
+| `--radius` | Disk outer edge in the simulation length unit (pc for `-u 1`) | `--radius 9.69627362e-07` (0.2 au in pc) |
 
 ### Radius calculation
 

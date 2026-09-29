@@ -73,6 +73,10 @@ Read on demand from `SKILL.md`'s "Reference Documents (Must Read)" table:
 - `petar-nbody-simulation/assets/input-source-workflows.md` — raw / snapshot / restart branching
 - `petar-nbody-simulation/assets/data-readback-patterns.md` — Python readback patterns (read before writing analysis code)
 - `petar-nbody-simulation/assets/dsm-workflow.md` — DSM scenario detail
+- `petar-nbody-simulation/assets/ic-generation.md` — IC generation workflow (generator availability, units, star-cluster checklist)
+- `petar-nbody-simulation/assets/changeover-tuning.md` — changeover/timestep physics-selection guidance
+- `petar-nbody-simulation/assets/build-toolchain.md` — reconfigure/rebuild toolchain notes
+- `petar-nbody-simulation/assets/controlled-experiments.md` — parameter-scan / cross-build checklist
 
 Generated or maintenance material (not part of the simulation read path):
 
