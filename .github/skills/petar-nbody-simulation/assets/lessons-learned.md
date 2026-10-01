@@ -567,3 +567,11 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 增写规则时只对照触发事故本身，未 grep 主题关键词把同主题全部既有表述拉出来并列对照（矛盾/张力在孤立看各自都正确）；下沉时用"复制+互指"代替"指针+增量"，把单一家园契约软化成了双家园。
 
 **Prevention rule**: (1) 新增或修改任何规则前，grep 主题关键词（如线程数、-C 5、hard.debug）把所有出现并列对照，矛盾或未限定的一般化即缺陷；(2) never-delete 规则的唯一全文在 SKILL.md 常载层，资产层只允许指针加不超过一行的增量说明；(3) 记录在 lessons 的预算/测量数字在后续微调后必须回写；(4) 结构性改动（分层、下沉、规则强化）完成后跑一次独立复查（Reviewer 按 skills README 健康检查程序）。
+
+### 2026-10-01: 冒烟"回归"三重假象——VERSION 匹配跳过重建跑陈旧家族二进制；长寿组暴露成员 changeover 漂移；numpy2/ffmpeg 环境坑
+
+**Mistake**: SDAR 统一判据落地后跑 `test/functional` 冒烟，bse-galpy 稳定 SIGABRT，一度判定为新判据回归并用 stash 双向重建做 A/B。结论部分正确但过程被三个无关因素污染：(1) `install_petar_major_versions.sh` 在 installed VERSION == source VERSION 时**跳过重建**——改源码不 bump VERSION 时，冒烟跑的是陈旧家族二进制（bse 案例用 `petar.mpi.omp.avx512.bse`，与手动 make install 的 avx512.bse.galpy 不同族），失败被错误归因；(2) 真实根因是**长寿组成员 changeover 漂移**：CM 的 r_in/r_out 每步按组总质量重算，成员只在成组时缩放一次，BSE 质量漂移累积突破 DEBUG 断言（1e-3）与 `r_search>=r_out` 不变量——旧判据频繁进出组掩盖，新判据（设计上）保持紧组更久从而暴露；(3) `np.in1d`（numpy2 移除）与 imageio 无 ffmpeg 后端让全部案例倒在工具步。
+
+**Root cause**: 成员同步只存在于 `collectGroupMemberAdrAndSetMemberParametersIter`（成组时一次性 r_scale_next）；质量变化路径（`correctSoftPotMassChange` 只修能量簿记）无 changeover/r_search 刷新；诊断依赖行号匹配源码但二进制来自 VERSION 缓存。
+
+**Prevention rule**: 源码级 A/B 或回归验证前必须核对运行二进制的 mtime/家族与源码一致（`ls -la` + 断言行号对照），VERSION 不 bump 时安装脚本会静默跳过重建；修复方式：`syncMemberChangeoverScale()`（每个组级 `pcm.changeover.setR` 后把 CM changeover 复制给成员并 floor r_search）+ 硬域入口 `updateWithRScale()` 后 floor `r_search>=r_out`（4 处组初始化位点 + 入口守卫）；成员与 CM 在同一边界一起跳变，与 CM 自身 setR 的即时性对称。已验证：双并合冒烟 IC 连续多轮通过、诊断断言零违例、Pal5 811 dump 回放与修复前逐位一致。

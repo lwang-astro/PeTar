@@ -1036,6 +1036,26 @@ public:
 #endif
                       }
 
+    //! rescale member changeover to track the freshly recomputed group c.m. value
+    /*! Stellar evolution drifts member masses while grouped; the c.m. r_in/r_out
+        are recomputed from the total mass at every initialization, but members
+        only receive a rescale at group formation. Long-lived groups therefore
+        accumulate member-c.m. changeover mismatches (asserted in initial());
+        copy the c.m. changeover to the members here — the c.m. itself jumps at
+        the same initialization boundary, so members follow it in lockstep — and
+        keep the r_search >= r_out invariant.
+     */
+    template <class Tparticles>
+    void syncMemberChangeoverScale(Tparticles& _particles) {
+        const PS::F64 rin_cm = _particles.cm.changeover.getRin();
+        const PS::F64 rout_cm = _particles.cm.changeover.getRout();
+        for (int k=0; k<_particles.getSize(); k++) {
+            if (_particles[k].changeover.getRin()!=rin_cm || _particles[k].changeover.getRout()!=rout_cm)
+                _particles[k].changeover = _particles.cm.changeover;
+            if (_particles[k].r_search < rout_cm) _particles[k].r_search = rout_cm;
+        }
+    }
+
     //! check parameters
     bool checkParams() {
         ASSERT(manager!=NULL);
@@ -1243,6 +1263,7 @@ public:
             // calculate c.m. changeover
             PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
             pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+            syncMemberChangeoverScale(sym_int.particles);
             pcm.calcRSearch(_dt);
 
 #ifdef HARD_DEBUG
@@ -1376,6 +1397,7 @@ public:
 
                     ASSERT(m_fac>0.0);
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                    syncMemberChangeoverScale(groupi.particles);
                     pcm.calcRSearch(_dt);
 
 #ifdef HARD_DEBUG
@@ -1383,6 +1405,7 @@ public:
                     for (PS::S32 k=0; k<groupi.particles.getSize(); k++) {
 #ifdef STELLAR_EVOLUTION
                         // if mass changed, r_out may be different within some tolerance
+                        // (syncMemberChangeoverScale copies the c.m. value first)
                         ASSERT(abs(groupi.particles[k].changeover.getRout()-r_out_cm)<1e-3);
 #else
                         ASSERT(abs(groupi.particles[k].changeover.getRout()-r_out_cm)<1e-10);
@@ -1420,6 +1443,7 @@ public:
                 PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                 ASSERT(m_fac>0.0);
                 pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                syncMemberChangeoverScale(groupi.particles);
                 pcm.calcRSearch(_dt);
 
 #ifdef EXTERNAL_HARD
@@ -1575,6 +1599,7 @@ public:
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                     ASSERT(m_fac>0.0);
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                    syncMemberChangeoverScale(groupi.particles);
                     pcm.calcRSearch(_time_end);
 
 #ifdef EXTERNAL_HARD
@@ -2437,8 +2462,7 @@ private:
     //! calculate binary parameters
     /*! get new changeover, rsearch, id for c.m.
      */
-    template <class Tchp, class Tptcl>
-    static PS::S64 calcBinaryIDChangeOverAndRSearchIter (Tchp& _par, const PS::S64& _id1, const PS::S64& _id2, COMM::BinaryTree<Tptcl,COMM::Binary>& _bin) {
+    template <class Tchp, class Tptcl>    static PS::S64 calcBinaryIDChangeOverAndRSearchIter (Tchp& _par, const PS::S64& _id1, const PS::S64& _id2, COMM::BinaryTree<Tptcl,COMM::Binary>& _bin) {
         // set bin id as the left member id
         // _id1==-1 is the initial status, once id is obtained, it is bin.id of left member
         if (_id1<0) _bin.id = _bin.getLeftMember()->id;
@@ -4459,9 +4483,17 @@ public:
                             calcAccChangeOverCorrection(_sys[adr], ptcl_nb[k]);
                     }
                 }
-                // update changeover
+                // update changeover; keep the r_search >= r_out invariant
+                // (mass changes and pending rescales can grow r_out after the
+                // last calcRSearch)
                 ptcl_hard_[j].changeover.updateWithRScale();
-                if(adr>=0) _sys[adr].changeover.updateWithRScale();
+                if (ptcl_hard_[j].r_search < ptcl_hard_[j].changeover.getRout())
+                    ptcl_hard_[j].r_search = ptcl_hard_[j].changeover.getRout();
+                if(adr>=0) {
+                    _sys[adr].changeover.updateWithRScale();
+                    if (_sys[adr].r_search < _sys[adr].changeover.getRout())
+                        _sys[adr].r_search = _sys[adr].changeover.getRout();
+                }
             }
             
         }

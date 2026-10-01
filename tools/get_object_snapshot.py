@@ -329,12 +329,12 @@ if __name__ == '__main__':
                         sel2 = select_type(data_temp.p2, sse_type)
                         sel = sel | (sel1 & sel2)
                     elif (mode=='id') | (mode=='idfile'):
-                        sel1 = np.in1d(data_temp.p1.id, idlist)
-                        sel2 = np.in1d(data_temp.p2.id, idlist)
+                        sel1 = np.isin(data_temp.p1.id, idlist)
+                        sel2 = np.isin(data_temp.p2.id, idlist)
                         sel = sel1 | sel2
                     elif (mode=='bid') | (mode=='bidfile'):
                         data_temp.generateBinaryID()
-                        sel = np.in1d(data_temp.bid, idlist)
+                        sel = np.isin(data_temp.bid, idlist)
                     elif (mode=='mass'):
                         sel1 = (data_temp.p1.mass >= mass_range[0]) & (data_temp.p1.mass < mass_range[1])
                         sel2 = (data_temp.p2.mass >= mass_range2[0]) & (data_temp.p2.mass < mass_range2[1])
@@ -402,7 +402,7 @@ if __name__ == '__main__':
                     if (mode=='type'):
                         sel = select_type(data_temp, sse_type)
                     elif (mode=='id') | (mode=='idfile'):
-                        sel = np.in1d(data_temp.id, idlist)
+                        sel = np.isin(data_temp.id, idlist)
                     elif (mode=='mass'):
                         sel = (data_temp.mass >= mass_range[0]) & (data_temp.mass < mass_range[1])
 
