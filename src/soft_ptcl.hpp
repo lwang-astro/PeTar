@@ -375,3 +375,25 @@ public:
     }
 };
 
+
+#ifdef RECORD_CM_IN_HEADER
+//! Velocity of the moving reference frame (system c.m., stat.pcm.vel).
+/*! With RECORD_CM_IN_HEADER, particle velocities are stored relative to this frame,
+    but the total energy is measured in the frame where the external potential is
+    defined (EnergyAndMomentum::calc adds the frame velocity back). Kinetic energy
+    changes caused by mass/velocity modifications (stellar evolution, mergers,
+    escaper removal) must therefore be converted to that frame as well.
+ */
+struct FrameVelocity {
+    inline static PS::F64vec vel = PS::F64vec(0.0);
+};
+
+//! Extra kinetic energy change seen in the external-potential frame when a body
+//! changes from (m0, v0) to (m1, v1), velocities given in the moving frame:
+//! dE = V.(m1 v1 - m0 v0) + 0.5 (m1 - m0) |V|^2
+inline PS::F64 calcDEKinFrameShift(const PS::F64 _m1, const PS::F64vec& _v1,
+                                   const PS::F64 _m0, const PS::F64vec& _v0) {
+    const PS::F64vec& V = FrameVelocity::vel;
+    return V*(_m1*_v1 - _m0*_v0) + 0.5*(_m1 - _m0)*(V*V);
+}
+#endif
