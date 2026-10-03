@@ -92,11 +92,12 @@ if [[ $ncol -ne $ncol_bse_type_change ]] && [[ $ncol -ne 0 ]]; then
 fi
 
 # check consistence for the number of columns if SEVN is active
+# SN_kick records print one star only (+6); type_change/dynamic_merge print 2/4 stars
 ncol_sevn=6
-ncol_sevn_sn_kick=$(( ncol_sse_sn_kick + 2*ncol_sevn ))
+ncol_sevn_sn_kick=$(( ncol_sse_sn_kick + ncol_sevn ))
 ncol_sevn_type_change=$(( ncol_sse_type_change + 2*ncol_sevn ))
 ncol_sevnB_dyn_merge=$(( ncol_bse_dyn_merge + 4*ncol_sevn ))
-ncol_sevnB_sn_kick=$(( ncol_bse_sn_kick + 2*ncol_sevn ))
+ncol_sevnB_sn_kick=$(( ncol_bse_sn_kick + ncol_sevn ))
 ncol_sevnB_type_change=$(( ncol_bse_type_change + 4*ncol_sevn + 2 ))
 
 ncol=`egrep -m 1 'SN_kick' $fname.sevn.0|wc -w|tr -d ' '`
@@ -114,7 +115,7 @@ fi
 ncol=`egrep -m 1 'Dynamic_merge' $fname.*sevnB*.0|wc -w|tr -d ' '`
 if [[ $ncol -ne $ncol_sevnB_dyn_merge ]] && [[ $ncol -ne 0 ]]; then
     echo 'Error! column number not matches for SEVN (binary) dynamical merger, should be '$ncol_sevnB_dyn_merge', the file has '$ncol
-    exitß
+    exit
 fi
 
 ncol=`egrep -m 1 'SN_kick' $fname.sevnB.0|wc -w|tr -d ' '`

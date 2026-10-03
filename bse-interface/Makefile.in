@@ -27,7 +27,7 @@ endif
 ifeq ($(se_mode),sevn)
 BSELIBS = -I./sevn/include/sevn -L./sevn/lib/sevn -L./sevn/lib64/sevn -lsevn_lib_static
 else
-BSE_LIBS= -lbse
+BSELIBS= -lbse
 endif
 
 TARGET: $(BSE_LIB) $(BSE_TEST) petar.get.init.binary

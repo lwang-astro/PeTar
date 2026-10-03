@@ -64,7 +64,7 @@ BSE_FLAG=on
 else  ifeq ($(se_mode),sevn)
 MT_FLAGS += -D SEVN -D BSE_BASE
 BSE_FLAG=on
-else  ifeq ($(se_modfe),bse)
+else  ifeq ($(se_mode),bse)
 MT_FLAGS += -D BSEBBF -D BSE_BASE
 BSE_FLAG=on
 else ifeq ($(se_mode),bseEmp)

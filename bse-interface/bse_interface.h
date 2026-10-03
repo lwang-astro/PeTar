@@ -6,11 +6,11 @@
 #include <string>
 #include <getopt.h>
 #include <set>
+#include "../src/io.hpp"
 
 #ifdef SEVN
 #include "./evolvebco_sevn.h"
 #include "lookup_and_phases.h"
-#include "../src/io.hpp"
 #endif
 
 /*!
@@ -1737,7 +1737,7 @@ public:
         _out.kw0 = _star.kw;
 #ifdef SEVN
         evolv1_SEVN(&_star, &_out, &tphysf, &z, &input_params_SEVN);
-#elif
+#else
         int kw = _star.kw;
         evolv1_(&kw, &_star.m0, &_star.mt, &_star.r, 
                 &_star.lum, &_star.mc, &_star.rc, &_out.menv, &_out.renv, 
@@ -2030,8 +2030,7 @@ public:
         ospin[1] = _star2.ospin;
         age[1]= _star2.tphys-_star2.epoch;
 
-        merge_(kw, m0, mt, r, mc, rc, menv, renv, ospin, age, &semi_rsun, &_ecc, vkick, zpars)
-
+        merge_(kw, m0, mt, r, mc, rc, menv, renv, ospin, age, &semi_rsun, &_ecc, vkick, zpars);
 
         _star1.kw = kw[0];
         _star1.m0 = m0[0];
@@ -2098,7 +2097,7 @@ public:
 #ifdef SEVN
         assert(_star.Mzams_SEVN >= 0.0);
         return get_timestep(&_star, &z, &input_params_SEVN) / tscale;
-#elif
+#else
         // make a copy to avoid overwriting the origin values
         int kw = _star.kw;
         double m0 = _star.m0;

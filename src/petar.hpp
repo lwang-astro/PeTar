@@ -569,7 +569,9 @@ public:
         // count used options
         opt_used ++;
         //std::cout<<"Opt used:"<<opt_used<<std::endl;
-        if (argc > 1 && argv[argc - 1][0] != '-') { //Allow for negative parameters
+        // detect the input data filename: only when there are unused arguments
+        // and the last one does not look like an option or a negative number
+        if (opt_used<argc && argv[argc-1][0] != '-') { //Allow for negative parameters
             fname_inp.value =argv[argc-1];
             if(print_flag) std::cout<<"Reading data file name: "<<fname_inp.value<<std::endl;
         }

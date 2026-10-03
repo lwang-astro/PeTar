@@ -995,7 +995,7 @@ public:
                         std::cerr<<" semi[R*]: "
                                  <<_bin.semi*bse_manager.rscale
                                  <<" ecc: "<<_bin.ecc
-                                 <<" period[days]: "<<_bin.period*bse_manager.tscale*bse_manager.year_to_day;
+                                 <<" period[days]: "<<_bin.period*bse_manager.tscale*bse_manager.myr_to_day;
                         std::cerr<<" Init: Star1: ";
                         p1_star_bk.print(std::cerr);
                         std::cerr<<" Star2: ";
@@ -1113,12 +1113,12 @@ public:
                                 fout_bse<<"Dynamic_merge: "
                                         <<std::setw(WRITE_WIDTH)<<p1->id
                                         <<std::setw(WRITE_WIDTH)<<p2->id
-                                        <<std::setw(WRITE_WIDTH)<<_bin.period*bse_manager.tscale*bse_manager.year_to_day
+                                        <<std::setw(WRITE_WIDTH)<<_bin.period*bse_manager.tscale*bse_manager.myr_to_day
                                         <<std::setw(WRITE_WIDTH)<<_bin.semi*bse_manager.rscale
                                         <<std::setw(WRITE_WIDTH)<<_bin.ecc;
 #ifndef DYNAMIC_MERGER_LESS_OUTPUT
                                 fout_bse<<std::setw(WRITE_WIDTH)<<dr*bse_manager.rscale
-                                        <<std::setw(WRITE_WIDTH)<<t_peri*bse_manager.tscale*bse_manager.year_to_day
+                                        <<std::setw(WRITE_WIDTH)<<t_peri*bse_manager.tscale*bse_manager.myr_to_day
                                         <<std::setw(WRITE_WIDTH)<<sd_factor;
 #endif
                                 // before

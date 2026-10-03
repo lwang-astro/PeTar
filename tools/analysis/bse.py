@@ -168,6 +168,11 @@ class SSESNKick(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
+        if 'interrupt_mode' in kwargs.keys():
+            self.interrupt_mode = kwargs['interrupt_mode']
+        else:
+            self.interrupt_mode = "bse" # Defaults to BSE
+
         if 'sevn' in self.interrupt_mode:
             keys = [['id',np.int64],['vkick',np.float64],['star',SEVNStarParameter]]
         else:
@@ -346,6 +351,11 @@ class BSESNKick(DictNpArrayMix):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         if 'interrupt_mode' in kwargs.keys():
+            self.interrupt_mode = kwargs['interrupt_mode']
+        else:
+            self.interrupt_mode = "bse" # Defaults to BSE
+
+        if 'sevn' in self.interrupt_mode:
             keys = [['id1',np.int64],['id2',np.int64],['kindex',np.int64],['vkick',np.float64],['star',SEVNStarParameter]]
         else:
             keys = [['id1',np.int64],['id2',np.int64],['kindex',np.int64],['vkick',np.float64],['star',SSEStarParameter]]
@@ -580,6 +590,11 @@ class SSEISO(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
+        if 'interrupt_mode' in kwargs.keys():
+            self.interrupt_mode = kwargs['interrupt_mode']
+        else:
+            self.interrupt_mode = "bse" # Defaults to BSE
+
         if 'sevn' in self.interrupt_mode:
             keys = [['mass_init',np.float64],['star',SEVNStarParameter],['out',SSEStarParameterOut]]
         else:
@@ -605,6 +620,11 @@ class BSEISO(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
+        if 'interrupt_mode' in kwargs.keys():
+            self.interrupt_mode = kwargs['interrupt_mode']
+        else:
+            self.interrupt_mode = "bse" # Defaults to BSE
+
         if 'sevn' in self.interrupt_mode:
             keys = [['m1_init',np.float64],['m2_init',np.float64],['period_init',np.float64],['ecc_init',np.float64],['period_final',np.float64],['ecc_final',np.float64],['star1',SEVNStarParameter],['out1',SSEStarParameterOut],['star2',SEVNStarParameter],['out2',SSEStarParameterOut]]
         else:
