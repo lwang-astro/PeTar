@@ -575,3 +575,19 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 成员同步只存在于 `collectGroupMemberAdrAndSetMemberParametersIter`（成组时一次性 r_scale_next）；质量变化路径（`correctSoftPotMassChange` 只修能量簿记）无 changeover/r_search 刷新；诊断依赖行号匹配源码但二进制来自 VERSION 缓存。
 
 **Prevention rule**: 源码级 A/B 或回归验证前必须核对运行二进制的 mtime/家族与源码一致（`ls -la` + 断言行号对照），VERSION 不 bump 时安装脚本会静默跳过重建；修复方式：`syncMemberChangeoverScale()`（每个组级 `pcm.changeover.setR` 后把 CM changeover 复制给成员并 floor r_search）+ 硬域入口 `updateWithRScale()` 后 floor `r_search>=r_out`（4 处组初始化位点 + 入口守卫）；成员与 CM 在同一边界一起跳变，与 CM 自身 setR 的即时性对称。已验证：双并合冒烟 IC 连续多轮通过、诊断断言零违例、Pal5 811 dump 回放与修复前逐位一致。
+
+### 2026-10-02: "SE 质量损失"诊断被事件级回放证伪——large_energy 真凶是双曲近遇的组进出注入；修复=事件步重基线
+
+**Mistake**: 对 Pal5-IMF 生产运行新出现的大量 `hard_large_energy` dump，交接计划文档诊断为"BSE 质量损失能量修正未接线"（dm 记账 active、消费者被注释），并给出改 dm 簿记的方向。事件级回放（gdb 断点 `evolveStar` + ADJUST_GROUP_DEBUG 组事件打印）三案例全部证伪：步内 12 次 evolveStar 全部 dm=0 或 ~1e-14，`.sse.*` 事件文件为空；每个案例的步内都发生组 form/break（40.5+40.5 M☉ BH 对在无束缚/临界束缚近遇的近心点瞬间 d<r_crit 成组、越界即释放，两例还有 form→break→re-form→break 抖动），每次状态改写注入 O(1e-3)×相遇动能（16.4 / 1.12 / 0.138）。`dE_mod`、`dE_change` 恒 ~0 因为过渡注入从未进簿记列——参考相对 dE 携带全部偏移并反复触发告警。
+
+**Root cause**: 判据性诊断只看了"dE 在首子步即达终值且恒定"的形态与 dm 管线的存在，未做事件级归因（组事件计数/断点验证）；过渡注入正是此前回文工作已测得的层（判据对称≠过渡对称），在稠密星团 BH 近遇上以 ~40 dump/小时的量级显形。
+
+**Prevention rule**: large_energy 归因必须先做事件级验证：`grep "Find new group\|Break group"` + gdb 断点 `evolveStar` 看 dm，再谈修正方向；"dE 恒定于首子步"同时兼容参考偏移（组事件）与真实误差，不能单凭形态定罪。修复（`hard.hpp` integrateToTime 能量读出后）：事件步 `calcEnergySlowDown(true)` 重基线，注入计入 `dE_change` 簿记列，告警只看残余积分误差——三案例回放 dE 降至 ~1e-10、零触发，非事件步与事件后漂移的检测灵敏度保留。
+
+### 2026-10-03: 重基线修复撤回——de_change_cum 语义是"物理变化专用"，算法注入混入即污染能量诊断
+
+**Mistake**: 前条把组事件注入计入 `de_change_cum` 的"治标"修复，经用户审查撤回：`de_change_cum`/`de_sd_change_cum` 设计语义是**物理**能量变化（恒星演化质量损失、双星中断）；把算法误差折入等于让簿记列失去诊断意义、并掩盖真实误差信号。告警压力本身是"过渡层注入真实误差"的正确信号。
+
+**Root cause**: 修复定位（事件步重基线）在诊断上有效（三案例 dE→1e-10）但语义错误；正确的根本方向是消除注入本身——SDAR 过渡层逐事件互逆 + 派生量纯态化（form/break 互为逆正则变换、辅助量由当前态经共享代码推导、切换对齐共同同步边界），可执行计划见 `SDAR/docs/transition_unification_plan.md`。
+
+**Prevention rule**: 数值方案中的簿记列各有语义边界（物理变化 vs 算法残差 vs 参考重置），任何"把 X 挪到 Y 列"的修复必须先核对 Y 的设计语义；治标修复落地时必须在文档中标注其掩盖性质与撤回条件。

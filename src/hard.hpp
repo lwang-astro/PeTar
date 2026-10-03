@@ -937,7 +937,7 @@ public:
 
 struct HardEnergy{
     PS::F64 de;                 // energy error
-    PS::F64 de_change_cum;      // cumulative energy change 
+    PS::F64 de_change_cum;      // cumulative physical energy change due to interruption and modification of one particle
     PS::F64 de_change_binary_interrupt; // cumulative energy change due to interruption
     PS::F64 de_change_modify_single;   // cumulative energy change due to modification of one particle
     PS::F64 de_sd;              // slowdown energy error
