@@ -855,6 +855,13 @@ public:
             Float de_kin = 0.5*dm*(vcm[0]*vcm[0]+vcm[1]*vcm[1]+vcm[2]*vcm[2]);
             auto& vbin = bink.vel;
             de_kin += bink.mass*(vbin[0]*vcm[0]+vbin[1]*vcm[1]+vbin[2]*vcm[2]);
+#ifdef RECORD_CM_IN_HEADER
+            {
+                PS::F64vec vcm_s(vcm[0], vcm[1], vcm[2]);
+                PS::F64vec vbin_s(vbin[0], vbin[1], vbin[2]);
+                de_kin += calcDEKinFrameShift(bink.mass, vcm_s + vbin_s, pcm.mass, vcm_s);
+            }
+#endif
 #endif
             sym_int.particles.shiftToOriginFrame();
             sym_int.particles.template writeBackMemberAll<PtclH4>();
@@ -941,6 +948,10 @@ public:
             Float de_kin = 0.5*dm*(vcm_org[0]*vcm_org[0]+vcm_org[1]*vcm_org[1]+vcm_org[2]*vcm_org[2]);
             Float dvcm[3] = {pcm.vel[0] - vcm_org[0], pcm.vel[1] - vcm_org[1], pcm.vel[2] - vcm_org[2]};
             de_kin += pcm.mass*(dvcm[0]*vcm_org[0]+dvcm[1]*vcm_org[1]+dvcm[2]*vcm_org[2]);
+#ifdef RECORD_CM_IN_HEADER
+            de_kin += calcDEKinFrameShift(pcm.mass, PS::F64vec(pcm.vel[0], pcm.vel[1], pcm.vel[2]),
+                                          mcm_bk, PS::F64vec(vcm_org[0], vcm_org[1], vcm_org[2]));
+#endif
 
             ekin    = h4_int.getEkin();
             epot    = h4_int.getEpot();
@@ -2062,6 +2073,9 @@ public:
             if (modify_flag) {
                 auto& v = pi.vel;
                 Float de_kin = 0.5*(pi.mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]) - mbk*(vbk[0]*vbk[0]+vbk[1]*vbk[1]+vbk[2]*vbk[2]));
+#ifdef RECORD_CM_IN_HEADER
+                de_kin += calcDEKinFrameShift(pi.mass, pi.vel, mbk, vbk);
+#endif
                 energy.de_sd_change_cum += de_kin;
                 energy.de_sd_change_modify_single += de_kin;
                 energy.de_change_cum += de_kin;
