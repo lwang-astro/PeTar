@@ -1,6 +1,10 @@
 se_mode=@with_interrupt@
 
+ifneq ($(se_mode),sevn)
 BSE_LIB=libbse.a
+else
+BSE_LIB=
+endif
 
 ifeq ($(se_mode),bse)
 BSE_TEST=petar.bse
@@ -10,12 +14,21 @@ else ifeq ($(se_mode),mobse)
 BSE_TEST=petar.mobse
 BSE_PATH=mobse
 CXXFLAGS = -D MOBSE -D BSE_BASE
+else ifeq ($(se_mode),sevn)
+BSE_TEST=petar.sevn
+BSE_PATH=sevn/include/sevn
+CXXFLAGS = -D SEVN -D BSE_BASE
 else ifeq ($(se_mode),bseEmp)
 BSE_TEST=petar.bseEmp
 BSE_PATH=bseEmp
 CXXFLAGS = -D BSEEMP -D BSE_BASE
 endif
 
+ifeq ($(se_mode),sevn)
+BSELIBS = -I./sevn/include/sevn -L./sevn/lib/sevn -L./sevn/lib64/sevn -lsevn_lib_static
+else
+BSE_LIBS= -lbse
+endif
 
 TARGET: $(BSE_LIB) $(BSE_TEST) petar.get.init.binary
 
@@ -32,8 +45,10 @@ FCLIBS = @FCLIBS@
 
 VPATH=$(BSE_PATH)
 
+ifneq ($(se_mode),sevn)
 SRC:= $(shell find $(BSE_PATH) -type f  \( -iname '*.f' ! -iname '.*' ! -iname '[sb]se.f' ! -iname 'mo[sb]se.f' ! -iname 'popbin.f' \) )
 OBJ:= $(SRC:.f=.o)
+endif
 ifeq ($(se_mode),bseEmp)
 SRC:= $(shell find $(BSE_PATH)  \( -iname '*.f' ! -iname '.*' ! -iname '[sb]se.f' ! -iname 'mo[sb]se.f' ! -iname 'popbin.f' \) )
 OBJ:= $(SRC:.f=.o)
@@ -42,11 +57,21 @@ OBJCXX:= $(SRCCXX:.cpp=.o)
 endif
 
 
+ifeq ($(se_mode),sevn)
+../build/evolve_sevn.o: evolve_sevn.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@ $(BSELIBS)
+else
 $(BSE_LIB): $(OBJ) $(OBJCXX)
 	ar rcs $@ $^
+endif
 
+ifeq ($(se_mode),sevn)
+$(BSE_TEST): bse_test.cxx $(BSE_LIB) evolvebco_sevn.h bse_interface.h |../build/evolve_sevn.o
+	$(CXX) $(CXXFLAGS) $< -o $@ ../build/evolve_sevn.o -L./ $(BSELIBS) $(FCLIBS)
+else
 $(BSE_TEST): bse_test.cxx $(BSE_LIB) bse_interface.h
-	$(CXX) $(CXXFLAGS) $< -o $@ -L./ -lbse $(FCLIBS)
+	$(CXX) $(CXXFLAGS) $< -o $@ -L./ $(BSELIBS) $(FCLIBS)
+endif
 
 petar.get.init.binary: get_init_binary_bse.sh
 	ln -sf $< $@

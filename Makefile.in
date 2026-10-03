@@ -61,8 +61,11 @@ BSE_FLAG=off
 ifeq ($(se_mode),mobse)
 MT_FLAGS += -D MOBSE -D BSE_BASE
 BSE_FLAG=on
-else  ifeq ($(se_mode),bse)
-MT_FLAGS += -D BSEBBF -D BSE_BASE 
+else  ifeq ($(se_mode),sevn)
+MT_FLAGS += -D SEVN -D BSE_BASE
+BSE_FLAG=on
+else  ifeq ($(se_modfe),bse)
+MT_FLAGS += -D BSEBBF -D BSE_BASE
 BSE_FLAG=on
 else ifeq ($(se_mode),bseEmp)
 MT_FLAGS += -D BSEEMP -D BSE_BASE
@@ -70,8 +73,13 @@ BSE_FLAG=on
 endif
 ifeq ($(BSE_FLAG),on)
 FCLIBS = @FCLIBS@
+ifeq ($(se_mode),sevn)
+BSELIBS = -L./bse-interface -I./bse-interface/sevn/include/sevn -L./bse-interface/sevn/lib/sevn -L./bse-interface/sevn/lib64/sevn -lsevn_lib_static
+SE_OBJS = build/evolve_sevn.o
+else
 BSELIBFILES= bse-interface/libbse.a bse-interface/bse_interface.h
 BSELIBS = -L ./bse-interface -lbse $(FCLIBS)
+endif
 CXXLIBS += $(BSELIBS)
 LIBFILES+= $(BSELIBFILES)
 PETAR_INCLUDE += -I ./bse-interface
@@ -80,8 +88,13 @@ SE_INSTALL:
 	$(MAKE) -C bse-interface install
 SE_CLEAN:
 	$(MAKE) -C bse-interface clean
+ifeq ($(se_mode),sevn)
+build/evolve_sevn.o: bse-interface/evolve_sevn.cpp |build
+	$(MAKE) -C bse-interface
+else
 bse-interface/libbse.a: bse-interface
 	$(MAKE) -C bse-interface 
+endif
 endif
 endif
 
@@ -226,8 +239,8 @@ SRC = main.cc ${shell ls ./src/*.hpp}
 build:
 	[ -d build ] || mkdir build
 
-build/@PROG_NAME@:  $(SRC) $(OBJS) $(LIBFILES) |build
-	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(OBJS) $(CXXLIBS)
+build/@PROG_NAME@:  $(SRC) $(SE_OBJS) $(OBJS) $(LIBFILES) |build
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(SE_OBJS) $(OBJS) $(CXXLIBS)
 
 SIMD_DEBFLAGS += -DRSQRT_NR_EPJ_X2
 SIMD_DEBFLAGS += -DAVX_PRELOAD
@@ -242,11 +255,11 @@ HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_TREE -D AR_SLOWDOWN_TIMESCALE -D HARD_
 
 HARD_SRC= io.hpp ptcl.hpp particle_base.hpp hard_assert.hpp cluster_list.hpp hard.hpp hard_ptcl.hpp hermite_interaction.hpp hermite_information.hpp hermite_perturber.hpp ar_interaction.hpp ar_perturber.hpp search_group_candidate.hpp artificial_particles.hpp stability.hpp soft_ptcl.hpp static_variables.hpp tidal_tensor.hpp orbit_sampling.hpp pseudoparticle_multipole.hpp
 
-build/petar.format.transfer: format_transfer.cxx |build
-	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS)
+build/petar.format.transfer: format_transfer.cxx $(SE_OBJS) |build
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS) $(SE_OBJS) $(BSELIBS)
 
-build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(BSELIBFILES) |build
-	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(BSELIBS)
+build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(BSELIBFILES) $(SE_OBJS) |build
+	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(SE_OBJS) $(BSELIBS)
 
 build/petar.hard.test: hard_test.cxx $(HARD_SRC) |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)

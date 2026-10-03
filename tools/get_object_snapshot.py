@@ -100,7 +100,7 @@ if __name__ == '__main__':
         print("                   # core: core data at the time of the snapshot")
         print("                   # origin, single, and binary: all three types of snapshots without position and velocity correction")
         print("                   # Return selected data")
-        print("  -i(--interrupt-mode)  [S]  The interruption mode used in Petar, choices: bse, mobse [%s]" % interrupt_mode)
+        print("  -i(--interrupt-mode)  [S]  The interruption mode used in Petar, choices: bse, mobse, sevn [%s]" % interrupt_mode)
         print("  -t(--external-mode)   [S]  External mode used in Petar, choices: galpy, none [%s]" % external_mode)
         print("       Notice that when the external mode is not none and the mode is not custom,")
         print("       the position and velocity offset from the header are added for single and binary snapshots.")

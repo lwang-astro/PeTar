@@ -12,9 +12,9 @@ do
 	    echo 'Options (default arguments shown in parentheses at the end):';
 	    echo '  -f [S] Specify the output file (PeTar input data) name (default: input file name + ".input")';
 	    echo '  -i [I] Skip the given number of rows in the input data file (default: 0)';
-	    echo '  -s [S] Add stellar evolution columns: base | bse | no (default: no)';
+	    echo '  -s [S] Add stellar evolution columns: base | bse | sevn | no (default: no)';
 	    echo '  -m [F] Set the mass scaling factor from the input data unit to [Msun]: mass[input unit]*m_scale=mass[Msun] (default: 1.0)';
-	    echo '      Note that Msun is used as the mass unit in BSE based stellar evolution.';
+	    echo '      Note that Msun is used as the mass unit in BSE/SEVN based stellar evolution.';
 	    echo '  -r [F] Set the radius scaling factor from the input data unit to [pc] (default: 1.0)';
 	    echo '  -v [F] Set the velocity scaling factor from the input data unit to [pc/myr]  (default: 1.0)';
 	    echo '          If "kms2pcmyr" is given, convert velocity unit from [km/s] to [pc/myr].';
@@ -146,6 +146,15 @@ if [[ $seflag != 'no' ]]; then
 	echo 'Interrupt mode: '$seflag
 	echo 'mass scale from PeTar unit (PT) to Msun (m[Msun] = m[PT]*mscale): ' $mscale
 	awk -v ms=$mscale  '{OFMT="%.15g"; print '"$base_col$se_col$bse_col$soft_col"'}' $fout.scale__ >>$fout
+
+	  elif [[ "$seflag" == *"sevn"* ]]; then
+    	#       type, m0,  m,     rad, mc,  rc,  spin, epoch, time, lum, Mzams_SEVN, MHE_SEVN, MCO_SEVN, Plife_SEVN, Phase_SEVN, RemnantType_SEVN
+  sevn_col='1, $1*ms, $1*ms, 0.0, 0.0, 0.0, 0.0,  0.0,   0.0,  0.0, $1*ms, 0.0, 0.0, 0.0, 1, 0,'
+
+	echo 'Interrupt mode: '$seflag
+	echo 'mass scale from PeTar unit (PT) to Msun (m[Msun] = m[PT]*mscale): ' $mscale
+	awk -v ms=$mscale  '{OFMT="%.15g"; print '"$base_col$se_col$sevn_col$soft_col"'}' $fout.scale__ >>$fout
+
     else
 	echo 'Error: unknown option for stellar evolution: '$seflag
     fi
