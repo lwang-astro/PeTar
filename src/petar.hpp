@@ -2635,6 +2635,9 @@ public:
                     remove_list_thx[ith].push_back(i);
                     PS::F64 dpot = pi.mass*pi.pot_tot;
                     PS::F64 dkin = 0.5*pi.mass*(pi.vel*pi.vel);
+#ifdef RECORD_CM_IN_HEADER
+                    dkin -= stat.pcm.calcDEKinFrameShift(0.0, pi.vel, pi.mass, pi.vel);
+#endif
                     PS::F64 eloss = dpot + dkin;
                     stat.energy.etot_ref -= eloss;
 #ifdef HARD_CHECK_ENERGY
@@ -4366,6 +4369,9 @@ public:
                 if (modify_flag) {
                     auto& v = p.vel;
                     PS::F64 de_kin = 0.5*(p.mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]) - mbk*(vbk[0]*vbk[0]+vbk[1]*vbk[1]+vbk[2]*vbk[2]));
+#ifdef RECORD_CM_IN_HEADER
+                    de_kin += stat.pcm.calcDEKinFrameShift(p.mass, v, mbk, vbk);
+#endif
                     stat.energy.de_sd_change_cum += de_kin;
                     stat.energy.de_sd_change_modify_single += de_kin;
                     stat.energy.de_change_cum += de_kin;

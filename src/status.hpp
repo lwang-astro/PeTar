@@ -37,6 +37,17 @@ public:
 #endif
                       is_center_shift_flag(false) {}
 
+#ifdef RECORD_CM_IN_HEADER
+        //! extra kinetic energy change seen in the frame moving with this c.m. velocity
+        /*! when a body changes from (m0, v0) to (m1, v1), velocities given relative to this frame:
+            dE = V.(m1 v1 - m0 v0) + 0.5 (m1 - m0) |V|^2  with V = this->vel  */
+        PS::F64 calcDEKinFrameShift(const PS::F64 _m1, const PS::F64vec& _v1,
+                                    const PS::F64 _m0, const PS::F64vec& _v0) const {
+            const PS::F64vec& v_frame = vel;
+            return v_frame*(_m1*_v1 - _m0*_v0) + 0.5*(_m1 - _m0)*(v_frame*v_frame);
+        }
+#endif
+
         //! print titles of class members using column style
         /*! print titles of class members in one line for column style
           @param[out] _fout: std::ostream output object
