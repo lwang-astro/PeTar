@@ -645,6 +645,7 @@ static double EstimateRocheRadiusOverSemi(double& _q) {
   @param[in] _ecc: eccentricity of binary, used for BSE
   \return timescale in Myr
 */
+#ifndef SEVN
 static double EstimateGRTimescale(StarParameter& _star1, StarParameter& _star2, double& _semi, double& _ecc) {
     double ecc2 = _ecc*_ecc;
     double omecc2 = 1.0 - ecc2;
@@ -656,6 +657,7 @@ static double EstimateGRTimescale(StarParameter& _star1, StarParameter& _star2, 
     double dtr = 1.0e-9/djgr*(1-_ecc); // in Myr,  with 0.001 coefficent and ecc correction factor
     return dtr;
 }
+#endif
 
 
 //! BSE based code event recorder class
@@ -1960,7 +1962,9 @@ public:
     int evolveStar(StarParameter& _star, StarParameterOut& _out, const double _dt, bool _unit_in_myr=false) {
         double tphysf = _dt*tscale + _star.tphys;
         if (_unit_in_myr) tphysf = _dt + _star.tphys;
+#ifndef SEVN
         double dtp = tphysf*100.0+1000.0;
+#endif
         _out.dm = _star.mt;
         _out.kw0 = _star.kw;
 #ifdef SEVN
@@ -2015,7 +2019,9 @@ public:
 #endif
         double tphys = std::max(_star1.tphys, _star2.tphys);
         double tphysf = _dt_nb*tscale + tphys;
+#ifndef SEVN
         double dtp=tphysf*100.0+1000.0;
+#endif
         double period_days = _period*tscale*myr_to_day;
         double semi_rsun = _semi*rscale;
         // in case two component have different tphys, evolve to the same time first
@@ -2627,8 +2633,12 @@ public:
 #ifdef SEVN
             // SEVN internal check: when the next SEVN event is sooner than the next regular check, call BSE now
             if (!call_flag) {
-                if (_semi <= 0.0) call_flag = true; // Also including negative SMA
-                else if (_ecc >= 1.0) call_flag = true;
+                // unbound pairs (negative SMA / ecc>=1) need a call only when there is time to
+                // evolve: with _dt1==_dt2==0 (both components already synced to time_now) the
+                // caller's dt>0 assumption would be violated; the next interrupt re-checks instead
+                if (_semi <= 0.0 or _ecc >= 1.0) {
+                    if (dt > 0.0) call_flag = true;
+                }
                 else {
                     double dt_sevn = std::max(_dt1, _dt2);
                     int binary_type_dummy = -1;

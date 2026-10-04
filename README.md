@@ -376,6 +376,11 @@ Enabling this option will also compile and install the standalone tool _petar.[b
 
 To use the SEVN track interpolator, users must compile and install the SEVN code (see
 Section [Dependence](#dependence)).
+Note that the SEVN installer does not copy the lookup tables: they remain in the SEVN
+source directory, and at runtime PeTar must be pointed at them via `--tables`
+(prefer the MIST gold set `SEVNtracks_MIST_AGBrobust_gold`, which covers
+0.7–80 M☉; the default PARSEC tables only cover ≥2.2 M☉). A complete worked
+example is `sample/star_cluster_plummer_N1k_binaries_sevn.sh`.
 
 To use the extreme metal-poor evolution track of bseEmp, users must create a symbolic link in the working directory to either the _ffbonn_ or _ffgeneva_ directory located in 'PeTar/bse-interface/bseEmp/emptrack/', depending on the selected stellar evolution track mode during the execution of PeTar. Failure to do this will lead to a file I/O error, causing the simulation to crash.
 
@@ -499,6 +504,7 @@ Core sample scripts:
 - [star\_cluster\_plummer\_N1k.sh](sample/star_cluster_plummer_N1k.sh): Isolated Plummer cluster (`N=1000`) without stellar evolution or external potential.
 - [star\_cluster\_plummer\_N1k\_binaries.sh](sample/star_cluster_plummer_N1k_binaries.sh): Isolated cluster with primordial binaries.
 - [star\_cluster\_plummer\_N1k\_binaries\_bse.sh](sample/star_cluster_plummer_N1k_binaries_bse.sh): Primordial binaries with SSE/BSE stellar evolution (`bse`).
+- [star\_cluster\_plummer\_N1k\_binaries\_sevn.sh](sample/star_cluster_plummer_N1k_binaries_sevn.sh): Primordial binaries with SEVN stellar evolution (`sevn`).
 
 Additional external-potential examples (previously not covered in this quick-start list):
 - [star\_cluster\_plummer\_N1k\_GalpyMWPot.sh](sample/star_cluster_plummer_N1k_GalpyMWPot.sh): No-binary cluster in Galactic potential using Galpy (`galpy`).

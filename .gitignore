@@ -36,6 +36,7 @@ bse-interface/Makefile
 bse-interface/petar.bse
 bse-interface/petar.bseEmp
 bse-interface/petar.mobse
+bse-interface/petar.sevn
 bse-interface/petar.*.get.init.binary
 bse-interface/sevn/
 galpy-interface/petar.galpy

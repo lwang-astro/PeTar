@@ -615,3 +615,27 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 上游 PR 按旧版 SEVN 的 BSE 式接口写种子代码,SEVN 库后来换成自带 `utilities` 随机数,接口蒸发但调用侧残留;静态审阅只看"写没写",没验证"谁在读"。CLI 坑在 SEVN 源码 `src/general/params.cpp` 的 `SEVNpar::load`(n%2==0 即报错)。
 
 **Prevention rule**: ① 接线随机种子(或任何跨库状态)时必须验证消费端存在:查库符号导出(`nm`)与头文件引用,写而无读即删除,不留"安慰性"代码;② 判断某 CLI 选项是否仍有效,反向 grep 其 `.value` 的全部消费点,而不是看帮助文本;③ 排查 sevn.x 时所有参数写成 `-名 值` 成对形式(布尔也用 `-名 true/false`),argc 保持奇数。
+
+### 2026-10-04: SEVN "MZAMS out of range" 是表覆盖稀疏不是库表错配——gold 表实测 0.7–80 M☉;运行验证须防已安装工具过期
+
+**Mistake**: SEVN 运行长期被 `MZAMS 0.91 out of range` 阻塞,当时推断为"库版本↔表集版本不匹配"并写进了 SKILL/plan。实测(petar.sevn 逐质量探测)发现:非 gold MIST 表(AGBnotpedantic)在部分 Z 下 ~1 M☉ 以下覆盖稀疏(SEVN 的 `tables/tables_info.md` 明说未达 CO 燃烧的轨道被裁剪),报错信息引用的 0.7–150 是标称范围不反映实际网格;换 `SEVNtracks_MIST_AGBrobust_gold` 后 0.7 M☉ 起全通(0.65 失败,90+ 失败@Z=0.00142857)。另两个坑:① SEVN 安装器**不拷贝 tables/**,`--tables` 必须指向 SEVN 源码目录;② 端到端首测报"requiring 18, only obtain 17",根因是 `~/bin/petar.init` 还是修复前的 19 列旧版——仓库 tools/ 改过后必须重新 install,否则浪费排查时间在代码侧。
+
+**Root cause**: 报错范围来自表元数据标称值,真实覆盖由轨道裁剪决定;错误推断("版本错配")未被实测证伪就写进了文档;已安装工具与仓库 HEAD 漂移没有检查习惯。
+
+**Prevention rule**: ① SEVN 质量/Z 越界先做逐点探测(`petar.sevn --tables <集> -z <精确Z> 质量1 质量2 ...`),再读 `tables/tables_info.md` 的覆盖说明,gold 表优先;② 凡"工具行为怪异",先 `diff` 已安装副本与仓库版再查代码;③ 运行期新结论必须实测(本条:gold 表 + N1k 无双星全程跑通 + type_change 事件落盘)后才更新 SKILL/plan,推断性结论要标注"未验证"。
+
+### 2026-10-04: SEVN dt=0 断言——unbound 对无条件调用违反主调 dt>0 不变量;修复验证必须核二进制 mtime>头文件 mtime
+
+**Mistake**: N1k 无双星 SEVN 运行在 t=7.75 Myr(BH 形成后)触发 `ar_interaction.hpp:1230 (dt>0)` 断言。直觉归因方向全错:先怀疑 SEVN overshoot(dtmiss<0 使 time_record 超前)——独立工具逐星实测排除;真因是 dt **恰好为 0**(bit 级 `time_record == time_interrupt == time_now`,gdb 十六进制比对确认):被 SN 踢出的 BH 与 MS 星新形成**双曲对**(semi<0, ecc 1.88),两成员 SSE 状态已同步到 time_now,而 `isCallBSENeeded` SEVN 分支对 unbound 对(`_semi<=0`/`_ecc>=1`)无条件返回 true、不查 dt——主调方的 `ASSERT(dt>0)` 不变量被破坏。非 SEVN 分支无此规则,故 bse 免疫(对照实验存活只是巧合性证据)。修复:unbound 对仅在 `max(dt1,dt2)>0` 时调用,否则推迟到下一中断点。另一坑:首次修复后回放仍复现断言——worktree 头文件 mtime(17:33)晚于二进制(12:04,时钟跳变导致 make 未感知头已更新),编译的还是旧头;gdb 断点行号与源码不符是唯一线索。
+
+**Root cause**: 上游 SEVN 分支新增"负 SMA/高心率即调用"判据时,没有与主调方 `dt = time_now − max(time_record) > 0` 的前置约定对齐;dt=0 调用本就无演化量可做。构建侧:文件 mtime 时钟跳变使 make 依赖失效。
+
+**Prevention rule**: ① 时序断言类崩溃,先 gdb 十六进制比对涉事时间量(==0 与 <0 的区分直接决定归因方向),再用同 IC 的对照模式解释差异来源,不接受"对照组存活"作为充分证据;② 给 `isCallBSENeeded` 类判据函数加新调用条件时,必须核对主调方对该调用成立的全部隐含前提(此处是 dt>0);③ cp+make 之后、回放之前,核对 `binary_mtime > header_mtime`,不符则 touch 强制重建——gdb 断点行号与源码不符即为陈旧二进制的特征信号。
+
+### 2026-10-04: SEVN 静态库默认带 OpenMP 符号——拉取其归档成员的工具只需链接期旗标;-Dopenmp=OFF 因 TLS 错配与线程安全被否决
+
+**Mistake**: 主树 `make install` 在 `format.transfer` 链接失败(undefined `omp_get_thread_num`)。误判一:以为 worktree 曾成功构建该目标即"免疫"——实为其产物从未真正重链(文件缺失),旧规则强制链接同样失败;误判二:尝试以 `-Dopenmp=OFF` 重建 SEVN 求干净——SEVN 头文件在 `_OPENMP` 下把 `liststars` 等静态流声明为 `threadprivate`(IO.h),PeTar 的 OMP 构建编译 `evolve_sevn.cpp` 产生 TLS 引用,与无 OMP 库的非 TLS 定义错配无法链接;且 petar 主程序在 OMP 并行区(integrateGroupsOneStep→evolveStar)、`petar.sevn` 逐星并行均调用 SEVN,线程安全恰恰依赖其 openmp 构建的 threadprivate。终案:SEVN 保持默认 openmp=ON,拉取 SEVN 归档成员的目标(format.transfer,因显式链接 evolve_sevn.o)加**仅链接**旗标 `OMPLINKFLAGS`(不带 `-D PARTICLE_SIMULATOR_THREAD_PARALLEL`、不产生任何并行);不引用 SEVN 符号的目标(simd.test/tt.test)静态库成员不被拉入、无需任何旗标;链接集统一为 `SELIBS`。另:hard.debug 回放退出时 LeakSanitizer 报 ~6.5 kB 字符串持有(IOParamsContainer::readAscii/add_sevn_param)属静态生命周期噪声,非泄漏,`ASAN_OPTIONS=detect_leaks=0` 可静默。
+
+**Root cause**: SEVN cmake `option(openmp ... ON)` 默认开启,日志用 `omp_get_thread_num` 随库分发;静态库成员拉取规则(无未解析符号不拉入)决定哪些目标受影响;SEVN 头文件的 `_OPENMP` 条件编译使库构建选项与调用方编译旗标强耦合。
+
+**Prevention rule**: ① 判断某工具是否需要 OpenMP 链接旗标:看它是否显式链接 SEVN 对象(`SE_OBJS`)或引用 SEVN 符号——显式列出的静态库仅按需拉成员;② 改动外部库构建选项前,先 grep 其头文件的条件编译宏(`_OPENMP` 类)与 PeTar 侧编译旗标的耦合,并确认调用是否发生在 OpenMP 并行区;③ 链接期 `-fopenmp` ≠ 启用并行(零线程占用),与编译宏 `THREAD_PARALLEL` 必须区分使用。

@@ -135,7 +135,9 @@ else
 BSELIBFILES= bse-interface/libbse.a bse-interface/bse_interface.h
 BSELIBS = -L ./bse-interface -lbse $(FCLIBS)
 endif
-CXXLIBS += $(BSELIBS) $(SEVNLIBS) $(SEVN_LIB)
+SELIBS = $(BSELIBS) $(SEVNLIBS) $(SEVN_LIB)
+
+CXXLIBS += $(SELIBS)
 LIBFILES+= $(BSELIBFILES) $(SEVN_LIB)
 PETAR_INCLUDE += -I ./bse-interface 
 CUDA_INCLUDE += -I ./bse-interface 
@@ -298,6 +300,12 @@ OMPFLAGS =
 ifeq ($(use_omp),yes)
 OMPFLAGS += @OPENMP_CXXFLAGS@
 OMPFLAGS += -D PARTICLE_SIMULATOR_THREAD_PARALLEL
+# link-only OpenMP flags (no THREAD_PARALLEL define, no parallelisation):
+# targets that link $(SEVN_LIB) must resolve the SEVN static library's OpenMP
+# runtime symbols; SEVN must be built with OpenMP (default) because petar and
+# petar.sevn call SEVN inside OpenMP regions and rely on its threadprivate
+# statics for thread safety
+OMPLINKFLAGS = @OPENMP_CXXFLAGS@
 endif # omp
 
 #---------------------------------------------
@@ -376,7 +384,7 @@ build/@PROG_NAME@:  $(SRC) $(SE_OBJS) $(OBJS) $(LIBFILES) $(RANDFILES) |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(OMPFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(SE_OBJS) $(OBJS) $(CXXLIBS) $(RANDLIBS)
 
 build/@PROG_NAME@.format.transfer: format_transfer.cxx $(SE_OBJS) |build
-	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS) $(SE_OBJS) $(BSELIBS) $(SEVNLIBS) $(SEVN_LIB)
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(OMPLINKFLAGS) $(MT_FLAGS) -o $@ $< $(SE_OBJS) $(CXXLIBS)
 
 build/@PROG_NAME@.hard.debug: hard_debug.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) $(SE_OBJS) |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(OMPFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(SE_OBJS) $(CXXLIBS) $(RANDLIBS)
