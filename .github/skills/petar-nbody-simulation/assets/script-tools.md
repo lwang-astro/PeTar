@@ -141,7 +141,6 @@ Measured reference (N=500, 2 Myr production run, one binary): 1 thread 1.13 s, 4
 
 ## Additional utility scripts
 
-- `petar.get.init.binary`
   Generate initial binary lists for BSE-style initialization workflows.
 
 - `petar.galpy.help`
@@ -169,8 +168,8 @@ Purpose inventory for the remaining installed binaries — none of the helper bi
 - `petar.bse` / `petar.mobse` / `petar.bseEmp`
   Standalone BSE-family stellar-evolution integrators — the only binaries for the standalone-bse scenario (no IC generation, no `petar.init`, metallicity required); not cluster N-body solvers.
 
-- `petar.get.init.binary.bse`
-  BSE-specific variant of `petar.get.init.binary` for generating initial binary tables.
+- `petar.<mode>.get.init.binary` (mode: bse|mobse|bseEmp|sevn)
+  Stellar-evolution initial binary table generator, installed per interrupt mode.
 
 ## Skill usage rule
 

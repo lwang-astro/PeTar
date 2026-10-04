@@ -1260,7 +1260,7 @@ public:
                         std::cerr<<" semi[R*]: "
                                  <<_bin.semi*bse_manager.rscale
                                  <<" ecc: "<<_bin.ecc
-                                 <<" period[days]: "<<_bin.period*bse_manager.tscale*bse_manager.year_to_day;
+                                 <<" period[days]: "<<_bin.period*bse_manager.tscale*bse_manager.myr_to_day;
                         std::cerr<<" Init: Star1: ";
                         p1_star_bk.print(std::cerr);
                         std::cerr<<" Star2: ";
@@ -1280,8 +1280,8 @@ public:
 
                     // check binary type and print event information
                     int binary_type_final=0;
-                    int nmax = bin_event.getEventNMax();
-                    int binary_type_init = bin_event.getType(bin_event.getEventIndexInit());
+                    int nmax = BinaryEvent::getEventNMax();
+                    int binary_type_init = bin_event.getType(BinaryEvent::getEventIndexInit());
                     for (int i=0; i<nmax; i++) {
                         int binary_type = bin_event.getType(i);
                         if (binary_type>0) {
@@ -1324,13 +1324,13 @@ public:
 
                             //if (vkick[3]>0||vkick[7]>0) event_flag = 3; // kick
                             if (binary_type>0) event_flag = std::max(event_flag, 1); // type change
-                            if (bse_manager.isMassTransfer(binary_type)) event_flag = std::max(event_flag, 2); // orbit change
-                            else if (bse_manager.isDisrupt(binary_type)) event_flag = std::max(event_flag, 3); // disrupt
-                            else if (bse_manager.isMerger(binary_type)) {
+                            if (BSEManager::isMassTransfer(binary_type)) event_flag = std::max(event_flag, 2); // orbit change
+                            else if (BSEManager::isDisrupt(binary_type)) event_flag = std::max(event_flag, 3); // disrupt
+                            else if (BSEManager::isMerger(binary_type)) {
                                 event_flag = std::max(event_flag, 4); // Merger
-                                if (bse_manager.isGWMerger(binary_type)) event_flag = std::max(event_flag, 6); // GW Merger
+                                if (BSEManager::isGWMerger(binary_type)) event_flag = std::max(event_flag, 6); // GW Merger
                             }
-                            else if (bse_manager.isNoRemnant(binary_type)) event_flag = std::max(event_flag, 5); // no Remnant
+                            else if (BSEManager::isNoRemnant(binary_type)) event_flag = std::max(event_flag, 5); // no Remnant
                             binary_type_final = binary_type;
 
                         }
@@ -1444,12 +1444,12 @@ public:
                             std::ofstream& fout_merge = getBSEMergeEventStream(logmessage);
                             fout_merge<<std::setw(WRITE_WIDTH)<<p1->id
                                  <<std::setw(WRITE_WIDTH)<<p2->id
-                                 <<std::setw(WRITE_WIDTH)<<_bin.period*bse_manager.tscale*bse_manager.year_to_day
+                                 <<std::setw(WRITE_WIDTH)<<_bin.period*bse_manager.tscale*bse_manager.myr_to_day
                                  <<std::setw(WRITE_WIDTH)<<_bin.semi*bse_manager.rscale
                                  <<std::setw(WRITE_WIDTH)<<_bin.ecc;
 #ifndef DYNAMIC_MERGER_LESS_OUTPUT
                             fout_merge<<std::setw(WRITE_WIDTH)<<dr*bse_manager.rscale
-                                 <<std::setw(WRITE_WIDTH)<<t_peri*bse_manager.tscale*bse_manager.year_to_day
+                                 <<std::setw(WRITE_WIDTH)<<t_peri*bse_manager.tscale*bse_manager.myr_to_day
                                  <<std::setw(WRITE_WIDTH)<<sd_factor;
 #endif
                                 // before

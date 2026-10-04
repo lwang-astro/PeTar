@@ -1,6 +1,6 @@
 #!/bin/bash
 
-suffixes='esc sse bse mosse mobse sseEmp bseEmp'
+suffixes='esc sse bse mosse mobse sevn sevnB sseEmp bseEmp'
 unset rmi
 unset onlylist
 unset groupflag
@@ -109,7 +109,7 @@ if [ ! -z $groupflag ]; then
 
 fi
 
-sse_opt='.sse .mosse .sseEmp'
+sse_opt='.sse .mosse .sevn .sseEmp'
 for s in $sse_opt
 do
     if [ -e $fout$s ]; then
@@ -119,13 +119,19 @@ do
     fi
 done
 
-bse_opt='.bse .mobse .bseEmp'
+bse_opt='.bse .mobse .sevnB .bseEmp'
 for s in $bse_opt
 do
     if [ -e $fout$s ]; then
 	echo 'get '$s' type_change, sn_kick, gw_kick, dynamic_merge, GW_tide_merge, hyperbolic_tde, binary_tde, tide'
 	egrep '^Dynamic_merge' $fout$s |sed 's/Dynamic_merge://g' >$fout$s.dynamic_merge.tmp
-	awk '{if (NF==45) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $LINE}' $fout$s.dynamic_merge.tmp > $fout$s.dynamic_merge
+	# SEVN star printColumn has 6 extra columns per star (4 stars in dynamic_merge):
+	# 69 fields when DYNAMIC_MERGER_LESS_OUTPUT is used (72 otherwise, 45/48 for BSE)
+	if [ "$s" = ".sevnB" ]; then
+  	    awk '{if (NF==69) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $0}' $fout$s.dynamic_merge.tmp > $fout$s.dynamic_merge
+  	else
+  	    awk '{if (NF==45) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $0}' $fout$s.dynamic_merge.tmp > $fout$s.dynamic_merge
+  	fi
 	rm -f $fout$s.dynamic_merge.tmp
 	egrep '^Binary_merge' $fout$s |sed 's/Binary_merge://g' >$fout$s.binary_merge.tmp
 	awk '{if (NF==45) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $LINE}' $fout$s.binary_merge.tmp > $fout$s.binary_merge

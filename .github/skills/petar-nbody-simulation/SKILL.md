@@ -17,7 +17,7 @@ This compact version prioritizes execution safety, option correctness, and repro
 - **Infer required physics/runtime features first, then switch binary family with `petar.select`.** Never run whatever `petar` currently points to, and never switch binaries by hand-editing symlinks. See "Binary Selection and Capability Validation".
 - **Ask only for missing required inputs; never guess a physics-defining parameter.** Do not proceed until every scenario-required input is resolved.
 - Only two defaults may be applied without asking: output prefix `data`, unit mode `-u 1`. Everything physics-defining must be confirmed — the definitive checklist is `assets/ic-generation.md` → "Star-Cluster Generation Inputs".
-- Mandatory scenario confirmations: stellar-evolution module (`merger` | `bse` | `bseEmp` | `mobse` | `dsm`); external-potential mode (`galpy` | `agama`); metallicity for BSE-family runs; and, for Galpy/Agama, COM position **and** velocity in physical units as numerical values — never accept vague descriptions such as "Sun position".
+- Mandatory scenario confirmations: stellar-evolution module (`merger` | `bse` | `bseEmp` | `mobse` | `sevn` | `dsm`); external-potential mode (`galpy` | `agama`); metallicity for BSE-family runs; and, for Galpy/Agama, COM position **and** velocity in physical units as numerical values — never accept vague descriptions such as "Sun position".
 - Exclude debug and GPU families unless the user explicitly asks for them.
 - Enforce unit consistency across IC generation, `petar.init`, runtime options, and post-processing.
 
@@ -50,8 +50,11 @@ This compact version prioritizes execution safety, option correctness, and repro
   source_version=$(echo "$(cat VERSION)_$(cat ../SDAR/VERSION)")
   ```
 - **When rebuilding, pass only the flags the current scenario needs** — never reuse the previous `config.status` command verbatim; it may carry unneeded features (e.g. `gasdrag`, `pnhermite`) into an unnecessarily large binary. Derive flags from the features selected for this scenario:
-  - `--with-interrupt=<bse|mobse|bseEmp|dsm>` for stellar evolution / disk star merger
+  - `--with-interrupt=<bse|mobse|bseEmp|sevn|dsm>` for stellar evolution / disk star merger
   - `--with-external=<galpy|agama>` for external potential
+  - SEVN build prerequisites: the SEVN library must be installed before configure (default location `<PeTar>/bse-interface/sevn`; an install elsewhere needs `--with-sevn-prefix=PREFIX`) — exact install commands live in `README.md` → "SEVN"; configure checks the headers and the static archive and fails with install instructions if missing
+  - SEVN runtime prerequisites (without them the run aborts in stellar initialisation): MIST tables via `--tables <sevn>/tables/SEVNtracks_MIST_AGBnotpedantic` (the default PARSEC tables only cover ≥2.2 M☉), `--tabuse_rhe false --tabuse_rco false --tabuse_envconv false` (MIST tables ship without these files), and stellar masses ≥0.7 M☉ (MIST grid lower bound); even with these, masses inside the MIST grid can still fail initialisation on an unresolved SEVN library↔table mismatch — see `doc/sevn_integration_plan.md` §3
+  - SEVN known limitation: random processes (e.g. SN kicks) use SEVN's internal random generator, which is not seeded by PeTar (`--rand-seed` has no effect; runs are not bit-wise reproducible) — see `doc/sevn_integration_plan.md` (D1). BSE-family packages are unaffected (kicks use PeTar's parallel random system).
   - `--with-external-hard=<gasdrag>` — **only if gas drag is explicitly requested**
   - `--with-pn=<pnall|pnhermite|…>` — **only if post-Newtonian correction is explicitly requested**
   - `--enable-mpfrc` — **only if MPFRC precision is explicitly requested**
@@ -133,7 +136,7 @@ Run `petar.find.dt` between IC preparation and the production run (Gate 5), then
 ### Binary Selection
 
 1. Determine required tokens from scenario:
-   - interrupt: `merger`, `bse`, `mobse`, `bseEmp`, `dsm`
+   - interrupt: `merger`, `bse`, `mobse`, `bseEmp`, `sevn`, `dsm`
    - external: `galpy`, `agama`
    - external-hard: `gasdrag`
    - PN: `pn*`

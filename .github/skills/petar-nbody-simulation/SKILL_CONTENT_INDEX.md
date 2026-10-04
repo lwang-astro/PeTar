@@ -73,6 +73,7 @@ Status: covered (split out 2026-09-29)
 
 - Gate 4 rebuild-flag derivation: `.github/skills/petar-nbody-simulation/SKILL.md` (Gate 4)
 - Toolchain environment checks, Makefile verification, clean-rebuild procedure, libasan/MPI-flavor hazards: `.github/skills/petar-nbody-simulation/assets/build-toolchain.md`
+- SEVN scenario rules (single home, added with the SEVN integration 2026-10-04): build/runtime prerequisites (install pointer to `README.md` → "SEVN", MIST tables, `--tabuse_* false`, mass ≥0.7 M☉, residual library↔table mismatch caveat) and the unseeded-random limitation — `SKILL.md` (Gate 4 build-flag list); per-scenario asks — `assets/minimal-question-sets.md` → "SEVN"
 
 Status: covered (split out 2026-09-29)
 

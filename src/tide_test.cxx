@@ -8,6 +8,7 @@
 #include <particle_simulator.hpp>
 #include "two_body_tide.hpp"
 #include "../src/io.hpp"
+#include "../src/astro_units.hpp"
 
 //! A sample particle class
 /*! A particle class should contain public members:
@@ -107,8 +108,8 @@ public:
 
 int main(int argc, char** argv){
 
-    Float G = 0.00449830997959438; // Msun pc Myr
-    Float c = 0.306594845e6; // pc/Myr
+    Float G = G_ASTRO; // pc^3/(Msun*Myr^2)
+    Float c = SPEED_OF_LIGHT; // pc/Myr
     int width = 14;
     int precision = 7;
 

@@ -1,23 +1,36 @@
 se_mode=@with_interrupt@
 
-BSE_LIB=libbse.a
-
 ifeq ($(se_mode),bse)
-BSE_TEST=petar.bse
-BSE_PATH=bse
+SE_TEST=petar.bse
+SE_PATH=bse
 CXXFLAGS = -D BSEBBF -D BSE_BASE
 else ifeq ($(se_mode),mobse)
-BSE_TEST=petar.mobse
-BSE_PATH=mobse
+SE_TEST=petar.mobse
+SE_PATH=mobse
 CXXFLAGS = -D MOBSE -D BSE_BASE
 else ifeq ($(se_mode),bseEmp)
-BSE_TEST=petar.bseEmp
-BSE_PATH=bseEmp
+SE_TEST=petar.bseEmp
+SE_PATH=bseEmp
 CXXFLAGS = -D BSEEMP -D BSE_BASE
+else ifeq ($(se_mode),sevn)
+SE_TEST=petar.sevn
+SE_PATH=$(SEVN_PREFIX)/include/sevn
+CXXFLAGS = -D SEVN -D BSE_BASE
 endif
 
+ifeq ($(se_mode),sevn)
+SE_LIB=
+# @sevn_prefix@/@sevn_lib@ are relative to the PeTar top directory; strip the
+# leading ./bse-interface/ so the paths resolve from this subdirectory too
+SEVN_PREFIX := $(patsubst ./bse-interface/%,./%,@sevn_prefix@)
+SEVN_LIB := $(patsubst ./bse-interface/%,./%,@sevn_lib@)
+SELIBS = -I$(SEVN_PREFIX)/include/sevn
+else
+SE_LIB=libbse.a
+SELIBS = -lbse
+endif
 
-TARGET: $(BSE_LIB) $(BSE_TEST) petar.get.init.binary.bse
+TARGET: $(SE_LIB) $(SE_TEST) $(SE_TEST).get.init.binary
 
 FC=@FC@
 CXX=@CXX@
@@ -44,14 +57,16 @@ endif # omp
 #FFLAGS= -g -O0 -Wall -finit-real=nan -fbounds-check
 #CXXFLAGS= -g -O2 -Wall -std=c++11 -fbounds-check
 
-VPATH=$(BSE_PATH) 
+VPATH=$(SE_PATH) 
 
-SRC:= $(shell find $(BSE_PATH) -type f  \( -iname '*.f' ! -iname '.*' ! -iname '[sb]se.f' ! -iname 'mo[sb]se.f' ! -iname 'popbin.f' \) )
+ifneq ($(se_mode),sevn)
+SRC:= $(shell find $(SE_PATH) -type f  \( -iname '*.f' ! -iname '.*' ! -iname '[sb]se.f' ! -iname 'mo[sb]se.f' ! -iname 'popbin.f' \) )
 OBJ:= $(SRC:.f=.o)
+endif
 ifeq ($(se_mode),bseEmp)
-SRC:= $(shell find $(BSE_PATH)  \( -iname '*.f' ! -iname '.*' ! -iname '[sb]se.f' ! -iname 'mo[sb]se.f' ! -iname 'popbin.f' \) )
+SRC:= $(shell find $(SE_PATH)  \( -iname '*.f' ! -iname '.*' ! -iname '[sb]se.f' ! -iname 'mo[sb]se.f' ! -iname 'popbin.f' \) )
 OBJ:= $(SRC:.f=.o)
-SRCCXX:= $(shell find $(BSE_PATH) -maxdepth 1 \( -iname '*.cpp' \) )
+SRCCXX:= $(shell find $(SE_PATH) -maxdepth 1 \( -iname '*.cpp' \) )
 OBJCXX:= $(SRCCXX:.cpp=.o)
 endif
 
@@ -59,21 +74,31 @@ RAND_PATH=../parallel-random
 RAND_LIB=$(RAND_PATH)/librand.a
 RAND_INCLUDE:= $(shell find $(RAND_PATH) -type f \( -iname '*.hpp' \) )
 
-$(BSE_LIB): $(OBJ) $(OBJCXX) $(RAND_LIB)
+ifeq ($(se_mode),sevn)
+../build/evolve_sevn.o: evolve_sevn.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@ $(SELIBS)
+else
+$(SE_LIB): $(OBJ) $(OBJCXX) $(RAND_LIB)
 	ar rcs $@ $^
+endif
 
-$(BSE_TEST): bse_test.cxx $(BSE_LIB) bse_interface.h $(RAND_INCLUDE)
-	$(CXX) $(CXXFLAGS) $< -o $@ -L./ -L../parallel-random -lbse -lrand $(FCLIBS)
+ifeq ($(se_mode),sevn)
+$(SE_TEST): bse_test.cxx $(SE_LIB) evolvebco_sevn.h bse_interface.h $(RAND_INCLUDE) $(RAND_LIB) |../build/evolve_sevn.o
+	$(CXX) $(CXXFLAGS) $< -o $@ ../build/evolve_sevn.o -L../parallel-random $(SELIBS) $(SEVN_LIB) -lrand $(FCLIBS)
+else
+$(SE_TEST): bse_test.cxx $(SE_LIB) bse_interface.h $(RAND_INCLUDE)
+	$(CXX) $(CXXFLAGS) $< -o $@ -L./ -L../parallel-random $(SELIBS) -lrand $(FCLIBS)
+endif
 
 ../parallel-random/librand.a: ../parallel-random
 	$(MAKE) -C ../parallel-random librand.a
 
-petar.get.init.binary.bse: get_init_binary_bse.sh
+$(SE_TEST).get.init.binary: get_init_binary.sh
 	ln -sf $< $@
 
 install:
 	install -d @prefix@/bin/
-	install -m 755 $(BSE_TEST) petar.get.init.binary.bse @prefix@/bin/
+	install -m 755 $(SE_TEST) $(SE_TEST).get.init.binary @prefix@/bin/
 
 clean:
-	rm -f $(BSE_PATH)/*.o *.o $(BSE_TEST) $(BSE_LIB)
+	rm -f $(SE_PATH)/*.o *.o $(SE_TEST) $(SE_LIB) $(SE_TEST).get.init.binary

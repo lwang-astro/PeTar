@@ -5,9 +5,15 @@
 #include <cstdio>
 #include <string>
 #include <getopt.h>
+#include <set>
 #include "../src/io.hpp"
 #include "../src/astro_units.hpp"
 #include "../src/gw_kick.hpp"
+
+#ifdef SEVN
+#include "./evolvebco_sevn.h"
+#include "lookup_and_phases.h"
+#endif
 
 /*!
   This file provides the interface classes to connect the BSE-based code to PeTar.
@@ -49,6 +55,17 @@
                                For each single star, if the given time is less than the next time estimated from the previous call, it is not evolved.
                                For each binary, if the given time is less than the next time estimated before, and the isCallBSENeeded return false, the binary is not evolved.
 */
+
+#ifdef SEVN
+// For SEVN default parameters, map of Label -> Pair of default value (first) and description (second)
+extern std::map<std::string, std::pair<std::string, std::string>> default_params_sevn;
+
+// For SEVN default parameters, map of Label -> Value
+extern std::map<std::string, std::string> input_params_SEVN;
+
+void construct_default_sevn_params();
+
+#endif
 
 #if (defined BSEBBF) || (defined BSEEMP)
 extern "C" {
@@ -251,6 +268,7 @@ extern "C" {
 }
 #endif
 
+
 //! SSE/BSE based code star parameter for saving
 /*! The necessary stellar parameters used in BSE are collected into one class StarParameter.
     PeTar does not save stellar parameters in history, and only record the present values.
@@ -261,12 +279,34 @@ struct StarParameter{
     double m0;    ///> Initial stellar mass in solar units
     double mt;    ///> Current mass in solar units (used for R)
     double r;     ///> Stellar radius in solar units
-    double mc;    ///> core mass in solar units 
+    double mc;    ///> core mass in solar units
     double rc;    ///> core radius in solar units (output)
     double ospin[3];  ///> spin of star
     double epoch;  ///> starting time of one evolution phase, age = tphys - epoch
     double tphys;  ///> physical evolve time in Myr
-    double lum;    ///> Landmark luminosities 
+    double lum;    ///> Landmark luminosities
+#ifdef SEVN
+    // Mass at the ZAMS of the current stellar track in solar units
+    // (not necessarily equal to the actual ZAMS mass due to change of tracks)
+    double Mzams_SEVN{-1.0};
+
+    // Mass of the Helium core (includes also the CO core) in solar units
+    double MHE_SEVN{0.0};
+
+    // Mass of the CO core in solar units
+    double MCO_SEVN{0.0};
+
+    // Percentage of life in the current evolutionary phase
+    double Plife_SEVN{0.0};
+
+    // Current evolutionary phase (in the SEVN classification).
+    long long int Phase_SEVN{1}; // Start at the ZAMS
+
+    // Remnant type (in the SEVN classification)
+    long long int RemnantType_SEVN;
+
+    // We use long long int for compatibility with the Python interface when saving data in BINARY format
+#endif
 
     //! initial zero age main sequence
     /*!
@@ -293,26 +333,55 @@ struct StarParameter{
     }
         epoch = _epoch;
         tphys = _epoch;
+
+#ifdef SEVN
+        Mzams_SEVN = _mass;
+        Plife_SEVN = 0.0; // Start at the ZAMS
+        Phase_SEVN = 1; // Start at the ZAMS
+        RemnantType_SEVN = Lookup::NotARemnant;
+#endif
     }
 
     //! write class data with ASCII format
     /*! @param[in] _fout: file IO for write
      */
     void writeAscii(FILE* fp) const{
+#ifdef SEVN
+        fprintf(
+            fp,
+            "%lld %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %lld %lld",
+            this->kw, this->m0, this->mt, this->r, this->mc, this->rc, this->ospin[0], this->ospin[1], this->ospin[2], this->epoch, this->tphys, this->lum,
+            this->Mzams_SEVN, this->MHE_SEVN, this->MCO_SEVN, this->Plife_SEVN, this->Phase_SEVN,
+            this->RemnantType_SEVN);
+#else
         fprintf(fp, "%lld %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
                 this->kw, this->m0, this->mt, this->r, this->mc, this->rc, this->ospin[0], this->ospin[1], this->ospin[2], this->epoch, this->tphys, this->lum);
+#endif
     }
 
     //! read class data with ASCII format
     /*! @param[in] _fin: file IO for read
      */
     void readAscii(FILE* fp) {
+#ifdef SEVN
+        int rcount = fscanf(fp, "%lld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lld %lld ",
+                            &this->kw, &this->m0, &this->mt, &this->r, &this->mc, &this->rc, &this->ospin[0], &this->ospin[1], &this->ospin[2], &this->epoch,
+                            &this->tphys, &this->lum, &this->Mzams_SEVN, &this->MHE_SEVN, &this->MCO_SEVN,
+                            &this->Plife_SEVN, &this->Phase_SEVN, &this->RemnantType_SEVN);
+
+        if (rcount < 18) {
+            std::cerr << "Error: Data reading fails! requiring data number is " << 18 <<
+                ", only obtain " << rcount << ".\n";
+            abort();
+        }
+#else
         int rcount=fscanf(fp, "%lld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf ",
                           &this->kw, &this->m0, &this->mt, &this->r, &this->mc, &this->rc, &this->ospin[0], &this->ospin[1], &this->ospin[2], &this->epoch, &this->tphys, & this->lum);
         if(rcount<12) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 10, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Data reading fails! requiring data number is 12, only obtain "<<rcount<<".\n";
             abort();
         }
+#endif
     }
 
     //! for print in one line
@@ -328,7 +397,16 @@ struct StarParameter{
             <<" spin[2]= "<<ospin[2]
             <<" epoch= "<<epoch
             <<" t[myr]= "<<tphys
-            <<" lum[L*]= "<<lum;
+            <<" lum[L*]= "<<lum
+#ifdef SEVN
+            <<" Mzams_SEVN[M*]= "<<Mzams_SEVN
+            <<" MHE_SEVN[M*]= "<<MHE_SEVN
+            <<" MCO_SEVN[M*]= "<<MCO_SEVN
+            <<" Plife_SEVN= "<<Plife_SEVN
+            <<" Phase_SEVN= "<<Phase_SEVN
+            <<" RemnantType_SEVN= "<<RemnantType_SEVN
+#endif
+            ;
     }
 
     //! print titles of class members using column style
@@ -348,8 +426,17 @@ struct StarParameter{
              <<std::setw(_width)<<"s_spin[2]"
              <<std::setw(_width)<<"s_epoch[Myr]"
              <<std::setw(_width)<<"s_time[Myr]"
-             <<std::setw(_width)<<"s_lum[L*]";
-    }    
+             <<std::setw(_width)<<"s_lum[L*]"
+#ifdef SEVN
+             <<std::setw(_width)<<"s_Mzams_SEVN[M*]"
+             <<std::setw(_width)<<"s_MHE_SEVN[M*]"
+             <<std::setw(_width)<<"s_MCO_SEVN[M*]"
+             <<std::setw(_width)<<"s_Plife_SEVN[%]"
+             <<std::setw(_width)<<"s_Phase_SEVN"
+             <<std::setw(_width)<<"s_RemnantType_SEVN"
+#endif
+            ;
+    }
 
     //! print data of class members using column style
     /*! print data of class members in one line for column style. Notice no newline is printed at the end
@@ -368,7 +455,16 @@ struct StarParameter{
              <<std::setw(_width)<<ospin[2]            
              <<std::setw(_width)<<epoch
              <<std::setw(_width)<<tphys
-             <<std::setw(_width)<<lum;
+             <<std::setw(_width)<<lum
+#ifdef SEVN
+             <<std::setw(_width)<<Mzams_SEVN
+             <<std::setw(_width)<<MHE_SEVN
+             <<std::setw(_width)<<MCO_SEVN
+             <<std::setw(_width)<<Plife_SEVN
+             <<std::setw(_width)<<Phase_SEVN
+             <<std::setw(_width)<<RemnantType_SEVN
+#endif
+            ;
     }
 
     //! print column title with meaning (each line for one column)
@@ -399,6 +495,20 @@ struct StarParameter{
         _fout<<std::setw(_offset)<<" "<<counter<<". s_time: physical time [Myr]\n";
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". s_lum: luminosity [Lsun]\n";
+#ifdef SEVN
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". s_Mzams_SEVN: ZAMS mass of the current stellar track [Msun]\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". s_MHE_SEVN: Mass of the HE core [Msun]\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". s_MCO_SEVN: Mass of the CO core [Msun]\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". s_Plife_SEVN: Percentage of life in the current phase [0-1]\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". s_Phase_SEVN: Phase of the star (see SEVN types)\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". s_RemnantType_SEVN: Remnant type (see SEVN types)\n";
+#endif
         return counter;
     }
 
@@ -554,7 +664,11 @@ static double EstimateGRTimescale(StarParameter& _star1, StarParameter& _star2, 
 class BinaryEvent{
     public:
     // Tanikawa's BH model
+#ifdef SEVN
+    double record[33][9];
+#else
     double record[24][9];
+#endif
     //double record[20][81];
     //
 
@@ -710,14 +824,14 @@ class BinaryEvent{
     void setEventIndexEnd(const int index) {
         record[9][index] = -1;
     }
-    
-    //! Maximum event number that can be recored in one call of evolv2
-    int getEventNMax() const {
+
+    //! Maximum event number that can be recorded in one call of evolv2
+    static constexpr int getEventNMax() {
         return 8;
     }
     
     //! The index of initial event in record array (last one)
-    int getEventIndexInit() const {
+    static constexpr int getEventIndexInit() {
         return 8;
     }
 
@@ -750,12 +864,31 @@ class BinaryEvent{
             <<" mc2[M*]= "<<record[15][index]
             <<" rc1[R*]= "<<record[16][index]
             <<" rc2[R*]= "<<record[17][index]
+#ifdef SEVN
+            <<" ospin1= "<<record[18][index]
+            <<" ospin2= "<<record[19][index]
+            <<" Mzams_SEVN1[M*]= "<<record[20][index]
+            <<" Mzams_SEVN2[M*]= "<<record[21][index]
+            <<" MHE_SEVN1[M*]= "<<record[22][index]
+            <<" MHE_SEVN2[M*]= "<<record[23][index]
+            <<" MCO_SEVN1[M*]= "<<record[24][index]
+            <<" MCO_SEVN2[M*]= "<<record[25][index]
+            <<" Plife_SEVN1= "<<record[26][index]
+            <<" Plife_SEVN2= "<<record[27][index]
+            <<" Phase_SEVN1= "<<round(record[28][index])
+            <<" Phase_SEVN2= "<<round(record[29][index])
+            <<" RemnantType_SEVN1= "<<round(record[30][index])
+            <<" RemnantType_SEVN2= "<<round(record[31][index])
+            <<" BEvent_SEVN= "<<int(record[32][index])
+            ;
+#else
             <<" ospin1[0]= "<<record[18][index]
             <<" ospin1[1]= "<<record[19][index]
             <<" ospin1[2]= "<<record[20][index]
             <<" ospin2[0]= "<<record[21][index]
             <<" ospin2[1]= "<<record[22][index]
             <<" ospin2[2]= "<<record[23][index];
+#endif
     }
 
     //! print titles of class members using column style
@@ -802,17 +935,66 @@ class BinaryEvent{
         for (int i=3; i<5; i++) _fout<<std::setw(_width)<<int(record[i][_index]);
         for (int i=5; i<9; i++) _fout<<std::setw(_width)<<record[i][_index];
         _fout<<std::setw(_width)<<int(record[9][_index]);
+#ifdef SEVN
+        for (int i=10; i<33; i++) _fout<<std::setw(_width)<<record[i][_index];
+#else
         for (int i=10; i<24; i++) _fout<<std::setw(_width)<<record[i][_index];
+#endif
     }
 };
 
-//! IO parameters manager for BSE based code 
+#ifdef SEVN
+
+// NOTE: the legacy BSE random-seed common blocks (value3_/rand3_, Fortran
+// COMMON /VALUE3/, /RAND3/) are intentionally NOT declared here: the SEVN
+// library never reads them and BSE-family kicks draw from PeTar's parallel
+// random generator (rand_f64, seeded via --rand-seed/--rand-seedfile).
+// See doc/sevn_integration_plan.md (D1) for the SEVN seeding gap.
+
+void evolv1_SEVN(StarParameter* star, StarParameterOut* out, double* tphysf, double* z,
+                 std::map<std::string, std::string>* input_params_SEVN);
+
+void evolv2_SEVN(StarParameter* star1, StarParameter* star2, StarParameterOut* out1, StarParameterOut* out2,
+                 double* tphysf, double* z, double* period_days, double* semi_rsun, double* ecc,
+                 double (&bse_event)[33][9], std::map<std::string, std::string>* input_params_SEVN);
+
+double get_timestep(StarParameter* star, double* z, std::map<std::string, std::string>* input_params_SEVN);
+
+double get_timestep(StarParameter* star1, StarParameter* star2, const double* semi_rsun, double* ecc, double* z,
+                    std::map<std::string, std::string>* input_params_SEVN);
+
+void merge_SEVN(StarParameter* star1, StarParameter* star2, StarParameterOut* out1, StarParameterOut* out2,
+                double* z, double* semi_rsun, double* ecc, bool log_bse_event, double (&bse_event)[33][9],
+                std::map<std::string, std::string>* input_params_SEVN);
+
+void init_sevn_event(double (&bse_event)[33][9]);
+
+void log_sevn_event(StarParameter* star1, StarParameter* star2, const double* tphys, const double* z, double* semi_rsun,
+                    const double* ecc, double (&bse_event)[33][9], std::map<std::string, std::string>* params_sevn,
+                    int* current_event_idx, int event_type);
+
+void printconst(std::map<std::string, std::string>* input_params_SEVN);
+#endif
+
+//! IO parameters manager for BSE based code
 /*! For initializing the COMMON block variables from the commander option.
   The description of each parameter is also provided.
  */
 class IOParamsBSE{
 public:
     IOParamsContainer input_par_store;
+#ifdef SEVN
+    // Map of label -> IOParams
+    std::map<std::string, IOParams<std::string>*> sevn_ioparams_map;
+
+    IOParams<std::string>& add_sevn_param(const char* key,
+                                          const char* def,
+                                          const char* desc) {
+        auto* p = new IOParams<std::string>(input_par_store, def, key, desc);
+        sevn_ioparams_map[key] = p;
+        return *p;
+    }
+#else
     IOParams<double> neta;
     IOParams<double> bwind;
     IOParams<double> hewind;
@@ -825,18 +1007,21 @@ public:
     IOParams<double> eddfac;
     IOParams<double> gamma;
     //IOParams<double> mxns;
+#endif
 #if (defined BSEBBF) || (defined BSEEMP)
     IOParams<double> sigma;
 #elif MOBSE
     IOParams<double> sigma1;
     IOParams<double> sigma2;
 #endif
+#ifndef SEVN
     IOParams<long long int> ceflag;
     IOParams<long long int> tflag;
     //IOParams<long long int> ifflag;
     IOParams<long long int> wdflag;
     IOParams<long long int> bhflag;
     IOParams<long long int> nsflag;
+#endif
 #if (defined BSEBBF) || (defined BSEEMP)
     IOParams<long long int> psflag;
     IOParams<long long int> kmech;
@@ -844,9 +1029,11 @@ public:
 #elif MOBSE
     IOParams<long long int> piflag;
 #endif
+#ifndef SEVN
     IOParams<double> pts1;
     IOParams<double> pts2;
     IOParams<double> pts3;
+#endif
 #ifdef BSEEMP
     IOParams<long long int> trackmode;
 #endif
@@ -936,6 +1123,25 @@ public:
                    z     (input_par_store, 0.001,   "mobse-metallicity",    "Metallicity"),
                    fname_par(input_par_store, "data.par", "p", "Parameter file prefix for sse/bse; the parameter file is [prefix].mobse (MOBSE); this option should be used first before any other options; The auto-determined prefix is '[prefix of output filename].par'; in default, it is 'data.par' ('data' is the default output filename prefix)",NULL,false),
                    print_flag(false) {}
+#elif SEVN
+    IOParamsBSE() : input_par_store(),
+                    tscale(input_par_store, 1.0, "tscale",
+                           "Time scale factor from input data unit (IN) to Myr (time[Myr]=time[IN]*tscale)"),
+                    rscale(input_par_store, 1.0, "rscale",
+                           "Radius scale factor from input data unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
+                    mscale(input_par_store, 1.0, "mscale",
+                           "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
+                    vscale(input_par_store, 1.0, "vscale",
+                           "Velocity scale factor from input data unit(IN) to km/s (v[km/s]=v[IN]*vscale)"),
+                    z(input_par_store, 0.001, "z", "Metallicity"),
+                    fname_par(input_par_store, "data.par", "p", "Parameter file prefix for sse/bse; the parameter file is [prefix].sevnB (SEVN); this option should be used first before any other options; The auto-determined prefix is '[prefix of output filename].par'; in default, it is 'data.par' ('data' is the default output filename prefix)",NULL,false),
+                    print_flag(false) {
+        construct_default_sevn_params();
+        for (const auto& v : default_params_sevn) {
+            add_sevn_param(v.first.c_str(), v.second.first.c_str(), v.second.second.c_str());
+        }
+    }
+
 #endif
 
     //! reading parameters from GNU option API
@@ -948,11 +1154,33 @@ public:
      */
     int read(int argc, char *argv[], const bool print_format_info=true, const int opt_used_pre=0) {
         static int sse_flag=-1;
-        const struct option long_options[] = {
-            {neta.key,   required_argument, &sse_flag, 0},  
-            {bwind.key,  required_argument, &sse_flag, 1},  
-            {hewind.key, required_argument, &sse_flag, 2},  
-          //{mxns.key,   required_argument, &sse_flag, 3}, 
+
+        std::vector<option> long_options_vec;
+
+#ifdef SEVN
+        constexpr int flag_value_start = 10000;
+        int flag_value = flag_value_start;
+        std::map<int, std::string> long_options_map;
+
+        for (const auto& v : default_params_sevn) {
+            option opt{};
+            opt.name = v.first.c_str();
+            opt.has_arg = required_argument;
+            opt.flag = &sse_flag;
+            opt.val = flag_value;
+
+            long_options_map[flag_value] = v.first; // store key
+            flag_value++;
+            long_options_vec.push_back(opt);
+        }
+#endif
+
+        const struct option long_options_hardcoded[] = {
+#ifndef SEVN
+            {neta.key,   required_argument, &sse_flag, 0},
+            {bwind.key,  required_argument, &sse_flag, 1},
+            {hewind.key, required_argument, &sse_flag, 2},
+          //{mxns.key,   required_argument, &sse_flag, 3},
             {alpha.key,  required_argument, &sse_flag, 22},
             {lambda.key, required_argument, &sse_flag, 23},
             {beta.key,   required_argument, &sse_flag, 24},
@@ -981,10 +1209,11 @@ public:
             {piflag.key, required_argument, &sse_flag, 11},
 #endif
             {pts1.key,   required_argument, &sse_flag, 14},
-            {pts2.key,   required_argument, &sse_flag, 15},       
+            {pts2.key,   required_argument, &sse_flag, 15},
             {pts3.key,   required_argument, &sse_flag, 16},
 #ifdef BSEEMP
             {trackmode.key,   required_argument, &sse_flag, 30},
+#endif
 #endif
             {tscale.key, required_argument, &sse_flag, 18},
             {rscale.key, required_argument, &sse_flag, 19},
@@ -995,28 +1224,69 @@ public:
             {0,0,0,0}
         };
 
+        for (auto& v : long_options_hardcoded) {
+            long_options_vec.push_back(v);
+        }
+        const struct option* long_options = long_options_vec.data();
+
+        // Pre-process argv in-place to protect negative numbers
+        // by merging "--flag -1.0" into "--flag=-1.0"
+        static std::vector<std::string> storage;
+        std::set<int> merged_indices;
+        for (int i = 1; i < argc - 1; i++) {
+            if (strncmp(argv[i], "--", 2) == 0) {
+                const char* next = argv[i + 1];
+                if (next[0] == '-' && strlen(next) > 1 &&
+                    (std::isdigit((unsigned char)next[1]) || next[1] == '.')) {
+                    storage.push_back(std::string(argv[i]) + "=" + std::string(next));
+                    argv[i] = &storage.back()[0];
+                    for (int j = i + 1; j < argc - 1; j++) argv[j] = argv[j + 1];
+                    argc--;
+                    merged_indices.insert(i);
+                }
+            }
+        }
+
         int opt_used=opt_used_pre;
         int copt;
         int option_index;
+
+        auto opt_increment = [&]() {
+            if (merged_indices.count(optind - 1)) opt_used += 1;
+            else opt_used += 2;
+        };
+
         optind = 0;
-        while ((copt = getopt_long(argc, argv, "-z:p:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "-z:p:h", long_options, &option_index)) != -1)
             switch (copt) {
             case 0:
+#ifdef SEVN
+                if (long_options_map.find(sse_flag) != long_options_map.end()) {
+                    // If it is a SEVN option, parse it
+                    const std::string& key = long_options_map.at(sse_flag);
+                    auto* param = sevn_ioparams_map.at(key);
+
+                    param->value = optarg; // string-based
+                    if (print_flag) param->print(std::cout);
+                    opt_increment();
+                }
+
+#else
                 switch (sse_flag) {
                 case 0:
                     neta.value = atof(optarg);
                     if(print_flag) neta.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 1:
                     bwind.value = atof(optarg);
                     if(print_flag) bwind.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 2:
                     hewind.value = atof(optarg);
                     if(print_flag) hewind.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 //case 3:
                 //    mxns.value = atof(optarg);
@@ -1026,168 +1296,171 @@ public:
                 case 4:
                     sigma.value = atof(optarg);
                     if(print_flag) sigma.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
 #elif MOBSE
                 case 4:
                     sigma1.value = atof(optarg);
                     if(print_flag) sigma1.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 5:
                     sigma2.value = atof(optarg);
                     if(print_flag) sigma2.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
 #endif
                 case 6:
                     ceflag.value = atof(optarg);
                     if(print_flag) ceflag.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 7:
                     tflag.value = atof(optarg);
                     if(print_flag) tflag.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 8:
                     wdflag.value = atof(optarg);
                     if(print_flag) wdflag.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 9:
                     bhflag.value = atof(optarg);
                     if(print_flag) bhflag.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 10:
                     nsflag.value = atof(optarg);
                     if(print_flag) nsflag.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
 #if (defined BSEBBF) || (defined BSEEMP)
                 case 11:
                     psflag.value = atof(optarg);
                     if(print_flag) psflag.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 12:
                     kmech.value = atof(optarg);
                     if(print_flag) kmech.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 13:
                     ecflag.value = atof(optarg);
                     if(print_flag) ecflag.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
 #elif MOBSE
                 case 11:
                     piflag.value = atof(optarg);
                     if(print_flag) piflag.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
 #endif
                 case 14:
                     pts1.value = atof(optarg);
                     if(print_flag) pts1.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 15:
                     pts2.value = atof(optarg);
                     if(print_flag) pts2.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 16:
                     pts3.value = atof(optarg);
                     if(print_flag) pts3.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 18:
                     tscale.value = atof(optarg);
                     if(print_flag) tscale.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 19:
                     rscale.value = atof(optarg);
                     if(print_flag) rscale.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 20:
                     mscale.value = atof(optarg);
                     if(print_flag) mscale.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 21:
                     vscale.value = atof(optarg);
                     if(print_flag) vscale.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 22:
                     alpha.value = atof(optarg);
                     if(print_flag) alpha.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 23:
                     lambda.value = atof(optarg);
                     if(print_flag) lambda.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 24:
                     beta.value = atof(optarg);
                     if(print_flag) beta.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 25:
                     xi.value = atof(optarg);
                     if(print_flag) xi.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 26:
                     bhwacc.value = atof(optarg);
                     if(print_flag) bhwacc.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 27:
                     epsnov.value = atof(optarg);
                     if(print_flag) epsnov.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 28:
                     eddfac.value = atof(optarg);
                     if(print_flag) eddfac.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
                 case 29:
                     gamma.value = atof(optarg);
                     if(print_flag) gamma.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
 #ifdef BSEEMP
                 case 30:
                     trackmode.value = atoi(optarg);
                     if(print_flag) trackmode.print(std::cout);
-                    opt_used+=2;
+                    opt_increment();
                     break;
 #endif
-                default:
-                    break;
-                }
+            default:
+                break;
+                    }
+#endif
                 break;
             case 'z':
                 z.value = atof(optarg);
                 if(print_flag) z.print(std::cout);
-                opt_used+=2;
+                opt_increment();
                 break;
             case 'p':
                 fname_par.value = optarg;
                 if(print_flag) {
 #ifdef BSEBBF
-                    std::string fbse_par = fname_par.value+".bse"; 
+                    std::string fbse_par = fname_par.value+".bse";
 #elif MOBSE
-                    std::string fbse_par = fname_par.value+".mobse"; 
+                    std::string fbse_par = fname_par.value+".mobse";
+#elif SEVN
+                    std::string fbse_par = fname_par.value+".sevnB";
 #elif BSEEMP
-                    std::string fbse_par = fname_par.value+".bseEmp"; 
+                    std::string fbse_par = fname_par.value+".bseEmp";
 #endif
                     FILE* fpar_in;
                     if( (fpar_in = fopen(fbse_par.c_str(),"r")) == NULL) {
@@ -1197,8 +1470,8 @@ public:
                     input_par_store.readAscii(fpar_in);
                     fclose(fpar_in);
                 }
-                opt_used+=2;
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+                opt_increment();
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
                 input_par_store.mpi_broadcast();
                 PS::Comm::barrier();
 #endif
@@ -1216,7 +1489,7 @@ public:
                 }
                 return -1;
             case '?':
-                opt_used +=2;
+                opt_increment();
                 break;
             default:
                 break;
@@ -1244,6 +1517,8 @@ public:
         std::string fbse_par = _filename_prefix+".mobse"; 
 #elif BSEEMP
         std::string fbse_par = _filename_prefix+".bseEmp"; 
+#elif SEVN
+        std::string fbse_par = _filename_prefix+".sevnB";
 #endif
         if (print_flag) std::cout << "Save BSE parameters to file " << fbse_par << std::endl;
         FILE* fpar_out;
@@ -1271,7 +1546,7 @@ public:
     double rscale; ///> radius scaling factor from NB to Rsun
     double mscale; ///> mass scaling factor from NB to Msun
     double vscale; ///> velocity scaling factor from NB to km/s
-    const double year_to_day; ///> year to day 
+    const double myr_to_day; ///> Myr to day
     GWKick gw_kick; ///> GW recoil kick calculator
     const char* single_type[16]; ///> name of single type from SSE
     const char* binary_type[15]; ///> name of binary type return from BSE evolv2, notice if it is -1, it indicate the end of record
@@ -1280,7 +1555,7 @@ public:
 #ifdef BSEEMP
                   trackmode(0),
 #endif
-                  tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0), year_to_day(3.6525e8), gw_kick(),
+                  tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0), myr_to_day(3.6525e8), gw_kick(),
                   single_type{"LMS", "MS", "HG", "GB", "CHeB", "FAGB", "SAGB", "HeMS", "HeHG", "HeGB", "HeWD", "COWD", "ONWD", "NS", "BH", "SN"},
                   binary_type{"Unset",               //0
                               "Initial",             //1
@@ -1346,6 +1621,16 @@ public:
         fout<<"MOBSE: Giacobbo N., Mapelli M. & Spera M., 2018, MNRAS, 474, 2959\n";
         fout<<"\t \t (Online document: https://mobse-webpage.netlify.app/)"
             <<std::endl;
+#elif SEVN
+        for (int i = 0; i < offset; i++) fout << " ";
+        fout <<
+            "SEVN: Iorio G., Mapelli M., Costa G., Spera M., Escobar G. J., Sgalletta C., Trani A. A., et al., 2023, MNRAS, 524, 426\n";
+        fout << "\t Paired with PeTar in Marin Pina et al. (in prep)\n";
+        fout <<
+            "\t\t see also Spera M., Mapelli M., Giacobbo N., Trani A. A., Bressan A., Costa G., 2019, MNRAS, 485, 889\n";
+        fout << "\t \t (Online document: https://gitlab.com/sevncodes/sevn/-/blob/SEVN/resources/SEVN_userguide.pdf)"
+            << std::endl;
+        // Citation is copied from https://gitlab.com/sevncodes/sevn
 #endif
         for (int i=0; i<offset; i++) fout<<" ";
         fout<<"TDE: Rastello S., Iorio G., Gieles M., Wang L., 2026, A&A, 707, A217"
@@ -1362,6 +1647,8 @@ public:
         return std::string(".sseEmp");
 #elif MOBSE
         return std::string(".mosse");
+#elif SEVN
+        return std::string(".sevn");
 #endif
     }
 
@@ -1372,6 +1659,8 @@ public:
         return std::string(".bseEmp");
 #elif MOBSE
         return std::string(".mobse");
+#elif SEVN
+        return std::string(".sevnB");
 #endif
     }
 
@@ -1382,6 +1671,8 @@ public:
         return std::string("SSEEMP");
 #elif MOBSE
         return std::string("MOSSE");
+#elif SEVN
+        return std::string("SEVN");
 #endif
     }
 
@@ -1392,10 +1683,12 @@ public:
         return std::string("BSEEMP");
 #elif MOBSE
         return std::string("MOBSE");
+#elif SEVN
+        return std::string("SEVN");
 #endif
     }
 
-    bool isMassTransfer(const int _binary_type) {
+    static bool isMassTransfer(const int _binary_type) {
         return (_binary_type>=3&&_binary_type<=9);
     }
 
@@ -1404,24 +1697,29 @@ public:
     //    return (_binary_type==13);
     //}
 
-    bool isMerger(const int _binary_type) {
+    static bool isMerger(const int _binary_type) {
         return (_binary_type==10 || _binary_type==14);
     }
-    
-    bool isGWMerger(const int _binary_type) {
+
+    static bool isGWMerger(const int _binary_type) {
         return (_binary_type==14);
     }
 
-    bool isNoRemnant(const int _binary_type) {
+    static bool isNoRemnant(const int _binary_type) {
         return (_binary_type==12);
     }
 
-    bool isDisrupt(const int _binary_type) {
+    static bool isDisrupt(const int _binary_type) {
         return (_binary_type==13);
     }
 
     //! initial SSE/BSE based code global parameters
     void initial(const IOParamsBSE& _input, const bool _print_flag=false) {
+#ifdef SEVN
+        for (const auto& v : _input.sevn_ioparams_map) {
+            input_params_SEVN[v.first] = v.second->value;
+        }
+#else
         // common block
         value1_.neta  = _input.neta.value;
         value1_.bwind = _input.bwind.value;
@@ -1468,7 +1766,7 @@ public:
         points_.pts1 = _input.pts1.value;
         points_.pts2 = _input.pts2.value;
         points_.pts3 = _input.pts3.value;
-
+#endif
         tscale = _input.tscale.value;
         rscale = _input.rscale.value;
         mscale = _input.mscale.value;
@@ -1483,19 +1781,22 @@ public:
         trackmode = _input.trackmode.value;
         zcnsts_(&z, zpars, &trackmode);
 #else
+#ifndef SEVN
         if (_print_flag&&(z<0.0001||z>0.03))
             std::cerr<<"BSE warning! metallicity Z is not in (0.0001, 0.03); given value:"<<z<<std::endl;
         zcnsts_(&z, zpars);
-//        value3_.idum = (_input.idum.value>0)? -_input.idum.value: _input.idum.value;
-// 
-//#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-//        // add off set to random seed to avoid repeating random numbers
-//        value3_.idum += PS::Comm::getRank();
+#endif
 #endif
 
+#ifdef SEVN
+        if (_print_flag) {
+            std::cout << "z: " << z << std::endl;
+            printconst(&input_params_SEVN);
+        }
+
+#else
         // collision matrix
         instar_();
-
         if (_print_flag) {
             printconst_();
             std::cout<<"z: "<<z<<" zpars: ";
@@ -1505,7 +1806,7 @@ public:
             std::cout<<"EMPTrack: "<<trackmode<<std::endl;
 #endif
         }
-
+#endif
     }
 
     //! get current mass in NB unit
@@ -1604,7 +1905,7 @@ public:
 
     //! print binary event
     void printBinaryEvent(std::ostream& _fout, const BinaryEvent& _bin_event) {
-        int nmax = _bin_event.getEventNMax();
+        int nmax = BinaryEvent::getEventNMax();
         for (int k=0; k<nmax; k++) {
             int type = _bin_event.getType(k);
             if(type>0) {
@@ -1621,7 +1922,7 @@ public:
         int type = _bin_event.getType(k);
         assert(type>=0&&type<15);
         _fout<<std::setw(16)<<binary_type[type]<<" Init:  ";
-        if (k==0) _bin_event.print(_fout, _bin_event.getEventIndexInit());
+        if (k==0) _bin_event.print(_fout, BinaryEvent::getEventIndexInit());
         else _bin_event.print(_fout, k-1);
         _fout<<"\n"<<std::setw(16)<<" "<<" Final: ";
         _bin_event.print(_fout, k);
@@ -1633,7 +1934,7 @@ public:
         assert(type>=0&&type<15);
         if (print_type_name) _fout<<std::setw(16)<<binary_type[type];
         _fout<<std::setw(_width)<<type;
-        if (k==0) _bin_event.printColumnAscii(_fout, _bin_event.getEventIndexInit(), _width);
+        if (k==0) _bin_event.printColumnAscii(_fout, BinaryEvent::getEventIndexInit(), _width);
         else _bin_event.printColumnAscii(_fout, k-1, _width);
         _bin_event.printColumnAscii(_fout, k, _width);
     }
@@ -1662,6 +1963,9 @@ public:
         double dtp = tphysf*100.0+1000.0;
         _out.dm = _star.mt;
         _out.kw0 = _star.kw;
+#ifdef SEVN
+        evolv1_SEVN(&_star, &_out, &tphysf, &z, &input_params_SEVN);
+#else
         int kw = _star.kw;
         double chi[3] = {0.0, 0.0, 0.0};
 
@@ -1677,6 +1981,7 @@ public:
             for (int k=0; k<3; k++) _star.ospin[k] = chi[k];
         }
         _star.kw = kw;
+#endif
         _out.dm = _star.mt - _out.dm;
         _out.dtmiss = tphysf - _star.tphys;
 
@@ -1703,12 +2008,15 @@ public:
       @param[in] _dt_nb: physical time step to evolve [In unit]
       \return error flag: -1: error, 0: normal
      */
-    int evolveBinary(StarParameter& _star1, StarParameter& _star2, StarParameterOut& _out1, StarParameterOut& _out2, 
+    int evolveBinary(StarParameter& _star1, StarParameter& _star2, StarParameterOut& _out1, StarParameterOut& _out2,
                      double& _semi, double& _period, double& _ecc, double* _am, double* pos_red, BinaryEvent& _bse_event, const int& _binary_init_type, const double _dt_nb) {
+#ifdef SEVN
+        init_sevn_event(_bse_event.record);
+#endif
         double tphys = std::max(_star1.tphys, _star2.tphys);
         double tphysf = _dt_nb*tscale + tphys;
         double dtp=tphysf*100.0+1000.0;
-        double period_days = _period*tscale*year_to_day;
+        double period_days = _period*tscale*myr_to_day;
         double semi_rsun = _semi*rscale;
         // in case two component have different tphys, evolve to the same time first
         int event_flag = 0 ;
@@ -1716,8 +2024,13 @@ public:
         _out2.dm = _star2.mt;
 
         // backup initial state
-        _bse_event.recordEvent(_star1, _star2, semi_rsun, _ecc, _binary_init_type, _bse_event.getEventIndexInit());
-
+#ifdef SEVN
+        int _idx_init = BinaryEvent::getEventIndexInit();
+        log_sevn_event(&_star1, &_star2, &tphys, &z, &semi_rsun, &_ecc, _bse_event.record, &input_params_SEVN,
+                       &_idx_init, _binary_init_type);
+#else
+        _bse_event.recordEvent(_star1, _star2, semi_rsun, _ecc, _binary_init_type, BinaryEvent::getEventIndexInit());
+#endif
         if (_star1.kw==15 || _star2.kw==15) {
             if (_star1.kw==15 && _star2.kw==15) {
                 _star1.tphys = tphysf;
@@ -1736,7 +2049,14 @@ public:
             }
             if (event_flag<0) return event_flag;
             int event_index = 0;
+#ifdef SEVN
+            if (event_flag > 0) {
+                log_sevn_event(&_star1, &_star2, &tphys, &z, &semi_rsun, &_ecc, _bse_event.record, &input_params_SEVN,
+                               &event_index, 2);
+            }
+#else
             if (event_flag>0) _bse_event.recordEvent(_star1, _star2, semi_rsun, _ecc, 2, event_index++);
+#endif
             _bse_event.setEventIndexEnd(event_index);
             return 0;
         }
@@ -1752,6 +2072,50 @@ public:
         }
         if (event_flag<0) return event_flag;
 
+#ifdef SEVN
+        if (semi_rsun > 0.0 and _ecc >= 0.0 and _ecc < 1.0) {
+            if ((_star1.RemnantType_SEVN != Lookup::Remnants::NotARemnant) &&
+                (_star2.RemnantType_SEVN != Lookup::Remnants::NotARemnant) &&
+                (_star1.RemnantType_SEVN != Lookup::Remnants::Empty) &&
+                (_star2.RemnantType_SEVN != Lookup::Remnants::Empty) &&
+                semi_rsun < 10.0) {
+                // If the binary is a BCO, the only possible evolution is through GW emission. For numerical stability,
+                // this is only considered for binaries with SMA < 10 Rsun (same than in BSE).
+                double semi_rsun0 = semi_rsun;
+                double t_fin = evolve_bco(semi_rsun, _ecc, _star1.mt, _star2.mt, _star1.r, _star2.r, tphysf);
+                _star1.tphys = t_fin;
+                _star2.tphys = t_fin;
+                period_days *= std::pow(semi_rsun / semi_rsun0, 3.0 / 2.0);
+
+                double r_sum = _star1.r + _star2.r;
+                if (semi_rsun <= r_sum) {
+                    semi_rsun = r_sum / (1.0 - _ecc);
+                    merge_SEVN(&_star1, &_star2, &_out1, &_out2, &z, &semi_rsun, &_ecc, true,
+                               _bse_event.record, &input_params_SEVN);
+                    assert((_star1.kw == 15) || (_star2.kw == 15)); // Assert that there's a merger
+                }
+            } else {
+                // Evolve the binary normally
+                evolv2_SEVN(&_star1, &_star2, &_out1, &_out2, &tphysf, &z, &period_days, &semi_rsun, &_ecc,
+                            _bse_event.record, &input_params_SEVN);
+            }
+        } else {
+            merge_SEVN(&_star1, &_star2, &_out1, &_out2, &z, &semi_rsun, &_ecc, true,
+                       _bse_event.record, &input_params_SEVN);
+        }
+
+        int kw[2];
+        kw[0] = _star1.kw;
+        kw[1] = _star2.kw;
+
+        _period = period_days / myr_to_day / tscale;
+
+        _out1.dm = _star1.mt - _out1.dm;
+        _out1.dtmiss = tphysf - _star1.tphys;
+        _out2.dm = _star2.mt - _out2.dm;
+        _out2.dtmiss = tphysf - _star2.tphys;
+
+#else
         int kw[2];
         double m0[2],mt[2],r[2],lum[2],mc[2],rc[2],menv[2],renv[2],ospin[2],chi1[3],chi2[3],epoch[2],tm[2],vkick[8];
         for (int k =0; k<4; k++) {
@@ -1786,7 +2150,7 @@ public:
 
 
         evolv2_(kw, m0, mt, r, lum, mc, rc, menv, renv, ospin, epoch, tm, &tphys, &tphysf, &dtp, &z, zpars, &period_days, &_ecc, _bse_event.record[0], vkick);
-        _period = period_days/year_to_day/tscale;
+        _period = period_days/myr_to_day/tscale;
 
         _star1.kw = kw[0];
         _star1.m0 = m0[0];
@@ -1960,6 +2324,7 @@ public:
         }
 
 
+#endif
         if (kw[0]<0||kw[1]<0||(_star1.mt<0&&_star1.kw==15)||(_star2.mt<0&&_star2.kw==15)) {
             kw[0] = abs(kw[0]);
             kw[1] = abs(kw[1]);
@@ -2051,7 +2416,7 @@ public:
 
 
 
-    //! merge two star using mix function, star 2 will becomes zero mass
+    //! merge two star using mix function, star 2 will become zero mass
     /*!
       @param[in,out] _star1: star parameter of first
       @param[in,out] _star2: star parameter of second
@@ -2063,6 +2428,22 @@ public:
     */
     void merge(StarParameter& _star1, StarParameter& _star2, StarParameterOut& _out1, StarParameterOut& _out2, double& _semi, double& _ecc) {
 
+        double semi_rsun = _semi * rscale;
+
+        _out1.dm = _star1.mt;
+        _out2.dm = _star2.mt;
+
+#ifdef SEVN
+        BinaryEvent dummy_event = BinaryEvent();
+        merge_SEVN(&_star1, &_star2, &_out1, &_out2, &z, &semi_rsun, &_ecc, false,
+                   dummy_event.record, &input_params_SEVN);
+
+        _semi = semi_rsun/rscale;
+        _out1.dm = _star1.mt - _out1.dm;
+        _out1.dtmiss = 0;
+        _out2.dm = _star2.mt - _out2.dm;
+        _out2.dtmiss = 0;
+#else
         double m0[2],mt[2],r[2],mc[2],rc[2],menv[2],renv[2],ospin[2],age[2],vkick[8];
         int kw[2];
 
@@ -2088,11 +2469,6 @@ public:
         rc[1] = _star2.rc;
         ospin[1] = _star2.ospin[0];
         age[1]= _star2.tphys-_star2.epoch;
-
-        _out1.dm = _star1.mt;
-        _out2.dm = _star2.mt;
-
-        double semi_rsun = _semi*rscale;
 
         merge_(kw, m0, mt, r, mc, rc, menv, renv, ospin, age, &semi_rsun, &_ecc, vkick, zpars);
 
@@ -2130,6 +2506,7 @@ public:
 
         for (int k=0; k<4; k++) _out1.vkick[k]=vkick[k];
         for (int k=0; k<4; k++) _out2.vkick[k]=vkick[k+4];
+#endif
     }
 
     //! get next time step to check in Myr
@@ -2140,6 +2517,10 @@ public:
     double getTimeStepStar(StarParameter& _star) {
         if (_star.kw==15) return 1.0e30/tscale; // give very large value to avoid evolve
 
+#ifdef SEVN
+        assert(_star.Mzams_SEVN >= 0.0);
+        return get_timestep(&_star, &z, &input_params_SEVN) / tscale;
+#else
         // make a copy to avoid overwriting the origin values
         int kw = _star.kw;
         double m0 = _star.m0;
@@ -2156,6 +2537,7 @@ public:
         //assert(dtm>0.0);
 
         return std::min(dtr, dtm)/tscale;
+#endif
     }
 
     //! call BSE evolv2 for a binary
@@ -2172,7 +2554,14 @@ public:
 
         double dt = getTimeStepStar(_star1);
         dt = std::min(dt,getTimeStepStar(_star2));
+#ifdef SEVN
+        double semi_rsun = _semi * rscale;
+        if (semi_rsun > 0.0 and _ecc >= 0.0 and _ecc < 1.0 and _star1.kw != 15 and _star2.kw != 15) {
+            double dtr = get_timestep(&_star1, &_star2, &semi_rsun, &_ecc, &z, &input_params_SEVN);
+            dt = std::min(dt, dtr);
+        }
 
+#else
         // mass transfer case
         if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15&&_semi>0.0) {// GR effect
             double semi_rsun = _semi*rscale;
@@ -2203,7 +2592,7 @@ public:
             dt = std::min(dt,dtr);
 
         }
-        
+#endif
         return dt/tscale;
     }
 
@@ -2235,6 +2624,20 @@ public:
             double dt = std::max(_dt1, _dt2)*tscale;
 
             // check GR effect
+#ifdef SEVN
+            // SEVN internal check: when the next SEVN event is sooner than the next regular check, call BSE now
+            if (!call_flag) {
+                if (_semi <= 0.0) call_flag = true; // Also including negative SMA
+                else if (_ecc >= 1.0) call_flag = true;
+                else {
+                    double dt_sevn = std::max(_dt1, _dt2);
+                    int binary_type_dummy = -1;
+                    if (getTimeStepBinary(_star1, _star2, _semi, _ecc, binary_type_dummy) < dt_sevn) call_flag = true;
+                }
+            }
+        } // close the outer mass-transfer/disruption check block
+#else
+        // check GR effect
             if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15) {
                 double semi_rsun = _semi*rscale;
                 double dt_gr = EstimateGRTimescale(_star1, _star2, semi_rsun, _ecc);
@@ -2275,6 +2678,7 @@ public:
             //}
         }
 
+#endif
         // check whether binary seperation is too wide, if yes, do not call bse
         double peri = _semi*(1-_ecc);
         if (_dr2 > 9.0*peri*peri and _semi>0) call_flag = false;

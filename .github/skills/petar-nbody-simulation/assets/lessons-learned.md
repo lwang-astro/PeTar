@@ -591,3 +591,27 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 修复定位（事件步重基线）在诊断上有效（三案例 dE→1e-10）但语义错误；正确的根本方向是消除注入本身——SDAR 过渡层逐事件互逆 + 派生量纯态化（form/break 互为逆正则变换、辅助量由当前态经共享代码推导、切换对齐共同同步边界），可执行计划见 `SDAR/docs/transition_unification_plan.md`。
 
 **Prevention rule**: 数值方案中的簿记列各有语义边界（物理变化 vs 算法残差 vs 参考重置），任何"把 X 挪到 Y 列"的修复必须先核对 Y 的设计语义；治标修复落地时必须在文档中标注其掩盖性质与撤回条件。
+
+### 2026-10-03: SEVN 上游合并四连坑——非 SEVN 构建静默失效;依赖仓版本配对;自动合并丢 #ifdef 块;同名工具误导冒烟
+
+**Mistake**: 审视 SEVN PR(#79) 合入 master 时,静态审阅只抓到 Makefile/tools 层问题;实际构建验证又连续暴露:(1) `bse_interface.h` 的 Fortran `merge_()` 调用丢分号、两处空 `#elif`、`../src/io.hpp` include 被挪进 `#ifdef SEVN`——非 SEVN 构建(bse/mobse/bseEmp)全部编译失败,而 PR 作者只测过 sevn 模式(preprocessor 直接剪掉 #else 分支,语法错误不可见);(2) `Makefile.in` 的 `se_modfe` 与 `bse-interface/Makefile.in` 的 `BSE_LIB_S` 两个变量名 typo 让 `--with-interrupt=bse` 静默退化成无 BSE 构建、测试工具丢失 `-lbse`——无任何报错;(3) 用共享 checkout 验证 PeTar master 时误配 SDAR experiment(`adr` 私有)与 FDPS master v8.0(profile API 改名),`adr`/`collect_sample_particle`/`IOParams<PS::S64>` 三类错误全是版本配对假象,PeTar master 实际配 FDPS ≤v7.1c + SDAR master;(4) 冒烟误用 `~/bin/petar.bse`——那是 bse-interface 的独立测试工具(bse_test.cxx),与主程序家族二进制同名。
+
+**Root cause**: 上游 PR 只在新增特性模式下编译验证,`#ifdef` 新分支天然掩盖旧分支的语法破坏;Makefile 条件分支 typo 属"静默功能退化"类,configure/编译都不报错;多仓工作区(共享 ../SDAR、../FDPS checkout)里分支配对关系(哪边动 API 哪边适配)没有显式记录;`petar.bse` 一名二物从未被文档强调。
+
+**Prevention rule**: (1) 审阅/合并 stellar-evolution 类 PR 后,至少在 bse 模式完整 configure+make+微运行(10 分钟内),不接受"只看 diff";(2) 验证某分支的 PeTar 前先确认依赖配对:PeTar master↔SDAR master+FDPS ≤8.0 前版本、PeTar experiment↔SDAR experiment+FDPS 8.0,用临时 worktree 钉住依赖版本(`git worktree add --detach ... <tag>`),不碰共享 checkout;(3) 大型合并解决冲突后,用脚本 diff 两边所有特性关键词(SEVN 等)出现的行集,审计自动合并是否吞掉 `#ifdef` 块,再数 `#if*/#endif` 配平;(4) 冒烟主程序用 `petar`(经 petar.select)或完整家族名(如 `petar.mpi.omp.avx512.bse.galpy`),`petar.bse` 永远指测试工具。
+
+### 2026-10-04: SEVN 首次真编译挖出七处合并暗伤;运行瓶颈在 SEVN 库-表匹配,非集成层
+
+**Mistake**: SEVN 模式长期只有静态审查+伪造安装 dry-run,从未真编译。装好真 SEVN 后首次编译连续暴露 7 处:① bse-interface 子目录用顶层相对路径找 SEVN 头文件(IO.h not found);② `IOParamsBSE::idum` 成员声明在合并中丢失但 SEVN 构造函数仍初始化它;③ SEVN 构造缺 `fname_par` 初始化(IOParams<string> 无默认构造直接编译错);④ 保存参数文件块缺 `#elif SEVN` 分支;⑤ `isCallBSENeeded` 的 SEVN 分支少一个 `}`(整个 BSEManager 类花括号失衡,导致后续文件所有报错全被误导成"constexpr 成员"之类);⑥ `petar.sevn` 链接缺 `-lrand`;⑦ initdata.sh sevn 模板 19 列应为 18 列。此前"宏配平(#if/#endif)检查"无法发现 ⑤——花括号平衡是另一维度。
+
+**Root cause**: 上游 PR 只在自己环境测过;合并时我保留的"实验侧 if 块开括号 + 上游侧结尾"混搭在条件分支组合下漏了一个闭合;dry-run 与静态检查都不能替代真实编译。运行期:PeTar 侧输入读取(42 列/星 18 列)、表加载均通过,瓶颈在 SEVN 库内部——默认表是 PARSEC 大星表(2.2–600 M☉),低质量星必须换 MIST 表并禁用 `--tabuse_rhe/rco/envconv false`(MIST 表缺这仨文件),之后仍报 `MZAMS 0.91 out of range`(表网格 0.7–150 明明覆盖),SEVN 自带 sevn.x 也因 CLI 解析怪癖跑不起来,无法对照排除——库版本与表集的匹配问题,非 PeTar 集成层。
+
+**Prevention rule**: ① SEVN 类条件合并后必须真编译(sevn + bse 两模式),检查包括:#if/#endif 配平 + 花括号净深度(`cpp -E -DSEVN ... | 数 {}`)两层;② 子目录 Makefile 引用仓库根相对路径时必须做 `$(patsubst ./bse-interface/%,./%,...))` 之类的上下文换算或用 @prefix@ 单独导出;③ SEVN 运行环境三要素先备齐再跑:MIST 表(`--tables`)+ `--tabuse_rhe/rco/envconv false` + 质量下限 0.7 M☉(MIST)/2.2 M☉(PARSEC 默认表);④ 首跑报"out of range"先查所用表集的质量/金属丰度覆盖,再怀疑集成代码。
+
+### 2026-10-04: value3_/rand3_ 是上游 PR 携带的死种子路径——"看似在播种,实则无人消费";sevn.x 要求 argc 为奇数
+
+**Mistake**: SEVN 分支的 `BSEManager::initial()` 一直在写 `value3_.idum`(含 MPI rank 偏移),代码形态与旧 BSE 的 COMMON /VALUE3/ 播种完全一致,审阅时自然认定"SEVN 种子已接入"。实际上:SEVN 库既不导出也不读取 `value3_`/`rand3_`(`nm libsevn_lib_static.a` 无此符号,头文件零引用),写入的是 PeTar 侧自建的孤儿结构;而 BSE 家族的 kick 早已改走 Fortran `rand_f64()`(PeTar 并行随机,`--rand-seed` 播种),`-idum` 选项同样无人消费。死代码让"随机数不可复现"这一真实缺陷被掩盖。另外 sevn.x 的 CLI 解析要求 argc(含 argv[0])为**奇数**——所有选项必须严格 `-名 值` 成对、不接受无值开关,否则直接报误导性的 "odd number of option-value arguments"(此时 argc 其实是偶数),无法用作对照排查。
+
+**Root cause**: 上游 PR 按旧版 SEVN 的 BSE 式接口写种子代码,SEVN 库后来换成自带 `utilities` 随机数,接口蒸发但调用侧残留;静态审阅只看"写没写",没验证"谁在读"。CLI 坑在 SEVN 源码 `src/general/params.cpp` 的 `SEVNpar::load`(n%2==0 即报错)。
+
+**Prevention rule**: ① 接线随机种子(或任何跨库状态)时必须验证消费端存在:查库符号导出(`nm`)与头文件引用,写而无读即删除,不留"安慰性"代码;② 判断某 CLI 选项是否仍有效,反向 grep 其 `.value` 的全部消费点,而不是看帮助文本;③ 排查 sevn.x 时所有参数写成 `-名 值` 成对形式(布尔也用 `-名 true/false`),argc 保持奇数。

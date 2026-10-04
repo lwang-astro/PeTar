@@ -157,7 +157,7 @@ public:
                      n_bin            (input_par_store, 0,    "b", "Number of primordial binaries (n_bin) for initialization (assuming the binaries' IDs are 1,2*n_bin)"),
                      time_end         (input_par_store, 10.0, "t", "End time of simulation"),
                      unit_set         (input_par_store, 0,    "u", "Input data unit; 0: based on the value of G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr, modify G to fit this unit set"),
-                     gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant, if -u 1, G = 0.00449830997959438 pc^3/(Msun*Myr^2)"),
+                     gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant, if -u 1, G = " XSTRINGIFY(G_ASTRO) " pc^3/(Msun*Myr^2)"),
                      n_glb            (input_par_store, 100000, "n", "Total number of particles, used only when the input data filename is __Plummer"),
                      dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft); > 0: custom dt_soft value, regularized to 0.5^n, where n is an integer; = 0: check '-r r_out':;      r_out = 0 (default): dt_soft = 2.6E-4*GM/sigma_3D^3, and is regularized to 0.5^n;          sigma_3D: global 3D velocity dispersion;      r_out > 0: check '--dt-soft-sigma-factor alpha':;          alpha > 0: dt_soft = alpha*r_in/(sqrt(3)*sigma);              r_in: determined by --r-ratio and r_out;          alpha = 0 (default): dt_soft = P(r_in)/nstep;              P(r_in): the binary period with the semi-major axis of r_in;              nstep: defined by --dt-soft-kepler-nstep; Note: on restart with this option given, hermite-dt-max, r-search-min and r_out (if -r not given) are re-determined"),
                      r_out            (input_par_store, 0.0,  "r", "Outer changeover radius (r_out); > 0: custom r_out value and check '-s dt_soft';      dt_soft = 0: calculate dt_soft and then adjust r_out by dt_soft;      dt_soft > 0: use custom r_out directly; = 0 (default): check '--dt-soft-sigma-factor alpha':;      alpha > 0: r_out = alpha*dt_soft*sigma_3D/r-ratio;          sigma_3D: global 3D velocity dispersion;          r-ratio: defined by --r-ratio;      alpha = 0 (default): r_out = a(r_in)/r-ratio;          a(r_in): the binary semi-major axis with the period of nstep*dt_soft;          nstep: defined by --dt-soft-kepler-nstep; Note: on restart with this option given, r-search-min, r-search-group, r-group,;      hermite-acc-offset-sq and dt_soft (if -s not given) are re-determined"),
@@ -456,7 +456,9 @@ public:
         // count used options
         opt_used ++;
         //std::cout<<"Opt used:"<<opt_used<<std::endl;
-        if (opt_used<argc) {
+        // detect the input data filename: only when there are unused arguments
+        // and the last one does not look like an option or a negative number
+        if (opt_used<argc && argv[argc-1][0] != '-') { //Allow for negative parameters
             fname_inp.value =argv[argc-1];
             if(print_flag) std::cout<<"Reading data file name: "<<fname_inp.value<<std::endl;
         }

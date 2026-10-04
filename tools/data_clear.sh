@@ -50,6 +50,8 @@ detect_modes_from_petar() {
 			interrupt_mode=bseEmp
 		elif [[ $pname == *'.mobse'* ]]; then
 			interrupt_mode=mobse
+		elif [[ $pname == *'.sevn'* ]]; then
+			interrupt_mode=sevn
 		elif [[ $pname == *'.bse'* ]]; then
 			interrupt_mode=bse
 		elif [[ $pname == *'.dsm'* ]]; then
@@ -303,7 +305,7 @@ do
 	    echo '  -t [F]: time criterion for clearing up data, must be provided (default: none)';
 	    echo '  -n [I]: number of MPI processes (default: auto)';
 	    echo '  -b    : use previous backup files instead of replacing (default: replacing)';
-	    echo '  --interrupt-mode [S]: mode for binary status/group parsing: none, merger, base, bse, bseEmp, mobse, dsm (default: auto-detect from active petar binary)';
+        echo '  --interrupt-mode [S]: mode for binary status/group parsing: none, merger, bse, bseEmp, mobse, sevn, dsm (default: auto-detect from active petar binary)';
 	    echo '  --external-mode [S]: mode for binary status/group parsing: none, galpy, agama (default: auto-detect from active petar binary)';
 	    echo '  --petar-binary [S]: petar command name/path used for auto-detection (default: petar)';
 	    echo '  --no-auto-mode: disable auto-detection and keep user-provided/default mode values';
@@ -333,8 +335,8 @@ do
     esac
 done
 
-suffixes=(esc group sse mosse sseEmp bse mobse bseEmp interrupt status prof.rank)
-tindices=(1 3 0 0 0 0 0 0 1 1 2)
+suffixes=(esc group sse mosse sseEmp bse mobse sevn sevnB bseEmp interrupt status prof.rank)
+tindices=(1 3 0 0 0 0 0 0 0 0 1 1 2)
 nsuffixes=${#suffixes[@]}
 
 if [ ! -e $fname ] | [ -z $fname ] ; then
@@ -363,33 +365,72 @@ initialize_event_column_counts
 
 # check consistence for the number of columns
 # SSE/BSE event files in current PeTar are ASCII outputs.
-ncol=`egrep -m 1 'SN_kick' $fname.*sse*.0|wc -w`
+ncol=`egrep -m 1 'SN_kick' $fname.*sse*.0|wc -w|tr -d ' '` # we need to remove whitespace for MacOS compatibility
 if [[ $ncol != $ncol_sse_sn_kick ]] && [[ $ncol != 0 ]]; then
     echo 'Error! column number not matches for SSE SN kick, should be '$ncol_sse_sn_kick', the file has '$ncol'.'
 	exit 1
 fi
-ncol=`egrep -v -m 1 'SN_kick' $fname.*sse*.0|wc -w`
+ncol=`egrep -v -m 1 'SN_kick' $fname.*sse*.0|wc -w|tr -d ' '`
 if [[ $ncol -ne $ncol_sse_type_change ]] && [[ $ncol -ne 0 ]]; then
     echo 'Error! column number not matches for SSE Type Change, should be '$ncol_sse_type_change', the file has '$ncol
 	exit 1
 fi
 
-ncol=`egrep -m 1 'Dynamic_merge' $fname.*bse*.0|wc -w`
+ncol=`egrep -m 1 'Dynamic_merge' $fname.*bse*.0|wc -w|tr -d ' '`
 if [[ $ncol -ne $ncol_bse_dyn_merge ]] && [[ $ncol -ne 0 ]]; then
     echo 'Error! column number not matches for BSE dynamical merger, should be '$ncol_bse_dyn_merge', the file has '$ncol
 	exit 1
 fi
 
-ncol=`egrep -m 1 'SN_kick' $fname.*bse*.0|wc -w`
+ncol=`egrep -m 1 'SN_kick' $fname.*bse*.0|wc -w|tr -d ' '`
 if [[ $ncol -ne $ncol_bse_sn_kick ]] && [[ $ncol -ne 0 ]]; then
     echo 'Error! column number not matches for BSE SN kick, should be '$ncol_bse_sn_kick', the file has '$ncol
 	exit 1
 fi
 
-ncol=`egrep -v -m 1 '(SN_kick|Dynamic_merge)' $fname.*bse*.0|wc -w`
+ncol=`egrep -v -m 1 '(SN_kick|Dynamic_merge)' $fname.*bse*.0|wc -w|tr -d ' '`
 if [[ $ncol -ne $ncol_bse_type_change ]] && [[ $ncol -ne 0 ]]; then
     echo 'Error! column number not matches for BSE Type Change, should be '$ncol_bse_type_change', the file has '$ncol
 	exit 1
+fi
+
+# check consistence for the number of columns if SEVN is active
+# SN_kick records print one star only (+6); type_change/dynamic_merge print 2/4 stars
+ncol_sevn=6
+ncol_sevn_sn_kick=$(( ncol_sse_sn_kick + ncol_sevn ))
+ncol_sevn_type_change=$(( ncol_sse_type_change + 2*ncol_sevn ))
+ncol_sevnB_dyn_merge=$(( ncol_bse_dyn_merge + 4*ncol_sevn ))
+ncol_sevnB_sn_kick=$(( ncol_bse_sn_kick + ncol_sevn ))
+ncol_sevnB_type_change=$(( ncol_bse_type_change + 4*ncol_sevn + 2 ))
+
+ncol=`egrep -m 1 'SN_kick' $fname.sevn.0|wc -w|tr -d ' '`
+if [[ $ncol != $ncol_sevn_sn_kick ]] && [[ $ncol != 0 ]]; then
+    echo 'Error! column number not matches for SEVN SN kick, should be '$ncol_sevn_sn_kick', the file has '$ncol'.'
+    exit
+fi
+
+ncol=`egrep -v -m 1 'SN_kick' $fname.sevn.0|wc -w|tr -d ' '`
+if [[ $ncol -ne $ncol_sevn_type_change ]] && [[ $ncol -ne 0 ]]; then
+    echo 'Error! column number not matches for SEVN Type Change, should be '$ncol_sevn_type_change', the file has '$ncol
+    exit
+fi
+
+ncol=`egrep -m 1 'Dynamic_merge' $fname.*sevnB*.0|wc -w|tr -d ' '`
+if [[ $ncol -ne $ncol_sevnB_dyn_merge ]] && [[ $ncol -ne 0 ]]; then
+    echo 'Error! column number not matches for SEVN (binary) dynamical merger, should be '$ncol_sevnB_dyn_merge', the file has '$ncol
+    exit
+fi
+
+ncol=`egrep -m 1 'SN_kick' $fname.sevnB.0|wc -w|tr -d ' '`
+if [[ $ncol -ne $ncol_sevnB_sn_kick ]] && [[ $ncol -ne 0 ]]; then
+    echo 'Error! column number not matches for SEVN (binary) SN kick, should be '$ncol_sevnB_sn_kick', the file has '$ncol
+    exit
+fi
+
+ncol=`egrep -v -m 1 '(SN_kick|Dynamic_merge)' $fname.sevnB.0|wc -w|tr -d ' '`
+if [[ $ncol -ne $ncol_sevnB_type_change ]] && [[ $ncol -ne 0 ]]; then
+    echo 'Error! column number not matches for SEVN (binary) Type Change, should be '$ncol_sevnB_type_change', the file has '$ncol
+    exit
 fi
 
 
@@ -470,21 +511,25 @@ do
 		cp $f.bk $f
 		continue
 	    fi
-	    awk -v t=$tcrit -v tsn=$tindex_sse_sn_kick -v ttch=$tindex_sse_type_change '{if (($1!="SN_kick" && $ttch<=t) || ($1=="SN_kick" && $tsn<=t)) print $LINE}' $f.bk >$f
+	    awk -v t=$tcrit -v tsn=$tindex_sse_sn_kick -v ttch=$tindex_sse_type_change '{if (($1!="SN_kick" && $ttch<=t) || ($1=="SN_kick" && $tsn<=t)) print $0}' $f.bk >$f
 	elif [[ $s == *'bse'* ]]; then
 	    if is_binary_file $f.bk; then
 		echo 'Warning! unexpected binary BSE event file '$f' detected; current PeTar BSE event outputs are treated as ASCII. Keep original backup content.'
 		cp $f.bk $f
 		continue
 	    fi
-	    awk -v t=$tcrit -v tsn=$tindex_bse_sn_kick -v ttch=$tindex_bse_type_change -v tdyn=$tindex_bse_dyn_merge '{if ($1=="SN_kick") {if ($tsn<=t) print $LINE} else if ($1=="Dynamic_merge:") {if($tdyn<=t) print $LINE} else if ($ttch<=t) print $LINE;}' $f.bk >$f
+	    awk -v t=$tcrit -v tsn=$tindex_bse_sn_kick -v ttch=$tindex_bse_type_change -v tdyn=$tindex_bse_dyn_merge '{if ($1=="SN_kick") {if ($tsn<=t) print $0} else if ($1=="Dynamic_merge:") {if($tdyn<=t) print $0} else if ($ttch<=t) print $0;}' $f.bk >$f
+        elif [[ $s == *'sevnB'* ]]; then
+            awk -v t=$tcrit -v tsn=$tindex_bse_sn_kick -v ttch=$tindex_bse_type_change -v tdyn=$tindex_bse_dyn_merge '{if ($1=="SN_kick") {if ($tsn<=t) print $0} else if ($1=="Dynamic_merge:") {if($tdyn<=t) print $0} else if ($ttch<=t) print $0;}' $f.bk >$f
+        elif [[ $s == *'sevn'* ]]; then
+            awk -v t=$tcrit -v tsn=$tindex_sse_sn_kick -v ttch=$tindex_sse_type_change '{if (($1!="SN_kick" && $ttch<=t) || ($1=="SN_kick" && $tsn<=t)) print $0}' $f.bk >$f
 	elif [ $s == 'interrupt' ]; then
 	    if is_binary_file $f.bk; then
 		echo 'Warning! unexpected binary interrupt file '$f' detected; interrupt outputs are treated as ASCII. Keep original backup content.'
 		cp $f.bk $f
 		continue
 	    fi
-	    awk -v t=$tcrit -v ti=$tindex '{if ($ti<=t) print $LINE}' $f.bk >$f
+	    awk -v t=$tcrit -v ti=$tindex '{if ($ti<=t) print $0}' $f.bk >$f
 	elif is_binary_file $f.bk; then
 	    if [ $s == 'status' ]; then
 		echo 'binary '$s': use Python parser to clear by time criterion'
@@ -512,7 +557,7 @@ do
 		cp $f.bk $f
 	    fi
 	else
-	    awk -v t=$tcrit -v ti=$tindex '{if ($ti<=t) print $LINE}' $f.bk >$f
+	    awk -v t=$tcrit -v ti=$tindex '{if ($ti<=t) print $0}' $f.bk >$f
 	fi
     done
 done

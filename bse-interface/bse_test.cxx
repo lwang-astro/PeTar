@@ -34,7 +34,11 @@ struct BinaryBase{
 int main(int argc, char** argv){
 
     int arg_label;
+#ifdef SEVN
+    int width=23;
+#else
     int width=13;
+#endif
     int n=5000;
     double m_min=0.08, m_max=150.0;
     double time=100.0;
@@ -301,7 +305,6 @@ int main(int argc, char** argv){
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             abort();
         }
-        double pc_to_rsun = 44334448.006896;
         for (int k=0; k<nb; k++) {
             BinaryBase hybk;
             hybk.readAscii(fhyb);
@@ -312,7 +315,7 @@ int main(int argc, char** argv){
             hybk.star[1].tphys = hybk.tphys;
             hybk.star[0].kw = hybk.kw1;
             hybk.star[1].kw = hybk.kw2;
-            hybk.semi = hybk.period*pc_to_rsun;
+            hybk.semi = hybk.period*PC_TO_RSUN;
             hybk.period = 0.0;
             hybk.period0 = 0.0;
             hybk.ecc0 = hybk.ecc;
@@ -338,9 +341,9 @@ int main(int argc, char** argv){
     auto printBinary=[&](std::ostream & _fout, BinaryBase& _bin){
         _fout<<std::setw(width)<<_bin.m1*bse_manager.mscale;
         _fout<<std::setw(width)<<_bin.m2*bse_manager.mscale;
-        _fout<<std::setw(width)<<_bin.period0*bse_manager.tscale*3.6524e8;
+        _fout<<std::setw(width)<<_bin.period0*bse_manager.tscale*bse_manager.myr_to_day;
         _fout<<std::setw(width)<<_bin.ecc0;
-        _fout<<std::setw(width)<<_bin.period*bse_manager.tscale*3.6524e8;
+        _fout<<std::setw(width)<<_bin.period*bse_manager.tscale*bse_manager.myr_to_day;
         _fout<<std::setw(width)<<_bin.ecc;
         for (int k=0; k<2; k++) {
             _bin.star[k].printColumnAscii(_fout, width);
@@ -415,11 +418,15 @@ int main(int argc, char** argv){
                 }
                 double mtot = bin[i].star[0].mt + bin[i].star[1].mt;
                 double period_myr = bin[i].period*bse_manager.tscale;
-                double G= 0.00449830997959438;
+#ifdef SEVN
+                const double G = G_ASTRO*PC_TO_RSUN*PC_TO_RSUN*PC_TO_RSUN; // Rsun^3/(Msun*Myr^2)
                 const double PI = 4.0*atan(1.0);
-                double pc_to_rsun = 44334448.006896;
-                bin[i].semi = std::pow(period_myr*period_myr*G*mtot/(4*PI*PI),1.0/3.0)*pc_to_rsun;
-
+                bin[i].semi = std::pow(period_myr*period_myr*G*mtot/(4*PI*PI),1.0/3.0);
+#else
+                const double G = G_ASTRO;
+                const double PI = 4.0*atan(1.0);
+                bin[i].semi = std::pow(period_myr*period_myr*G*mtot/(4*PI*PI),1.0/3.0)*PC_TO_RSUN;
+#endif
                 StarParameter p1_star_bk = bin[i].star[0];
                 StarParameter p2_star_bk = bin[i].star[1];
                 double L[3] = {0,0,1};
@@ -450,9 +457,8 @@ int main(int argc, char** argv){
                     abort();
                 }
 
-
-                int nmax = bin[i].bse_event.getEventNMax();
-                int bin_type_init = bin[i].bse_event.getType(bin[i].bse_event.getEventIndexInit());
+                int nmax = BinaryEvent::getEventNMax();
+                int bin_type_init = bin[i].bse_event.getType(BinaryEvent::getEventIndexInit());
                 bin_type_last = bin_type_init;
                 for (int k=0; k<nmax; k++) {
                     int binary_type = bin[i].bse_event.getType(k);
@@ -491,7 +497,7 @@ int main(int argc, char** argv){
                     }
                     else if (binary_type<0) {
                         if (always_output_flag) {
-                            if (k==0) bin[i].bse_event.print(std::cout,bin[i].bse_event.getEventIndexInit());
+                            if (k==0) bin[i].bse_event.print(std::cout,BinaryEvent::getEventIndexInit());
                             else bin[i].bse_event.print(std::cout,k-1);
                             std::cout<<std::endl;
                         }
@@ -557,7 +563,7 @@ int main(int argc, char** argv){
                     break;
                 }
                  
-                if (bse_manager.isDisrupt(bin_type_last)) {
+                if (BSEManager::isDisrupt(bin_type_last)) {
 #pragma omp critical
                     {
                         mass0.push_back(bin[i].star[0].m0/bse_manager.mscale);

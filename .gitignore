@@ -36,7 +36,8 @@ bse-interface/Makefile
 bse-interface/petar.bse
 bse-interface/petar.bseEmp
 bse-interface/petar.mobse
-bse-interface/petar.get.init.binary.bse
+bse-interface/petar.*.get.init.binary
+bse-interface/sevn/
 galpy-interface/petar.galpy
 galpy-interface/petar.galpy.help
 parallel-random/test_rand*

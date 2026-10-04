@@ -401,12 +401,18 @@ AS_IF([test ${FDPS_VERSION%%.*} -ge 7 ],
       [use_fdps_comm=no])
 
 # SDAR
-AC_ARG_WITH([sdar-prefix], 
+AC_ARG_WITH([sdar-prefix],
             [AS_HELP_STRING([--with-sdar-prefix],
                             [Prefix of your FDPS installation. Default: ../SDAR])],
             [sdar_prefix=$withval],
             [sdar_prefix="../SDAR"])
 
+# SEVN
+AC_ARG_WITH([sevn-prefix],
+            [AS_HELP_STRING([--with-sevn-prefix],
+                        [Prefix of your SEVN installation (checked when --with-interrupt=sevn). Default: ./bse-interface/sevn])],
+            [sevn_prefix=$withval],
+            [sevn_prefix="./bse-interface/sevn"])
 AC_CHECK_FILE(["$sdar_prefix/src/Hermite/hermite_integrator.h"],
 	      [PETAR_INCLUDE=$PETAR_INCLUDE" -I$sdar_prefix/src"
              SDAR_PATH=$(cd $sdar_prefix && pwd)],
@@ -437,7 +443,7 @@ AC_ARG_WITH([step-mode],
 FCFLAGS_BK=$FCFLAGS
 AC_ARG_WITH([interrupt],
             [AS_HELP_STRING([--with-interrupt],
-                            [Interruption detection mode (merger, bse, mobse, bseEmp, dsm). Default: off])],
+                            [Interruption detection mode (merger, bse, mobse, bseEmp, sevn, dsm). Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_interrupt
              AS_IF([[test x"$with_interrupt" == xbse] || [test x"$with_interrupt" == xmobse] || [test x"$with_interrupt" == xbseEmp]],
                    [use_fortran=yes
@@ -464,10 +470,25 @@ AC_ARG_WITH([interrupt],
                           [AX_CHECK_COMPILE_FLAG([-O3],
                                                  [FCFLAGS=$FCFLAGS" -O3"])])
                     AX_CHECK_COMPILE_FLAG([-Wall],
-                                          [FCFLAGS=$FCFLAGS" -Wall"])])],
-	    [with_interrupt=off])
-
-# external potential
+                                          [FCFLAGS=$FCFLAGS" -Wall"])])
+             AS_IF([test x"$with_interrupt" == xsevn],
+                   [# PeTar only needs the installed SEVN files (headers + static archive), never the SEVN source tree
+                    AS_CASE([$sevn_prefix],[/*],[sevn_dir=$sevn_prefix],[sevn_dir=$srcdir/$sevn_prefix])
+                    petar_src_dir=`cd $srcdir && pwd`
+                    AC_CHECK_FILE([$sevn_dir/include/sevn/sevn.h],
+                                  [],
+                                  [AC_MSG_FAILURE([SEVN headers not found at $sevn_prefix/include/sevn (expected sevn.h). Install SEVN first: in the SEVN source directory run cmake . -DCMAKE_INSTALL_PREFIX=$petar_src_dir/bse-interface/sevn -Dstaticlib=ON -Dlinklib=static and make install. For an installation elsewhere use --with-sevn-prefix=PREFIX (see README SEVN section).])])
+                    AC_MSG_CHECKING([for SEVN static library libsevn_lib_static.a])
+                    sevn_lib=notfound
+                    AS_IF([test -f "$sevn_dir/lib64/sevn/libsevn_lib_static.a"],
+                          [sevn_lib=$sevn_prefix/lib64/sevn/libsevn_lib_static.a])
+                    AS_IF([test x"$sevn_lib" == xnotfound && test -f "$sevn_dir/lib/sevn/libsevn_lib_static.a"],
+                          [sevn_lib=$sevn_prefix/lib/sevn/libsevn_lib_static.a])
+                    AS_IF([test x"$sevn_lib" != xnotfound],
+                          [AC_MSG_RESULT([yes ($sevn_lib)])],
+                          [AC_MSG_RESULT([no])
+                           AC_MSG_FAILURE([SEVN static library not found under $sevn_prefix/lib/sevn or lib64/sevn. Install SEVN with -Dstaticlib=ON -Dlinklib=static (see README SEVN section).])])],[])],
+            [with_interrupt=off])
 AC_ARG_WITH([external],
             [AS_HELP_STRING([--with-external],
                             [External potential (galpy,agama). Default: off])],
@@ -654,6 +675,9 @@ AC_SUBST([use_mpfrc])
 AC_SUBST([with_debug])
 AC_SUBST([with_step_mode])
 AC_SUBST([with_interrupt])
+AS_IF([test x"$sevn_lib" == x || test x"$sevn_lib" == xnotfound],[sevn_lib=''])
+AC_SUBST([sevn_prefix])
+AC_SUBST([sevn_lib])
 AC_SUBST([with_external])
 AC_SUBST([with_external_hard])
 AC_SUBST([with_pn])

@@ -599,7 +599,7 @@ class Data:
         self.snapshot_type = 'post'
         self.interrupt_mode = 'bse'
         self.external_mode = 'none'
-        self.G = 0.00449830997959438 # pc^3/(Msun*Myr^2)
+        self.G = petar.G_MSUN_PC_MYR # pc^3/(Msun*Myr^2)
         self.semi_max = 0.1
         self.snapshot_format = 'binary'
         self.lum_min = 1e-5
@@ -726,7 +726,7 @@ class Data:
                 #print(data['core'].pos,data['core'].vel,data['skycm'].icrs)
 
             data['binary'] = binary
-            if ('bse' in self.interrupt_mode):
+            if ('bse' in self.interrupt_mode or 'sevn' in self.interrupt_mode):
                 data['lum'] = np.concatenate((single.star.lum, binary.p1.star.lum, binary.p2.star.lum))
                 data['rad'] = np.concatenate((single.star.rad, binary.p1.star.rad, binary.p2.star.rad))
                 data['type']= np.concatenate((single.star.type,binary.p1.star.type,binary.p2.star.type))
@@ -773,7 +773,7 @@ class Data:
                 else:
                     data['skycm'] = header.toSkyCoord()
             
-            if ('bse' in self.interrupt_mode):
+            if ('bse' in self.interrupt_mode or 'sevn' in self.interrupt_mode):
                 data['lum'] = particles.star.lum
                 data['rad'] = particles.star.rad
                 data['type']= particles.star.type
@@ -788,7 +788,7 @@ class Data:
             if (self.snapshot_type=='generate_binary'):
                 kdtree,single,binary = petar.findPair(particles, self.G, self.semi_max*2.0, True)
                 data['binary'] = binary
-                if ('bse' in self.interrupt_mode):
+                if ('bse' in self.interrupt_mode or 'sevn' in self.interrupt_mode):
                     data['lum_cm'] = np.append(single.star.lum, binary.p1.star.lum+binary.p2.star.lum)
                     temp_single = 5778*(single.star.lum/(single.star.rad*single.star.rad))**0.25
                     temp_b1 = 5778*(binary.p1.star.lum/(binary.p1.star.rad*binary.p1.star.rad))**0.25
@@ -1188,7 +1188,7 @@ if __name__ == '__main__':
         print("          When reading data, the path and the prefix will be added in front of the filenames.")
         print("          For example, path'./'; prefix'data'; reading file'./data.[0-9*'.")
         print("          The number of snapshots should be the same for all models.")
-        print("  -i [S]  Interrupt mode used in petar: none, merger, base, bse, mobse: ", data.interrupt_mode)
+        print("  -i [S]  Interrupt mode used in petar: none, merger, bse, mobse, bseEmp, dsm, sevn: ", data.interrupt_mode)
         print("  -t [S]  External mode used in petar: none, galpy, agama: ", data.external_mode)
         print("  -c [S]  Color type for particles: loglum, logtemp, ekin, pot, etot, white: ", pxy.color_mode)
         print("              loglum: log(luminosity).")

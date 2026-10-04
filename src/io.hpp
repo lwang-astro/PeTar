@@ -12,6 +12,11 @@
 #define PRINT_WIDTH 15
 #define PRINT_PRECISION 7
 
+// stringify a macro's token text as-is
+#define STRINGIFY(x) #x
+// expand macros in x first, then stringify the result (e.g. XSTRINGIFY(G_ASTRO))
+#define XSTRINGIFY(x) STRINGIFY(x)
+
 // Bring COMM IO types into global namespace (PeTar code uses them without prefix)
 using COMM::IOParams;
 using COMM::IOParamsContainer;

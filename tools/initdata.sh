@@ -12,8 +12,9 @@ do
 	    echo 'Options (default arguments shown in parentheses at the end):';
 	    echo '  -f [S] Specify the output file (PeTar input data) name (default: input file name + ".input")';
 	    echo '  -i [I] Skip the given number of rows in the input data file (default: 0)';
-	    echo '  -m [F] Set the mass scaling factor from the input data unit to [Msun]: mass[input unit]*m_scale=mass[Msun] (default: 1.0)';
-	    echo '         Note that Msun is used as the mass unit in BSE based stellar evolution.';
+        echo '  -s [S] Add stellar evolution columns: merger | bse | bseEmp | mobse | sevn | dsm | no (default: no)';
+        echo '  -m [F] Set the mass scaling factor from the input data unit to [Msun]: mass[input unit]*m_scale=mass[Msun] (default: 1.0)';
+        echo '         Note that Msun is used as the mass unit in BSE/SEVN based stellar evolution.';
 	    echo '  -r [F] Set the radius scaling factor from the input data unit to [pc] (default: 1.0)';
 	    echo '  -v [F] Set the velocity scaling factor from the input data unit to [pc/myr]  (default: 1.0)';
 	    echo '          If "kms2pcmyr" is given, convert velocity unit from [km/s] to [pc/myr].';
@@ -116,7 +117,11 @@ fi
 
 # first, scale data
 if [ $convert == 1 ] && [ $henon_unit == 1 ] ; then
-    G=0.00449830997959438
+    G=$(python3 -c "import petar; print(petar.G_MSUN_PC_MYR)" 2>/dev/null) # pc^3/(Msun*Myr^2), single source: src/astro_units.hpp
+    if [ -z "$G" ]; then
+        echo 'Error: cannot import the petar Python package to read G (defined in src/astro_units.hpp). Install the petar Python tools (make install) first.'
+        exit 1
+    fi
     echo 'Convert Henon unit to Astronomical unit: distance scale: '$rscale';  mass scale: '$mscale';  velocity scale: sqrt(G*ms/rs);  G='$G
     awk -v ig=$igline -v rs=$rscale -v G=$G -v ms=$mscale 'BEGIN{vs=sqrt(G*ms/rs)} {OFMT="%.15g"; if (NR>ig) print $1*ms,$2*rs,$3*rs,$4*rs,$5*vs,$6*vs,$7*vs}' $fname>$fout.scale__
     if [[ x$cm_array != x ]]; then
@@ -187,6 +192,16 @@ if [[ $seflag != 'no' ]]; then
 	#         type,  ns, nbh, tinit,  tmerger, helium
 	dsm_col=$setype', 0, 0, '$tinit', 0.0, '$helium', '
 	awk -v ms=$mscale  '{OFMT="%.15g"; print '"$base_col$se_col$dsm_col$soft_col"'}' $fout.scale__ >>$fout
+
+        elif [[ "$seflag" == *"sevn"* ]]; then
+        #       type, m0,  m,     rad, mc,  rc,  spin[3], epoch, time, lum, Mzams_SEVN, MHE_SEVN, MCO_SEVN, Plife_SEVN, Phase_SEVN, RemnantType_SEVN
+        sevn_col=$setype', $1*ms, $1*ms, 0.0, 0.0, 0.0, 0.0,0.0,0.0, '$tinit', 0.0, 0.0, $1*ms, 0.0, 0.0, 0.0, 1, 0,'
+
+        echo 'Interrupt mode: '$seflag
+        echo 'Initial stellar type: '$setype
+        echo 'mass scale from PeTar unit (PT) to Msun (m[Msun] = m[PT]*mscale): ' $mscale
+        awk -v ms=$mscale  '{OFMT="%.15g"; print '"$base_col$se_col$sevn_col$soft_col"'}' $fout.scale__ >>$fout
+
     else
 	echo 'Error: unknown option for stellar evolution: '$seflag
     fi

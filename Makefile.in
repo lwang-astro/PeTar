@@ -95,8 +95,11 @@ DSM_FLAG=off
 ifeq ($(se_mode),mobse)
 MT_FLAGS += -D MOBSE -D BSE_BASE
 BSE_FLAG=on
+else  ifeq ($(se_mode),sevn)
+MT_FLAGS += -D SEVN -D BSE_BASE
+BSE_FLAG=on
 else  ifeq ($(se_mode),bse)
-MT_FLAGS += -D BSEBBF -D BSE_BASE 
+MT_FLAGS += -D BSEBBF -D BSE_BASE
 BSE_FLAG=on
 else ifeq ($(se_mode),bseEmp)
 MT_FLAGS += -D BSEEMP -D BSE_BASE
@@ -123,10 +126,17 @@ RAND_CLEAN:
 endif
 ifeq ($(BSE_FLAG),on)
 FCLIBS = @FCLIBS@
-BSELIBFILES= bse-interface/libbse.a bse-interface/bse_interface.h 
+ifeq ($(se_mode),sevn)
+SEVN_PREFIX = @sevn_prefix@
+SEVN_LIB = @sevn_lib@
+SEVNLIBS = -I$(SEVN_PREFIX)/include/sevn
+SE_OBJS = build/evolve_sevn.o
+else
+BSELIBFILES= bse-interface/libbse.a bse-interface/bse_interface.h
 BSELIBS = -L ./bse-interface -lbse $(FCLIBS)
-CXXLIBS += $(BSELIBS)
-LIBFILES+= $(BSELIBFILES)
+endif
+CXXLIBS += $(BSELIBS) $(SEVNLIBS) $(SEVN_LIB)
+LIBFILES+= $(BSELIBFILES) $(SEVN_LIB)
 PETAR_INCLUDE += -I ./bse-interface 
 CUDA_INCLUDE += -I ./bse-interface 
 SRC += ${shell ls ./bse-interface/*.h}
@@ -135,8 +145,13 @@ SE_INSTALL:
 	$(MAKE) -C bse-interface install
 SE_CLEAN:
 	$(MAKE) -C bse-interface clean
+ifeq ($(se_mode),sevn)
+build/evolve_sevn.o: bse-interface/evolve_sevn.cpp |build
+	$(MAKE) -C bse-interface
+else
 bse-interface/libbse.a: bse-interface
 	$(MAKE) -C bse-interface 
+endif
 endif
 endif
 
@@ -357,14 +372,14 @@ CUDA_INCLUDE += -I./src @PETAR_INCLUDE@
 build:
 	[ -d build ] || mkdir build
 
-build/@PROG_NAME@:  $(SRC) $(OBJS) $(LIBFILES) $(RANDFILES) |build
-	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(OMPFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(OBJS) $(CXXLIBS) $(RANDLIBS) 
+build/@PROG_NAME@:  $(SRC) $(SE_OBJS) $(OBJS) $(LIBFILES) $(RANDFILES) |build
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(OMPFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(SE_OBJS) $(OBJS) $(CXXLIBS) $(RANDLIBS)
 
-build/@PROG_NAME@.format.transfer: format_transfer.cxx |build
-	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS)
+build/@PROG_NAME@.format.transfer: format_transfer.cxx $(SE_OBJS) |build
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS) $(SE_OBJS) $(BSELIBS) $(SEVNLIBS) $(SEVN_LIB)
 
-build/@PROG_NAME@.hard.debug: hard_debug.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) |build
-	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(OMPFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS) $(RANDLIBS)
+build/@PROG_NAME@.hard.debug: hard_debug.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) $(SE_OBJS) |build
+	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(OMPFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(SE_OBJS) $(CXXLIBS) $(RANDLIBS)
 
 build/@PROG_NAME@.dump2test: dump2test.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(OMPFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS) $(RANDLIBS)

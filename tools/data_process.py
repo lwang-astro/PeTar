@@ -129,7 +129,7 @@ def recoverParallelRealtimeFiles(filename_prefix, save_keys, output_format, kwar
 def getProcessedTimeSet(filename_prefix, output_format, kwargs):
     required_keys = ['lagr', 'core']
     if ('interrupt_mode' in kwargs.keys()):
-        if ('bse' in kwargs['interrupt_mode']):
+        if ('bse' in kwargs['interrupt_mode'] or 'sevn' in kwargs['interrupt_mode']):
             required_keys.append('bse_status')
     if (kwargs.get('r_escape', None) == 'tidal'):
         required_keys.append('tidal')
@@ -230,7 +230,7 @@ if __name__ == '__main__':
         print("  -h(--help)                Display help information.")
         print("  -p(--filename-prefix) [S] Prefix of output file names as: [prefix].[lagr|esc_[single|binary]|core] (default: data).")
         print("  -m(--mass-fraction)   [S] Lagrangian radii mass fraction, seperated by ',' without empty spaces (default: 0.1,0.3,0.5,0.7,0.9).")
-        print("  -G(--gravitational-constant) [F] Gravitational constant (if interrupt-mode=*bse*: "+str(petar.G_MSUN_PC_MYR)+"; else 1.0).")
+        print("  -G(--gravitational-constant) [F] Gravitational constant (if interrupt-mode=*bse*/sevn: "+str(petar.G_MSUN_PC_MYR)+"; else 1.0).")
         print("  -b(--r-max-binary)    [F] Maximum separation for detecting binaries (default: 0.1).")
         print("  -B(--full-binary)         Calculate detailed binary orbital parameters (including orbital angle and phase) with time-consuming computation;")
         print("                            Without this option, only basic orbital parameters (semi-major axis and eccentricity) are calculated.")
@@ -246,7 +246,7 @@ if __name__ == '__main__':
         print("     --e-escape       [S|F] Energy criterion for escaper when objects are outside distance criterion; only works when --r-escape is used; if the value is 'bound_noext', calculate bound energy without external potential and remove etot > 0; otherwise etot > mass * e-escape (default: 0.0).")
         print("     --m-ext            [S] Read a table of masses of external potential for each time, used for the calculation of tidal radius (default: not used).")
         print("                            The argument is the filename of the table. The file contains two columns: time, mass.")
-        print("  -i(--interrupt-mode)  [S] The interruption mode used in petar; choices: no, merger, base, bse, mobse, bseEmp (default: no).")
+        print("  -i(--interrupt-mode)  [S] The interruption mode used in petar; choices: no, merger, dsm, bse, mobse, bseEmp, sevn (default: no).")
         print("  -t(--external-mode)   [S] External mode used in petar; choices: galpy, no (default: no).")
         print("  -P(--use_mpfrc)           Include three columns of high-precision parts of particle position x, y, z.")
         print("     --spin-1d               Stellar evolution data use 1D spin (one column) instead of 3D; for PeTar outputs before Dec 2024.")
@@ -321,7 +321,7 @@ if __name__ == '__main__':
         print("            The corresponding class member names are 'mass_0.08_1', 'mass_1_150', and 'mass_0.08_1__in__1_150'.")
         print("Important notes:")
         print("  1) Ensure correct options are set for '-i', '-t', and '-G' to read snapshots accurately and calculate Kepler orbital parameters correctly.")
-        print("     When using the compiled SSE/BSE stellar evolution package, use '-i bse'. Note that even if SSE/BSE is compiled but switched off during petar usage, '-i bse' is still required.")
+        print("     When using the compiled SSE/BSE stellar evolution package, use '-i bse'. Note that even if SSE/BSE is compiled but switched off during petar usage, '-i bse' is still required. Idem for SEVN")
         print("     Similarly, when the Galpy external potential support is compiled, use '-i galpy' regardless of whether external potential is set in petar options during simulation.")
         print("     Make sure to set the correct value for '-G' based on the units used during petar usage.")
         print("  2) If data is written in BINARY format during petar simulation, use '-s binary'.")
@@ -410,7 +410,7 @@ if __name__ == '__main__':
 
     if (not 'G' in kwargs.keys()):
         if ('interrupt_mode' in kwargs.keys()):
-            if ('bse' in kwargs['interrupt_mode']): kwargs['G'] = 0.00449830997959438 # pc^3/(Msun*Myr^2)
+            if ('bse' in kwargs['interrupt_mode'] or 'sevn' in kwargs['interrupt_mode']): kwargs['G'] = petar.G_MSUN_PC_MYR # pc^3/(Msun*Myr^2)
 
     fl = open(filename,'r')
     file_list = fl.read()

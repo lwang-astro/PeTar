@@ -37,7 +37,7 @@ declare -a SCRIPT_TOOL_NAMES=(
   petar.galev.process
   petar.external.pot.movie
   petar.galpy.pot.movie
-  petar.get.init.binary
+  petar.bse.get.init.binary
 )
 
 discover_petar_bins() {

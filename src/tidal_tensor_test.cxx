@@ -13,6 +13,7 @@
 #include <getopt.h>
 #ifdef GALPY
 #include "galpy_interface.h"
+#include "astro_units.hpp"
 #endif
 
 #ifdef GALPY
@@ -92,7 +93,7 @@ int main(int argc, char **argv){
 #endif
             std::cout<<"Use the astronomical unit set (Myr, pc, Msun)\n";
             opt_used ++;
-            gravitational_constant = 0.00449830997959438; // pc^3/(Msun*Myr^2)
+            gravitational_constant = G_ASTRO; // pc^3/(Msun*Myr^2)
             break;
         case 'h':
             std::cout<<"petar.tt.test [options] [data filename]\n"

@@ -30,7 +30,7 @@ Examples:
 	petar.select --require bse,agama --optional mpi,omp,avx2
 
 Feature tokens and related configure options:
-	merger|bse|mobse|bseEmp|dsm -> --with-interrupt=<token>
+	merger|bse|mobse|bseEmp|sevn|dsm -> --with-interrupt=<token>
 	galpy|agama           -> --with-external=<token>
 	gasdrag               -> --with-external-hard=gasdrag
 	mpi                   -> --with-mpi=yes
@@ -74,7 +74,7 @@ split_csv_to_array() {
 feature_to_configure_hint() {
 	local token="$1"
 	case "$token" in
-		base|merger|bse|mobse|bseEmp|dsm)
+		base|merger|bse|mobse|bseEmp|sevn|dsm)
 			canonical_interrupt_token="$(canonical_feature_token "$token")"
 			printf '%s\n' "  - $token -> ./configure --with-interrupt=$canonical_interrupt_token"
 			return 0
@@ -137,7 +137,7 @@ feature_to_configure_hint() {
 is_supported_feature_token() {
 	local token="$1"
 	case "$token" in
-		base|merger|bse|mobse|bseEmp|dsm|galpy|agama|gasdrag|mpi|omp|avx|avx2|avx512|gpu|64b|mp|mpfrc|g|d)
+		base|merger|bse|mobse|bseEmp|sevn|dsm|galpy|agama|gasdrag|mpi|omp|avx|avx2|avx512|gpu|64b|mp|mpfrc|g|d)
 			return 0
 			;;
 		pn*)
@@ -167,7 +167,7 @@ canonical_feature_token() {
 is_interrupt_feature_token() {
 	local token="$1"
 	case "$token" in
-		base|merger|bse|mobse|bseEmp|dsm)
+		base|merger|bse|mobse|bseEmp|sevn|dsm)
 			return 0
 			;;
 		*)
@@ -179,7 +179,7 @@ is_interrupt_feature_token() {
 is_require_only_feature_token() {
 	local token="$1"
 	case "$token" in
-		base|merger|bse|mobse|bseEmp|dsm|galpy|agama|gasdrag|64b|gpu|mp|mpfrc)
+		base|merger|bse|mobse|bseEmp|sevn|dsm|galpy|agama|gasdrag|64b|gpu|mp|mpfrc)
 			return 0
 			;;
 		pn*)
@@ -228,7 +228,7 @@ is_performance_feature_token() {
 }
 
 print_supported_features() {
-	echo "Supported features: merger,bse,mobse,bseEmp,dsm,galpy,agama,gasdrag,mpi,omp,avx,avx2,avx512,gpu,64b,mp,mpfrc,pn*,g,d" >&2
+	echo "Supported features: merger,bse,mobse,bseEmp,sevn,dsm,galpy,agama,gasdrag,mpi,omp,avx,avx2,avx512,gpu,64b,mp,mpfrc,pn*,g,d" >&2
 }
 
 validate_feature_csv() {
@@ -349,7 +349,7 @@ count_optional_hits() {
 has_interrupt_token_in_name() {
 	local name="$1"
 	local token
-	for token in merger bse mobse bseEmp dsm; do
+	for token in merger bse mobse bseEmp sevn dsm; do
 		if has_token "$name" "$token"; then
 			return 0
 		fi
@@ -512,7 +512,7 @@ select_by_features() {
 	if [[ -z "$best_name" ]]; then
 		echo "Error: no installed petar version matches required features: ${require_csv}" >&2
 		echo "Hint: require-only feature families are included only when explicitly required." >&2
-		echo "Hint: this applies to interrupt (merger/bse/mobse/bseEmp/dsm), external (galpy/agama), external-hard (gasdrag), pn*, and mpfrc/mp features." >&2
+		echo "Hint: this applies to interrupt (merger/bse/mobse/bseEmp/sevn/dsm), external (galpy/agama), external-hard (gasdrag), pn*, and mpfrc/mp features." >&2
 		print_configure_hints_for_csv "$require_csv"
 		echo "Available versions in $bindir:" >&2
 		list_versions "$bindir" >&2 || true

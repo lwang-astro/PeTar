@@ -11,8 +11,11 @@ from sdar.hermite import HermiteData as hermite_HermiteData
 import sdar.group as hermite_group
 from .bse import *
 from .dsm import *
+from .astro_units import G_ASTRO
 
-G_MSUN_PC_MYR=0.00449830997959438 # Msun, pc, myr
+# alias kept for existing tools; single source: tools/analysis/astro_units.py
+# (generated together with src/astro_units.hpp by tools/generate_astro_units.py)
+G_MSUN_PC_MYR = G_ASTRO # pc^3/(Msun*Myr^2)
 G_HENON=1 # Henon unit
 HEADER_OFFSET=24 # header offset in bytes for snapshots with the BINARY format
 HEADER_OFFSET_F128=32 # header offset in bytes for snapshots with the BINARY format
@@ -239,7 +242,7 @@ class BaseParticle(SimpleParticle):
         Members inherited from SimpleParticle: mass (1D), pos (2D,3), *pos_high (2D,3) vel (2D,3) 
             see help(petar.SimpleParticle)
         binary_state (1D): binary interruption state
-        if (keyword argument 'interrupt_mode' == 'base', 'bse', 'bseEmp', 'mobse', 'dsm'):
+        if (keyword argument 'interrupt_mode' == 'merger', 'bse', 'bseEmp', 'mobse', 'dsm', 'sevn'):
             radius:        (1D): radius for merger checker
             dm:            (1D): mass loss
             time_record    (1D): last time of interruption check
@@ -257,7 +260,7 @@ class BaseParticle(SimpleParticle):
         ----------
         keyword arguments:
             interrupt_mode: string (none)
-               PeTar interrupt mode (set in configure): merger, base, bse, mobse, none, dsm
+               PeTar interrupt mode (set in configure): merger, bse, mobse, bseEmp, sevn, none, dsm
                This option indicates whether columns of stellar evolution exist
             use_mpfrc: bool (False)
                 if true, add three columns of pos_high indicating the high-precision parts of position
@@ -281,7 +284,9 @@ class BaseParticle(SimpleParticle):
                 keys = keys_bstat+keys_se+[['star',SSEStarParameter]]
             elif (kwargs['interrupt_mode']=='dsm'):
                 keys = keys_bstat+keys_se+[['star',DSMStarParameter]]
-            
+            elif ('sevn' in kwargs['interrupt_mode']):
+                keys = keys_bstat+keys_se+[['star', SEVNStarParameter]]
+
         SimpleParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
 
@@ -305,7 +310,7 @@ class HardParticle(BaseParticle):
 
         keyword arguments:
             interrupt_mode: string (none)
-               PeTar interrupt mode (set in configure): merger, base, bse, mobse, none, dsm
+               PeTar interrupt mode (set in configure): merger, bse, mobse, bseEmp, sevn, none, dsm
                This option indicates whether columns of stellar evolution exist
             use_mpfrc: bool (False)
                 if true, add three columns of pos_high indicating the high-precision parts of position
@@ -341,7 +346,7 @@ class HermiteParticle(HardParticle):
 
         keyword arguments:
             interrupt_mode: string (none)
-               PeTar interrupt mode (set in configure): merger, base, bse, mobse, none, dsm
+               PeTar interrupt mode (set in configure): merger, bse, mobse, bseEmp, sevn, none, dsm
                This option indicates whether columns of stellar evolution exist
             use_mpfrc: bool (False)
                 if true, add three columns of pos_high indicating the high-precision parts of position
@@ -385,7 +390,7 @@ class Particle(HardParticle):
         ----------
         keyword arguments:
             interrupt_mode: string (none)
-               PeTar interrupt mode (set in configure): merger, base, bse, mobse, none, dsm
+               PeTar interrupt mode (set in configure): merger, bse, mobse, bseEmp, sevn, none, dsm
                This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
                PeTar external mode (set in configure): galpy, agama, none 
@@ -491,7 +496,7 @@ class Binary(sdar_Binary):
             G: float (1.0)
                 Gravitational constant
             interrupt_mode: string (none)
-                PeTar interrupt mode (set in configure): merger, base, bse, mobse, none, dsm
+                PeTar interrupt mode (set in configure): merger, bse, mobse, bseEmp, sevn, none, dsm
                 This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
                 PeTar external mode (set in configure): galpy, agama, none 
@@ -577,7 +582,7 @@ class GroupInfo(hermite_group.GroupInfo):
                 member_particle_type: type (HardParticle)
                     Type of component particle, do not change this!
                 interrupt_mode: string (none)
-                    PeTar interrupt mode (set in configure): merger, base, bse, mobse, none, dsm
+                    PeTar interrupt mode (set in configure): merger, bse, mobse, bseEmp, sevn, none, dsm
                     This option indicates whether columns of stellar evolution exist
                 external_mode: string (none)
                     PeTar external mode (set in configure): galpy, agama, none 
@@ -652,7 +657,7 @@ class SDARData(sdar_SDARData):
                 include_H_approx: bool (False)
                     if True, add H_approx key
                 interrupt_mode: string (none)
-                    PeTar interrupt mode (set in configure): merger, base, bse, mobse, none, dsm
+                    PeTar interrupt mode (set in configure): merger, bse, mobse, bseEmp, sevn, none, dsm
                     This option indicates whether columns of stellar evolution exist
                 external_mode: string (none)
                     PeTar external mode (set in configure): galpy, agama, none 
@@ -695,7 +700,7 @@ class HermiteData(hermite_HermiteData):
                 time_measure: bool (False)
                     if True, add time measure keys in profile
                 interrupt_mode: string (none)
-                    PeTar interrupt mode (set in configure): merger, base, bse, mobse, none, dsm
+                    PeTar interrupt mode (set in configure): merger, bse, mobse, bseEmp, sevn, none, dsm
                     This option indicates whether columns of stellar evolution exist
                 external_mode: string (none)
                     PeTar external mode (set in configure): galpy, agama, none 

@@ -9,7 +9,7 @@ do
 	-h) shift;
 	    echo 'Read PeTar initial data and generate the input file for binary stellar evolution (petar.[mo]bse)';
 	    echo 'The keplerorbit tool from SDAR/sample/Kepler needs to be installed first'
-	    echo 'Usage: petar.get.init.binary.bse [options] [input data filename]';
+	    echo 'Usage: petar.[bse|mobse|bseEmp|sevn].get.init.binary [options] [input data filename]';
 	    echo 'Input data file should have the astronomical unit: Msun, pc, pc/Myr';
 	    echo 'Options:';
 	    echo '  -f: output file (petar input data) name (default: intput file name + ".bin0")';

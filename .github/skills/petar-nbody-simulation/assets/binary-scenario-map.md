@@ -12,6 +12,10 @@ This note documents the default scenario inference used by the skill.
   Scenario: stellar evolution
   Feature stack: base + BSE/SSE
 
+- `petar.mpi.omp.avx512.sevn`
+  Scenario: stellar evolution (SEVN)
+  Feature stack: base + SEVN
+
 - `petar.mpi.omp.avx512.galpy`
   Scenario: external potential with Galpy
   Feature stack: base + Galpy
@@ -44,7 +48,7 @@ This note documents the default scenario inference used by the skill.
 
 ## Standalone stellar-evolution tools
 
-- `petar.bse` / `petar.mobse` / `petar.bseEmp`
+- `petar.bse` / `petar.mobse` / `petar.bseEmp` / `petar.sevn`
   Valid executables only for the standalone-bse scenario (stellar evolution without N-body); not cluster solvers.
 
 ## Skill behavior

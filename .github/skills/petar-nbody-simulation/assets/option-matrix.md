@@ -351,8 +351,8 @@ Apply this ordering after choosing a requirement-driven filter.
   - path: /home/lwang/bin/petar.external.galpy
 - petar.galpy.help (5 options)
   - path: /home/lwang/bin/petar.galpy.help
-- petar.get.init.binary.bse (3 options)
-  - path: /home/lwang/bin/petar.get.init.binary.bse
+- petar.bse.get.init.binary (3 options)
+  - path: /home/lwang/bin/petar.bse.get.init.binary
 - petar.hard.test (40 options)
   - path: /home/lwang/bin/petar.hard.test
 - petar.mpi.omp.avx2.bse.galpy.gasdrag.dump2test (39 options)

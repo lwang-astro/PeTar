@@ -89,7 +89,7 @@ Usage: petar [option] filename
   -h(--help):  print help
 ** Default values are shown after ':'
 ** The char in [] indicates argument type: I: 64bit integer; F: 64bit floating; S: string
-  -G  [F] Gravitational constant, if -u 1, G = 0.00449830997959438 pc^3/(Msun*Myr^2): 1
+  -G  [F] Gravitational constant, if -u 1, G = 0.004498502151469553 pc^3/(Msun*Myr^2): 1
   -T  [F] Particle-tree opening angle theta: 0.3
   -a  [I] Data file output mode: 1
          0: overwrite files except object dump files, include header lines

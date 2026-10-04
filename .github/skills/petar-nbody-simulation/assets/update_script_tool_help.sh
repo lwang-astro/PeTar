@@ -18,7 +18,7 @@ TOOLS=(
   petar.galev.process
   petar.external.pot.movie
   petar.galpy.pot.movie
-  petar.get.init.binary
+  petar.bse.get.init.binary
 )
 
 rm -f "$OUT_DIR"/*.help.txt
