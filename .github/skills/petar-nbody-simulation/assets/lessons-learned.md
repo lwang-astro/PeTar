@@ -639,3 +639,19 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: SEVN cmake `option(openmp ... ON)` 默认开启,日志用 `omp_get_thread_num` 随库分发;静态库成员拉取规则(无未解析符号不拉入)决定哪些目标受影响;SEVN 头文件的 `_OPENMP` 条件编译使库构建选项与调用方编译旗标强耦合。
 
 **Prevention rule**: ① 判断某工具是否需要 OpenMP 链接旗标:看它是否显式链接 SEVN 对象(`SE_OBJS`)或引用 SEVN 符号——显式列出的静态库仅按需拉成员;② 改动外部库构建选项前,先 grep 其头文件的条件编译宏(`_OPENMP` 类)与 PeTar 侧编译旗标的耦合,并确认调用是否发生在 OpenMP 并行区;③ 链接期 `-fopenmp` ≠ 启用并行(零线程占用),与编译宏 `THREAD_PARALLEL` 必须区分使用。
+
+### 2026-10-04: hard.debug 回放改 par 判据半径无效——判据状态内嵌在 dump 粒子里;判据参数效应归因先看事件卡在哪个分支
+
+**Mistake**: 想用 `*.hard.debug` 回放做 r-group 参数扫描,直接改 `data.par.hard` 的 `r-group`/`r-search-group`(0.1×–10× 共 30× 范围),结果三档 dE 与有效 r_crit 逐位不变,一度误以为"生产事件与半径无关"。
+
+**Root cause**: 有效 r_crit = 每粒子 changeover 半径(dump 内嵌)× r_group_over_in,回放工具从 dump 恢复粒子态时判据半径随之固化,par 文件的 r-group 行不重算它(×30 还会触发 r_search 界断言)。真正该看的:Pal5 三案形成点全部精确卡在半径边界(dr≈r_crit_eff)、κ_org 超门 7–13 个量级——事件是**半径钳制**而非 κ 门限,κ 分支(自适应放置器,样例实测校准在最优)被 r_group/r_in=0.00375 上限拦住。
+
+**Prevention rule**: 回放只能复现不能重parametrize 判据;判据参数的生产效应要么改 dump 二进制里的粒子半径,要么跑真实段。归因任何判据行为先打印事件触发点的 dr/r_crit/κ_org,判断卡在半径分支还是 κ 分支,再谈参数。
+
+### 2026-10-04: 组进出误差评估必须报切换位置与 κ 触发值——SDAR 样例侧完整归因链(Pal5 large_energy 收官)
+
+**Mistake**: hard_large_energy 归因链两次误诊(SE 质量损失;过渡层簿记不对称 #4/#5、重入初始化 #7、自适应步长 #6)——全部被逐项实测证伪:簿记项全零、改写纯度 ≤1e-16、固定 ds 与自适应逐位相同;真因是**切换离散格式的固有局部截断,大小由切换位置主导**(孤立相遇早切好 400×、强扰动场中间最优 ~3×、束缚轨道平坦)。
+
+**Root cause**: 计划审计表按九月重构前的行为写的,#4/#5/#7 已被重构修掉;κ 门(1e-2)本身就是自适应放置机制且恰校准在实测最优,生产被半径上限钳制。完整证据链见 `SDAR/docs/transition_unification_plan.md`(commits a2dff7a/d474412),回归基准 `SDAR/sample/test/group_transition_bench.sh`。
+
+**Prevention rule**: 评估组判据/过渡层改动必须带切换位置(r_crit/peri)与 κ 触发值,不能只报事件数或固定残差;κ 门限(1e-2)的物理位置与 κ_ref 约定强耦合(样例 1e-6 时潮汐环境完全拒绝成组,生产 1e-4),调门限必须连 κ_ref 一起定标。
