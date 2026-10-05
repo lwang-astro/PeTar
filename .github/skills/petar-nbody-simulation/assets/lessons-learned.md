@@ -284,6 +284,30 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: 排查"DATADUMP 无产物"先确认本步该 cluster 是否已有更早 dump 事件（grep 同线程相邻 "Dump file:" 行）；读 `dumpThread` 必须读全——副作用在函数尾部。临时打印 key/allow 一轮即可定位此类问题。
 
+### 2026-10-04: t=0 全簇硬系统连锁的真链路是 r_search 连通簇收集,不是 SDAR 组分析——先查 data.par 解析半径再归因
+
+**Mistake**: `doc/ic-hard-failures-plan.md` 初版把 N=1000 单簇硬系统归因于 "SDAR group analysis 经巨大 r_search 链式合并"(n_group=336→单组),方向误导:真正把全簇连成一个连通硬系统的是上游 r_search 连通簇收集(`cluster_list.hpp` 的 DFS);SDAR 的 r-search-group(物理钳制 a_hs≈0.0068 pc)没有参与——无初始双星 IC 以 n_group=0 失败即为反证。
+
+**Root cause**: `-s 0.5`(dt_soft=0.5 Myr)≫ 该簇自动值(~2.4e-4 Myr),自动反推 r_out_base=3.26 pc(`src/petar.hpp:3807` Kepler 约束,nstep=16,m_avg=2.38 M☉)> 簇维里半径(G·M/3σ²≈2.27 pc);每粒子 r_search≥r_search_min=5.13 pc,再叠加 (m/m_avg)^{1/3} 质量放大(73.6 M☉ ×3.16→r_out=10.24 pc)与双星成员 |v|·dt 项(783 pc),连通判据覆盖全簇→999/1000 粒子一簇。outA/outB 日志中 r_in/r_out/r_search 与公式逐位吻合。双星成员 783 pc 的成因是时序空窗:每树步 `calcRsearchAndGetMassBackupAndsetGroupDataToCM`(`src/hard.hpp:4152`)对已标记组员(bid≠0)本用**质心速度**算 r_search 并复制给成员,但首树步建组发生在刷新**之后**,原始双星成员当时 bid==0 全按单粒子自身速度刷新;建组后同树步只 floor r_search 到 r_out(`syncMemberChangeoverScale`,commit 2fa15b7)不覆盖为 CM 值,783 pc 判据随即进入 SDAR 扰动者判据(hermite_integrator.h:1579 取成员 max)。`-b` 仅影响 IC 载入时一次性的 σ-based r_search(petar.hpp:3937)、σ 统计的成员配对(3684)和 tree 容量(3245),不进入运行期半径公式。
+
+**Prevention rule**: 归因 "整簇进硬积分" 类故障,第一步读 `data.par`/`data.par.hard` 的解析半径(r、r-ratio、r-search-min、r-search-group)与日志的 "Mean inner/outer changeover radius / Average mass / Velocity dispersion",用 r_virial≈G·M/(3σ²) 对照 r_out;检查 -s 是否被显式放大到自动值之上。HARD_DEBUG 版的 "Maximum rsearch particle" 打印直接给出肇事粒子及其半径。
+
+### 2026-10-05: 破组 changeover 残留的验证必须用 data.process 成员判定——status 列与 Kepler 双星判据都会假阳性;修复量化必须有 A/B 基线
+
+**Mistake**: 对症检查初版用快照 `status<0` 当组员判据,758 个"违规"全是活跃双星成员(输出时刻 status 不可靠);二版要求所有 data.process 双星带 pair 缩放,又把宽双星(SDAR 不建组、按设计带自身值)误判——两版都差点得出"修复无效"的错误结论。
+
+**Root cause**: 成员身份的权威来源是 SDAR 分组;`status` 列在输出时刻被重置/不完整,`petar.data.process` 的双星是 Kepler 束缚判定,与 SDAR r_group 判组是两套标准。正确不变量:单星 r_in == 自身质量公式;双星成员接受"pair 值或自身值",匹配两者皆非才是陈旧。终版结果:基线(无修复)561 例陈旧、最高 +260%;修复版(sync+簇守卫+孤立单星守卫)0 例,唯一成员案例 0.12%(SE 漂移量级)。
+
+**Prevention rule**: 写 changeover/成员不变量检查用 petar.data.process 的 single/binary 分类,不用原始快照 status 列;双星成员判据必须同时接受 pair 与自身两种合法值,容差 ≥2e-4;量化修复效果必须带无修复基线(stash→重编译→同 IC 重跑);修复版与基线中止于同子系统不同断言 = 既有缺陷而非回归。**第三类假阳性:层级组(n≥3)**——data.process 只识别双星,n3/n4 组成员按设计带组总质量 changeover,与 pair/自身期望都不匹配;严格判定需用 data.group.nN 成员表。MPI 验证(2 秩,bse,N=500 双星簇,t=2 Myr):干净完成、hard_connected=9+1(跨节点连通簇路径与 adr<0 远端分支实际执行,守卫经既有 send-back/correctForceForChangeOverUpdateOMP 机制传播),所有不变量标记均属三体假阳性(经 data.group.n3 确证,ids 47/48/371、449/450)。复现配方(mcluster -N 500 -b 0.95 -m 0.5 -m 50 -C 5 -u 1 -s 7 → petar.init bse 模板 → petar -u 1 -b 237 --bse-metallicity 0.02)记录于 2026-10-05 断言修复提交信息。
+
+### 2026-10-05: 双星中断断言与 SEVN merge 无关——归因先 blame 失败行再 cpp -E 剥离对比;固定 --rand-seed 也不可复现
+
+**Mistake**: BSE 双星两个断言(ar_interaction.hpp:1230 `dt>0` 与 :1342 零质量星)恰好在 SEVN 集成提交(55d09bd/1a12bab)合入次日复现,时间上高度可疑;且 ±hard.hpp 修复 A/B 表现为"换个位置崩",容易被读成"merge 引入新缺陷"。
+
+**Root cause**: (1) 归因依据是时间邻近而非代码谱系:git blame 显示两条断言及其触发判据(isCallBSENeeded 的 Roche/trflow 分支)分别引入于 2021-01、2024-04、2024-07、2024-10,远早于 2026-10-04 的 merge;用 `g++ -E` 携带目标构建完整 -D 集(SEVN 未定义)对 bse_interface.h 做 merge 前后真实预处理对比,BSE 可见差异仅剩:readAscii 错误消息计数修正(fscanf 本来就按 12 列读)、#endif 后分号重排、static constexpr 重构、选项解析重构——无数值路径变化(手写 ifdef 剥离脚本连续两版都有 bug,不可靠)。(2) 运行对照方法错误:默认 `--rand-seed` 固定后仍不可复现——同一二进制、同 seed、同线程数(1 rank/2 threads)两次运行分别崩在 hard.hpp:3116(NaN vbk)与 ar_interaction.hpp:1342,BSE 中断处理的线程交错使每次运行对"崩在哪"重新采样,单次崩溃签名不能区分代码变体;而 pre-SEVN 二进制(worktree 1a89cd2)同输入 seed 1 即精确复现 Case-B 断言。
+
+**Prevention rule**: ① 归因"最近合并"前先两步:blame 失败行与触发判据的引入日期;对涉事头文件用 cpp -E(带目标构建完整 -D、目标宏未定义一侧)做前后对比,不要肉眼扫 diff 或手写宏剥离脚本;② BSE 家族运行对照必须重复多次比较"崩溃集合"是否一致,`--rand-seed` 固定不构成可复现性保证(结论自包含:两条断言行均 2021/2024 引入,cpp -E 全 -D 对比 merge 前后 BSE 可见代码无数值路径变化,pre-SEVN worktree 二进制同输入复现 Case-B 断言);③ 对称性检查:一侧修了某判据缺陷(如 1a12bab 只给 SEVN 分支加了 dt>0 guard)后,必须检查其他 interrupt 分支(BSE/mobse/bseEmp)是否需要等价 guard。
+
 ---
 
 ## Post-Processing
@@ -580,7 +604,7 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Mistake**: 对 Pal5-IMF 生产运行新出现的大量 `hard_large_energy` dump，交接计划文档诊断为"BSE 质量损失能量修正未接线"（dm 记账 active、消费者被注释），并给出改 dm 簿记的方向。事件级回放（gdb 断点 `evolveStar` + ADJUST_GROUP_DEBUG 组事件打印）三案例全部证伪：步内 12 次 evolveStar 全部 dm=0 或 ~1e-14，`.sse.*` 事件文件为空；每个案例的步内都发生组 form/break（40.5+40.5 M☉ BH 对在无束缚/临界束缚近遇的近心点瞬间 d<r_crit 成组、越界即释放，两例还有 form→break→re-form→break 抖动），每次状态改写注入 O(1e-3)×相遇动能（16.4 / 1.12 / 0.138）。`dE_mod`、`dE_change` 恒 ~0 因为过渡注入从未进簿记列——参考相对 dE 携带全部偏移并反复触发告警。
 
-**Root cause**: 判据性诊断只看了"dE 在首子步即达终值且恒定"的形态与 dm 管线的存在，未做事件级归因（组事件计数/断点验证）；过渡注入正是此前回文工作已测得的层（判据对称≠过渡对称），在稠密星团 BH 近遇上以 ~40 dump/小时的量级显形。
+**Root cause**: 判据性诊断只看了"dE 在首子步即达终值且恒定"的形态与 dm 簿记的存在，未做事件级归因（组事件计数/断点验证）；过渡注入正是此前回文工作已测得的层（判据对称≠过渡对称），在稠密星团 BH 近遇上以 ~40 dump/小时的量级显形。
 
 **Prevention rule**: large_energy 归因必须先做事件级验证：`grep "Find new group\|Break group"` + gdb 断点 `evolveStar` 看 dm，再谈修正方向；"dE 恒定于首子步"同时兼容参考偏移（组事件）与真实误差，不能单凭形态定罪。修复（`hard.hpp` integrateToTime 能量读出后）：事件步 `calcEnergySlowDown(true)` 重基线，注入计入 `dE_change` 簿记列，告警只看残余积分误差——三案例回放 dE 降至 ~1e-10、零触发，非事件步与事件后漂移的检测灵敏度保留。
 
@@ -648,10 +672,19 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: 回放只能复现不能重parametrize 判据;判据参数的生产效应要么改 dump 二进制里的粒子半径,要么跑真实段。归因任何判据行为先打印事件触发点的 dr/r_crit/κ_org,判断卡在半径分支还是 κ 分支,再谈参数。
 
-### 2026-10-04: 组进出误差评估必须报切换位置与 κ 触发值——SDAR 样例侧完整归因链(Pal5 large_energy 收官)
 
-**Mistake**: hard_large_energy 归因链两次误诊(SE 质量损失;过渡层簿记不对称 #4/#5、重入初始化 #7、自适应步长 #6)——全部被逐项实测证伪:簿记项全零、改写纯度 ≤1e-16、固定 ds 与自适应逐位相同;真因是**切换离散格式的固有局部截断,大小由切换位置主导**(孤立相遇早切好 400×、强扰动场中间最优 ~3×、束缚轨道平坦)。
+### 2026-10-05: 防御性 clamp 照搬前先查危害是否已被根修——"单星路径有防护"不是加 clamp 的理由;isCallBSENeeded 的 SEVN 轮询是死代码
 
-**Root cause**: 计划审计表按九月重构前的行为写的,#4/#5/#7 已被重构修掉;κ 门(1e-2)本身就是自适应放置机制且恰校准在实测最优,生产被半径上限钳制。完整证据链见 `SDAR/docs/transition_unification_plan.md`(commits a2dff7a/d474412),回归基准 `SDAR/sample/test/group_transition_bench.sh`。
+**Mistake**: 修复双星两断言后,我在 postProcess 又加了 `std::max(time_interrupt_max, time_now)` clamp,理由是"单星路径 modifyOneParticle 已有同款防护,注释列了两个危害"。用户追问后查证:两个危害都是已修复的 bug——hard dump 时间偏移(40b1ee4 已在 hard_debug 源头修复,clamp 只是残留 harden)、Hermite dt-max 超 drift 步宽(1bc65f9 已修)。Case-A dump 里 stale-max 也从未发生(触发是正常排程 ti=rec+dtstar 恰落在 time_now)。同轮还发现 isCallBSENeeded 的 SEVN 分支里 `getTimeStepBinary(...) < dt_sevn` 轮询自 SEVN 集成起就是死代码:束缚对走第一判据,else 分支要求束缚对与 !call_flag 矛盾;SEVN 下一事件时间本就由 postProcess 的 getTimeStepBinary 写进 time_interrupt,不需要检查时二次查询。均已移除。
 
-**Prevention rule**: 评估组判据/过渡层改动必须带切换位置(r_crit/peri)与 κ 触发值,不能只报事件数或固定残差;κ 门限(1e-2)的物理位置与 κ_ref 约定强耦合(样例 1e-6 时潮汐环境完全拒绝成组,生产 1e-4),调门限必须连 κ_ref 一起定标。
+**Root cause**: 把"别处有防护"当成"此处需要防护",没有验证危害在当前代码是否可达;把 2024 年注释列举的 hazard 当作活机制,而没查这些 hazard 对应的根修提交。SEVN 死代码则源于集成时照搬了不成立的假设(检查时轮询替代排程),从未做可达性推演。
+
+**Prevention rule**: ① 加防御性 clamp/assert 豁免前,先回答:当前代码里这个危害可达吗?用 git log -S 找防护代码的引入提交,读它修的根因是否已在源头修复;若已根修,防护只是残留,照搬等于掩盖未来的真 bug。② 不变式类(time_interrupt_max >= time_now)设计上应严格成立,违反即 bug:暴露优于 clamp,clamp 只应存在于已知的工具性时间偏移场景(如 hard_debug 回放)且需注释指向根修提交。③ 评审继承的判据代码时做可达性推演:第一判据已覆盖的状态,后续分支是否可达;不可达即删。
+
+### 2026-10-05: BSE 双星两断言修复——dt>0 不变式要求两成员都落后;kw15 是 BSE 合法返回通道必须在 assert 中豁免
+
+**Mistake**: (1) Case A(dt>0 断言)最初归因为 Roche/trflow 非时间判据在 dt=0 时触发;实际 trflow.f 对已溢出恒星返回正值(一个轨道周期),dt=0 永远不会触发——真机制是新 group 形成时成员 time_record 混合(一个已在 time_now、另一个因 SSE 事件 dtmiss 落后),isCallBSENeeded 第一判据 `(_dt1>0 or _dt2>0)` 只要有一个落后就调用,catch-up 后二体区间恰为 0。(2) Case B(零质量星断言)假设是 merger 簿记泄漏;实际 hrdiag.f 三处(544/798/979)在无残骸超新星(PISN/碳点燃失败)时合法返回 kw=15/mt=0,evolv2 内部产生时只记 type-change 事件(event_flag≤2),断言在 postProcess 已有的零质量清理之前就 abort。两次都是 hard.debug dump 重放 + gdb watchpoint(bin_interrupt.status)定案,静态假设全部偏了。
+
+**Root cause**: (1) 断言编码了错误的不变式("dt>0"实际要求两个成员都严格落后于 time_now),而混合 record 状态在新鲜 group/重组时常规出现;(2) 事件分类根因:evolv2.f 的 kw15 转变经 goto 135 本就写 marker 12(no remnant),真正的漏在 PeTar 侧 evolveBinary 的 kw15 早退分支——SSE(evolv1)产生的 kw15 无二体事件通道,该分支把状态记成 type 2 且仅伴星有事件才记录;修正为始终记 type 12,isNoRemnant→event_flag=5,断言门自然关闭,断言恢复严格(豁免移除)。消失处理最终为"每处自含":叶子 catch-up(catchup_modify==3→status=merge 且 modify_return=max(...,3))、叶子 postProcess mass-zero(既有)、树分支单成员注册点(branch==3→merge,带 destroy 保护);最初的集中提升块已删。中途教训:catch-up 注册曾写死 modify_return=2,把 3(消失信号)吞掉——父树节点永远看不到 3,hard.hpp 非 merge 路径的 ASSERT(!isUnused) 会炸;返回码语义必须透传(std::max),不得整体覆盖。诊断方法论:t=12.5 快照全净 + binary_merge 无新行即可排除 merger 泄漏,锁定窗口内 SSE/evolv2 直接产生。
+
+**Prevention rule**: ① 排查 BSE 断言先重放 dump 取实际状态(member 的 time_record/time_interrupt/kw/tphys),不要从判据代码反推触发路径——反推两次都错(Roche 假设、merger 泄漏假设);② 对 BSE/SSE 返回值写 invariant assert 时必须核对 Fortran 侧全部产出通道(kw15 三处、mix.f 一处),"mt>0"类断言要豁免 kw15 或改为检查 kw 一致性;③ 中断状态机:凡设 status!=none 必须同时 setBinaryTreeAddress(SDAR checkParams 强制),编辑该区域后若新增状态赋值路径,grep 确认每个路径都带地址;④ 修复后必须重放原 abort dump 回归——本次重构(catch-up 前置)曾意外丢失入口 setBinaryTreeAddress,gdb watchpoint 立即暴露。

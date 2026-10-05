@@ -973,8 +973,14 @@ public:
                     if (evolve_single_flag) {
                         modify_branch[k] = modifyOneParticle(*_bin.getMember(k), _bin.getMember(k)->time_record, _bin_interrupt.time_now);
                         modify_return = std::max(modify_return, modify_branch[k]);
-                        // if status not set, set to change
-                        if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) {
+                        // a fully vanished member (return 3, kw=15) needs the merger
+                        // removal handling; otherwise set change if status not set
+                        if (modify_branch[k]==3) {
+                            if (_bin_interrupt.status != AR::InterruptStatus::destroy)
+                                _bin_interrupt.status = AR::InterruptStatus::merge;
+                            _bin_interrupt.setBinaryTreeAddress(&_bin);
+                        }
+                        else if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) {
                             _bin_interrupt.status = AR::InterruptStatus::change;
                             _bin_interrupt.setBinaryTreeAddress(&_bin);
                         }
@@ -1195,39 +1201,60 @@ public:
                 int binary_type_init = 0;
                 if (binary_type_p1==binary_type_p2) binary_type_init = binary_type_p1;
 
-                // check whether need to update based on time step
+                // first evolve the lagging component (SSE) to the leader's record;
+                // ti=rec forces modifyOneParticle's gate, evolution stops at SSE
+                // events, so fully syncing may take several interrupt checks
+                int catchup_modify = 0;
+                if (p1->time_record!=p2->time_record) {
+                    if (p1->time_record<p2->time_record) {
+                        p1->time_interrupt = p1->time_record;
+                        catchup_modify = modifyOneParticle(*p1, p1->time_record, p2->time_record);
+                    }
+                    else {
+                        p2->time_interrupt = p2->time_record;
+                        catchup_modify = modifyOneParticle(*p2, p2->time_record, p1->time_record);
+                    }
+                    if (catchup_modify>0) {
+                        _bin_interrupt.setBinaryTreeAddress(&_bin);
+                        if (catchup_modify==3) {
+                            // the caught-up member vanished (kw=15): trigger the same
+                            // removal handling as postProcess's mass-zero path, the
+                            // BSE call below may be skipped (dt==0 / not due)
+                            _bin_interrupt.status = AR::InterruptStatus::merge;
+                        }
+                        else if (_bin_interrupt.status == AR::InterruptStatus::none)
+                            _bin_interrupt.status = AR::InterruptStatus::change;
+                        // propagate the vanish signal (3), not blanket 2
+                        modify_return = std::max(modify_return, catchup_modify);
+                    }
+                }
+
+                // common evolution interval left to time_now after the catch-up;
+                // the catch-up cannot pass the leader (SSE events may stop it early),
+                // so the binary start time is the leader's (max) record
+                Float dt = _bin_interrupt.time_now - std::max(p1->time_record,p2->time_record);
+                ASSERT(dt>=0);
+
+                // BSE call due only when an evolution interval remains (dt==0: only the
+                // catch-up above was due) and the next scheduled check is not in the future;
+                // the dynamical merger/tide checks below must still run at every check
                 double time_check = std::min(p1->time_interrupt, p2->time_interrupt);
-                Float dt1 = _bin_interrupt.time_now - p1->time_record;
-                Float dt2 = _bin_interrupt.time_now - p2->time_record;
-                // if next time to check > time_now, do not evolve by setting dt = 0;
-                if (time_check>_bin_interrupt.time_now) dt1 = dt2 = 0.0;
+                bool bse_call_flag = (dt>0 && time_check<=_bin_interrupt.time_now);
 
-                // check whether bse is needed
-                Float dr[3] = {p1->pos[0] - p2->pos[0],
-                               p1->pos[1] - p2->pos[1],
-                               p1->pos[2] - p2->pos[2]};
-                Float dr2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                if (bse_call_flag) {
+                    // check whether bse is needed
+                    Float dr[3] = {p1->pos[0] - p2->pos[0],
+                                   p1->pos[1] - p2->pos[1],
+                                   p1->pos[2] - p2->pos[2]};
+                    Float dr2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
 
-                bool check_flag = bse_manager.isCallBSENeeded(p1->star, p2->star, dr2, _bin.semi, _bin.ecc, dt1, dt2, binary_type_init);
+                    bse_call_flag = bse_manager.isCallBSENeeded(p1->star, p2->star, dr2, _bin.semi, _bin.ecc, dt, binary_type_init);
+                }
 
-	        	if (check_flag) {
+	            if (bse_call_flag) {
                     ASSERT(bse_manager.checkParams());
                     // record address of modified binary
                     _bin_interrupt.setBinaryTreeAddress(&_bin);
-
-                    // first evolve two components to the same starting time
-                    if (p1->time_record!=p2->time_record) {
-                        if (p1->time_record<p2->time_record) {
-                            p1->time_interrupt = p1->time_record;
-                            modifyOneParticle(*p1, p1->time_record, p2->time_record);
-                        }
-                        else {
-                            p2->time_interrupt = p2->time_record;
-                            modifyOneParticle(*p2, p2->time_record, p1->time_record);
-                        }
-                    }
-                    Float dt = _bin_interrupt.time_now - std::max(p1->time_record,p2->time_record);
-                    ASSERT(dt>0);
 
                     StarParameterOut out[2];
                     _bin.calcOrbit(gravitational_constant);

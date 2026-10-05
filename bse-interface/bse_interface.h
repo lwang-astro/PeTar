@@ -2041,6 +2041,12 @@ public:
             if (_star1.kw==15 && _star2.kw==15) {
                 _star1.tphys = tphysf;
                 _star2.tphys = tphysf;
+#ifndef SEVN
+                // both members vanished: record no-remnant so the destroy handling
+                // in the caller runs instead of an unrecorded state change
+                _bse_event.recordEvent(_star1, _star2, semi_rsun, _ecc, 12, 0);
+                _bse_event.setEventIndexEnd(1);
+#endif
                 return 0;
             }
             if (_star1.kw==15) {
@@ -2061,7 +2067,10 @@ public:
                                &event_index, 2);
             }
 #else
-            if (event_flag>0) _bse_event.recordEvent(_star1, _star2, semi_rsun, _ecc, 2, event_index++);
+            // the kw=15 member vanished in single-star evolution, which has no binary
+            // event channel: always record a no-remnant event so isNoRemnant()
+            // classifies the pair and the caller runs the mass-zero cleanup
+            _bse_event.recordEvent(_star1, _star2, semi_rsun, _ecc, 12, event_index++);
 #endif
             _bse_event.setEventIndexEnd(event_index);
             return 0;
@@ -2613,41 +2622,29 @@ public:
       @param[in] _dr2: seperation square of two members [IN unit]
       @param[in] _semi: semi-major axis, [IN unit]
       @param[in] _ecc: eccentricity of binary, used for BSE
-      @param[in] _dt1: the time step of star 1 [In unit]
-      @param[in] _dt2: the time step of star 2 [In unit]
+      @param[in] _dt: the time step of the binary [In unit]
       @param[in] _binary_type_init: initial binary type
       \return true: necessary
     */
-    bool isCallBSENeeded(StarParameter& _star1, StarParameter& _star2, double& _dr2, double& _semi, double& _ecc, double& _dt1, double& _dt2, int& _binary_type_init) {
-
+    bool isCallBSENeeded(StarParameter& _star1, StarParameter& _star2, double& _dr2, double& _semi, double& _ecc, double& _dt, int& _binary_type_init) {
+        ASSERT(_dt>0);
         bool call_flag = false;
         // check time step and seperation criterion
-        if ((_dt1>0 or _dt2>0) and _semi>0)  call_flag = true;
+        if (_semi>0)  call_flag = true;
         
         // check whether this binary is in mass transfer or is disrupted, if not, check Roche, GW and tidal disruption condition
         if (!call_flag && !isMassTransfer(_binary_type_init) && !isDisrupt(_binary_type_init)) {
 
-            double dt = std::max(_dt1, _dt2)*tscale;
+            double dt = _dt*tscale;
 
-            // check GR effect
 #ifdef SEVN
-            // SEVN internal check: when the next SEVN event is sooner than the next regular check, call BSE now
-            if (!call_flag) {
-                // unbound pairs (negative SMA / ecc>=1) need a call only when there is time to
-                // evolve: with _dt1==_dt2==0 (both components already synced to time_now) the
-                // caller's dt>0 assumption would be violated; the next interrupt re-checks instead
-                if (_semi <= 0.0 or _ecc >= 1.0) {
-                    if (dt > 0.0) call_flag = true;
-                }
-                else {
-                    double dt_sevn = std::max(_dt1, _dt2);
-                    int binary_type_dummy = -1;
-                    if (getTimeStepBinary(_star1, _star2, _semi, _ecc, binary_type_dummy) < dt_sevn) call_flag = true;
-                }
-            }
-        } // close the outer mass-transfer/disruption check block
+            // unbound pairs (negative SMA / ecc>=1) never satisfy the first criterion
+            // but still need BSE calls (kicks, disruption); the next event time is
+            // already scheduled into time_interrupt via getTimeStepBinary in postProcess
+            // at the end of the last evolution, no re-query is needed here
+            if (_semi <= 0.0 or _ecc >= 1.0) call_flag = true;
 #else
-        // check GR effect
+            // check GR effect
             if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15) {
                 double semi_rsun = _semi*rscale;
                 double dt_gr = EstimateGRTimescale(_star1, _star2, semi_rsun, _ecc);
