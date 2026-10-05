@@ -1145,7 +1145,9 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
 
     # 6) petar.get.object.snap with correct -i/-t for dtype
     object_snap_args = case.get("object_snap_args", [])
-    snap_cmd = ["petar.get.object.snap", *object_snap_args, "-p", "object", "-f", "origin", "-m", "id", "1", snap_list.name]
+    # -C: the tool's core-file default is hardcoded to 'data.core'; cases with a
+    # different output prefix (e.g. bse-galpy 'out') must point at <prefix>.core
+    snap_cmd = ["petar.get.object.snap", *object_snap_args, "-p", "object", "-C", f"{output_prefix}.core", "-f", "origin", "-m", "id", "1", snap_list.name]
     print(f"[DEBUG] petar.get.object.snap cmd: {snap_cmd}")
     rc, warns = run_cmd(snap_cmd, cwd=case_dir, env=env, log_path=log_path)
     snap_critical_warn = has_critical_mismatch_warning(warns)
@@ -1224,6 +1226,11 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
 
     if "--n-cpu" not in movie_args:
         movie_args.extend(["--n-cpu", "1"])
+
+    # movie's core-file default is hardcoded to 'data.core'; point it at the
+    # case's actual output prefix (needed by --cm-mode core)
+    if "--core-file" not in movie_args:
+        movie_args.extend(["--core-file", f"{output_prefix}.core"])
 
     movie_cmd = ["petar.movie", *movie_args, snap_list.name]
     rc, warns = run_cmd(movie_cmd, cwd=case_dir, env=env, log_path=log_path)
