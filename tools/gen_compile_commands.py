@@ -28,6 +28,7 @@ import argparse
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -54,7 +55,10 @@ SOURCE_DIRS = ("src",)
 SOURCE_SUFFIXES = (".cxx", ".cc")
 
 COMPILER = "/usr/bin/g++"
-DRIVER = "/usr/bin/mpic++"  # only consulted to extract the MPI include dirs
+# Candidate MPI C++ wrappers, in preference order; only consulted to extract the
+# MPI include dirs.  Distros ship different names (Ubuntu: mpic++/mpicxx,
+# Intel MPI/MPICH: mpicxx only).
+MPI_DRIVERS = ("mpic++", "mpicxx", "mpiCC")
 
 
 def make_var(name: str) -> list[str]:
@@ -73,16 +77,53 @@ def make_var(name: str) -> list[str]:
     return result.stdout.split()
 
 
+def find_mpi_driver() -> str | None:
+    for name in MPI_DRIVERS:
+        path = shutil.which(name)
+        if path:
+            return path
+    return None
+
+
 def mpi_compile_flags() -> list[str]:
-    """MPI include/link flags the mpic++ wrapper would add."""
-    try:
-        out = subprocess.run(
-            [DRIVER, "--showme:compile"], capture_output=True, text=True, check=True
-        ).stdout
-    except (OSError, subprocess.CalledProcessError) as exc:
-        print(f"warning: cannot query {DRIVER} ({exc}); no MPI includes added", file=sys.stderr)
+    """MPI include/link flags the MPI C++ wrapper would add."""
+    driver = find_mpi_driver()
+    if driver is None:
+        print(
+            f"warning: no MPI C++ wrapper found (tried {', '.join(MPI_DRIVERS)}); no MPI includes added",
+            file=sys.stderr,
+        )
         return []
-    return shlex.split(out)
+    # OpenMPI uses --showme:compile; MPICH and Intel MPI use -show (which also
+    # emits link flags that are irrelevant here).
+    for query in ("--showme:compile", "-show"):
+        try:
+            out = subprocess.run(
+                [driver, query], capture_output=True, text=True, check=True
+            ).stdout
+        except (OSError, subprocess.CalledProcessError):
+            continue
+        flags = shlex.split(out)
+        return flags if query == "--showme:compile" else strip_link_flags(flags)
+    print(f"warning: cannot query {driver}; no MPI includes added", file=sys.stderr)
+    return []
+
+
+def strip_link_flags(flags: list[str]) -> list[str]:
+    """Drop linker-only flags (-L, -l, -Wl,, -Xlinker arg) from wrapper output."""
+    result: list[str] = []
+    index = 0
+    while index < len(flags):
+        flag = flags[index]
+        if flag == "-Xlinker" and index + 1 < len(flags):
+            index += 2
+            continue
+        if flag.startswith(("-L", "-l", "-Wl,")):
+            index += 1
+            continue
+        result.append(flag)
+        index += 1
+    return result
 
 
 def build_flags(variables: dict[str, list[str]]) -> list[str]:
