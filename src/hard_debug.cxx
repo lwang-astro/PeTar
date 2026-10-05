@@ -38,7 +38,7 @@ public:
     bool print_flag;
 
     IOParamsHardDebug(): input_par_store(),
-                         mode(input_par_store, 0, "m", "running mode; 0: evolve system to time_end; 1: stability check"),
+                         mode(input_par_store, 0, "m", "running mode; 0: evolve system to time_end; 1: stability check; 2: print the backed-up cluster state (stellar bookkeeping columns incl. t_record/t_interrupt/star) without integration"),
                          n_crit_ptcl(input_par_store, 0, "n", "if >0, only do integration when particle number matches the given value"),
                          tstart(input_par_store, -1.0, "tstart", "if >0 only do integration when physical time >= tstart"),
                          tend(input_par_store, -1.0, "tend", "if >0 only do integration when physical time < tend"),
@@ -163,7 +163,7 @@ public:
     }
 
     bool checkParams() {
-        assert(mode.value==0 || mode.value==1);
+        assert(mode.value==0 || mode.value==1 || mode.value==2);
         assert(n_crit_ptcl.value >= 0 && n_crit_group.value >= 0 && n_crit_arti.value >= 0);
         assert(istart.value==-1 || istart.value>=1);
         assert(iend.value==-1 || iend.value>=1);
@@ -460,6 +460,26 @@ int main(int argc, char **argv){
 #if defined(BSE_BASE) || defined(DISK_STAR_MERGER)
         hard_dump.rand_manager.printRandSeeds(std::cerr);
 #endif
+
+        // print mode: static state readback (incl. stellar bookkeeping), no integration
+        if (debug_io.mode.value==2) {
+            std::cout<<std::setprecision(WRITE_PRECISION);
+            std::cout<<"# cluster "<<ncount
+                     <<"  time_offset "<<hard_dump.time_offset
+                     <<"  step_width "<<hard_dump.time_end
+                     <<"  n_ptcl "<<hard_dump.n_ptcl
+                     <<"  n_group "<<hard_dump.n_group
+                     <<"  n_arti "<<hard_dump.n_arti
+                     <<"  gcm_mass "<<hard_dump.gcm_mass
+                     <<std::endl;
+            PtclHard::printColumnTitleAscii(std::cout, WRITE_WIDTH);
+            std::cout<<std::endl;
+            for (int i=0;i<hard_dump.n_ptcl;i++) {
+                hard_dump.ptcl_bk[i].printColumnAscii(std::cout, WRITE_WIDTH);
+                std::cout<<std::endl;
+            }
+            continue;
+        }
 
         stat.time = hard_dump.time_offset;
         stat.pcm.mass = hard_dump.gcm_mass;

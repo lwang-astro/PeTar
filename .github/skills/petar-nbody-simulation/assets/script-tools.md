@@ -154,10 +154,10 @@ Measured reference (N=500, 2 Myr production run, one binary): 1 thread 1.13 s, 4
 Purpose inventory for the remaining installed binaries — none of the helper binaries can replace the solver. Each family helper also installs a generic `petar.<name>` symlink (e.g. `petar.hard.debug`, `petar.dump2test`, `petar.format.transfer`) pointing to the default family build; same purpose, prefer the family-matched name when reproducing a specific run:
 
 - `petar.<family>.hard.debug`
-  **Dump-file replay tool.** Its input is a hard-integrator dump file produced by a run (last command-line argument); it re-integrates only the dumped system over its one global step for diagnosis. It is **not** a debug build of the solver: it cannot start a simulation from a snapshot and must never be used to "run with debugging". See "Hard dump debugging" below.
+  **Dump-file replay tool.** Its input is a hard-integrator dump file produced by a run (last command-line argument); it re-integrates only the dumped system over its one global step for diagnosis. It is **not** a debug build of the solver: it cannot start a simulation from a snapshot and must never be used to "run with debugging". `-m 2` switches to **static state readback**: print each backed-up cluster (header + per-particle columns incl. `t_record`/`t_interrupt`/`dm`/`radius` and the stellar parameters) and exit without integration — use it to test state hypotheses (e.g. mixed time records) without replaying. Column map: 30 columns, `t_record`=11, `t_interrupt`=12, stellar `s_type..s_lum`=13–24, `id`=26. See "Hard dump debugging" below.
 
 - `petar.<family>.dump2test`
-  Converts hard dump files into `petar.hard.test`-compatible input snapshots (record selectors `-p`, `--istart/--iend`, `--tstart/--tend`, `-n`, `--n-crit-group`). Feeds the test driver; not a solver.
+  Converts hard dump files into `petar.hard.test`-compatible input snapshots (record selectors `-p`, `--istart/--iend`, `--tstart/--tend`, `-n`, `--n-crit-group`). Feeds the test driver; not a solver. ASan build — needs the `setarch $(uname -m) -R` prefix. Output is the 20-column dynamics-only test input (no `t_record`/`t_interrupt`/stellar columns); for bookkeeping fields use `hard.debug -m 2`.
 
 - `petar.hard.test`
   Standalone hard-integrator test driver — `petar.hard.test [options] [data filename]` integrates a prepared hard-system input file (e.g. produced by `dump2test`) without the tree/PT part. For reproducing run dumps prefer `hard.debug`; `hard.test` is for constructing dedicated test cases.

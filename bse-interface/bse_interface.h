@@ -2627,7 +2627,10 @@ public:
       \return true: necessary
     */
     bool isCallBSENeeded(StarParameter& _star1, StarParameter& _star2, double& _dr2, double& _semi, double& _ecc, double& _dt, int& _binary_type_init) {
-        ASSERT(_dt>0);
+        if (_dt<=0) {
+            std::cerr<<"Error: isCallBSENeeded: time step is not positive!"<<std::endl;
+            return false;
+        }
         bool call_flag = false;
         // check time step and seperation criterion
         if (_semi>0)  call_flag = true;
