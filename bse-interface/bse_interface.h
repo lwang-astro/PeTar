@@ -2638,8 +2638,6 @@ public:
         // check whether this binary is in mass transfer or is disrupted, if not, check Roche, GW and tidal disruption condition
         if (!call_flag && !isMassTransfer(_binary_type_init) && !isDisrupt(_binary_type_init)) {
 
-            double dt = _dt*tscale;
-
 #ifdef SEVN
             // unbound pairs (negative SMA / ecc>=1) never satisfy the first criterion
             // but still need BSE calls (kicks, disruption); the next event time is
@@ -2647,6 +2645,8 @@ public:
             // at the end of the last evolution, no re-query is needed here
             if (_semi <= 0.0 or _ecc >= 1.0) call_flag = true;
 #else
+            double dt = _dt*tscale;
+
             // check GR effect
             if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15) {
                 double semi_rsun = _semi*rscale;
@@ -2686,9 +2686,9 @@ public:
                      
                 // SARA_f_1
             //}
+#endif
         }
 
-#endif
         // check whether binary seperation is too wide, if yes, do not call bse
         double peri = _semi*(1-_ecc);
         if (_dr2 > 9.0*peri*peri and _semi>0) call_flag = false;
