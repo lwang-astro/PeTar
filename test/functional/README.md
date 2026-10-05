@@ -30,6 +30,7 @@ Current first-pass cases:
 - `bse`
 - `galpy`
 - `bse-galpy`
+- `binaries-invariant` (bse family; binary-rich Plummer cluster IC, checks the ex-member changeover invariant: lone particles must carry the own-mass changeover — guards the group-c.m. sync / ex-member rescale fixes)
 - `agama` (optional; requires `AGAMA_CONF_FILE` environment variable)
 
 Naming rule:

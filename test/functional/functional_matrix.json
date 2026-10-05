@@ -82,6 +82,18 @@
       "run_args": ["-b", "4", "--agama-conf-file", "{AGAMA_CONF_FILE}"],
       "process_args": ["-i", "bse", "-t", "agama", "--r-escape", "tidal"],
       "object_snap_args": ["-i", "bse", "-t", "agama"]
+    },
+    {
+      "name": "binaries-invariant",
+      "require": "bse",
+      "interrupt_mode": "bse",
+      "ic_case": "functional_binary_cluster",
+      "t_end": 3,
+      "dt_out": 0.5,
+      "init_args": ["-s", "bse", "-v", "1.022712165045695"],
+      "run_args": ["-b", "95"],
+      "process_args": ["-i", "bse"],
+      "object_snap_args": ["-i", "bse"]
     }
   ]
 }

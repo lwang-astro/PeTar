@@ -83,8 +83,102 @@ def describe_ic_case(ic_case: str) -> str:
         "functional_smoke": "One deterministic close binary plus a small symmetric background cluster.",
         "functional_dual_merge_smoke": "Two target BSE binaries plus a light symmetric background cluster.",
         "functional_mcluster_dual_merge_smoke": "mcluster N=100 Plummer Rh=1 pc Kroupa no-binary model, first four stars replaced by two target binaries, then global COM recentered.",
+        "functional_binary_cluster": "mcluster N=200 Plummer Rh=0.5 pc Kroupa 95% primordial-binary model (seed 11), members written first as adjacent pairs.",
     }
     return descriptions.get(ic_case, ic_case)
+
+
+def _check_changeover_invariant(
+    case_dir: Path,
+    output_prefix: str,
+    interrupt_mode: str,
+    external_mode: str,
+    petar_module,
+    log_path: Optional[Path],
+    dt_out: float,
+) -> Optional[Dict[str, Any]]:
+    """Ex-member changeover invariant check.
+
+    A particle with no companion within its changeover radius r_out must carry
+    the own-mass changeover r_in = max((m/m_avg)^(1/3),1)*r_in_base (rtol 2e-3,
+    generous against stellar-evolution drift between tree steps). Particles
+    with a companion inside r_out are exempt: they are either active SDAR-group
+    members (group-total value) or bound ungrouped pairs, and the recorded
+    group event stream cannot distinguish these because isolated binaries
+    emit new/end records every hard substep. This is the invariant guaranteed
+    by the group-c.m. sync and ex-member rescale guards.
+    Returns None when prerequisites (run-log radii, snapshot list) are absent.
+    """
+    import numpy as np  # noqa: WPS433 (paired with the readback imports)
+
+    if log_path is None or not Path(log_path).exists() or dt_out <= 0:
+        return None
+    log_text = Path(log_path).read_text(encoding="utf-8", errors="ignore")
+    m_avg_m = re.search(r"Average mass\s*=\s*(\S+)", log_text)
+    rin_m = re.search(r"Mean inner changeover radius\s*=\s*(\S+)", log_text)
+    if not m_avg_m or not rin_m:
+        return None
+    m_avg = float(m_avg_m.group(1))
+    rin_base = float(rin_m.group(1))
+
+    snap_lst = case_dir / f"{output_prefix}.snap.lst"
+    if not snap_lst.exists():
+        return None
+    snaps = []
+    for name in snap_lst.read_text(encoding="utf-8").splitlines():
+        name = name.strip()
+        if name and re.search(r"\.\d+$", name):
+            snaps.append(case_dir / name)
+    if not snaps:
+        return None
+
+    offset = petar_module.HEADER_OFFSET_WITH_CM if external_mode != "none" else petar_module.HEADER_OFFSET
+    violations = 0
+    examples = []
+    lone_checked = 0
+    for snap_path in snaps:
+        p = petar_module.Particle(interrupt_mode=interrupt_mode, external_mode=external_mode)
+        p.fromfile(str(snap_path), offset=offset)
+        mass = np.asarray(p.mass, dtype=float)
+        pos = np.asarray(p.pos, dtype=float)
+        rout = np.asarray(p.r_out, dtype=float)
+        rin = np.asarray(p.r_in, dtype=float)
+        ids = np.asarray(p.id).astype(np.int64)
+        use = mass > 0
+        idx = np.flatnonzero(use)
+        if idx.size < 2:
+            continue
+        d2 = ((pos[idx][:, None, :] - pos[idx][None, :, :]) ** 2).sum(axis=2)
+        np.fill_diagonal(d2, np.inf)
+        nearest = np.sqrt(d2.min(axis=1))
+        lone = nearest > rout[idx]
+        lone_checked += int(lone.sum())
+        own = np.maximum((mass[idx][lone] / m_avg) ** (1.0 / 3.0), 1.0) * rin_base
+        bad = np.abs(rin[idx][lone] / own - 1.0) > 2e-3
+        violations += int(bad.sum())
+        if bad.any() and len(examples) < 5:
+            for j in np.flatnonzero(bad)[:3]:
+                examples.append(
+                    {
+                        "snapshot": snap_path.name,
+                        "id": int(ids[idx][lone][j]),
+                        "nearest_pc": float(nearest[lone][j]),
+                        "r_in": float(rin[idx][lone][j]),
+                        "own_expected": float(own[j]),
+                    }
+                )
+
+    return {
+        "ok": violations == 0,
+        "details": {
+            "m_avg": m_avg,
+            "r_in_base": rin_base,
+            "snapshots": len(snaps),
+            "lone_particles_checked": lone_checked,
+            "violations": violations,
+            "examples": examples,
+        },
+    }
 
 
 def add_step(
@@ -529,7 +623,7 @@ def select_build_tags(cases: List[Dict[str, Any]]) -> List[str]:
     return sorted(list(dict.fromkeys(tags)))
 
 
-def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str, output_prefix: str, interrupt_mode_override: str = "") -> Dict[str, Any]:
+def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str, output_prefix: str, interrupt_mode_override: str = "", log_path: Optional[Path] = None, dt_out: float = 0.0) -> Dict[str, Any]:
     tools_path = repo_root / "tools"
     if str(tools_path) not in sys.path:
         sys.path.insert(0, str(tools_path))
@@ -785,6 +879,24 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
                 external_mode=em,
             ).fromfile(str(p)),
             f"petar.GroupInfo(N={n_member}, interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
+        )
+
+    # Ex-member changeover invariant: non-grouped particles must carry the
+    # own-mass changeover (guards the group-c.m. sync / ex-member rescale fix).
+    inv = _check_changeover_invariant(
+        case_dir, output_prefix, interrupt_mode, external_mode, petar, log_path, dt_out
+    )
+    if inv is not None:
+        checks.append(
+            {
+                "label": f"{output_prefix}.changeover_invariant",
+                "file": str(case_dir / f"{output_prefix}.snap.lst"),
+                "command": "internal: own-mass changeover r_in required for particles outside active SDAR groups",
+                "ok": inv["ok"],
+                "error": "" if inv["ok"] else f"{inv['details']['violations']} invariant violations",
+                "warnings": [],
+                "details": inv["details"],
+            }
         )
 
     all_warnings = []
@@ -1139,6 +1251,8 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         require,
         output_prefix,
         interrupt_mode_override=case.get("interrupt_mode", ""),
+        log_path=log_path,
+        dt_out=float(dt_out),
     )
     result["read_checks"] = read_checks
     if read_checks.get("warnings"):

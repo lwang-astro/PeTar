@@ -1036,23 +1036,30 @@ public:
 #endif
                       }
 
-    //! rescale member changeover to track the freshly recomputed group c.m. value
+    //! rescale member changeover and r_search to track the freshly recomputed group c.m. values
     /*! Stellar evolution drifts member masses while grouped; the c.m. r_in/r_out
         are recomputed from the total mass at every initialization, but members
         only receive a rescale at group formation. Long-lived groups therefore
         accumulate member-c.m. changeover mismatches (asserted in initial());
         copy the c.m. changeover to the members here — the c.m. itself jumps at
-        the same initialization boundary, so members follow it in lockstep — and
-        keep the r_search >= r_out invariant.
+        the same initialization boundary, so members follow it in lockstep.
+        The c.m. r_search (c.m.-velocity based) is copied to the members as well:
+        on the tree step where a group first forms, members were still unmarked
+        (binaryID==0) at the per-step r_search refresh and thus carry the
+        single-particle value computed with their orbital velocity (|v_orb|*dt
+        can exceed the cluster size for tight pairs); without the copy that
+        value leaks into the SDAR perturber criterion of the first step.
      */
     template <class Tparticles>
-    void syncMemberChangeoverScale(Tparticles& _particles) {
-        const PS::F64 rin_cm = _particles.cm.changeover.getRin();
-        const PS::F64 rout_cm = _particles.cm.changeover.getRout();
+    void syncMemberChangeoverScale(Tparticles& _particles, const PS::F64 _dt_tree) {
+        auto& pcm = _particles.cm;
+        const PS::F64 rin_cm = pcm.changeover.getRin();
+        const PS::F64 rout_cm = pcm.changeover.getRout();
+        pcm.calcRSearch(_dt_tree);
         for (int k=0; k<_particles.getSize(); k++) {
             if (_particles[k].changeover.getRin()!=rin_cm || _particles[k].changeover.getRout()!=rout_cm)
-                _particles[k].changeover = _particles.cm.changeover;
-            if (_particles[k].r_search < rout_cm) _particles[k].r_search = rout_cm;
+                _particles[k].changeover = pcm.changeover;
+            _particles[k].r_search = pcm.r_search;
         }
     }
 
@@ -1263,8 +1270,7 @@ public:
             // calculate c.m. changeover
             PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
             pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
-            syncMemberChangeoverScale(sym_int.particles);
-            pcm.calcRSearch(_dt);
+            syncMemberChangeoverScale(sym_int.particles, _dt);
 
 #ifdef HARD_DEBUG
             if(_ptcl_artificial==NULL) {
@@ -1397,8 +1403,7 @@ public:
 
                     ASSERT(m_fac>0.0);
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
-                    syncMemberChangeoverScale(groupi.particles);
-                    pcm.calcRSearch(_dt);
+                    syncMemberChangeoverScale(groupi.particles, _dt);
 
 #ifdef HARD_DEBUG
                     PS::F64 r_out_cm = pcm.changeover.getRout();
@@ -1443,8 +1448,7 @@ public:
                 PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                 ASSERT(m_fac>0.0);
                 pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
-                syncMemberChangeoverScale(groupi.particles);
-                pcm.calcRSearch(_dt);
+                syncMemberChangeoverScale(groupi.particles, _dt);
 
 #ifdef EXTERNAL_HARD
                 // hard external perturbation
@@ -1599,8 +1603,7 @@ public:
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                     ASSERT(m_fac>0.0);
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
-                    syncMemberChangeoverScale(groupi.particles);
-                    pcm.calcRSearch(_time_end);
+                    syncMemberChangeoverScale(groupi.particles, _time_end);
 
 #ifdef EXTERNAL_HARD
                     // hard external perturbation
@@ -3147,6 +3150,15 @@ public:
 #endif
             assert(!std::isinf(pi.vel.x));
             assert(!std::isnan(pi.vel.x));
+            // ex-members drifting as lone singles keep the group c.m. changeover;
+            // a lone single has no neighbor within r_search >= r_out, so shrinking
+            // to the own-mass value needs no force correction (writeback copies it)
+            if (pi.mass>0.0) {
+                ChangeOver co_target;
+                co_target.setR(pi.mass*Ptcl::mean_mass_inv, manager->r_in_base, manager->r_out_base);
+                if (std::abs(pi.changeover.getRin()*pi.changeover.r_scale_next - co_target.getRin()) > 1e-10*co_target.getRin())
+                    pi.changeover = co_target;
+            }
             pi.Ptcl::calcRSearch(_dt);
             /*
               DriveKeplerRestricted(mass_sun_, 
@@ -3925,6 +3937,27 @@ public:
                 ptcl_in_cluster[j].group_data.artificial.setParticleTypeToSingle();
                 PS::S64 adr=ptcl_in_cluster[j].adr_org;
                 if(adr>=0) _sys[adr].group_data = ptcl_in_cluster[j].group_data;
+                // ex-members keep the group c.m. changeover after breakup: rescale back
+                // to the own-mass value; applied with force correction (re-grouping in
+                // this same step overwrites the pending target with the new c.m. one)
+                if (ptcl_in_cluster[j].mass>0.0) {
+                    ChangeOver co_target;
+                    co_target.setR(ptcl_in_cluster[j].mass*Ptcl::mean_mass_inv, manager->r_in_base, manager->r_out_base);
+                    const PS::F64 rin_p = ptcl_in_cluster[j].changeover.getRin();
+                    const PS::F64 rin_eff = rin_p*ptcl_in_cluster[j].changeover.r_scale_next;
+                    const PS::F64 rin_target = co_target.getRin();
+                    if (rin_eff!=rin_target) {
+                        if (std::abs(rin_eff-rin_target)<1e-10) {
+                            ptcl_in_cluster[j].changeover = co_target;
+                            if(adr>=0) _sys[adr].changeover = co_target;
+                        }
+                        else {
+                            ptcl_in_cluster[j].changeover.r_scale_next = rin_target/rin_p;
+                            if(adr>=0) _sys[adr].changeover.r_scale_next = ptcl_in_cluster[j].changeover.r_scale_next;
+                        }
+                        i_cluster_changeover_update_threads[ith].push_back(i);
+                    }
+                }
             }
             // search group_candidates
             SearchGroupCandidate<PtclH4> group_candidate;

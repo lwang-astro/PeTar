@@ -654,6 +654,83 @@ def build_functional_mcluster_dual_merge_smoke(output: Path) -> None:
     write_rows(output, rows_out)
 
 
+def build_functional_binary_cluster(output: Path) -> None:
+    """Binary-rich Plummer cluster for the functional changeover-invariant case.
+
+    mcluster N=200, Plummer Rh=0.5 pc, Kroupa IMF, 95% primordial binaries,
+    fixed seed 11. mcluster writes binary members first as adjacent pairs,
+    then remaining singles; the builder verifies the pair adjacency and the
+    binary count so petar's '-b <n_bin>' (member IDs are 1..2*n_bin) holds.
+
+    Output convention (same as functional_mcluster_dual_merge_smoke):
+    position pc, velocity km/s -> petar.init -v KM_S_TO_PC_MYR under -u 1.
+    """
+    n_star = 200
+    binary_fraction = 0.95
+    n_bin_expected = int(binary_fraction * n_star // 2)
+
+    with tempfile.TemporaryDirectory(prefix="petar_make_ic_") as tmpdir:
+        tmp_prefix_name = "binclu"
+        cmd = [
+            "mcluster",
+            "-N", str(n_star),
+            "-P", "0",
+            "-R", "0.5",
+            "-f", "1",
+            "-b", str(binary_fraction),
+            "-u", "1",
+            "-C", "3",
+            "-s", "11",
+            "-o", tmp_prefix_name,
+        ]
+        proc = subprocess.run(
+            cmd,
+            cwd=tmpdir,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        match = re.search(r"Creating (\d+) primordial binary systems", proc.stdout)
+        if not match or int(match.group(1)) != n_bin_expected:
+            found = match.group(1) if match else "none"
+            raise RuntimeError(
+                f"mcluster primordial binary count mismatch: expected {n_bin_expected}, got {found}"
+            )
+
+        table_path = Path(tmpdir) / f"{tmp_prefix_name}.txt"
+        rows: List[Tuple[float, List[float], List[float]]] = []
+        with table_path.open("r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split()
+                if len(parts) < 7:
+                    continue
+                mass = float(parts[0])
+                pos = [float(parts[1]), float(parts[2]), float(parts[3])]
+                vel = [float(parts[4]), float(parts[5]), float(parts[6])]
+                rows.append((mass, pos, vel))
+
+    if len(rows) != n_star:
+        raise RuntimeError(f"mcluster returned {len(rows)} stars, expected {n_star}")
+
+    # mcluster writes members first as adjacent (2k, 2k+1) pairs; verify so the
+    # petar '-b n_bin' ID convention (members are IDs 1..2*n_bin) is valid.
+    pair_sep_max_sq = 0.05 ** 2
+    for k in range(n_bin_expected):
+        a, b = rows[2 * k], rows[2 * k + 1]
+        d2 = sum((a[1][i] - b[1][i]) ** 2 for i in range(3))
+        if d2 > pair_sep_max_sq:
+            raise RuntimeError(
+                f"binary pair {k} separation {math.sqrt(d2):.3e} pc exceeds 0.05 pc; "
+                "member-first adjacency assumption broken"
+            )
+
+    write_rows(output, rows)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate deterministic initial conditions for PeTar validation scenarios")
     parser.add_argument(
@@ -667,6 +744,7 @@ def main() -> int:
             "functional_smoke",
             "functional_dual_merge_smoke",
             "functional_mcluster_dual_merge_smoke",
+            "functional_binary_cluster",
         ],
         required=True,
     )
@@ -690,6 +768,8 @@ def main() -> int:
         build_functional_dual_merge_smoke(out)
     elif args.case == "functional_mcluster_dual_merge_smoke":
         build_functional_mcluster_dual_merge_smoke(out)
+    elif args.case == "functional_binary_cluster":
+        build_functional_binary_cluster(out)
     return 0
 
 
