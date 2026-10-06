@@ -696,3 +696,10 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: ① 拿到"读数据"类需求时惯性写一次性脚本,没走"先查 skill 工具清单"的流程;② 工具定位与字段覆盖分辨不足(实证 2026-10-05):hard.debug=全状态重放;dump2test=转换为 petar.hard.test 输入,仅 20 列动力学字段(mass/pos/vel/id/bin_stat/r_search/r_in/r_out),**丢弃 t_record、t_interrupt、dm/radius 与全部恒星参数(kw/tphys/mt...)**——即 BSE 中断调度诊断所需的簿记字段;"含簿记字段的 dump 静态读回"当时确无文档化工具(当日已由 hard.debug -m 2 关闭,勿再视为缺口),正确反馈路径是 skill/工具改进,而非布局脆弱的临时脚本。附:dump2test 亦为 ASan 构建,调用需 setarch $(uname -m) -R 前缀(当时未注明,已补入 script-tools.md)。
 
 **Prevention rule**: ① 涉及 dump/快照/事件文件的读取分析,第一步 grep SKILL.md 与 script-tools.md 的工具清单;不覆盖再考虑自写,且自写前评估格式耦合度(内存布局式格式严禁临时脚本);② 临时脚本连续失败两次即停,换 skill 文档化的正式工具;③ 发现 skill 工具矩阵缺口(如 dump 静态读回)时,记入 lessons 并在维护窗口提议:给 hard.debug 加 --print 模式或在 script-tools.md 增加读回配方,由维护流程决定。(已实施 2026-10-05:hard.debug -m 2 静态读回,含簿记字段,列图见 script-tools.md;经 Case-A dump 验证与已知真值一致。)
+### 2026-10-05: checkConsistence 质量备份断言在 STELLAR_EVOLUTION 下结构性无效——断言点位于 setMassBackup 刷新之前,固定容差挡不住合法质量损失
+
+**Mistake**: pulsar 分支 debug 模式跑 binary_test 在 T=18.49 abort 于 `artificial_particles.hpp` checkConsistence 的 `abs(mass_cm_check-getMassBackup())<1e-3`,形态像质量簿记 bug。addr2line 定位真实触发点是 hard.hpp `driftClusterAndArtificialCMAndWriteBack` 中 AR 积分刚结束处:该 checkConsistence 执行在 BSE 步内质量演化之后、`setMassBackup()` 刷新(hard.hpp ~1914)之前,比较对象天然是"新成员质量和 vs 旧备份快照"。任何单步超 1e-3 的恒星演化质量损失(星风/SN/质量转移,pulsar 测试必含 SN)都必然触发——断言编码的不变式与代码自身数据流矛盾,不是 bug 信号。
+
+**Root cause**: 备份同步是离散事件(每硬步末刷新;软侧 CM 质量由 calcRsearchAndGetMassBackupAndsetGroupDataToCM 在刷新后另行同步),BSE 恰在两个同步点之间改成员质量;1e-3 容差只是对单步质量损失的任意猜测,SN 超它数个量级。同构隐患:`correctOrbitalParticleForce` 内 `m_ob_tot` vs backup 的 1e-10 断言(orbit 采样粒子开启时同样会比较刷新前备份,当前默认关)。真正有效的簿记校验已存在(如 `ASSERT(getMassBackup()!=0.0)`、writeBack 的 dm 记账)。
+
+**Prevention rule**: ① 写/保留备份类调试断言前先排数据流:断言点必须落在"生产者已写、消费者未改"窗口内,备份不变式只能在刷新点之后紧邻校验;② STELLAR_EVOLUTION 构建下任何固定容差的质量差断言都无效(单步质量损失无上界),应改用簿记类校验(非零、dm 记账);③ abort 栈先 addr2line 定位真实调用点再判断断言合理性,不要只看断言表达式。处置:删除该断言的 STELLAR_EVOLUTION 分支,保留非 SE 构建的 1e-10 版本(无质量演化时不变式成立)。
