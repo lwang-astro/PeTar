@@ -615,6 +615,12 @@ Subsequently, when a terminal is opened or `source ~/.bashrc` is executed in an 
 
 When utilizing OpenMP, it is important to note that the simulation may not be reproducible, as dynamic parallelism is employed to integrate the short-range interactions.
 
+Even with a single thread, repeated runs from the identical snapshot may differ, because the memory address layout (ASLR) affects the integration realization. To obtain bit-wise reproducible runs (for debugging or A/B comparisons), disable address randomization with `setarch`:
+```shell
+setarch $(uname -m) -R OMP_STACKSIZE=128M OMP_NUM_THREADS=1 petar [options] [snapshot filename]
+```
+Repeated launches with this prefix produce byte-identical output snapshots (verified 2026-10-07). To sample *different* reproducible realizations, keep `setarch -R` and vary the environment-variable padding, which shifts the initial stack layout.
+
 ### Using MPI
 
 When MPI is utilized, an MPI launcher is required to utilize multiple MPI processors. The standard approach is as follows:
