@@ -1,0 +1,102 @@
+{
+  "name": "t5_massive_binary_tt",
+  "description": "Massive-binary + light-churner tidal-tensor momentum conservation: reproduces the 2026-10-06 leak configuration (77.65 Msun binary, a=0.0081, e=0.667; 0.242 Msun churner crossing the group boundary). r1/r2 (pure hard mode): with only 3 particles the churner orbit (0.01-0.04 pc) necessarily overlaps the group-linking radius, so the system stays one isolated AR group with TT structurally inactive (r1 must match the r2 baseline, guarding the no-artificial path). r3 (tree mode, production configuration of the event): TT engaged with group-boundary churn; linear momentum must be conserved.",
+  "workdir": "{repo_root}",
+  "setup_commands": [
+    "mkdir -p test/validation/work/t5",
+    "python3 test/validation/make_ic.py --case t5 --output test/validation/work/t5/input.base",
+    "cd test/validation/work/t5 && petar.init -f input input.base"
+  ],
+  "extract": {
+    "momentum": true,
+    "status_n_particle": 3,
+    "interrupt_mode": "none",
+    "regex_counts": {
+      "hard_energy_significant": "Hard energy significant",
+      "hard_dump": "hard_large_energy\\.",
+      "runtime_abort": "Segmentation fault|Assertion|Aborted"
+    }
+  },
+  "runs": [
+    {
+      "id": "r1_hard_tt",
+      "command": "cd test/validation/work/t5 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -b 0 --tt-switch 1 --r-group 0.03 --r-search-group 0.03 -s 3.0e-5 -r 2 -t 3 -o 0.05 -w 2 -f t5_r1_hard_tt input",
+      "output": "r1_hard_tt.log"
+    },
+    {
+      "id": "r2_hard_no_tt",
+      "command": "cd test/validation/work/t5 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -b 0 --tt-switch 0 --r-group 0.03 --r-search-group 0.03 -s 3.0e-5 -r 2 -t 3 -o 0.05 -w 2 -f t5_r2_hard_no_tt input",
+      "output": "r2_hard_no_tt.log"
+    },
+    {
+      "id": "r3_tree_tt",
+      "command": "cd test/validation/work/t5 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -b 0 --tt-switch 1 --r-group 0.02 --r-search-group 0.02 --r-ratio 0.3 -s 0.0039 -r 0.08 -t 3 -o 0.05 -w 2 -f t5_r3_tree_tt input",
+      "output": "r3_tree_tt.log"
+    }
+  ],
+  "checks": [
+    {
+      "name": "r1_hard_tt_momentum_conserved",
+      "type": "max_threshold",
+      "run_id": "r1_hard_tt",
+      "metric": "max_momentum_drift_pcm",
+      "threshold": 0.02
+    },
+    {
+      "name": "r2_hard_no_tt_momentum_conserved",
+      "type": "max_threshold",
+      "run_id": "r2_hard_no_tt",
+      "metric": "max_momentum_drift_pcm",
+      "threshold": 0.02
+    },
+    {
+      "name": "r3_tree_tt_momentum_conserved",
+      "type": "max_threshold",
+      "run_id": "r3_tree_tt",
+      "metric": "max_momentum_drift_pcm",
+      "threshold": 0.005
+    },
+    {
+      "name": "r1_hard_tt_matches_no_tt_baseline",
+      "type": "max_threshold",
+      "run_id": "r1_hard_tt",
+      "metric": "max_artificial_particles_glb",
+      "threshold": 0
+    },
+    {
+      "name": "r3_tt_engaged",
+      "type": "min_threshold",
+      "run_id": "r3_tree_tt",
+      "metric": "max_artificial_particles_glb",
+      "threshold": 1
+    },
+    {
+      "name": "r2_no_tt_particles",
+      "type": "max_threshold",
+      "run_id": "r2_hard_no_tt",
+      "metric": "max_artificial_particles_glb",
+      "threshold": 0
+    },
+    {
+      "name": "r1_no_runtime_abort",
+      "type": "regex_count_max",
+      "run_id": "r1_hard_tt",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "r2_no_runtime_abort",
+      "type": "regex_count_max",
+      "run_id": "r2_hard_no_tt",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "r3_no_runtime_abort",
+      "type": "regex_count_max",
+      "run_id": "r3_tree_tt",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    }
+  ]
+}

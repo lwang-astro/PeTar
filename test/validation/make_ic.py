@@ -354,6 +354,49 @@ def build_t4(output: Path) -> None:
     build_t4_with_outer_a(output, outer_a=0.15)
 
 
+def build_t5(output: Path) -> None:
+    # Massive-binary + light-churner configuration reproducing the 2026-10-06
+    # tidal-tensor momentum-leak event (run_N1k_200Myr at t~47.6):
+    # a 77.65 Msun binary (46.06 + 31.59) with a=0.0081 pc, e=0.667, plus a
+    # 0.242 Msun star on an eccentric orbit whose pericenter (0.01 pc) sits
+    # inside the group radius and apocenter (0.04 pc) outside it, so the AR
+    # group membership churns every outer orbit and close passages dominate
+    # the tidal-tensor fit (the T3 ~ r^-4 regime).
+    m1 = 46.06
+    m2 = 31.59
+    m3 = 0.242
+
+    ein = 0.667
+    ain = 0.0081
+    # start the inner binary at apocenter
+    r12, v12, r3_in, v3_in = two_body_apo_state(m1, m2, ain, ein, G_MSUN_PC_MYR)
+
+    m12 = m1 + m2
+    aout = 0.025
+    eout = 0.6
+    # start the outer orbit at apocenter
+    r12o, v12o, r3o, v3o = two_body_apo_state(m12, m3, aout, eout, G_MSUN_PC_MYR)
+
+    p1 = [r12o[i] + r12[i] for i in range(3)]
+    p2 = [r12o[i] + r3_in[i] for i in range(3)]
+    v1 = [v12o[i] + v12[i] for i in range(3)]
+    v2 = [v12o[i] + v3_in[i] for i in range(3)]
+
+    rows: List[Tuple[float, List[float], List[float]]] = [(m1, p1, v1), (m2, p2, v2), (m3, r3o, v3o)]
+
+    mass_tot = sum(item[0] for item in rows)
+    com_pos = [sum(item[0] * item[1][k] for item in rows) / mass_tot for k in range(3)]
+    com_vel = [sum(item[0] * item[2][k] for item in rows) / mass_tot for k in range(3)]
+
+    recentered: List[Tuple[float, List[float], List[float]]] = []
+    for mass, pos, vel in rows:
+        pos_new = [pos[k] - com_pos[k] for k in range(3)]
+        vel_new = [vel[k] - com_vel[k] for k in range(3)]
+        recentered.append((mass, pos_new, vel_new))
+
+    write_rows(output, recentered)
+
+
 def build_t4_outer15(output: Path) -> None:
     # Original notebook-scale outer orbit.
     build_t4_with_outer_a(output, outer_a=1.5)
@@ -741,6 +784,7 @@ def main() -> int:
             "t3",
             "t4",
             "t4_outer15",
+            "t5",
             "functional_smoke",
             "functional_dual_merge_smoke",
             "functional_mcluster_dual_merge_smoke",
@@ -762,6 +806,8 @@ def main() -> int:
         build_t4(out)
     elif args.case == "t4_outer15":
         build_t4_outer15(out)
+    elif args.case == "t5":
+        build_t5(out)
     elif args.case == "functional_smoke":
         build_functional_smoke(out)
     elif args.case == "functional_dual_merge_smoke":

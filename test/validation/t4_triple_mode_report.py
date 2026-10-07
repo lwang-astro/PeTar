@@ -166,7 +166,8 @@ def load_status_particles(path: Path, n_particle: int):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
     from analysis.status import Status  # pylint: disable=import-outside-toplevel  # pyright: ignore[reportMissingImports]
 
-    st = Status(N_particle=n_particle)
+    # T4 runs with -b 1 on a bse-interrupt binary: status rows carry stellar columns
+    st = Status(N_particle=n_particle, interrupt_mode="bse")
     with warnings.catch_warnings(record=True) as warn_list:
         warnings.simplefilter("always", category=UserWarning)
         st.fromfile(str(path))

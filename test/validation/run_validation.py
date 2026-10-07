@@ -313,6 +313,53 @@ def extract_orbital_drift_from_status(status_path: Path, repo_root: Path, n_part
     }
 
 
+def extract_momentum_from_status(status_path: Path, repo_root: Path, n_particle: int, interrupt_mode: str = "none") -> Dict[str, float]:
+    """Total linear momentum drift from per-particle status rows (-w 2).
+
+    The tidal-tensor mean-leak bug (fixed 2026-10-06) manifests as a secular,
+    one-directional drift of sum(m*v); the fix caps it at the baseline
+    integration-drift level. Returns drift normalized to velocity units
+    (pc/Myr) so thresholds are scale-free.
+    """
+    if n_particle < 2:
+        return {}
+
+    tools_path = (repo_root / "tools").resolve()
+    if str(tools_path) not in sys.path:
+        sys.path.insert(0, str(tools_path))
+
+    from analysis.status import Status  # pylint: disable=import-outside-toplevel  # pyright: ignore[reportMissingImports]
+
+    st = Status(N_particle=n_particle, interrupt_mode=interrupt_mode)
+    with warnings.catch_warnings(record=True) as warn_list:
+        warnings.simplefilter("always", category=UserWarning)
+        st.fromfile(str(status_path))
+    if warn_list:
+        msg = "; ".join(str(item.message) for item in warn_list)
+        raise RuntimeError(
+            f"Status parse warning for {status_path} with N_particle={n_particle}: {msg}. "
+            "This usually indicates an N_particle mismatch."
+        )
+
+    px = np.zeros(st.size)
+    py = np.zeros(st.size)
+    pz = np.zeros(st.size)
+    m_tot = np.zeros(st.size)
+    for k in range(n_particle):
+        pk = getattr(st.particles, f"p{k}")
+        px += pk.mass * pk.vel[:, 0]
+        py += pk.mass * pk.vel[:, 1]
+        pz += pk.mass * pk.vel[:, 2]
+        m_tot += pk.mass
+
+    p_norm = np.sqrt(px * px + py * py + pz * pz)
+    drift = np.max(np.abs(p_norm - p_norm[0])) / m_tot[0]
+
+    return {
+        "max_momentum_drift_pcm": float(drift),
+    }
+
+
 def extract_regex_counts(log_text: str, patterns: Dict[str, str]) -> Dict[str, int]:
     counts = {}
     for key, pattern in patterns.items():
@@ -349,6 +396,15 @@ def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any], command: str
         status_path = resolve_status_path_from_command(command, workdir)
         if status_path is not None and status_path.exists():
             orbital_metrics = extract_orbital_drift_from_status(status_path, repo_root=repo_root, n_particle=status_n_particle, interrupt_mode=str(extract_cfg.get("interrupt_mode", "none")))
+            if extract_cfg.get("momentum", False):
+                orbital_metrics.update(
+                    extract_momentum_from_status(
+                        status_path,
+                        repo_root=repo_root,
+                        n_particle=status_n_particle,
+                        interrupt_mode=str(extract_cfg.get("interrupt_mode", "none")),
+                    )
+                )
 
     max_n_real_glb = max((row["n_real_glb"] for row in count_rows), default=0.0)
     max_n_all_glb = max((row["n_all_glb"] for row in count_rows), default=0.0)

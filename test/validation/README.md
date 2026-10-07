@@ -1,4 +1,4 @@
-# Validation Framework (T1–T4)
+# Validation Framework (T1–T5)
 
 Scriptable validation scenarios for PeTar algorithm changes.
 
@@ -70,12 +70,25 @@ Output: `test/out/t3_binary_hard_switch_summary.html`
 - Five modes compared: pure SDAR reference, hard/tree with and without tidal tensor, and variants
 - Automatic checks: energy-error ordering across modes, inner/outer orbital-element conservation, runtime-abort regex counts
 - Control scenario `t4_tree_hard_from_triple_outer15.json` repeats the comparison with the original outer semi-major axis `a_out = 1.5`
+- Requires a bse-interrupt binary (IC has `petar.init -s bse` columns, runs use `-b 1`); the pipeline selects it via `petar.select --require bse --optional mpi,omp,avx2` and builds it (`./configure --with-interrupt=bse && make install`) if missing
 
 ```bash
 bash test/validation/t4_triple_pipeline.sh [path/to/petar]
 ```
 
 Output: `test/out/t4_triple_mode_summary.html`
+
+### T5: Massive Binary + Light Churner, Tidal-Tensor Momentum Conservation
+- IC from the 2026-10-06 momentum-leak event: 77.65 Msun binary (`a=0.0081` pc, `e=0.667`) plus a 0.242 Msun star whose pericenter (0.01 pc) lies inside the group radius and apocenter (0.04 pc) outside it, so AR group membership churns every outer orbit (the T3 ~ r^-4 close-passage regime)
+- Three runs: pure hard mode with `--tt-switch 1/0` (with 3 particles the churner orbit necessarily overlaps the group-linking radius, so the system stays one isolated AR group — TT structurally inactive, and the TT-on run must match the TT-off baseline) plus tree mode with `--tt-switch 1` (production configuration of the event: TT engaged with group-boundary churn)
+- Automatic checks: linear-momentum drift `max ||P|-|P0||/M` from `.status` readback (tree-mode threshold 0.005 chosen so the pre-fix binary fails at ~0.0103 while the fixed binary passes at ~0.0014), artificial-particle counts (TT engaged in tree mode, none in hard mode), runtime-abort regex counts
+- Requires a plain-family binary (no interrupt/external): the IC is plain-format, so galpy- or BSE-enabled builds cannot read it; `t5_massive_binary_tt_report.py --run` selects it automatically via `petar.select --optional mpi,omp,avx2` (this changes the active binary selection)
+
+```bash
+python3 test/validation/t5_massive_binary_tt_report.py --run
+```
+
+Output: `test/out/t5_massive_binary_tt_summary.html` (momentum-drift figure, run summary, checks; JSON report at `test/out/report.t5.massive_binary_tt.json`)
 
 ---
 
@@ -85,12 +98,13 @@ Output: `test/out/t4_triple_mode_summary.html`
 |------|---------|
 | `run_validation.py` | Scenario runner, metric extractor, pass/fail checker, `--pipeline t1/t2/t3` driver |
 | `metrics.py` | Common check functions |
-| `make_ic.py` | Deterministic IC generator (`--case t1…t4`) |
+| `make_ic.py` | Deterministic IC generator (`--case t1…t5`) |
 | `criteria.json` | Centralized threshold reference |
 | `t1_kdkdk4_report.py` | T1 report generation |
 | `t2_binary_conservation_report.py` | T2 report generation |
 | `t3_binary_hard_switch_report.py` | T3 report generation |
 | `t4_triple_mode_report.py` / `t4_triple_pipeline.sh` | T4 report generation & pipeline |
+| `t5_massive_binary_tt_report.py` | T5 report generation (`--run` executes the scenario first) |
 | `scenarios/*.json` | Scenario definitions (commands, runs, checks) |
 
 ## Outputs

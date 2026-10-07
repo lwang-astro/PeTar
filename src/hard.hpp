@@ -4269,8 +4269,10 @@ public:
                 // in case the member has larger r_out due to previously existing binaries, use largest r_out among members to determine r_search
                 Float r_ratio = r_out_max/pcm.changeover.getRout();
                 if (r_ratio>1.0) {
-                    pcm.changeover.r_scale_next = r_ratio;
-                    pcm.changeover.updateWithRScale();
+                    // set r_out exactly to r_out_max: rescaling by the ratio re-rounds and can
+                    // fall one ULP below the member value, failing the assert below when the
+                    // c.m. velocity (and thus the r_search cushion) is near zero
+                    pcm.changeover.setR(pcm.changeover.getRin()*r_ratio, r_out_max);
                 }
                 pcm.calcRSearch(_dt_tree);
                 for (const auto& idx : indices) {

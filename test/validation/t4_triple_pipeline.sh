@@ -9,7 +9,16 @@ REPORT="test/out/report.t4.triple.json"
 OUTDIR="test/out/validation_t4_triple"
 FINAL_HTML="test/out/t4_triple_mode_summary.html"
 
-BIN_NON64="${1:-petar}"
+# The scenario IC carries BSE stellar columns (petar.init -s bse) and runs with
+# -b 1, so a bse-interrupt binary is required; build it if petar.select fails.
+if ! petar.select --require bse --optional mpi,omp,avx2 >/dev/null 2>&1; then
+    echo "[T4] bse-family binary not found; building (--with-interrupt=bse)..."
+    ./configure --with-interrupt=bse
+    make -j"$(nproc)" install
+    petar.select --require bse --optional mpi,omp,avx2
+fi
+
+BIN_NON64="${1:-$(command -v petar)}"
 
 echo "[T4] non64b binary: $BIN_NON64"
 

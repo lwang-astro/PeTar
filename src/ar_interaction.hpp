@@ -480,6 +480,20 @@ public:
                 }
 #endif
 
+#ifdef SOFT_PERT
+                // tidal tensor evaluated here (before the c.m. accumulation) so the
+                // removal loop below subtracts its member mean — the even-order (T3 x^2)
+                // part has a non-zero mass-weighted mean that would otherwise push the
+                // group c.m. with no counter-reaction (momentum leak); the differential
+                // part (a_i - a_j) is untouched, preserving the T2/T3 orbital corrections.
+                if(_perturber.soft_pert!=NULL) {
+                    if (pi.pos*pi.pos<pi.changeover.getRout()*pi.changeover.getRout()) {
+                        _perturber.soft_pert->eval(acc_pert, pi.pos);
+                        pot_pert += _perturber.soft_pert->evalPot(pi.pos);
+                    }
+                }
+#endif
+
                 acc_pert_cm[0] += pi.mass *acc_pert[0];
                 acc_pert_cm[1] += pi.mass *acc_pert[1];
                 acc_pert_cm[2] += pi.mass *acc_pert[2];
@@ -508,15 +522,6 @@ public:
                 acc_pert[2] -= acc_pert_cm[2];
                 pot_pert -= acc_pert[0]*pi.pos[0] + acc_pert[1]*pi.pos[1] + acc_pert[2]*pi.pos[2];
 
-#ifdef SOFT_PERT
-                if(_perturber.soft_pert!=NULL) {
-                    // avoid too large perturbation force if system is disruptted
-                    if (pi.pos*pi.pos<pi.changeover.getRout()*pi.changeover.getRout()) {
-                        _perturber.soft_pert->eval(acc_pert, pi.pos);
-                        pot_pert += _perturber.soft_pert->evalPot(pi.pos);
-                    }
-                }
-#endif
             }
 
         }
@@ -585,17 +590,36 @@ public:
 #endif
 
 #ifdef SOFT_PERT
+            // same differential-only rule as the n_pert>0 branch: remove the tensor's
+            // member mean (the even-order T3 x^2 part), which has no counter-reaction
             if(_perturber.soft_pert!=NULL) {
+                Float acc_pert_cm[3] = {0.0, 0.0, 0.0};
+                Float mcm = 0.0;
                 for(int i=0; i<_n_particle; i++) {
                     Float* acc_pert = _force[i].acc_pert;
                     Float& pot_pert = _force[i].pot_pert;
                     const auto& pi = _particles[i];
-                    //acc_pert[0] = acc_pert[1] = acc_pert[2] = pot_pert = Float(0.0);
                     // avoid too large perturbation force if system is disruptted
                     if (pi.pos*pi.pos<pi.changeover.getRout()*pi.changeover.getRout()) {
                         _perturber.soft_pert->eval(acc_pert, pi.pos);
                         pot_pert += _perturber.soft_pert->evalPot(pi.pos);
                     }
+                    acc_pert_cm[0] += pi.mass*acc_pert[0];
+                    acc_pert_cm[1] += pi.mass*acc_pert[1];
+                    acc_pert_cm[2] += pi.mass*acc_pert[2];
+                    mcm += pi.mass;
+                }
+                acc_pert_cm[0] /= mcm;
+                acc_pert_cm[1] /= mcm;
+                acc_pert_cm[2] /= mcm;
+                for (int i=0; i<_n_particle; i++) {
+                    Float* acc_pert = _force[i].acc_pert;
+                    Float& pot_pert = _force[i].pot_pert;
+                    const auto& pi = _particles[i];
+                    acc_pert[0] -= acc_pert_cm[0];
+                    acc_pert[1] -= acc_pert_cm[1];
+                    acc_pert[2] -= acc_pert_cm[2];
+                    pot_pert -= acc_pert[0]*pi.pos[0] + acc_pert[1]*pi.pos[1] + acc_pert[2]*pi.pos[2];
                 }
             }
 #endif
