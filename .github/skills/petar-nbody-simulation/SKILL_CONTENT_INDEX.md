@@ -29,6 +29,7 @@ Owned by [../README.md](../README.md) → "Design Goals", "Layering Rules", and 
   - `petar.find.dt -a` must repeat the production unit mode; `-o` must match the production thread count
   - restart needs all `<prefix>.par.*` companions and a `-i` read format matching the snapshot
   - thread count scales with N — detail in `assets/script-tools.md` → "Parallel Launch Heuristics"
+  - runtime estimates and launch-config comparison: profile output + `assets/performance-log.md` (measured cases)
 - Moved to assets (2026-09-29 compaction): configure/toolchain-environment rules → `assets/build-toolchain.md`; find.dt rationale and workflow → `assets/script-tools.md` → "Timestep tuning workflow"
 
 Status: restored-in-skill

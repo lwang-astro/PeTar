@@ -69,7 +69,7 @@ IC generation (mcluster) → petar.init → petar.select → petar.find.dt → p
 | N ~ 10⁴ | a few (2–8) — benchmark on the target machine |
 | N ≳ 10⁵ | all available cores, MPI ranks × OMP threads per rank |
 
-Measured reference (N=500, 2 Myr production run, one binary): 1 thread 1.13 s, 4 threads 1.35 s (**+19%**), 8 threads 1.88 s (**+66%**). `sample/star_cluster_plummer_N1k.sh` documents the same expectation for N≈10³, and `launch-template-by-scale.sh` encodes this table as a heuristic.
+Measured cases (N=500 threads; N=1000 threads/ranks/UCX-env) accumulate in `assets/performance-log.md` — consult it and benchmark via profile output before any multi-thread/rank proposal. `sample/star_cluster_plummer_N1k.sh` documents the same expectation for N≈10³, and `launch-template-by-scale.sh` encodes this table as a heuristic.
 
 - Applies to **both** `petar.find.dt -o` and the production launch; a mismatch makes the benchmark's recommendation meaningless for the run that follows.
 - If the user requests many threads for a small system, state the measured trade-off and confirm rather than silently overriding their choice.

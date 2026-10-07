@@ -703,3 +703,129 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 备份同步是离散事件(每硬步末刷新;软侧 CM 质量由 calcRsearchAndGetMassBackupAndsetGroupDataToCM 在刷新后另行同步),BSE 恰在两个同步点之间改成员质量;1e-3 容差只是对单步质量损失的任意猜测,SN 超它数个量级。同构隐患:`correctOrbitalParticleForce` 内 `m_ob_tot` vs backup 的 1e-10 断言(orbit 采样粒子开启时同样会比较刷新前备份,当前默认关)。真正有效的簿记校验已存在(如 `ASSERT(getMassBackup()!=0.0)`、writeBack 的 dm 记账)。
 
 **Prevention rule**: ① 写/保留备份类调试断言前先排数据流:断言点必须落在"生产者已写、消费者未改"窗口内,备份不变式只能在刷新点之后紧邻校验;② STELLAR_EVOLUTION 构建下任何固定容差的质量差断言都无效(单步质量损失无上界),应改用簿记类校验(非零、dm 记账);③ abort 栈先 addr2line 定位真实调用点再判断断言合理性,不要只看断言表达式。处置:删除该断言的 STELLAR_EVOLUTION 分支,保留非 SE 构建的 1e-10 版本(无质量演化时不变式成立)。
+
+### 2026-10-06: 大质量天体"逃逸"合理性必须先做守恒律审计——快照总动量 P(t) 与双星硬化能量预算比 data.core 异常更早定罪
+
+**Mistake**: run_N1k_200Myr(N=1000, W0=5, Rh=1 pc, 583 Msun, Kroupa IMF, 纯引力, 自动 changeover: r_out=0.079/r_in=0.008 pc)在 t≈47-48 出现"77.6 Msun 巨双星(id 184+377, 13% 簇质量)携 ~40 颗近邻星逃逸、data.core 随之漂移到 (-110,18,-31) pc"。若只看 data.core/data.esc 或逃逸速度量级(1.5-2.1 km/s,与该处 v_esc 同量级),会误判为物理弹射。
+
+**Root cause**: 质量分层后巨双星沉入核内;changeover 半径按 (m/m_avg)^{1/3} 质量放大(77.6 Msun → ~5×)叠加 r_search 链式连通(见 2026-10-04 条目),把大块核心粘进**单个连通 Hermite 硬簇**(内嵌小 AR 组,非巨型 AR 组——`hard.debug` 重放 dump 证实:t≈11 为 111-134 粒子 Hermite 簇 + 1 个 2→3 成员 AR 组;日志 "N_members" 直方图统计的就是连通簇,来源 `petar.hpp:2399-2413` `clusterCount(connected_cluster_n_list)`);t=47-48 该系统硬积分失败:output 日志 E_total -303→-159(+144,占 |E0| 48%,注入走 de_change_cum/Modify 列 +143,Modify_single/Modify_group=0)、|L| 58→270、N_all 1000→1012(≈2-3 个 AR 组的人工粒子);相邻快照全粒子总动量 P: (9.2,-1.7,-2.3)→(-119,8.6,-54.4) Msun·pc/Myr(|ΔP|≈130 Msun·km/s,为事件前 46 Myr 累计漂移 9.6 的 14 倍),且簇剩余部分反冲方向与逃逸组同向(物理反冲必须反向);能量来源不足且动量无载体:全局注入 +144 中双星硬化仅贡献 ΔEb≈+31(Eb=G m1 m2/(2a):370.8→401.8;**勿用 Binary.mass(总质量)代 m1m2——Eb=G·m_tot/(2a) 无物理意义,首次分析即错成 21.4**);动量侧决定性:双星 CM 获得 |Δp|≈114 Msun·km/s,事件中的三体入侵者星 87 仅 0.242 M☉、事件后速度 0.9-2.8 km/s(动量 ~0.25-0.67,需 ~471 km/s 才能平衡),簇剩余部分反冲方向还与逃逸组同向——逃逸速度是在 AR 组 (87,184,377) form/break 状态回写瞬间凭空写入的(data.group.n2/n3 事件级记录:两次速度阶跃 0.68→1.40→1.77 km/s 精确落在 t=47.8203/48.0664 组解散时刻,期间双星内部 a/e 三位有效数字不变)。dump 重放(petar.mpi.omp.avx2.hard.debug -p data.par,版本比 run 新 9 天但 dE_SD=0.250278 与 run stderr 逐位一致)直接测得该硬系统单树步相对能量误差 ~1e-3(阈值 1e-4,PeTar 自身告警),步内发生 AR 组 form(2→3 成员),与 2026-10-02 组转换注入机制同源。
+
+**Prevention rule**: 判定逃逸/喷出事件是否物理,按序审计:① 相邻快照算全粒子总动量 P(t)(孤立系统严格守恒,比能量灵敏;快照坐标为单一惯性系,初始 P=0 可作基准;output 日志的 "C.M." 行是势中心 _mode=3 不是动量 CM,勿混用);② output 日志事件步的 E_total/Modify/|L|err_cum 跳变;③ 能量预算:逃逸组动能 vs 全部双星硬化增量(事后无残留硬化双星=数值注入);④ 反冲方向核对。大 AR 组(>10 成员)是红旗:致密核+大质量 IMF 下自动 changeover 的质量放大项会让巨双星捕获整核,须显式收紧 -s/-r 并复跑。
+
+### 2026-10-06: 巨双星逃逸 bug 已复现并定位到组 form/break 表示切换的动量失配——诊断用逐层动量探针,硬域内部守恒不代表全局守恒
+
+**Mistake**: 首轮分析止于"守恒律崩坏+组事件时间吻合",未定位到代码;若只看硬积分器内部能量(dE_SD ~1e-3)会低估——实际全局注入达 O(100) Msun·km/s/事件。
+
+**Root cause**: 从 data.47 重启复现(当前代码仍在:-261→+325 能量、|P| 55→306/3Myr;重启快照文件名沿用输入 nfile 编号,re47.48=t=47.25)。逐层动量探针结论:① SDAR Hermite 簇间跳变全部严格配对抵消(两簇经 soft 力交换,net=0);② 泄漏在 petar.hpp drift() 内部:soft 侧实粒子动量在组 form/break 事件单步跳 |ΔP| 50-156 Msun·pc/Myr,连环 form/break 不抵消(净 ~82-88/事件期),与快照全局跳变吻合。机理:组存在期间其动量由人工 CM 粒子(在 n_real 之外,快照/探针都不计)承载;break 时成员恢复质量回写,恢复的动量 ≠ (form 时隐藏的动量 + soft 系统对人工 CM 传递的冲量)。嫌疑位点:hard.hpp integrateToTime 末尾人工粒子更新用陈旧 cm_vel_org(pcm 重算前的漂移值)平移 bink.vel(~2088 行)、updateArtificialParticles 直接取 slowdown 表示下的树根速度、AR perturber 冲量与人工 CM soft kick 的双重/遗漏记账。
+
+**Prevention rule**: ① 动量泄漏诊断必须分层:SDAR 簇内(calcEnergySlowDown 加 ptot_,已实现 getPtotTrue)→ soft 实粒子(petar.hpp drift() 入口,已实现 SoftP drift jump 打印)→ 快照全局;硬域守恒≠全局守恒,表示切换(质量置零成员+人工 CM)是盲区;② 重启复现时快照文件名编号连续自输入快照,审计时用日志时间对齐;③ 诊断探针改动保持未提交并在完成后恢复 configure(已恢复 bse.g);④ 修复方向:break/form 回写时强制 Σm·v 成员 == 人工 CM 动量(边界守恒校正),并修正 cm_vel_org/bink.vel 两处陈旧值;验证即用本探针重跑(净 |dP| 应归零)。
+
+### 2026-10-06: 动量修复两次尝试的排除性结论——匹配路径本已严格守恒(dv~1e-16),退役侧校正反而有害;泄漏点仍在,下一步是步内相位二分
+
+**Mistake**: 修复初版打在两个猜测点上:① retire 侧(组变化/解散时陈旧人工 CM 的动量移交成员)——实测把本来自洽的 form/break 对打错方向(全局 |P| 从 143 恶化到 216);② matched 侧(updateArtificialParticles 后锁定人工粒子组动量==成员 Σmv)——实测 dv 恒为 ~1e-16(机器精度),说明 bink 基础的更新本来就是成员 CM 的精确表示(SD=1 无 slowdown 时),锁定是无效但无害的防御性代码。
+
+**Root cause**: 泄漏的 +85.9@t=47.623 单步跳变既不在 SDAR 簇内部(硬域跳变全部配对抵消)、也不在 matched 人工粒子更新(严格一致),且不是轻星表示翻转(0.24 M☉ 的星 87 不可能贡献 85.9)——只能来自 77.6 M☉ 双星自身的 sys 槽质量表示翻转(createGroup 置零 ↔ breakGroups 恢复)与陈旧人工粒子在移除前的共存窗口。另注意:Ptcl::DataCopy **不拷贝 group_data**(回写会剥离成员标记),任何在 system_soft 侧用 isMember()/getParticleCMAddress() 找成员的方案在 removeParticles 时刻都会空手而归——成员信息权威在 ptcl_hard_。
+
+**Prevention rule**: ① 边界修复前先验证不变量是否已被现有代码满足(matched 锁定的 dv=1e-16 一测即知),别在未测量的猜点上动刀;② 下一步探针:在泄漏步(47.623)内做相位二分——kick 前后、createGroup 前后、drift 各子调用(kickCluster/kickCM/drift/writeBack)前后分别打印 P_soft_real,单步定位产生 +85.9 的确切调用;③ system_soft 侧任何成员识别必须走 ptcl_hard_,DataCopy 剥离 group_data 是结构性陷阱;④ 命令行 CXXFLAGS=... 会整体覆盖 Makefile 的 += 累积(SIMD 标志丢失导致虚假编译错误),加宏应直接追加进 Makefile。
+
+### 2026-10-06: gdb 定位动量泄漏真因——不在 form/break,而是 AR 组隐藏期间每步连续注入 dP=m_组×Δv_cm;表示切换本身守恒;AR 扰动已差分化非双重计数
+
+**Mistake**: 前两轮把修复打在 form/break 表示切换上,方向全错。gdb(-O1 -g,与 -O3 逐位一致)裸地址硬件 watchpoint + 逐步 dump 证实:①"SoftP drift jump"的 ±53/+85.9 大跳变是**表示切换假象**(成员质量 46.06→0、动量转入人工 CM;总质量 583.6→506 即证据;P_full=P_real+P_arti 在切换时刻守恒到 0.02);②真实泄漏是**连续的**:双星处于 AR 组表示期间(n_all=1012, t=47.623-47.7246)每个树步 P_full 增 1.3-8.9(逐步增长),累计 +85.5 与快照 |P| 55→143.7 精确吻合,组一解散泄漏立即停止;③每步注入 dP_full 与人工 CM 速度变化 Δv_cm **方向大小精确一致**(dP=m_组×Δv_cm,方向收敛 (-0.99,+0.14,-0.02))——隐藏组的 CM 被加速(隐含 8-58 pc/Myr²,核内近邻力量级)而**全系统无反冲**(实粒子每步 ΔP≈0.02);④单方受力候选逐一排除:AR perturber 双重计数不成立(ar_interaction.hpp:505-510 明确扣除 CM 净分量做差分化)、matched 人工粒子更新严格一致(dv=1e-16)、kickCM 与成员 kick 用同一 CM 加速度。
+
+**Root cause**: 单向力在 Hermite 簇内组 CM 的受力路径上——组 CM 加速无反应。剩余嫌疑(下一步单一实验可钉死):`need_resolve_flag` 分支的 resolved-member 对力(calcAccJerkPairSingleGroupMember,singles 感受组的成员)与组 CM 侧对力(changeover 权重 k 在两种配对下不对称),或簇 CM 帧漂移 pcm.pos+=pcm.vel*_time_end 用重算前后的陈旧/新值不一致(hard.hpp:1984-2042)。逃逸速度来源定量闭合:∫m×a_注入dt = +85.5 M☉·km/s ≈ 77.6 M☉ × 1.1 km/s。
+
+**Prevention rule**: ① 排查守恒破坏先分类"一次性跳变 vs 连续漂移"——表示切换类跳变(质量置零/恢复)必须用 P_full=real+arti 审计,只看 real 会满眼假泄漏;② gdb 硬件 watchpoint 必须用裸地址(`watch *(double*)addr`),带 this-> 的表达式离开作用域会被自动删除造成"零触发"假阴性;-O1 -g 与 -O3 逐位一致可放心降级调试;③ 逐步 dump(id/mass/vel 全粒子+人工)到文件离线分析是最高性价比方案:方向对齐检验(dP vs m·Δv_cm)一步区分"组被单方加速"与"表示错位";④ 下一步:在泄漏步内 break 于 Hermite 子步尾,比较组 CM 的 Δv 与其扰源邻居 Σm·Δv,或 A/B 补丁 calcAccJerkPairSingleGroupCM 强制对称验证泄漏归零。
+
+### 2026-10-06: 联锁修复(失配停用人工粒子)已实施并验证非主通道——主泄漏窗口组员稳定且 matched;泄漏在 SDAR 积分内部,簇 CM 速度每步跳 ~0.045
+
+**Mistake**: "TT 按设计在成员变化后停用"的门控实际只覆盖张量力输入,且原 group_id 符号翻转联锁已被注释废弃(ar_perturber.hpp:28-50);据此实施的失配联锁(ARTI_MISMATCH_INTERLOCK:失配人工组质量置零)在真实失配事件正确触发(2 次),但主泄漏窗口(47.625-47.72)组为稳定 n2、每步 matched 更新,联锁零触发,|P| 泄漏不变(55.2→143.7)。
+
+**Root cause**(排除链收口):kick 体/createGroup/表示切换/张量 eval(T1 置零逐位不变)/失配陈旧人工粒子全部排除;泄漏发生在 drift 体内部(matted 更新把 AR 视图写入质量承载的人工 CM),CM 分解显示簇 CM 速度 ccm 每大步跳 0.045 pc/Myr(小步 ~0.01,随窗口渐增)——量级 v_orb×Δκ≈0.017 与 slowdown 因子更新同阶,方向恒定;窗口内组员无变化,故与 n2↔n3 churn 无关的每步机制只剩 slowdown 因子更新与 perturber 列表更新两类。--tt-switch 0 仍是最有效缓解(绕过整条人工粒子路径)。
+
+**Prevention rule**: ① 表示级联锁修复方向正确但需先证主通道:实施前先用最小探针(如 CMVIEW 分解 bink/gcm/ccm 三分量)确认泄漏载体;② SDAR 组 cm.vel 的写入者(calcCenterOfMass 重算/AR 内部漂移/initial)可用裸地址 watchpoint 逐个抓——模板头文件行断点(hermite_integrator.h:2694)在 -O1 下可能不绑定,改用函数名 rbreak 或在调用方(非模板)行设断;③ 下一实验:watch SDAR 组 cm.vel 写入点,或对比 perturber 列表逐步差异(NB 数、成员)与泄漏步的相关性;④ ARTI_MISMATCH_INTERLOCK 宏保留(CXXFLAGS += -D ARTI_MISMATCH_INTERLOCK),是正确的防御加固,勿与主泄漏修复混淆。
+
+### 2026-10-06: slowdown/perturber 检查收口——组转换重写动量精确中性(3174 事件 dP≤4e-14,CM 含入);泄漏在 SDorg 尖峰步的积分段内;联锁已按用户决定回退
+
+**Mistake**: 联锁修复虽在真实失配事件正确触发,但主泄漏窗口组员稳定、matched 更新,无改善——按"无改善不改码"回退(质量置零亦有引入双表示/失重的风险)。另:geid 转换探针初版只测簇坐标系动量(恒≈0),不含簇 CM 项,是假排除;补上 `particles.cm.mass*cm.vel` 后才有效。
+
+**Root cause**(最终状态):泄漏与 `kappa_org = kref·pert_in/pert_out` 的尖峰步逐一对应(SDorg 基线 0.0017 ↔ 尖峰 0.02→0.22 递增,阈值 groupedCriterion 1e-2 恰在中间;NB 12↔14 交替 = perturber 列表 churn);kappa(实际应用因子)恒 1。组 form/break 状态重写经 CM 含入审计确认动量中性;泄漏在**转换之间的 AR 积分段**内累积(geid P_pre 序列平滑漂移 +0.1-0.15/步而非跳变)。即:perturber 列表churn → pert_out 骤降 → kappa_org 尖峰(宽对成组翻转,判据 5a62e4e 2026-10-01,晚于原 run)→ 该步 AR 积分(含 slowdown 状态机更新)单向注入簇 CM 速度 +0.018/步。
+
+**Prevention rule**: ① 探针测动量必须含 CM 项(簇/组坐标系动量恒≈0 是结构性盲区,两次踩坑);② 下一步唯一悬置实验:在每个 AR integrateToTime 段前后打印 CM 含入 P + 内层(非根)树节点的 κ 值——注入点应在 slowdown 因子更新路径(syncTreeSlowDownAndDs/calcBinaryTreeSlowDown 之后的状态调整);③ 判据阈值(kappa_org≥1e-2)与 perturber 列表更新均无滞回,churn 环境下必然翻转——修复可考虑双阈值滞回或列表变化平滑,但须先定位积分段内的注入函数;④ Makefile 追加行不触发重编(SDAR 头文件不在依赖),改 Makefile 后必须 make -B;configure 备份要在 configure 之前拷贝(时序错误曾把 plain 当 bse.g 恢复)。
+
+### 2026-10-06: pert_out 振荡的具体原因已查明——星 282 在 r_neighbor_crit 质量放大边界(~0.41 pc)按刷新周期翻转;TT 因果链闭合
+
+**Mistake**: 曾以"kappa 恒 1"与"转换重写中性"推断 TT 无关,忽略了 TT/人工粒子在**上游**驱动扰动列表churn——tt-switch 0 的显著改善必然意味着 TT 在链上(用户指出)。
+
+**Root cause**(NBLIST 逐步实测):perturber 列表成员 12↔14 翻转的实体是**星 282(0.111 M☉,距组 0.3-0.4 pc)以精确的 tree-nstep-mklist=2 刷新周期进出列表**(374 偶发同步);**星 87(0.242 M☉)于 t=47.627 永久离开列表,恰为泄漏窗口起点**。组的 perturber 搜索半径按质量放大 r_out=0.0804×(77.65/0.584)^(1/3)≈0.41 pc,282 正悬边界——每次 createGroup/人工粒子刷新重估 r_neighbor_crit 时被纳入/踢出 → pert_out 骤降 → kappa_org=kref·pin/pout 尖峰(跨 1e-2 判据阈值)→ 尖峰步 AR 积分段注入簇 CM 速度 +0.018/步。TT-off(无人工粒子、成员保真实质量)时邻域判据结构不同,无翻转、无泄漏——因果链与全部 A/B 一致。
+
+**Prevention rule**: ① "机制 X 无关"的推断必须检查其是否在**上游**驱动观测变量(tt-off 改善与"kappa 恒 1"两事实并存的原因:TT 驱动列表churn而非直接施力);② 质量放大 changeover(r∝m^(1/3))使大质量组的邻域边界(~0.4 pc)覆盖大量场星,边界翻转是结构性隐患——perturber 列表与 kappa 判据都无滞回;③ 修复方向排序:(a) 列表/判据滞回(防翻转,治标);(b) 定位尖峰步 AR 积分内的注入函数(治本,最后悬置实验:积分段前后 CM 含入 P + 内层 κ 打印);④ NBLIST 探针已删,复现方法:在 matched 更新处打印 neighbor_address 的 id 列表(NBAdr::Group 取 ->cm.id,Single 取 ->id)。
+
+### 2026-10-06: pert_out 量级反解定位真摄动源;TT 关联定性——churn 双配置皆有,注入只在 TT-on 机器
+
+**Mistake**: 两处归因先后被证伪:282 列表翻转(仅症状,0.11 M☉@0.35 pc 占 pert_out ~1% 不可能造成 12-130× 振荡);87 三体churn(重启实现泄漏窗口 n3 记录为零——那是原始 run 的实现)。
+
+**Root cause**(量级反解):存储 Pout=2.7e6-4.7e7 反解出"0.24-7.8 M☉ 天体在 0.01-0.06 pc",而组自身 perturber 列表全在 1.5-1.9 pc(物理和仅几十)——pert_out 由**步内暂现组**(geid 每步 n_form:1 事件,以 group 型成员带合并质量进入列表)或等价近距离通道主导;公式 m·m/r³ 与 apo 基 pert_in 均无算术错误(pert_in=1454/0.0135³=5.9e8 与实测 6.15e8 吻合)。TT 关联:churn 在 TT on/off 都发生(tt-off 2988 次 n2 事件)但泄漏只在 TT-on——注入需要 TT-on 独有的耦合链(组型 perturber 列表项 / slowdown 状态与人工 CM 同步);TT-off 的 isolated 组无此耦合,churn 周期安全通过。slowdown 状态按内层轨道周期(~4 树步)更新,存储值在更新间陈旧——振荡的离散跳变源于此。
+
+**Prevention rule**: ① 归因反转解:从存储量(Pout/kappa)反推所需的 m/r 组合,与实测列表逐项对照,不一致即存在未识别通道(本轮由此定位暂现组通道);② 探针打印列表须在事件发生时刻(步内)而非 drift 末端——暂现组在末端已解散,末端快照看不见;③ churn 事件计数要区分 run 实现(重启与原 run 的混沌实现不同,事件主体可能不同——87 三体是原 run 的,暂现对是重启的);④ 最后一环验证:在 checkAndAddNeighborGroup 处打印加入的 group 型成员的 (id, m, r),确认暂现组以近距离合并质量进入列表。
+
+### 2026-10-06: 簇 CM 写入源已锁定——calcCenterOfMass@hard.hpp:2042 唯一写入;gdb VLA/-O0 工具链打通
+
+**Mistake**: gdb 追 SDAR 内部状态三轮失败:(1) this-> 表达式 watchpoint 离开作用域被删;(2) 模板头文件行断点不绑定;(3) C99 VLA(hard_int_thread)在 -O1 无调试信息("no such vector element")。resolved 分支假设也被证伪:checkGroupResolve() 恒 resolved(CM 模式被注释,注释自述 "_kappa>3.0 seems cause oscillation")。
+
+**Root cause**(本轮定位):积分期间簇 CM(h4_int.particles.cm.vel)的全部写入唯一来源 = `COMM::ParticleGroup::calcCenterOfMass` @ `driftClusterAndArtificialCMAndWriteBack` hard.hpp:2042(HARD_CHECK_ENERGY 门控的 drift 尾重算);重算前后 CM 速度差即代码内 `dcm_vel`,其动能记账进能量日志 Modify 列(事件时 +115 的指纹)——代码自知重算改变 CM 但只做能量记账。动力学消费者(成员回写/人工 CM)均用重算前的 cm_vel_org,形式自洽;泄漏如何经此进入动量承载表示待 -O0 轨迹复核。另:-O0 与 -O1/-O3 **不逐位一致**(FP 求值序),跨优化级对拍会错位泄漏步。
+
+**Prevention rule**: ① gdb 追 VLA 内部对象必须 -O0 构建;裸地址 watchpoint + 非模板调用行(hard.hpp:3491 lambda 行)布防;COMM::List 计数字段是 num_ 非 size_;栈上 VLA 每 drift 复用同地址,watch 会串簇/串噪声——用 backtrace 的参数(_n_group 等)区分;② 跨优化级重跑会漂移泄漏步,先在同构建里重定位再布防;③ checkGroupResolve 的注释历史("kappa>3.0 oscillation")说明 resolved/CM 表示切换早有振荡前科,值得在修复设计时回看;④ 下一步闭环:SDCORR 加回 -O0 构建重定位泄漏步 → watch 2042 重算前后 dump 成员速度 → 验证 (重算值−cm_vel_org)×m 是否=每步泄漏。
+
+### 2026-10-06: 【结案】真凶=潮汐张量 T3 偶阶项的成员平均非零——AR 每子步净推组 CM 无反作用;修复(扣除张量均值)已验证动量+能量双恢复
+
+**Mistake**: 多轮将泄漏归因于表示切换/失配人工粒子/组转换重写等下游症状;用户坚持"TT perturbation 计算导致积分内动量不守恒"才引入决定性探针(Σm·acc_pert after removal+tensor):正常窗口 <1e-3,泄漏窗口 **29–39 pc/Myr²**,×77.65 M☉×dt=+4.7/树步=泄漏量,333,630 次 AR 子步持续作用。另:首轮 NETP-A 探针误置于成员循环内(测到中途部分和,~0.027 假信号),教训:聚合探针必须在完整循环后。
+
+**Root cause**(数学+测量双确认):calcAccPert 对列表力做 CM 扣除(Σm·a 精确=0)之后加入潮汐张量;fit() 按构造 T1=0("assume input force already remove the c.m.")、T2 线性项 Σm·T2·x=0(CM 系精确抵消),但 **T3 二次项 Σm·T3·x²≠0(x² 为偶函数,±x 成员不抵消)**——张量给组成员留下非零质量加权平均力,无任何反作用通道。近距暂现体主导张量拟合时 T3∝r⁻⁴ 爆炸(0.01-0.06 pc 源 → 净力 11-30 pc/Myr²,实测 29-39 ✓)。kappa_org 尖峰/pert_out 振荡/NB churn 全是同一近距源的伴生症状。TT-off 无张量故无泄漏;drift 尾 calcCenterOfMass 重算只是测量结果。
+
+**Fix**(ar_interaction.hpp,已验证):张量 eval 后同列表力一样扣除其质量加权平均(pot 同步修正)。验证:|P| 55→57.3(修复前→143.7,tt-off→56.7);能量 err_cum 29.9→3.2;TT-on 守恒性与 TT-off 等同。原始 200 Myr run 的逃逸事件(+144 能量/+130 动量、巨双星 1.5-2 km/s 假逃逸、data.core 崩坏)即此机制在无近距暂现体猝发时段的持续累积。
+
+**Prevention rule**: ① 微分/差分化校验必须逐项做**偶宇称检验**:奇阶(线性)项在 CM 系自动抵消,偶阶(常数/二次)项的平均非零——任何"扣除均值"操作之后加入的场展开都要重新扣除均值;② 聚合探针(Σ/均值)必须放完整循环后,放循环内会测到部分和假信号;③ 守恒审计的最短路径是直接测"力通道的净输出"(Σm·a per call)而非层层追状态写入——写入者(calcCenterOfMass)往往只是测量者;④ 修复后验证必须同时查动量(|P| 序列)与能量(err_cum),二者同源时应同时恢复。
+
+**修正语义对照论文复核(2026-10-06 续)**:PeTar_code.pdf §6.4.1 自身定义 A′=A−A(rcm)(测量点先扣 CM 值,零阶项由 CM 粒子单独交付)——但内部动力学需要的严格量是 A′−⟨A′⟩(⟨A′⟩=⟨T3x²⟩≠0 即泄漏),扣均值是把论文定义执行到底而非改变设计。**T3 差分贡献完整保留**:对成员减同一常数使相对力 (a_i−a_j) 严格不变;非等质量双星 x1≠x2(m1/m2 缩放),T3·x1²≠T3·x2² 的差分项(论文测得的轨道修正效应)原封不动;等质量时 T3 项纯均匀,扣除是恒等变换。净分量的物理内容是 O((a/L)²) 有限尺寸净力修正,可忽略且已由 CM 通道(A(rcm))覆盖。反作用(§6.4.2 sampling/伪粒子)与张量均值处理无关,修复恢复一致性。
+
+**修复重构(用户方案,2026-10-06 再续)**:张量 eval 挪入循环 1(列表力之后、acc_pert_cm 累加之前),既有 CM 扣除自动覆盖张量均值,独立修正循环删除——与分离循环版逐位等价(|P| 序列完全一致)。**n_pert==0 分支勘误(用户纠正)**:该分支原本就有张量施加(else 内 SOFT_PERT 块,我此前误读为"完全不施加"),同样无均值扣除——即**两个分支都有同一泄漏**;修正:原块就地加均值扣除(非新增张量),我误加的重复块已删。教训:① python 字符串手术连吞三处结构性括号/宏(每次以不同编译错误显形),多 edits 必须从 git 原版一次性重放并逐锚点断言;② 读分支代码必须读到块尾(EXTERNAL_HARD 嵌套截断了我的视野);③ 未触发路径的错误重构不会被验证场景暴露(n_pert==0 在本测试中不执行)——重构后要静态核对所有分支的施加次数恰好一次。
+
+### 2026-10-06: T5 验证场景落地——回归阈值必须用未修复二进制实测定标;3 体 hard 模式 TT 结构性不触发
+
+**Mistake**: T5 场景初版三处想当然:(1) r3 命令 `--r-search-group 0.03` 触发断言 `r_search_group_over_in<=1.0` 直接 abort(0.03/0.024>1,r_in=r_ratio·r_out);(2) r1(hard 模式)期望 `tt_engaged>=1` 失败——3 体事件构型中 churner 轨道(0.01–0.04 pc)与并组半径必然重叠,系统恒为孤立 AR 组、TT 结构性关闭(r1≡r2 逐位一致本身是有效回归:证明无人工粒子路径不被修复扰动);(3) 初版动量阈值 0.02 用修复版结果(0.0014)直接外推,未实测未修复版——实测未修复仅 0.0102(<0.02,拦不住旧 bug)。
+
+**Root cause**: ① r_search_group 上限是 r_in(非 r_out),树模式缩小 r_out 时必须同步缩 r_search;② hard 模式 TT 人工粒子需要"组外 perturber",3 体尺度重叠构型无此状态(T4 能触发因其尺度干净分离:双星 1.9e-3 ≪ perturber 0.15);③ 泄漏在该 IC 上早期一次近距通过即饱和(t=3 与 t=10 同为 ~0.0103),延时不能增大判别力,判别力只能来自阈值。
+
+**Prevention rule**: ① 新增回归检查的阈值必须双向定标:同一命令分别跑修复/未修复二进制,取"修复版裕度≥3×、未修复版超限≥2×"的阈值(此处定 0.005:修复 0.0014 / 未修复 0.0103);② 定标未修复版的最短路径:`git show HEAD:file > file && make install`,测完从暂存副本恢复再重装(全程 ~2 分钟);③ 泄漏型 bug 的回归指标先测时间饱和性再决定跑多长;④ 场景命令先手动跑通再写入 JSON,断言失败会在 work 目录留下部分输出易误导诊断方向。
+
+### 2026-10-06: 场景 setup 的输入格式与二进制家族强耦合——BSE 中断构建要求 petar.init -s bse(勘误:.g 是 --with-debug=g,非 galpy)
+
+**Mistake**: T5 HTML 报告首跑失败:恢复用户 bse.g 选定后,`petar` 读 setup 生成的 input 直接 abort("Ptcl data reading r_search, id, and group_data fails! requiring 4, only obtain 2")。同一 setup + plain 家族全部通过,误以为 setup 与二进制无关;首版归因还把 .g 后缀误判为 galpy——实为 `--with-debug=g`(Makefile.in:280 `ifeq ($(debug_flag),g)` 添加 .g 后缀)。
+
+**Root cause**: 输入粒子列数是**编译期特性**(interrupt/external 列),与运行时旗标(-b 0)无关:BSE 中断构建的粒子类额外读恒星演化列,petar.init 需 `-s bse`(运行也要 -b 1);galpy 外势构建需 `-t`(外势列+header offsets)。plain 格式 input 只能被 no-interrupt/no-external 家族读。
+
+**Prevention rule**: ① 编写验证场景先确定目标二进制家族,setup 的 petar.init 旗标必须与之一致;纯引力测试选 plain 家族,报告脚本经 `petar.select --optional mpi,omp,avx2` 选择(不带 --require 即 plain 家族)并显式 `--var petar_bin_switch=<选中路径>`——不硬编码绝对路径、不依赖运行前谁被选中;注意 select 会**改变当前选定**(副作用同 T1-T3 管线);② 该 abort 的指纹是"requiring 4, only obtain 2"——列数不匹配即查家族特性列;③ 报告脚本(T2/T3/T5 范式)把 --petar 做成参数,空值走 petar.select,失败时报错而非静默回退(静默回退正是本轮 bse.g 失败被延迟发现的原因)。
+
+### 2026-10-06: T4 m1 在 HEAD 上的既有 abort——r_search 断言的 1-ULP 重构舍入;乘法放缩改精确赋值修复
+
+**Mistake**: T4 管线重启即挂(m1 t≈10.9 abort `pcm.r_search >= member.getRout()`),先入为主怀疑当日 TT 修复/重建引入——用 `git show HEAD:` 回退重建对照后同点 abort,证明是 HEAD 既有问题(Sep 28 旧报告全过 → 之后 f14606f/2fa15b7 的 r_search 不变量提交引入)。静态分析三轮推不出违例(逻辑上 r_out_max 扫描+放缩应恒覆盖),误判方向包括 NaN/能量爆炸(实际能量 1e-9 干净)。
+
+**Root cause**(gdb -O0 帧内实测):BSE 质量流失使 mass_cm 微降 → member r_out 比 pcm 基准值大 1.3e-12 相对量 → r_ratio=1.0000000000013>1 → `updateWithRScale()` 用**乘法重构** `pcm_r_out·ratio`,舍入后比 member 值短 ~4e-15;平时 cushion 是 |v_cm|·dt·factor,但质心系下 v_cm≈6e-13 → cushion≈1e-16 失效 → 断言差 1 ULP 失败。**修法**:ratio>1 时改用两参 `setR(rin·ratio, r_out_max)` 把 r_out **精确赋值**为 r_out_max(无舍入路径),r_search=max(≥0 项+r_out,·) ≥ r_out_max 恒成立。验证:-O0 与 -O3 完整跑通 t=20(161 输出,无断言),T4 全 5 模式恢复。
+
+**Prevention rule**: ① "重构应有值"类断言禁止经乘法/除法往返(`a·(b/a)≠b`,1-ULP 短缺);需要 ≥b 保证时直接赋值 b;② 断言的 cushion 项(速度·dt)可在质心系退化到 0,边界分析必须考虑 cushion=0 情形;③ 恢复旧验证先跑再改:同命令 HEAD 回退对照是排除"新改动引入"的最快手段(~2 分钟);④ abort 在 omp outlined 函数内时,断点帧 locals 要 `frame N`+`info locals` 取(N=bt 中 _omp_fn 帧),-batch 脚本注意 grep "Assertion" 无匹配返回码非零会误报失败。
+
+### 2026-10-07: 模拟配置先查记录再推测——并行/时长/重启三连错被用户纠正;实测基准统一进 performance-log.md
+
+**Mistake**: N1k 验证重启的启动配置连错三轮,均为"推测优先、查证滞后":① 提议 OMP 4 线程(SKILL 明文 N≲10³ 用 1 线程,script-tools 有 N=500 实测 4 线程 +19%,我引用"binaries-rich 2-4"例外却未按 quick rule 先 benchmark);② wall 实测显示"mpirun -n 4 快 8×"推荐 MPI——实为对照探针缺 `UCX_VFS_ENABLE=n` 的混淆(环境变量只设了 MPI 组),直跑+环境变量后差距消失;③ 用短探针 wall 外推时长(0.25 Myr 探针 wall 5 s 里计算仅 1.3 s,启动/IO 占 3/4),先后报出 2 h→52 min→10 min 三个错误估计,真值(prof: 2.6 s/Myr)自始至终可一步获得。另:重启命令最初漏 `-p data.par`(SKILL Restart/resume 节明文"Use -p before overrides"与"-i 0 for binary snapshot"),该节内容我未读即拼命令。
+
+**Root cause**: 并行规模与时长属于"有实测数据可查"的问题,却被当作可直觉推断的问题;wall 计时在短探针上系统性失真(启动+IO+UCX 逐通信开销),且 A/B 对照未控制环境变量;SKILL 相关节(Restart/resume、Parallel Launch Heuristics、UCX 环境要求)都已覆盖,失败在"没有先读对应章节"。
+
+**Prevention rule**: ① 提议任何多线程/多进程配置前,先查 `assets/performance-log.md` 实测记录,无记录则当场用 prof 输出(`Wallclock time per step: Total`)做基准,不得凭直觉;② 时长估算一律用 prof 每步 Total × 总步数(或输出文件 mtime 间隔),禁止短探针 wall 外推;③ A/B 对照必须逐变量控制环境(UCX/OMP/MPI 变量在两组间完全一致);④ 拼重启命令前重读 SKILL "Workflow Patterns → Restart/resume"(-p 前置、-i 匹配快照格式、.par.* 伴随文件);⑤ 每次正式/验证模拟后向 performance-log.md 追加一行实测(N、家族、启动配置、ms/step、s/Myr)——该文件是实测基准唯一权威家,script-tools/SKILL 只留指针。
+
+### 2026-10-07: 全系统动量审计以快照 Σmv 为准(日志 C.M.: 行语义不符);fix47 长程验证通过 + t≈167 暂态 NaN 断言为未决鲁棒性问题
+
+**Mistake**: 验证时先用日志 `C.M.:` 行算 |P|(全系统质心速度×质量),得 39–136 振荡、误判"修复可能失效";三轮对照(未修复 re47/中间版 re47k/新 fix47)该指标不分彼此,才起疑指标本身。
+
+**Root cause**: status.hpp 的 `C.M.:` 行速度与快照 Σmv/M 不一致(fix47.50: 快照 59.5 vs 日志行 113.3),语义非全系统动量。快照直算 |Σmv| 后结论干净:原始 55→132→165→238(单调泄漏),修复版 47–66 有界振荡 153 Myr 无增长;巨双星(id184+377,77.65 M☉)原始 t=200 飞至 243 pc(假逃逸),修复版留在 22 pc 束缚;能量 t=50 处 29.9→5.3。另:fix47 在 t≈167 遇 `driveForOneClusterOMP` 的 `!isnan(pi.vel.x)` 断言 abort——从 fix47.167 快照重启即绕过(重启重建 AR 组/slowdown 内态,不逐位复现),未固定根因,属 hard 积分鲁棒性独立问题,待查。
+
+**Prevention rule**: ① 动量守恒审计一律直接对快照算 |Σ m·v|(`petar.Particle.fromfile(f, offset=petar.HEADER_OFFSET)`,不含 BSE 列时默认参数即可),不信日志 C.M. 行;② 多版本对照若"不分彼此",先怀疑度量再怀疑物理;③ 快照重启不逐位复现崩溃(内态重建),NaN/断言类问题复现要靠 dump 回放(hard.debug)或同进程续跑;④ 长程验证中出现的一次性 NaN 断言要单独立案,不得因"重启绕过"而静默关闭。
