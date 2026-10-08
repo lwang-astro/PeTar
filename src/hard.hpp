@@ -2081,8 +2081,14 @@ public:
                         }
                         if (unmatch_flag) continue;
 
-                        // update new cm. pos and vel for binarytree root
+                        // open (hyperbolic) roots have no valid elliptic artificial-particle
+                        // sampling; skip the refresh (like the isolated path) and leave
+                        // group_arti_update_list unset so the artificial set is flagged
+                        // changed and genuinely regenerated next adjustment
                         auto& bink = groupk.info.getBinaryTreeRoot();
+                        if (bink.semi <= 0.0) continue;
+
+                        // update new cm. pos and vel for binarytree root
                         bink.pos += groupk.particles.cm.pos + cm_pos_org;
                         bink.vel += groupk.particles.cm.vel + cm_vel_org;
 

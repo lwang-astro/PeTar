@@ -370,6 +370,11 @@ public:
 
         // for orbital artificial particles, recalculate new data
         auto* aporb = getOrbitalParticles(_ptcl_artificial);
+        // elliptic sampling only: hyperbolic/degenerate roots (semi<=0) have no sampling
+        // solution (orbitToParticle/calcMeanAnomaly emit NaN, poisoning the soft-system
+        // tree; observed 2026-10-08). Callers must skip the update for open roots —
+        // the same guard as hard.hpp driftClusterAndArtificialCMAndWriteBack.
+        ASSERT(_bin.semi > 0.0);
         orbit_manager.createSampleParticles(aporb, _bin);
 
 

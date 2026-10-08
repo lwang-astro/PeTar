@@ -837,3 +837,51 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 判别实验:`setarch $(uname -m) -R`(关 ASLR)下连跑两次输出**逐位一致**;ASLR 开时每次进程堆布局不同→某处存在地址依赖行为(指针序/布局敏感路径,值键容器与值排序已排除)→FP 求和序等微差被混沌放大。因此每个进程是一次"实现采样",NaN 是该实现系综的稀有事件(fix47 命中、repfull 未命中);不可复现是常态而非异常。内存泄漏假设排除(泄漏不产生 FP 分歧);经典越界损坏未被证实(地址依赖在固定布局下是确定性的)。
 
 **Prevention rule**: ① 需要复现/对拍/调试的 run 一律加 `setarch $(uname -m) -R` 前缀(与 ASan 构建并用时本就是仓库惯例);② 采样可复现实现系综:关 ASLR + 改变环境变量填充(如加无效 env pad)平移初始栈→不同布局且可复现;③ 判定"是否位级可复现"用输出快照 `cmp` 而非日志打印(打印精度会掩盖分歧);④ "重启不复现"不能作为排除 bug 的证据——完整重跑不可复现时先做 setarch -R 对照;⑤ 下次 NaN 出现时:先打印失败簇成员(id/质量/间距)再 abort 的一行诊断 + 上述可复现采样,即可闭环定位。
+
+### 2026-10-07: NaN 已定位——致密核紧双星形成瞬间 Pert_In~1.8e9(摄动源近零距/重合类),form-break-重构震荡中 AR 发散;可复现采样协议生效
+
+**Mistake**: NaN 一度按"稀有随机事件"处理;env-padding 采样显示 t=0 起跑 8 实现中 5 个死在同一 t=79(去重 5/6)——并非稀有,而是几乎每实现必遇的物理阶段(大质量星内落成紧双星)触发。
+
+**Root cause**(diag1 t=57.7012,打印+dump 回放链):致密核形成紧双星(a=0.0055 pc,P=0.0043 Myr);其 Pert_In=**1.85e9**、Pert_Out=5.1e5——摄动强度超 AR 有效性 9 个量级,指向摄动源与组几乎重合(r→0,同 2026-09-20"停放粒子重合→0/0"家族);组 0.0007 Myr 内 form→break→3 体重构(semi<0,ecc=1.0047),窗口内 41 次 large-energy;最终 AR 积分 NaN(id1),NaN 经树力一步毒化全系统(检测点在下一漂移步:全表 vel NaN、binID=0、位置正常)。t=79/57/167 是不同实现的同一机制首次触发时刻。
+
+**Prevention rule**: ① NaN/全局毒化的诊断顺序:漂移步检测点打印全表状态 → 定位首个 NaN 粒子 → 取最近 dump 回放(hard.debug)看 form/break 序列与 Pert_In/Out;② Pert_In>1e6 即"重合/近零距摄动"红旗,值得在 perturber 收集处加距离下限断言;③ 采样协议(setarch -R + env padding)把"不可复现 NaN"变成可复现枚举,是此类问题的标准工具;④ 下一步闭环:在组初始化处打印 perturber 到组 CM 距离分布,验证重合粒子来源(人工粒子/CM 表示/真实恒星),对症加最小距离保护或重合消解。
+
+### 2026-10-08: NaN 根因闭环——轻星穿越巨紧双星内部(r~7.6e-4 pc < 双星间距),有限强时变摄动使 AR 时间变换积分内部发散;非重合粒子、非摄动力溢出
+
+**Mistake**: 依 Pert_In=1.85e9 与 2026-09-20 先例推测"摄动源与组近零距重合"(r→0 除零),在 calcAccPert 加 r²<1e-12 诊断——6 个全 NaN 实现零命中,假设被否定;gdb 捕获路线因实现彩票(+gdb LINES/COLUMNS 环境泄漏、输出前缀长度参与布局抽样)效率过低放弃。
+
+**Root cause**(双阈值诊断,r<0.01 距离层命中 + |acc_pert|>1e60 层零命中):0.132 M☉ 星(id 848)从 77.65 M☉ 紧双星(184+377,a~0.005 pc)**内部穿过**(距成员 7.6e-4–2.7e-3 pc,eps_sq=0);摄动力量级大但**始终有限**(changeover 加权在),NaN 产生于 **AR 时间变换辛积分器内部**——紧双星 slowdown 饱和 + 组成员间强时变摄动超出"弱摄动 Kepler"适用域,form-break-重构震荡即吸收失败的表现,最终一步发散。每实现必经的物理阶段(大质量星内落成紧双星后遭遇穿越)→ 触发率高(同窗 6/6)。
+
+**Prevention rule**: ① 双阈值诊断(几何距离层 + 物理量溢出层)可一次实验同时证实/证伪两类假设——本例距离层命中+溢出层零命中直接把责任从"力计算"移到"积分器";② gdb 批处理调试需 `unset environment LINES/COLUMNS`(gdb 向 inferior 泄漏自身终端变量→改变实现),且输出前缀字符串长度也参与地址布局抽样;③ 修复方向候选(待设计):(a) 摄动者进入组半径内即强制吸收为组成员(n→3 精确积分)而非保持 perturber;(b) 对 r<r_in 的 perturber 力加强 changeover 截断;(c) 强摄动紧双星的 AR 步长/ slowdown 上限保护。
+
+### 2026-10-08: 方案(a)检测层吸收未达(持久组旁路+ap_manager 记账),NaN 归责修正为簇 Hermite 单粒子;多轮"零命中"系陈旧二进制假象——诊断前必须 strings 验证
+
+**Mistake**: 三重流程事故:① 强制吸收补丁多次构建因 Makefile 家族切换(恢复 bse.g 后 plain 目标无规则)与头文件不被 make 跟踪而**静默使用陈旧二进制**——fa/tt/herm/vel 系列"零命中"部分是假象(直到 strings|grep BLAME=0 才暴露);② 吸收真正生效时触发 ap_manager 成员计数一致性断言(吸收未向 artificial-particle 记账注册);③ NaN 机制叙述(AR/摄动/张量通道)全部基于陈旧二进制的"安静"证据,归责错误。
+
+**Root cause**(strings 验证后的可靠证据):BLAME 诊断:首个 NaN 粒子 id=1 m=1.83 **type=single**(簇 Hermite 域);PERT-DIAG(848 穿越双星,r~7.6e-4,acc 有限)与 TT/GT/VEL/HERM 诊断均来自混合新旧构建,仅 -B+strings 验证过的可信:AR 子步无 dt 奇点、无近距对(r<1e-4)。责任修正:**簇 Hermite 对单粒子的 predictor-corrector 在极端有限力梯度下失稳**(动力学诱因仍可能是 848 穿越巨双星造成的环境)。
+
+**Prevention rule**: ① 任何"诊断零命中"结论前必须 `strings <binary> | grep <DIAG标记>` 验证诊断确实在二进制里,再跑实验;② make 家族切换(configure/restore)后立即核对目标存在(`make -n`),头文件改动一律 -B;③ 强制吸收类改动必须同步 ap_manager 记账(createArtificialParticles 的成员注册路径),否则触发 hard.hpp 成员计数断言;④ 下一步:(i) 修近邻打印的 NaN 比较陷阱(dr2 非有限时按 |pos| 排序或跳过 NaN offender 自身),重跑 BLAME 拿单粒子的近邻归责;(ii) 对簇 Hermite 加 acc/jerk 量级诊断(|acc|>1e6 时打印对 id/距离)定位失稳对;(iii) 吸收方案重做时走 ap_manager 正规注册。
+
+### 2026-10-08: 用户指路的 SDAR 侧判据改造(成员选择性保组)已实现但未命中 NaN;力求值通道全排除,嫌疑收窄到速度更新通道(jerk/块步长/changeover 修正)
+
+**Mistake**: 方案(a)放 hard.hpp 检测层是错的方向(用户纠正):① 持久组旁路检测;② 吸收需 ap_manager 记账。SDAR 侧积分时调整机制里**吸收入口本就存在**(checkNewGroup 的 group case 用 perturber.r_min + groupedCriterion),真正的判据缺口在 **break 侧只评估根对**:848(双曲线)远离时根对判散→**整组解散**(含内层紧双星)→重组窗口+震荡。
+
+**Root cause(本轮实验)**: 在 hermite_integrator.h 实现 anyInnerNodeGroupedIter(任一内层树节点过判据即保组)+ break 调用点接入——6 实现电池仍 6/6 NaN,form/break 震荡假设被否定(或非唯一通道)。经 strings 验证的力通道全面排查(单粒子 |acc|<1e6、无 r<1e-2 近对、AR 子步有限、TT/张量有界、κ 有钳制)全部干净,而 NaN 首发恒为**簇域单粒子**——生成点只能在速度更新通道:Hermite 校正器 jerk 项、Aarseth 块时间步、PeTar 侧 changeover 力修正(soft↔hard 混合,Force_corr 通道,本 session ULP bug 即在其邻域)、或 AR↔Hermite 写回。
+
+**Prevention rule**: ① 下一步诊断目标:单粒子**每步 Δv** 打印(>1e2 即报,附 acc/jerk/dt)+ jerk 幅值——Δv 直接锁定爆掉的那一次更新及其通道;② changeover 力修正(forceCorr/Force_corr)是高嫌疑(历史上 ULP bug 同域),PeTar 侧 hard.hpp 力修正路径需同样排查;③ 判据侧改动(成员选择性保组)语义合理但未验证收益,去留待定(与诊断同树未提交);④ 复用本轮基建:strings 验证 + setarch -R + env padding 电池是标准 NaN 狩猎流水线。
+
+### 2026-10-08: 【NaN 闭环】毒源=AR 积分内 TT 采样粒子位置 NaN(成员全程干净)→ 写回 soft 毒化树 → 全体单粒子 acc NaN → 全局 vel NaN;用户"入口遗留"检查是破局关键
+
+**Mistake**: 多轮排查都盯着"力通道"(摄动力/张量值/Hermite acc/AR dt)——全部安静;直到按用户提示做**相位扫描**(硬积分入口/出口)发现两端口真实粒子都干净,才把检查移到 kickOne:soft acc 已非有限(1936 处扩散,首发即 BLAME 罪犯 id=1)→ 树被毒化 → 毒源必在喂树的**soft 系统人工粒子**:出口扫描人工粒子块,抓到 arti j=8/12(TT 采样,块布局 4TT+1orb+1CM)pos=(-nan,-nan,-nan) 而 vel 有限。
+
+**Root cause(完整链)**:某组的**潮汐张量采样粒子在 AR 积分内位置变 NaN**(TT 采样点由内层双星 Kepler 解放置;848 俯冲驱动的强扰动使内层轨道根数退化(ecc→1/近心距→0)时 Kepler 放置产生 NaN)→ 写回 soft → 树矩 NaN → 所有单粒子 acc NaN → kick 全局毒化 vel → 漂移步断言 abort。这解释了此前一切"安静":真实成员/AR 成员检查干净(毒在人工粒子几何),力值检查干净(毒在位置不在力)。修复方向:TT 采样放置的退化保护(Kepler 解非有限时保持上一位置/钳制)+ 上游内层轨道退化处理(与 break-guard 方向同源)。
+
+**Prevention rule**: ① 相位扫描法(每个相位边界全表查非有限)应从第一次就用,且**必须覆盖人工粒子**(soft 系统全量,不只 ptcl_hard_)——"谁喂树谁可能是毒源";② 力值诊断的阴性结果只排除力通道,几何(pos)通道需要独立检查;③ SDAR break-guard(成员选择性保组)实验未命中本 bug 已回退,但其方向(内层退化保护)与本根因同族,重做时可复用;④ 下一轮:instrument tidal_tensor.hpp 采样放置函数,捕获退化 Kepler 输入(打印根数),然后加保护并跑 6 实现电池+T4/T5 回归。
+
+### 2026-10-08: 【NaN 结案】轨道采样粒子对双曲根数无解→NaN 毒树;最终修复=open 组在写回处 continue(人工粒子标记变更、真实重建)+updateArtificialParticles 入口 ASSERT
+
+**Root cause(终版确认)**:NaN 生成点是 `orbit_manager.createSampleParticles`(由 `updateArtificialParticles` 调用):组根为双曲线(semi<0,ecc>1)时 `orbitToParticle/calcMeanAnomaly` 无椭圆采样解→采样粒子 pos NaN→写回 soft→树矩 NaN→全体单粒子 acc NaN→全局 vel NaN。入口确认:1901 孤立路径有 `semi>0` 守卫,**2089(driftClusterAndArtificialCMAndWriteBack)缺失**——故障全部经此进入。逐层证据:TT 生成输入正常(TTGEN 零)、人工粒子入口干净(ENTRY 零)、出口 NaN(EXIT 命中 m=25.93=77.65/3 轨道采样)、"after create" 命中(TTUPD,semi=-0.046)。
+
+**Fix(用户设计,已验证)**:hard.hpp 写回循环中 `if (bink.semi <= 0.0) continue;`(声明前移修复编译序)——跳过刷新+成员质量备份,且 `group_arti_update_list` 保持 false → 计入 `sdar_n_groups_arti_change` → 人工粒子集**标记变更、下次调整真实重建**(非保留陈旧);artificial_particles.hpp `updateArtificialParticles` 内加 `ASSERT(_bin.semi>0)` 固化调用契约。验证:NaN 窗口电池 6/6(修复前 6/6 必死)、T5 回归 9/9、ASSERT 零触发、全程跑穿 t=10–15 暴力相(0.59 单事件 dE 与对照变体逐位同——固有物理,两方案一致;对照变体 6/6 CLEAN 200)。中间方案反证:仅跳过刷新但保留人工粒子为"当前"(guard-wrap)在 t≈15 因 n63 巨簇能量灾难死亡——open 组的陈旧人工表示不能复用,必须真实删除。
+
+**Prevention rule**: ① open(双曲)系统的椭圆类采样/开普勒类计算一律先判据;人工粒子生命周期变更必须走正式删除/重建通道,不能"跳过更新但保留状态";② 调用契约用入口 ASSERT 固化,调用点守卫保持与既有范式一致(1901/2089 对称);③ 重负载多实现验证避免 9p 盘(localdata=E:\):dump 洪泛阶段 37 s/Myr(15× 慢,wchan=p9_client_rpc),改用 ext4 目录;④ 单事件 dE/Etot~0.6 的暴力相是修复后大质量核心固有活动,评估方案优劣要看事件特征跨方案一致性而非绝对值。
