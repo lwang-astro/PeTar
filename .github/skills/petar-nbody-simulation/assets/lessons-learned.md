@@ -911,3 +911,13 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Final design**: ① 删除形成时赋值(collectGroupMemberAdrAndSetMemberParametersIter 不再改成员 changeover);② 删除两处 ex-member 重缩放(driveForOneClusterOMP 写回、findGroups 重置循环);③ syncMemberChangeoverScale 只拷 r_search 且加 max 下限 `std::max(pcm.r_search, 成员.r_out)`(c.m. 速度近零时 r_search 可小于成员 r_out);④ 写回路径 Ptcl::calcRSearch 天然含 +r_out 项、setRNeighbor/轨道粒子处各有下限,不变量全覆盖;⑤ SDAR 侧 addDEChangeModifySingle 公共接口一并移除。副作用:i_cluster_changeover_update_/changeover_update_flag 机构成为死代码(标志永不置真)——留作防御,因发送列表侧 MPI 轨道粒子修正仍活跃。验证:6 实现电池 6/6 干净 dump=**0**(优于记账版 5);T5 9/9;n100 dump 回放 dE=-1e-9 无事件;功能冒烟通过。
 
 **Prevention rule**: ① 加补偿层前先审计补偿对象的**全部消费路径**——若力路径根本不用被同步的量,同步本身就是噪声源;② "配套修改链"(2fa15b7→f14606f)回退时必须整链回退,靠 git log 找齐依赖 commit;③ 最小设计优于记账修补:消除跳变源 vs 为跳变记账,前者使 dump 从 5→0 且删代码;④ 回退上游固有行为(形成时赋值是 master 既有代码)前,先 `git show <commit>^` 确认归属,避免误删上游机制。
+
+### 2026-10-10: 【配套检查漏网】f14606f 连同功能检查一起加,回退代码却漏改检查——烟测 5 用例假失败;基线应锚 IC 质量而非当前质量
+
+**Mistake**: 8df337b 整链回退了 2fa15b7+f14606f 的代码,但 f14606f 同时添加的 `_check_changeover_invariant`(binaries-invariant 用例 + 各用例附加检查)未同步更新;最简设计下烟测 dsm/bse/bse-galpy/bse-agama/binaries-invariant 5 用例失败(10-22 "violations")。
+
+**Root cause**: 检查断言"孤立粒子 r_in == 当前质量的 own-mass 值"——这是 f14606f ex-member 重缩放(每次写回强制 snap 到当前质量)才成立的契约。最简设计 changeover 在初始化钉死、运行中不再刷新:恒星演化(并合/星风)使质量漂移后携带值保持 IC 质量(实例:id7 r_in=0.0829=own(10M☉),当前 19.9M☉ 并合残骸,own(19.9)=0.1044)。std/merger/galpy 无质量演化故通过。上游 master 对并合残骸同样不刷新(changeover setR 仅存在于初始化/重启/组 CM 路径)。
+
+**Fix**: 检查基线改为按 id 锚定首快照(IC)质量 `own(m_ic)`,契约改述为"钉死于初始化,运行中不重标";对既有输出复检 5 用例全部 0 违例。
+
+**Prevention rule**: ① 回退某 commit 的"整链"必须包含其测试/检查——先 `git show <commit> --stat` 列出全部文件再逐项归类代码/测试/文档;② 检查失败先读 examples 定性质(质量漂移 vs CM 泄漏:携带值<期望=增重史,>期望=减重史或 CM 大值),再决定改检查还是改代码;③ 长任务监控用独立终端 + 作业 setsid 脱离,避免终端清理连带杀运行(本次 N1k 重跑 t=55.85 被杀的教训,复跑浪费 15 分钟)。

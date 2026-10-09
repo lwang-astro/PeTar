@@ -100,13 +100,15 @@ def _check_changeover_invariant(
     """Ex-member changeover invariant check.
 
     A particle with no companion within its changeover radius r_out must carry
-    the own-mass changeover r_in = max((m/m_avg)^(1/3),1)*r_in_base (rtol 2e-3,
-    generous against stellar-evolution drift between tree steps). Particles
-    with a companion inside r_out are exempt: they are either active SDAR-group
-    members (group-total value) or bound ungrouped pairs, and the recorded
-    group event stream cannot distinguish these because isolated binaries
-    emit new/end records every hard substep. This is the invariant guaranteed
-    by the group-c.m. sync and ex-member rescale guards.
+    the own-mass changeover r_in = max((m_ic/m_avg)^(1/3),1)*r_in_base of its
+    initial-condition mass (rtol 2e-3): members keep their own-mass changeover
+    for the whole run, so stellar-evolution drift (wind, mergers) leaves the
+    pinned value in place. Particles with a companion inside r_out are exempt:
+    they are either active SDAR-group members or bound ungrouped pairs, and the
+    recorded group event stream cannot distinguish these because isolated
+    binaries emit new/end records every hard substep. This is the invariant
+    guaranteed by the members-keep-own-changeover design (no c.m. sync, no
+    ex-member rescale).
     Returns None when prerequisites (run-log radii, snapshot list) are absent.
     """
     import numpy as np  # noqa: WPS433 (paired with the readback imports)
@@ -136,6 +138,10 @@ def _check_changeover_invariant(
     violations = 0
     examples = []
     lone_checked = 0
+    # own-mass baseline from the IC snapshot per id: the changeover is pinned at
+    # initialization and never rescaled mid-run, so stellar-evolution mass drift
+    # (wind, mergers) must not count as a violation
+    ic_mass = {}
     for snap_path in snaps:
         p = petar_module.Particle(interrupt_mode=interrupt_mode, external_mode=external_mode)
         p.fromfile(str(snap_path), offset=offset)
@@ -148,12 +154,15 @@ def _check_changeover_invariant(
         idx = np.flatnonzero(use)
         if idx.size < 2:
             continue
+        if not ic_mass:
+            ic_mass = {int(ids[i]): float(mass[i]) for i in idx}
         d2 = ((pos[idx][:, None, :] - pos[idx][None, :, :]) ** 2).sum(axis=2)
         np.fill_diagonal(d2, np.inf)
         nearest = np.sqrt(d2.min(axis=1))
         lone = nearest > rout[idx]
         lone_checked += int(lone.sum())
-        own = np.maximum((mass[idx][lone] / m_avg) ** (1.0 / 3.0), 1.0) * rin_base
+        base_mass = np.array([ic_mass.get(int(ids[idx][lone][j]), mass[idx][lone][j]) for j in range(int(lone.sum()))])
+        own = np.maximum((base_mass / m_avg) ** (1.0 / 3.0), 1.0) * rin_base
         bad = np.abs(rin[idx][lone] / own - 1.0) > 2e-3
         violations += int(bad.sum())
         if bad.any() and len(examples) < 5:
@@ -882,7 +891,7 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         )
 
     # Ex-member changeover invariant: non-grouped particles must carry the
-    # own-mass changeover (guards the group-c.m. sync / ex-member rescale fix).
+    # IC-pinned own-mass changeover (guards the members-keep-own-changeover design).
     inv = _check_changeover_invariant(
         case_dir, output_prefix, interrupt_mode, external_mode, petar, log_path, dt_out
     )
