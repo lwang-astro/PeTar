@@ -885,3 +885,29 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Fix(用户设计,已验证)**:hard.hpp 写回循环中 `if (bink.semi <= 0.0) continue;`(声明前移修复编译序)——跳过刷新+成员质量备份,且 `group_arti_update_list` 保持 false → 计入 `sdar_n_groups_arti_change` → 人工粒子集**标记变更、下次调整真实重建**(非保留陈旧);artificial_particles.hpp `updateArtificialParticles` 内加 `ASSERT(_bin.semi>0)` 固化调用契约。验证:NaN 窗口电池 6/6(修复前 6/6 必死)、T5 回归 9/9、ASSERT 零触发、全程跑穿 t=10–15 暴力相(0.59 单事件 dE 与对照变体逐位同——固有物理,两方案一致;对照变体 6/6 CLEAN 200)。中间方案反证:仅跳过刷新但保留人工粒子为"当前"(guard-wrap)在 t≈15 因 n63 巨簇能量灾难死亡——open 组的陈旧人工表示不能复用,必须真实删除。
 
 **Prevention rule**: ① open(双曲)系统的椭圆类采样/开普勒类计算一律先判据;人工粒子生命周期变更必须走正式删除/重建通道,不能"跳过更新但保留状态";② 调用契约用入口 ASSERT 固化,调用点守卫保持与既有范式一致(1901/2089 对称);③ 重负载多实现验证避免 9p 盘(localdata=E:\):dump 洪泛阶段 37 s/Myr(15× 慢,wchan=p9_client_rpc),改用 ext4 目录;④ 单事件 dE/Etot~0.6 的暴力相是修复后大质量核心固有活动,评估方案优劣要看事件特征跨方案一致性而非绝对值。
+
+### 2026-10-09: 【百 dump 洪泛滥根因结案】形成瞬间成员 changeover 被组 CM 质量换算(×m^(1/3))改写→calcEnergy 对势权重全变→Epot 记账跳 9.34;纯监视器假阳性,动力学无恙
+
+**Mistake**: 归因两轮错误:先"AR 积分发散"(dE 形成后冻结排除)、再"SD 替换注入"(gdb 对账真/SD 四能量逐位相等推翻)。
+
+**Root cause**(n100 dump 回放 + gdb 逐层对账,铁证):近抛物线双曲对 {m4.6, m46} 形成时,`collectGroupMemberAdrAndSetMemberParametersIter` 把成员 changeover **替换为组 CM 的**(质量换算,m^(1/3):轻成员 r_in/r_out ×2.22 跃变,gdb 实测 0.0160/0.160→0.0356/0.356);`HermiteInteraction::calcEnergy` 的每对势能权重 = `calcPotWTwo(chi_i, chi_j, r)` — 物理位置不变、权重全变 → 簇 Epot 跳 +9.34、Ekin +0.31,监视器对冻结的旧参考报 dE=9.65 并**永久带偏**。量纲论证封死"真实积分误差"可能:窗口内位移 1.2e-4 pc,产生 9.34 Epot 需 46 M☉ 星在 0.001 pc 内(实际 0.026,差 4 个量级)。力侧有配套修正(correctForceChangeOverUpdate),**能量参考侧无重锚定** — 缺口即此。
+
+**Prevention rule**: ① 任何"表示切换改 changeover/质量"的事件,力与能量两侧必须对称处理:力侧修正已有,**能量参考需同步重锚定或把权重差记账进 Modify 列**(与质量变化 de_change_modify 同范式);② 能量误差归因三问:形成/打断瞬间?(查表示切换记账)· 冻结不涨?(查参考偏置)· 量纲可能?(ΔE vs Δr·∇Φ);③ gdb 断点命令里调方法会返回垃圾值(getRin() 等),读私有字段(r_in_)可靠;VLA(ptmp)与 vec 索引同样不可靠,用 .x/.y/.z 或绕开;④ dump 洪泛≠积分病:先指纹去重统计(88% 不同指纹=成员 churn),再抽单 dump 回放对账,一步分辨真误差/假阳性。
+
+### 2026-10-09: 【记账修复落地】changeover 切换差延迟入账(检查态精确求值,ID 寻址)——dump 洪泛 366→5,T5 9/9;两轮实现各踩一坑(位置漂移过记/陈旧索引 NaN)
+
+**Mistake**: 实现两轮失败:① 即时记账(切换时刻求值)过记 1.16 — 双求值实验证明精确表示差 9.6526 需在**监视器同状态**(singles 预测位/成员写回位)下求值,切换时刻位置漂移经权重过渡带放大;② 索引版首跑 NaN,误诊为"adjustGroups 重排数组"改用 ID 寻址——用户质疑后实测(4737 条记账,索引移动 0、离开 0:SDAR 步中不重排 particles 数组),判别实验证明真因是**重合位置对 r=0 除零**,r>0 防护才是真修复,ID 寻址冗余已回退索引版。
+
+**Fix(最终版)**:sync 只记(ID, 旧chi) 快照;三个 calcEnergySlowDown 评估点后 consumeBookedChangeoverDE():按 ID 重解索引(离簇跳过,r≤0 防护),同状态算新旧权重势差,经 SDAR 新公共接口 addDEChangeModifySingle 入 de_cum/de_modify_single(参考自动跟随);再调一次 calcEnergySlowDown 刷新参考。验证:n100 dump 回放 14→**0** 事件;6 实现电池 6/6 干净且 dump **366→5**(残 5 个为 n10-16 小系统真实 ~1e-2 误差,监视器恢复判别力);T5 回归 9/9。
+
+**Prevention rule**: ① 表示切换类记账必须在**消费点的状态**下求值(与监视器同帧),切换时刻求值会引入过渡带位置漂移误差;② 除零防护(r>0)是重合位置对的硬性要求;SDAR 步中 adjust 不重排/不删除 particles 数组(实测),数组索引跨迭代安全——但下结论前先做双因子分离实验,双改动同时上会混淆归因(本轮 ID+r防护 即教训);③ 消费型账目配对设计:记录点最小快照+消费点完整求值,中间状态变化由 ID 解析吸收;④ 修复后残差事件要做性质抽检(确认是真实误差而非新假阳性)。
+
+### 2026-10-09: 【设计回退结案】力路径审计证伪同步收益→记账修复整体废弃,回退为"成员终身保持自身质量 changeover"最简设计;6/6 电池 dump=0
+
+**Mistake**: 记账修复(上条)方向正确但治标;用户追问"同步设计本身是否必要、pcm 微扰失配有无实证"后,逐力路径审计发现前提不成立。
+
+**Root cause**: 全部力路径(AR calcAccPert、Hermite PairSingleSingle/PairSingleGroupMember、PairSingleGroupCM 逐成员、PairGroupCMSingle)用的都是**成员自身** changeover,CM 模式权重取 max(CM.rout, 成员.rout)=CM 的更大值——把成员 changeover 同步为 CM 值对力精度**零收益**,只制造形成/打断瞬间的权重跳变(监视器假阳性源头)与配套补丁链(打断重缩放×2、r_search 拷贝、记账)。此外 petar.hpp 的 CM 模式 r_search 设置处本就把 CM.rout 撑到成员最大值(上游固有),断言 pcm.r_search>=成员.r_out 恒成立——最简设计与之自洽。
+
+**Final design**: ① 删除形成时赋值(collectGroupMemberAdrAndSetMemberParametersIter 不再改成员 changeover);② 删除两处 ex-member 重缩放(driveForOneClusterOMP 写回、findGroups 重置循环);③ syncMemberChangeoverScale 只拷 r_search 且加 max 下限 `std::max(pcm.r_search, 成员.r_out)`(c.m. 速度近零时 r_search 可小于成员 r_out);④ 写回路径 Ptcl::calcRSearch 天然含 +r_out 项、setRNeighbor/轨道粒子处各有下限,不变量全覆盖;⑤ SDAR 侧 addDEChangeModifySingle 公共接口一并移除。副作用:i_cluster_changeover_update_/changeover_update_flag 机构成为死代码(标志永不置真)——留作防御,因发送列表侧 MPI 轨道粒子修正仍活跃。验证:6 实现电池 6/6 干净 dump=**0**(优于记账版 5);T5 9/9;n100 dump 回放 dE=-1e-9 无事件;功能冒烟通过。
+
+**Prevention rule**: ① 加补偿层前先审计补偿对象的**全部消费路径**——若力路径根本不用被同步的量,同步本身就是噪声源;② "配套修改链"(2fa15b7→f14606f)回退时必须整链回退,靠 git log 找齐依赖 commit;③ 最小设计优于记账修补:消除跳变源 vs 为跳变记账,前者使 dump 从 5→0 且删代码;④ 回退上游固有行为(形成时赋值是 master 既有代码)前,先 `git show <commit>^` 确认归属,避免误删上游机制。

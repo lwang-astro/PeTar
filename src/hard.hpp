@@ -1037,29 +1037,22 @@ public:
                       }
 
     //! rescale member changeover and r_search to track the freshly recomputed group c.m. values
-    /*! Stellar evolution drifts member masses while grouped; the c.m. r_in/r_out
-        are recomputed from the total mass at every initialization, but members
-        only receive a rescale at group formation. Long-lived groups therefore
-        accumulate member-c.m. changeover mismatches (asserted in initial());
-        copy the c.m. changeover to the members here — the c.m. itself jumps at
-        the same initialization boundary, so members follow it in lockstep.
-        The c.m. r_search (c.m.-velocity based) is copied to the members as well:
+    /*! Copy the c.m. r_search (c.m.-velocity based) to the members:
         on the tree step where a group first forms, members were still unmarked
         (binaryID==0) at the per-step r_search refresh and thus carry the
         single-particle value computed with their orbital velocity (|v_orb|*dt
         can exceed the cluster size for tight pairs); without the copy that
         value leaks into the SDAR perturber criterion of the first step.
+        Members keep their own-mass changeover (all force paths use the member's
+        own, not the c.m.'s); the c.m.-velocity r_search can be smaller than a
+        member's r_out, so floor it there to preserve r_search >= r_out.
      */
     template <class Tparticles>
     void syncMemberChangeoverScale(Tparticles& _particles, const PS::F64 _dt_tree) {
         auto& pcm = _particles.cm;
-        const PS::F64 rin_cm = pcm.changeover.getRin();
-        const PS::F64 rout_cm = pcm.changeover.getRout();
         pcm.calcRSearch(_dt_tree);
         for (int k=0; k<_particles.getSize(); k++) {
-            if (_particles[k].changeover.getRin()!=rin_cm || _particles[k].changeover.getRout()!=rout_cm)
-                _particles[k].changeover = pcm.changeover;
-            _particles[k].r_search = pcm.r_search;
+            _particles[k].r_search = std::max(pcm.r_search, _particles[k].changeover.getRout());
         }
     }
 
@@ -1405,18 +1398,6 @@ public:
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
                     syncMemberChangeoverScale(groupi.particles, _dt);
 
-#ifdef HARD_DEBUG
-                    PS::F64 r_out_cm = pcm.changeover.getRout();
-                    for (PS::S32 k=0; k<groupi.particles.getSize(); k++) {
-#ifdef STELLAR_EVOLUTION
-                        // if mass changed, r_out may be different within some tolerance
-                        // (syncMemberChangeoverScale copies the c.m. value first)
-                        ASSERT(abs(groupi.particles[k].changeover.getRout()-r_out_cm)<1e-3);
-#else
-                        ASSERT(abs(groupi.particles[k].changeover.getRout()-r_out_cm)<1e-10);
-#endif
-                    }
-#endif
                 }
             }
 
@@ -2448,34 +2429,11 @@ private:
             _ptcl->group_data.artificial.setParticleTypeToMember(_ptcl->mass, - (_par.pcm_id+1));
             _ptcl->mass = 0.0;
         }
-        PS::F64 rin_cm = _par.changeover_cm->getRin();
-        PS::F64 rin_p  = _ptcl->changeover.getRin();
-        if (rin_p!=rin_cm) {
-            // avoid round-off error case
-            if (abs(rin_p-rin_cm)<1e-10) {
-                _ptcl->changeover = *_par.changeover_cm;
-            }
-            else {
-                _ptcl->changeover.r_scale_next = rin_cm/rin_p;
-                _ptcl->r_search = std::max(_ptcl->r_search, _par.rsearch_cm);
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-                if (_ptcl->r_search<rin_p) {
-                    std::cerr<<"Error, r_search<r_out found! \n"
-                             <<"id: "<<_ptcl->id
-                             <<"bin_changeover: ";
-                    _par.changeover_cm->print(std::cerr);
-                    std::cerr<<"member changeover: ";
-                    _ptcl->changeover.print(std::cerr);
-                    std::cerr<<"member mass: "<<_ptcl->mass
-                             <<"member r_search: "<<_ptcl->r_search
-                             <<"cm research: "<<_par.rsearch_cm
-                             <<std::endl;
-                    abort();
-                }
-#endif
-                _par.changeover_update_flag = true;
-            }
-        }
+        // Members keep their own-mass changeover throughout the group lifetime:
+        // all force paths (AR perturbation, Hermite resolved/CM-mode) use the member's
+        // own changeover; the CM-mode weight takes max(CM.rout, member.rout) = CM's,
+        // so the member's smaller r_out only sharpens its own resolved-mode transition.
+        // This removes the formation/breakup changeover jump and the ex-member rescale.
     }
 
 
@@ -3156,15 +3114,6 @@ public:
 #endif
             assert(!std::isinf(pi.vel.x));
             assert(!std::isnan(pi.vel.x));
-            // ex-members drifting as lone singles keep the group c.m. changeover;
-            // a lone single has no neighbor within r_search >= r_out, so shrinking
-            // to the own-mass value needs no force correction (writeback copies it)
-            if (pi.mass>0.0) {
-                ChangeOver co_target;
-                co_target.setR(pi.mass*Ptcl::mean_mass_inv, manager->r_in_base, manager->r_out_base);
-                if (std::abs(pi.changeover.getRin()*pi.changeover.r_scale_next - co_target.getRin()) > 1e-10*co_target.getRin())
-                    pi.changeover = co_target;
-            }
             pi.Ptcl::calcRSearch(_dt);
             /*
               DriveKeplerRestricted(mass_sun_, 
@@ -3943,27 +3892,6 @@ public:
                 ptcl_in_cluster[j].group_data.artificial.setParticleTypeToSingle();
                 PS::S64 adr=ptcl_in_cluster[j].adr_org;
                 if(adr>=0) _sys[adr].group_data = ptcl_in_cluster[j].group_data;
-                // ex-members keep the group c.m. changeover after breakup: rescale back
-                // to the own-mass value; applied with force correction (re-grouping in
-                // this same step overwrites the pending target with the new c.m. one)
-                if (ptcl_in_cluster[j].mass>0.0) {
-                    ChangeOver co_target;
-                    co_target.setR(ptcl_in_cluster[j].mass*Ptcl::mean_mass_inv, manager->r_in_base, manager->r_out_base);
-                    const PS::F64 rin_p = ptcl_in_cluster[j].changeover.getRin();
-                    const PS::F64 rin_eff = rin_p*ptcl_in_cluster[j].changeover.r_scale_next;
-                    const PS::F64 rin_target = co_target.getRin();
-                    if (rin_eff!=rin_target) {
-                        if (std::abs(rin_eff-rin_target)<1e-10) {
-                            ptcl_in_cluster[j].changeover = co_target;
-                            if(adr>=0) _sys[adr].changeover = co_target;
-                        }
-                        else {
-                            ptcl_in_cluster[j].changeover.r_scale_next = rin_target/rin_p;
-                            if(adr>=0) _sys[adr].changeover.r_scale_next = ptcl_in_cluster[j].changeover.r_scale_next;
-                        }
-                        i_cluster_changeover_update_threads[ith].push_back(i);
-                    }
-                }
             }
             // search group_candidates
             SearchGroupCandidate<PtclH4> group_candidate;
