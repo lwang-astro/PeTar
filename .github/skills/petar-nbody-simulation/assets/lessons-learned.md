@@ -886,6 +886,24 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: ① open(双曲)系统的椭圆类采样/开普勒类计算一律先判据;人工粒子生命周期变更必须走正式删除/重建通道,不能"跳过更新但保留状态";② 调用契约用入口 ASSERT 固化,调用点守卫保持与既有范式一致(1901/2089 对称);③ 重负载多实现验证避免 9p 盘(localdata=E:\):dump 洪泛阶段 37 s/Myr(15× 慢,wchan=p9_client_rpc),改用 ext4 目录;④ 单事件 dE/Etot~0.6 的暴力相是修复后大质量核心固有活动,评估方案优劣要看事件特征跨方案一致性而非绝对值。
 
+### 2026-10-09: 【group 文件 3.4TB 事故闭环】BH-BH 双星群检测边界振荡×崩溃重启循环撑爆输出与配额;去重=episode 折叠(同对 0.1 Myr 内连续出现留首尾)
+
+**Mistake**: 初始假设"重启重复追加同字节/同时间段数据"是错的方向——采样证明无字节级重复、无大时间回跳;真相是**重新生成的事件**(每次重启从快照重新积分,事件内容不同但同窗口)。且 level-1"连续同对 run 折叠"对**轮转式振荡**(多对粒子轮流 form/end,每对都是 2 记录短 run)完全无效,首次作业因此输出海量中间结果到 /dev/shm 触发 cgroup OOM(64 worker 全灭)。
+
+**Root cause**: ① 高偏心(e~0.7-0.999)紧 BH-BH 双星在群判据边界上以 ~1e-9 Myr 微步振荡,每步输出 form/end 记录对,sd=1 显示 slowdown 未生效(疑振荡反复重置状态);② 振荡使积分停滞→作业墙钟超时被杀→从快照重启→同一双星继续→循环放大(70 次 crashed.*);③ 最后一次崩溃留下 448 字节半条记录,后续追加整体错相 448 字节(网格校验全挂,形似"垃圾区"实为有效数据);④ 配额(3.5TB)打满后事务性提交静默失败,tmp 无限累积。去重正解:worker 内直接做 **episode 折叠**(归一化 pair,时间间隔 ≤0.1 Myr 视为同一事件,只留首条 form 与末条状态),join 后再全流式缝合跨 stripe 边界;严格校验(质量/ID/SSE 类型范围)过滤错位假阳性(宽松头部校验在高度重复数据里必然漏网)。
+
+**Prevention rule**: ① 二进制 group 文件诊断基线:本配置(bse+galpy+spin_3d)记录 688 字节,type(i4)@0/n(i4)@4/time(f8)@8/id1@408/id2@648,先暴力搜 R 再谈其他;② "重复数据"要先区分**字节重复**(重启重放)与**事件重生成**(重新积分),后者只能按 pair+时间窗折叠,不能按哈希去重;③ 长运行监控 data.group.n* 体积(>100 GB 报警);④ 崩溃残留 tmp 重启前清掉,配额打满会让提交静默失败加重事故;⑤ 崩溃后文件末尾出现"解码全垃圾"区域时,先试 +Δ 相位重读(Δ=崩溃碎片长度)再下结论;⑥ 计算节点多进程读超大文件:posix_fadvise(DONTNEED) 逐 chunk 丢页缓存,且中间产物体积必须与最终产物同量级(episode 折叠进 worker 而非后置),否则 tmpfs/cgroup OOM。
+
+### 2026-10-10: 【泛用化结案】去重/纠错工具 petar.group.dedup 入库;应急版 episode 管线有 pair 读取 bug(<'qq'@id1off 一次读 16B 把 mass_bk 当 id2)导致 id 交替的双星欠坍缩
+
+**Mistake**: 应急管线(10-09)的 episode.py/worker 用 `S_QQ.unpack_from(buf, o+408)` 一次读 16 字节当 (id1,id2)——第二个 8 字节实为 mass_bk 字段。id1/id2 顺序会交替的双星(p1/p2 翻转是常态)被拆进两个错误 key 流,每流各发首尾=4 条而非 2 条;同一报告 bug 在泛用化首版 stitch_pass 里又复发一次(修 report.py 时发现的同款)。另外泛用化过程中测试暴露:相位扫描只试 8 字节倍数(真实碎片任意长度)、尾部主网格外字节无人扫描(bounds[-1]=main_end)、单记录 episode 双发、stitch 单遍非幂等(时间倒置 episode 排序后重新链)。
+
+**Root cause**: 手写二进制字段偏移时 "<qq" 连读是隐形陷阱——id1 与 id2 相隔一个粒子步长(240B),连读读到的是下一个标量字段;n3 的 bin0.p2 还是质心粒子(负 ID=内层最小 ID 取负),校验必须按绝对值。非幂等的本质:输入含时间回退(重启岛)时 episode 的 (first,last) 可时间倒置,排序后相邻 episode 又落在 gap 内,需迭代到不动点(每遍记录数严格递减,必收敛)。
+
+**Fix/成果**: `tools/group_dedup.py` → 安装为 `petar.group.dedup`(Makefile.in install_script_tool 已加,README/SKILL script-tools 已写):布局优先 petar.GroupInfo.collectDtype(任意 N×interrupt/spin/mpfrc/float,itemsize=R、fields 给偏移,venv numpy 1.19 即可),无包时经验检测(R 暴力搜+ID 字段签名:非零、|v|<1e9、≥20 distinct、仅采样头部有效记录);episode 折叠+任意字节相位恢复(滑窗)+跨 stripe 缝合+stitch 迭代至不动点(≤10 遍)+严格校验。正式数据 27540→22948 条(修正欠坍缩),petar.GroupInfo.fromfile 官方读取器验证通过。
+
+**Prevention rule**: ① 任何手写二进制字段提取,id 偏移一律分别单读,禁止跨字段连读;粒子 ID 校验允许负值(质心惯例)且非零;② 布局来源优先用官方 dtype(collectDtype.itemsize/fields),经验检测只作回退,且回退必须只统计头部有效的网格记录(错位区垃圾会污染签名);③ 去重类算法交付前必须做**幂等性测试**(输出再跑一遍 sha 相同),非幂等说明存在排序/链式效应,迭代至不动点是通用解法;④ 合成测试数据要覆盖:任意长度碎片(非 8 倍数)、多错位区、主网格外尾部、id 交替、负 ID——本次 4 个 bug 全部由合成测试暴露。
+
 ### 2026-10-09: 【百 dump 洪泛滥根因结案】形成瞬间成员 changeover 被组 CM 质量换算(×m^(1/3))改写→calcEnergy 对势权重全变→Epot 记账跳 9.34;纯监视器假阳性,动力学无恙
 
 **Mistake**: 归因两轮错误:先"AR 积分发散"(dE 形成后冻结排除)、再"SD 替换注入"(gdb 对账真/SD 四能量逐位相等推翻)。

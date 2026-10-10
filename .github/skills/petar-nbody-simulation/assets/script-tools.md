@@ -84,6 +84,17 @@ Measured cases (N=500 threads; N=1000 threads/ranks/UCX-env) accumulate in `asse
 - `petar.data.clear`
   Remove events after a specified time before restarting from an intermediate snapshot.
 
+- `petar.group.dedup`
+  Repair and deduplicate binary group files (`data.group.n[N]`): collapse oscillation-duplicated
+  episodes (same member pair re-forming within `--gap`, default 0.1 in file time units) to
+  first+last records, and recover/realign records shifted by crash fragments. Auto-detects the
+  record layout via the petar package (any N, interrupt mode, spin width, mpfrc, float type) or
+  empirically. Use `--n-proc N` for large files, `--report FILE` to list anomaly-candidate pairs
+  with first-appearance times, `--in-place` to replace the input after verified write.
+  ```bash
+  petar.group.dedup --n-proc 32 --report data.group.n2.report --in-place data.group.n2
+  ```
+
 ## Post-processing and extraction
 
 - `petar.data.process`

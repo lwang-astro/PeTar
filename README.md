@@ -121,6 +121,7 @@ For developers seeking to understand the code structure, please consult the [Dox
         - [Reading Lagrangian Data](#reading-lagrangian-data)
         - [Reading Stellar Evolution Outputs](#reading-stellar-evolution-outputs)
         - [Reading Group Information](#reading-group-information)
+        - [Repairing and Deduplicating Group Files](#repairing-and-deduplicating-group-files)
         - [Accessing Tool Manuals Using Python Help](#accessing-tool-manuals-using-python-help)
 - [Method](#method)
     - [Integration Algorithm Overview](#integration-algorithm-overview)
@@ -1518,6 +1519,10 @@ If the tool is executed again, it automatically checks for the presence of backu
 
 Please be aware that the backup files only retain the data prior to the most recent modification. If the tool is utilized multiple times and the backup files are overwritten, it is important to note that the original data may not be completely recoverable.
 
+#### Repairing and Deduplicating Group Files
+
+When a binary group file (`data.group.n[N]`) grows abnormally large due to oscillation duplication or becomes partly unreadable due to crash-induced phase shifts, the `petar.group.dedup` tool can collapse duplicated episodes, recover shifted records and realign the file. See [Repairing and Deduplicating Group Files](#repairing-and-deduplicating-group-files) for details.
+
 #### Data Format Conversion
 
 `Petar` offers the capability to read and write snapshot files in either BINARY or ASCII format. The BINARY format, being compressed (resulting in file sizes less than half of the ASCII format), facilitates faster read and write operations for both `Petar` and data analysis tools. However, it is important to note that BINARY files cannot be directly interpreted using a text editor. It is recommended to opt for the BINARY format when simulations yield a substantial amount of data and users intend to utilize analysis tools for data interpretation. The `Petar.Particle` and `Petar.PeTarDataHeader` classes in the Python3 analysis module support reading both BINARY and ASCII formats.
@@ -2174,6 +2179,36 @@ g3.printTable([('bin0.m1','%10.4f'),('bin0.m2','%10.4f'),
                ('bin1.m1','%10.4f'),('bin1.m2','%10.4f'),
                ('bin1.p1.id','%11d'),('bin1.p2.id','%11d'),
                ('bin1.semi','%10.4g'),('bin1.ecc','%10.4g')])
+```
+
+#### Repairing and Deduplicating Group Files
+
+Under two pathological conditions, binary group files (`data.group.n[N]`, output option `--write-group-info 2`) can grow abnormally large or become partly unreadable:
+
+1. **Oscillation (episode) duplication**: the same particle pair repeatedly form/end within a short time window. Causes include group-detection boundary flapping of tight eccentric binaries and crash-restart loops that re-integrate the same time window (events are re-generated, not byte-identical, so hash-based dedup does not work).
+2. **Phase-shifted appends**: when a run crashes in the middle of writing a record, the leftover fragment shifts the phase of all subsequently appended records, making them unreadable at the nominal record grid.
+
+The `petar.group.dedup` tool repairs both problems in one pass:
+
+```shell
+petar.group.dedup [options] data.group.n2
+```
+
+Each episode (consecutive appearances of the same member pair with time gaps below `--gap`, default 0.1 in the time unit of the file) is collapsed to its first record (initial formation) and last record (final state). Valid records inside phase-shifted regions are detected, recovered and realigned; corrupt fragments are dropped and reported. The output is verified (headers and member-id sanity) before it replaces the destination.
+
+The binary record layout is derived automatically from the petar package (`petar.GroupInfo.collectDtype`) for any member count and interrupt/spin/mpfrc/float-type options; when petar or numpy is not importable, an empirical fallback detects the layout from the data. Useful options:
+
+- `--gap X`: episode time-gap threshold; `0` disables collapsing (repair/realign only).
+- `--in-place`: replace the input file after a verified write (default writes `<input>.dedup`).
+- `--n-proc N`: parallel scan processes (recommended for very large files).
+- `--interrupt-mode M`: explicitly select the stellar-evolution mode used by the simulation (`none|base|merger|bse|bseEmp|mobse|dsm|sevn`); auto-detected otherwise.
+- `--report FILE`: write a report of the pairs with the most records (oscillation/anomaly candidates), including first-appearance times and orbital properties.
+- `--no-recover`: drop invalid bytes without attempting shifted-region recovery.
+
+For example, to deduplicate a huge file with 32 processes and generate an anomaly report:
+
+```shell
+petar.group.dedup --n-proc 32 --report data.group.n2.report --in-place data.group.n2
 ```
 
 #### Accessing Tool Manuals Using Python Help
