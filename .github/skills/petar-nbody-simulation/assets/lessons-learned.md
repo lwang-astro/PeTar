@@ -912,6 +912,14 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: ① 加补偿层前先审计补偿对象的**全部消费路径**——若力路径根本不用被同步的量,同步本身就是噪声源;② "配套修改链"(2fa15b7→f14606f)回退时必须整链回退,靠 git log 找齐依赖 commit;③ 最小设计优于记账修补:消除跳变源 vs 为跳变记账,前者使 dump 从 5→0 且删代码;④ 回退上游固有行为(形成时赋值是 master 既有代码)前,先 `git show <commit>^` 确认归属,避免误删上游机制。
 
+### 2026-10-09: data.group.n2 爆炸复现归因——统一判据 break 侧 NaN 角点（未评估 CM 力场 0/0）；galpy 家族 make install 从不重建二进制二次坑
+
+**Mistake**: Pal5 N210k 的 group 记录爆炸（3.4TB，1e-9 Myr 翻转）本地从 data.1152 复现后，首轮 A/B 结论（"legacy 同样爆炸"）作废：`make install` 只重建 configure 的家族（mpi.omp.avx512.bse），**galpy 家族二进制自 10-05 起从未被重建**——三个"A/B"二进制 md5 相同；且 `install_petar_major_versions.sh` 在 VERSION 匹配时静默跳过（第二次踩坑，内容变化不 bump VERSION 则版本串不变必跳过）。10-01 的教训重演：跨家族 A/B 前必须 stat 目标二进制 mtime/md5。
+
+**Root cause**: 灾难性翻转 = 统一判据（10-01 提交）break 侧 kappa 估计的 NaN 角点：新成组 CM 力场未评估（acc0=pot=0）时 `calcPertFromForcePot` 得 0/0=NaN，`NaN>=1e-2` 恒假→break；formation 侧同零场走 pert_out==0 退化分支得 kappa=1→form——两侧对"力场未算"处理不对称，apo≈r_crit 的紧 BH-BH 对每微步永久翻转（sd 被 applyStableCheckAndSlowDown 因 apo>=r_break_crit 强制 1，微步 1e-9）。背景级（每半轨道一次，~1e4 条/对/Myr）两种判据共有，属边界徘徊结构性现象。
+
+**Prevention rule**: 判据谓词的每个分支对"输入不可用"（未评估场、NaN）必须双侧一致处理——用 NaN 安全比较（`!(k<x)` 使 NaN 判过）或显式守卫，禁止裸 `>=` 阈值比较出现在以运行期场为输入的谓词里；apo>=r_break_crit 强制 sd=1 的路径使这类对无慢化微步积分，放大一切翻转问题，值得复查。验证：dump 回放 15142→3 事件，solver 级 2.8GB/4min→6.7MB/7min（~400x）。
+
 ### 2026-10-10: 【配套检查漏网】f14606f 连同功能检查一起加,回退代码却漏改检查——烟测 5 用例假失败;基线应锚 IC 质量而非当前质量
 
 **Mistake**: 8df337b 整链回退了 2fa15b7+f14606f 的代码,但 f14606f 同时添加的 `_check_changeover_invariant`(binaries-invariant 用例 + 各用例附加检查)未同步更新;最简设计下烟测 dsm/bse/bse-galpy/bse-agama/binaries-invariant 5 用例失败(10-22 "violations")。
