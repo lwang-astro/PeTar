@@ -697,6 +697,62 @@ def build_functional_mcluster_dual_merge_smoke(output: Path) -> None:
     write_rows(output, rows_out)
 
 
+def build_t6(output: Path) -> None:
+    """Plummer cluster with an engineered central massive triple for the T6
+    perturber-kernel-match check.
+
+    The compact triple (4+4 Msun inner binary, a=0.0012 pc, e=0.2; 3 Msun outer
+    companion, a=0.008 pc, e=0.1) guarantees an AR group with artificial
+    particles (tidal tensor engaged) from the first tree step, independent of
+    chaotic realization differences; the run must pass --r-group/--r-search-
+    group large enough to keep the outer orbit linked (e.g. 0.008/0.01 with
+    --r-ratio 0.15, since r_search_group must stay <= r_in). The
+    surrounding Plummer sphere (297 stars, scale a=0.3 pc, masses uniform in
+    [0.2, 5] Msun) supplies list perturbers that cross the member-r_out..
+    c.m.-r_out transition annulus of the triple group. Fixed seed. Units:
+    Msun, pc, pc/Myr (G = G_MSUN_PC_MYR, same as t1-t3).
+    """
+    import random as _random
+
+    rng = _random.Random(20261010)
+    n = 297
+    a = 0.3
+    m_tot = 0.0
+    rows = []
+    for _ in range(n):
+        mass = 0.2 + 4.8 * rng.random()
+        m_tot += mass
+        # Plummer radius by inverse-CDF sampling
+        x1 = rng.random()
+        while x1 < 1e-12:
+            x1 = rng.random()
+        r = a / math.sqrt(x1 ** (-2.0 / 3.0) - 1.0)
+        r = min(r, 20.0 * a)
+        ct = 2.0 * rng.random() - 1.0
+        st = math.sqrt(1.0 - ct * ct)
+        phi = 2.0 * math.pi * rng.random()
+        pos = [r * st * math.cos(phi), r * st * math.sin(phi), r * ct]
+        sigma = math.sqrt(G_MSUN_PC_MYR * m_tot / (6.0 * math.sqrt(r * r + a * a)))
+        vel = [rng.gauss(0.0, sigma) for _ in range(3)]
+        rows.append((mass, pos, vel))
+
+    # engineered central massive triple: inner binary plus outer companion
+    m1, m2, m3 = 4.0, 4.0, 3.0
+    ra, va, rb, vb = two_body_peri_state(m1, m2, 0.0012 * (1.0 - 0.2), 0.2, G_MSUN_PC_MYR)
+    rc, vc, rd, vd = two_body_peri_state(m1 + m2, m3, 0.008 * (1.0 - 0.1), 0.1, G_MSUN_PC_MYR)
+    rows.append((m1, [rc[i] + ra[i] for i in range(3)], [vc[i] + va[i] for i in range(3)]))
+    rows.append((m2, [rc[i] + rb[i] for i in range(3)], [vc[i] + vb[i] for i in range(3)]))
+    rows.append((m3, rd, vd))
+
+    cm_r = [sum(row[1][k] for row in rows) / len(rows) for k in range(3)]
+    cm_v = [sum(row[2][k] for row in rows) / len(rows) for k in range(3)]
+    rows = [
+        (mass, [pos[k] - cm_r[k] for k in range(3)], [vel[k] - cm_v[k] for k in range(3)])
+        for mass, pos, vel in rows
+    ]
+    write_rows(output, rows)
+
+
 def build_functional_binary_cluster(output: Path) -> None:
     """Binary-rich Plummer cluster for the functional changeover-invariant case.
 
@@ -785,6 +841,7 @@ def main() -> int:
             "t4",
             "t4_outer15",
             "t5",
+            "t6",
             "functional_smoke",
             "functional_dual_merge_smoke",
             "functional_mcluster_dual_merge_smoke",
@@ -808,6 +865,8 @@ def main() -> int:
         build_t4_outer15(out)
     elif args.case == "t5":
         build_t5(out)
+    elif args.case == "t6":
+        build_t6(out)
     elif args.case == "functional_smoke":
         build_functional_smoke(out)
     elif args.case == "functional_dual_merge_smoke":

@@ -1,4 +1,4 @@
-# Validation Framework (T1–T5)
+# Validation Framework (T1–T6)
 
 Scriptable validation scenarios for PeTar algorithm changes.
 
@@ -90,6 +90,19 @@ python3 test/validation/t5_massive_binary_tt_report.py --run
 
 Output: `test/out/t5_massive_binary_tt_summary.html` (momentum-drift figure, run summary, checks; JSON report at `test/out/report.t5.massive_binary_tt.json`)
 
+### T6: AR Perturber-List Kernel Match (Members Keep Own-Mass Changeover)
+- Design under test: group artificial particles (c.m./tidal-tensor/pseudo) carry the group c.m. changeover while AR group members keep their own-mass changeover; the tidal tensor is measured at the c.m. band but the direct perturber-list force on members uses the member band, so the two kernels differ in the member-r_out..c.m.-r_out transition annulus
+- IC: engineered central massive triple (4+4+3 Msun, a_in=0.0012/a_out=0.008 pc) inside a compact Plummer field (297 stars, a=0.3 pc, masses 0.2-5 Msun, seed 20261010) — the triple guarantees a tidal-tensor-active AR group from the first tree step; group linking needs `--r-ratio 0.15 --r-group 0.008 --r-search-group 0.01` (r_search_group <= r_in constraint)
+- All runs cover exactly one tree step (`-t 0.00390625` = dt_soft auto-derived from `-r 0.1`): round-off has no time to amplify chaotically, so r1/r2/r3 replicate the same trajectory — r1 measures the kernel mismatch (`PERT_KERNEL_DIFF=1`), r2/r3 are the member-kernel/c.m.-kernel A/B whose end-of-step energy-error difference is the pure in-step kernel effect (r1 and r2 end bit-identically, proving measurement neutrality)
+- Checks (14): single step and TT-active group (>=12 artificial particles) in every run, diagnostic sample size (>=5000 evaluations), mismatch-ratio regression band (0.01-0.5; measured ~0.24 on this IC vs ~1.2e-3 aggregated at production N=1000), end-of-step |dE/E| < 1e-3 for r2/r3, zero large-energy dumps, zero aborts
+- Requires a plain-family binary built with `-D PERT_KERNEL_DIAG` (portable: `CXXFLAGS='-D PERT_KERNEL_DIAG' ./configure && make -j` — the Makefile adds `-D PROFILE` itself and `make` without a target builds the configured family); `t6_pert_kernel_match_report.py --run` configures and builds it automatically when missing (this changes the configure state)
+
+```bash
+python3 test/validation/t6_pert_kernel_match_report.py --run
+```
+
+Output: `test/out/t6_pert_kernel_match_summary.html` (paper-style sections: background, method with metric definitions, single-step A/B results, checks; JSON report at `test/out/report.t6.pert_kernel_match.json`)
+
 ---
 
 ## Files
@@ -98,13 +111,14 @@ Output: `test/out/t5_massive_binary_tt_summary.html` (momentum-drift figure, run
 |------|---------|
 | `run_validation.py` | Scenario runner, metric extractor, pass/fail checker, `--pipeline t1/t2/t3` driver |
 | `metrics.py` | Common check functions |
-| `make_ic.py` | Deterministic IC generator (`--case t1…t5`) |
+| `make_ic.py` | Deterministic IC generator (`--case t1…t6`) |
 | `criteria.json` | Centralized threshold reference |
 | `t1_kdkdk4_report.py` | T1 report generation |
 | `t2_binary_conservation_report.py` | T2 report generation |
 | `t3_binary_hard_switch_report.py` | T3 report generation |
 | `t4_triple_mode_report.py` / `t4_triple_pipeline.sh` | T4 report generation & pipeline |
 | `t5_massive_binary_tt_report.py` | T5 report generation (`--run` executes the scenario first) |
+| `t6_pert_kernel_match_report.py` | T6 report generation (`--run` executes the scenario first; reuses T5 SVG helpers) |
 | `scenarios/*.json` | Scenario definitions (commands, runs, checks) |
 
 ## Outputs

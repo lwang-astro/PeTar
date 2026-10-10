@@ -25,6 +25,53 @@
 #endif
 //#define GR_PRECESSION
 
+#ifdef PERT_KERNEL_DIAG
+/*! Diagnostic: compare the AR perturber-list kernel using the member's own
+    changeover (minimal design) against the group c.m. changeover (upstream-
+    consistent kernel, matching the tidal-tensor measurement band).
+    PERT_KERNEL_DIFF: measure only; PERT_KERNEL_CM: dynamics uses the c.m. kernel. */
+static const bool pert_diag_on = (std::getenv("PERT_KERNEL_DIFF")!=NULL)||(std::getenv("PERT_KERNEL_CM")!=NULL);
+static const bool pert_use_cm  = (std::getenv("PERT_KERNEL_CM")!=NULL);
+struct PertDiagStats {
+    long n_eval, n_1e3, n_1e2, n_1e1;
+    double sum_absdiff, sum_absref, max_rel;
+    PertDiagStats(): n_eval(0), n_1e3(0), n_1e2(0), n_1e1(0), sum_absdiff(0.0), sum_absref(0.0), max_rel(0.0) {}
+    void add(const Float _vm[3], const Float _vc[3]) {
+        double dm=0.0, dc=0.0, dd=0.0;
+        for (int d=0; d<3; d++) {
+            dm += double(_vm[d])*_vm[d];
+            dc += double(_vc[d])*_vc[d];
+            dd += double(_vm[d]-_vc[d])*(_vm[d]-_vc[d]);
+        }
+        dm = std::sqrt(dm); dc = std::sqrt(dc); dd = std::sqrt(dd);
+        const double ref = dm>dc ? dm : dc;
+        n_eval++;
+        sum_absdiff += dd;
+        sum_absref  += ref;
+        if (ref>0.0) {
+            const double rel = dd/ref;
+            if (rel>max_rel) max_rel = rel;
+            if (rel>1e-3) n_1e3++;
+            if (rel>1e-2) n_1e2++;
+            if (rel>1e-1) n_1e1++;
+        }
+        if ((n_eval & 0xFFFFF)==0) report("interval");
+    }
+    void report(const char* _tag) const {
+        const double inv_n = n_eval>0 ? 1.0/double(n_eval) : 0.0;
+        std::cerr<<"PERT_KERNEL_DIAG["<<_tag<<"] eval="<<n_eval
+                 <<" sum|d|/sum|ref|="<<(sum_absref>0.0 ? sum_absdiff/sum_absref : 0.0)
+                 <<" max_rel="<<max_rel
+                 <<" frac(>1e-3)="<<n_1e3*inv_n
+                 <<" frac(>1e-2)="<<n_1e2*inv_n
+                 <<" frac(>1e-1)="<<n_1e1*inv_n
+                 <<std::endl;
+    }
+    ~PertDiagStats() { if (n_eval>0) report("final"); }
+};
+static PertDiagStats pert_diag_stats;
+#endif
+
 //! AR interaction clas
 class ARInteraction{
 public:
@@ -414,7 +461,14 @@ public:
                 Float* acc_pert = _force[i].acc_pert;
                 Float& pot_pert = _force[i].pot_pert;
                 auto& pi = _particles[i];
+#ifdef PERT_KERNEL_DIAG
+                auto& chi_mem = pi.changeover;
+                const ChangeOver& chi_cm = _particle_cm.changeover;
+                const ChangeOver& chi = pert_use_cm ? chi_cm : chi_mem;
+                Float pdiff_vm[3] = {0.0, 0.0, 0.0}, pdiff_vc[3] = {0.0, 0.0, 0.0};
+#else
                 auto& chi = pi.changeover;
+#endif
                 acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
                 pot_pert = 0.0;
 
@@ -438,6 +492,15 @@ public:
                     acc_pert[0] += gmor3 * dr[0];
                     acc_pert[1] += gmor3 * dr[1];
                     acc_pert[2] += gmor3 * dr[2];
+#ifdef PERT_KERNEL_DIAG
+                    if (pert_diag_on) {
+                        const Float gmr3 = gm/r3;
+                        const Float k_m = ChangeOver::calcAcc0WTwo(chi_mem, *changeover[j], r);
+                        const Float k_c = ChangeOver::calcAcc0WTwo(chi_cm, *changeover[j], r);
+                        for (int d=0; d<3; d++) pdiff_vm[d] += gmr3*k_m*dr[d];
+                        for (int d=0; d<3; d++) pdiff_vc[d] += gmr3*k_c*dr[d];
+                    }
+#endif
 
                 }
                 // group perturber
@@ -459,8 +522,24 @@ public:
                     acc_pert[0] += gmor3 * dr[0];
                     acc_pert[1] += gmor3 * dr[1];
                     acc_pert[2] += gmor3 * dr[2];
+#ifdef PERT_KERNEL_DIAG
+                    if (pert_diag_on) {
+                        Float mk_m = 0.0, mk_c = 0.0;
+                        for (int k=0; k<ptclgroup[jk]->getSize(); k++) {
+                            mk_m += ptcl_mem[k].mass * ChangeOver::calcAcc0WTwo(chi_mem, ptcl_mem[k].changeover, r);
+                            mk_c += ptcl_mem[k].mass * ChangeOver::calcAcc0WTwo(chi_cm, ptcl_mem[k].changeover, r);
+                        }
+                        const Float gmr3 = gravitational_constant/(r3);
+                        for (int d=0; d<3; d++) pdiff_vm[d] += gmr3*mk_m*dr[d];
+                        for (int d=0; d<3; d++) pdiff_vc[d] += gmr3*mk_c*dr[d];
+                    }
+#endif
 
                 }
+
+#ifdef PERT_KERNEL_DIAG
+                if (pert_diag_on) pert_diag_stats.add(pdiff_vm, pdiff_vc);
+#endif
 
 #ifdef EXTERNAL_HARD
                 if (ext_force->isEnabled()) {

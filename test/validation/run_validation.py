@@ -367,6 +367,22 @@ def extract_regex_counts(log_text: str, patterns: Dict[str, str]) -> Dict[str, i
     return counts
 
 
+def extract_regex_floats(log_text: str, patterns: Dict[str, str]) -> Dict[str, float]:
+    """First capture group of the LAST match per pattern (final report line)."""
+    values: Dict[str, float] = {}
+    for key, pattern in patterns.items():
+        matches = re.findall(pattern, log_text, flags=re.MULTILINE)
+        if not matches:
+            continue
+        last = matches[-1]
+        text = last[0] if isinstance(last, tuple) else last
+        try:
+            values[key] = float(text)
+        except ValueError:
+            continue
+    return values
+
+
 def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any], command: str, workdir: Path, repo_root: Path) -> Dict[str, Any]:
     text = output_path.read_text(encoding="utf-8", errors="replace")
     energy_rows = parse_energy_rows(text)
@@ -379,6 +395,9 @@ def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any], command: str
 
     regex_cfg = extract_cfg.get("regex_counts", {})
     regex_counts = extract_regex_counts(text, regex_cfg) if regex_cfg else {}
+
+    floats_cfg = extract_cfg.get("regex_floats", {})
+    regex_floats = extract_regex_floats(text, floats_cfg) if floats_cfg else {}
 
     period = float(extract_cfg.get("period", 0.0) or 0.0)
     n_period = int(extract_cfg.get("n_period", 0) or 0)
@@ -427,6 +446,8 @@ def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any], command: str
         "max_artificial_particles_loc": max_artificial_particles_loc,
         "final_time_log": final_time,
         "regex_counts": regex_counts,
+        "regex_floats": regex_floats,
+        **regex_floats,
         "period_bin_count": len(pmax),
         "max_abs_error_period_max": max_period_error,
         "sum_abs_error_period_max": sum_period_error,

@@ -3766,7 +3766,9 @@ public:
                 Tptcl* ptcl_orbit=ap_manager.getOrbitalParticles(ptcl_artificial_i);
                 PS::S32 n_orbit = ap_manager.getOrbitalParticleN();
                 for (int j=0; j<n_orbit; j++) {
-                    // use member changeover, if new changeover is different, record the scale ratio
+#ifdef ORBIT_SAMPLING
+                    // sample pairs carry the member masses (m1*w, m2*w), so the
+                    // member changeover matches the mass each particle carries
                     Tptcl& pj = ptcl_orbit[j];
                     pj.changeover =  binary_stable_i.getMember(j%2)->changeover;
 
@@ -3787,6 +3789,14 @@ public:
                         }
                     }
                     else pj.r_search = binary_stable_i.r_search;
+#else
+                    // pseudo multipole: three equal-mass (M/3) particles represent the
+                    // orbit-averaged binary field and carry the whole group mass; use
+                    // the group c.m. changeover like the tidal tensor particles
+                    Tptcl& pj = ptcl_orbit[j];
+                    pj.changeover = binary_stable_i.changeover;
+                    pj.r_search   = binary_stable_i.r_search;
+#endif
 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                     //check rsearch consistence:

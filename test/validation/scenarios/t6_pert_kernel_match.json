@@ -1,0 +1,140 @@
+{
+  "name": "t6_pert_kernel_match",
+  "description": "Single-tree-step AR perturber-list kernel match for the members-keep-own-changeover design. An engineered central massive triple (4+4+3 Msun) guarantees a tidal-tensor-active AR group from the first step, and running exactly one tree step removes chaotic divergence, so all three runs replicate the same trajectory: r1 measures the per-evaluation vector difference between the member kernel and the group-c.m. kernel of the list force (PERT_KERNEL_DIFF=1, dynamics unchanged); r2/r3 run the member kernel (design) and the c.m. kernel (upstream-consistent counterfactual) whose end-of-step energy error difference is then the pure in-step kernel effect. Guards: single step and TT-active group in every run, diagnostic sample size, mismatch ratio regression band, energy conservation, zero dumps/aborts.",
+  "workdir": "{repo_root}",
+  "setup_commands": [
+    "mkdir -p test/validation/work/t6",
+    "python3 test/validation/make_ic.py --case t6 --output test/validation/work/t6/input.base",
+    "cd test/validation/work/t6 && petar.init -f input input.base"
+  ],
+  "extract": {
+    "interrupt_mode": "none",
+    "regex_floats": {
+      "pert_kernel_eval": "PERT_KERNEL_DIAG\\[final\\] eval=([0-9]+)",
+      "pert_kernel_ratio": "PERT_KERNEL_DIAG\\[final\\].*sum\\|d\\|/sum\\|ref\\|=([0-9.eE+-]+)",
+      "pert_kernel_frac_1e2": "PERT_KERNEL_DIAG\\[final\\].*frac\\(>1e-2\\)=([0-9.eE+-]+)",
+      "pert_kernel_frac_1e1": "PERT_KERNEL_DIAG\\[final\\].*frac\\(>1e-1\\)=([0-9.eE+-]+)"
+    },
+    "regex_counts": {
+      "hard_dump": "hard_large_energy\\.",
+      "runtime_abort": "Segmentation fault|Assertion|Aborted"
+    }
+  },
+  "runs": [
+    {
+      "id": "r1_measure",
+      "command": "cd test/validation/work/t6 && OMP_NUM_THREADS=1 PERT_KERNEL_DIFF=1 {petar_bin_switch} -u 1 -t 0.00390625 -o 0.004 -w 2 --r-ratio 0.15 --r-group 0.008 --r-search-group 0.01 -r 0.1 -f r1 input",
+      "output": "t6_r1.log"
+    },
+    {
+      "id": "r2_member_kernel",
+      "command": "cd test/validation/work/t6 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -t 0.00390625 -o 0.004 -w 2 --r-ratio 0.15 --r-group 0.008 --r-search-group 0.01 -r 0.1 -f r2 input",
+      "output": "t6_r2.log"
+    },
+    {
+      "id": "r3_cm_kernel",
+      "command": "cd test/validation/work/t6 && OMP_NUM_THREADS=1 PERT_KERNEL_CM=1 {petar_bin_switch} -u 1 -t 0.00390625 -o 0.004 -w 2 --r-ratio 0.15 --r-group 0.008 --r-search-group 0.01 -r 0.1 -f r3 input",
+      "output": "t6_r3.log"
+    }
+  ],
+  "checks": [
+    {
+      "name": "r1_diag_active",
+      "type": "min_threshold",
+      "run_id": "r1_measure",
+      "metric": "pert_kernel_eval",
+      "threshold": 5000
+    },
+    {
+      "name": "r1_single_step",
+      "type": "max_threshold",
+      "run_id": "r1_measure",
+      "metric": "final_time_log",
+      "threshold": 0.005
+    },
+    {
+      "name": "r1_ratio_not_degenerate",
+      "type": "min_threshold",
+      "run_id": "r1_measure",
+      "metric": "pert_kernel_ratio",
+      "threshold": 0.01
+    },
+    {
+      "name": "r1_ratio_within_band",
+      "type": "max_threshold",
+      "run_id": "r1_measure",
+      "metric": "pert_kernel_ratio",
+      "threshold": 0.5
+    },
+    {
+      "name": "r1_tt_active",
+      "type": "min_threshold",
+      "run_id": "r1_measure",
+      "metric": "max_artificial_particles_glb",
+      "threshold": 12
+    },
+    {
+      "name": "r2_single_step",
+      "type": "max_threshold",
+      "run_id": "r2_member_kernel",
+      "metric": "final_time_log",
+      "threshold": 0.005
+    },
+    {
+      "name": "r2_tt_active",
+      "type": "min_threshold",
+      "run_id": "r2_member_kernel",
+      "metric": "max_artificial_particles_glb",
+      "threshold": 12
+    },
+    {
+      "name": "r2_energy_conserved",
+      "type": "max_threshold",
+      "run_id": "r2_member_kernel",
+      "metric": "max_abs_error_over_total",
+      "threshold": 0.001
+    },
+    {
+      "name": "r2_no_dump",
+      "type": "regex_count_max",
+      "run_id": "r2_member_kernel",
+      "regex_key": "hard_dump",
+      "threshold": 0
+    },
+    {
+      "name": "r3_single_step",
+      "type": "max_threshold",
+      "run_id": "r3_cm_kernel",
+      "metric": "final_time_log",
+      "threshold": 0.005
+    },
+    {
+      "name": "r3_tt_active",
+      "type": "min_threshold",
+      "run_id": "r3_cm_kernel",
+      "metric": "max_artificial_particles_glb",
+      "threshold": 12
+    },
+    {
+      "name": "r3_energy_conserved",
+      "type": "max_threshold",
+      "run_id": "r3_cm_kernel",
+      "metric": "max_abs_error_over_total",
+      "threshold": 0.001
+    },
+    {
+      "name": "r3_no_dump",
+      "type": "regex_count_max",
+      "run_id": "r3_cm_kernel",
+      "regex_key": "hard_dump",
+      "threshold": 0
+    },
+    {
+      "name": "r3_no_abort",
+      "type": "regex_count_max",
+      "run_id": "r3_cm_kernel",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    }
+  ]
+}

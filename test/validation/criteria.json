@@ -5,8 +5,8 @@
   },
   "t1_high_ecc_changeover": {
     "max_abs_error_over_total": {
-      "inside_r0005_si00": 5e-7,
-      "hard_r200_si00": 5e-5
+      "inside_r0005_si00": 5e-07,
+      "hard_r200_si00": 5e-05
     },
     "loglog_slope": {
       "inside_slope": {
@@ -26,10 +26,10 @@
   },
   "t2_binary_conservation_longterm": {
     "max_abs_error_over_total": {
-      "baseline": 1e-6
+      "baseline": 1e-06
     },
     "max_abs_error_pp": {
-      "stress": 1e-5
+      "stress": 1e-05
     },
     "regex_count_max": {
       "large_step_warning": 0,
@@ -43,7 +43,7 @@
   },
   "t4_tree_hard_from_triple": {
     "max_abs_error_over_total": {
-      "m1_pure_sdar_ref": 1e-8
+      "m1_pure_sdar_ref": 1e-08
     },
     "regex_count_max": {
       "runtime_abort": 0
@@ -51,12 +51,29 @@
   },
   "t3_blogh_ab_placeholder": {
     "max_abs_error_over_total": {
-      "method_a": 2e-6,
-      "method_b": 2e-6
+      "method_a": 2e-06,
+      "method_b": 2e-06
     },
     "regex_count_max": {
       "large_step_warning": 0,
       "hard_dump": 0
+    }
+  },
+  "t6_pert_kernel_match": {
+    "notes": "Thresholds mirror the scenario file (2026-10-10 single-step redesign: engineered triple IC, one tree step, identical trajectories).",
+    "min_threshold": {
+      "pert_kernel_eval": 5000,
+      "pert_kernel_ratio": 0.01,
+      "max_artificial_particles_glb": 12
+    },
+    "max_threshold": {
+      "pert_kernel_ratio": 0.5,
+      "final_time_log": 0.005,
+      "max_abs_error_over_total": 0.001
+    },
+    "regex_count_max": {
+      "hard_dump": 0,
+      "runtime_abort": 0
     }
   }
 }
