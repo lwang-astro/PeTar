@@ -1,5 +1,10 @@
 # Validation Framework (T1–T6)
 
+**Design rules**: new validation reports follow [REPORT_DESIGN.md](REPORT_DESIGN.md) (paper-style
+sections, symbol definitions, figure encoding, threshold semantics, test-design principles, shared
+`report_common.py` helpers). T6 is the reference implementation; T1–T5 are legacy style pending
+migration.
+
 Scriptable validation scenarios for PeTar algorithm changes.
 
 ## Quick Start
@@ -110,6 +115,8 @@ Output: `test/out/t6_pert_kernel_match_summary.html` (paper-style sections: back
 | File | Purpose |
 |------|---------|
 | `run_validation.py` | Scenario runner, metric extractor, pass/fail checker, `--pipeline t1/t2/t3` driver |
+| `report_common.py` | Shared report helpers (parsing, escaping, plotting, cards); see REPORT_DESIGN.md §5 |
+| `REPORT_DESIGN.md` | Design rules for validation scenarios and HTML reports (T6 = reference) |
 | `metrics.py` | Common check functions |
 | `make_ic.py` | Deterministic IC generator (`--case t1…t6`) |
 | `criteria.json` | Centralized threshold reference |

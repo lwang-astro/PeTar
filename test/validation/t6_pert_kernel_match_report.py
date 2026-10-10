@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """T6 AR perturber-kernel-match HTML report (members-keep-own-changeover design)."""
 import argparse
-import importlib.util
 import json
 import re
 import subprocess
@@ -9,26 +8,16 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+from report_common import html_escape, load_json, parse_log_version
+
 Point = Tuple[float, float]
 REPO = Path(__file__).resolve().parents[2]
 WORK_DIR = Path("test/validation/work/t6")
-
-_spec = importlib.util.spec_from_file_location(
-    "t5_report_mod", REPO / "test/validation/t5_massive_binary_tt_report.py"
-)
-_t5 = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_t5)
-html_escape = _t5.html_escape
 
 DIAG_LINE_RE = re.compile(
     r"PERT_KERNEL_DIAG\[(final|interval)\] eval=(\d+) sum\|d\|/sum\|ref\|=([0-9.eE+-]+) "
     r"max_rel=([0-9.eE+-]+) frac\(>1e-3\)=([0-9.eE+-]+) frac\(>1e-2\)=([0-9.eE+-]+) frac\(>1e-1\)=([0-9.eE+-]+)"
 )
-
-
-def load_json(path: Path) -> Dict:
-    with path.open("r", encoding="utf-8") as fh:
-        return json.load(fh)
 
 
 def parse_diag_lines(log_text: str) -> List[Dict[str, float]]:
@@ -285,6 +274,11 @@ group linking r<sub>group</sub>/r<sub>search,group</sub> = 0.008/0.01; tree mode
 measurement code inside r1 changes the compiled instruction schedule of the perturbation loop, so
 r1 and r2 need not be bit-identical; keeping r2/r3 free of instrumentation isolates the A/B pair
 from even this channel. Over a single tree step the round-off difference has no time to amplify,
+from report_common import (
+    html_escape,
+    load_json,
+    parse_log_version,
+)
 and r1 and r2 indeed end bit-identically (&sect;3.2), which doubles as a direct proof that the
 measurement is neutral.</div>
 
@@ -410,7 +404,7 @@ def main() -> int:
     log_path = Path(args.out_dir) / runs[0]["output"]
     log_text = log_path.read_text(encoding="utf-8", errors="replace")
     diag_rows = parse_diag_lines(log_text)
-    log_version = _t5.parse_log_version(log_path)
+    log_version = parse_log_version(log_path)
 
     run_commands: List[Tuple[str, str]] = [
         (run["run_id"], str(run.get("command", ""))) for run in runs

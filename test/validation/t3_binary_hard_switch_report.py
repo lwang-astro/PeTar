@@ -9,117 +9,21 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 import numpy as np
+from report_common import (
+    format_tick,
+    html_escape,
+    load_json,
+    orbital_elements_from_two_body_rows,
+    parse_command_args,
+    parse_log_metadata,
+    read_ic,
+)
 
 G_MSUN_PC_MYR = 0.00449830997959438
 PLOT_LOG_FLOOR = 1e-15
 VERSION_RE = re.compile(r"^Version:\s*(.*)$")
 
 Point = Tuple[float, float]
-
-
-def load_json(path: Path) -> Dict:
-    with path.open("r", encoding="utf-8") as fh:
-        return json.load(fh)
-
-
-def html_escape(text: str) -> str:
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
-
-
-def parse_command_args(command: str) -> Dict[str, str]:
-    tokens = shlex.split(command)
-    out: Dict[str, str] = {}
-    i = 0
-    while i < len(tokens):
-        tok = tokens[i]
-        if tok in {"-s", "-t", "-o", "-f", "-b", "-u", "-w", "-a", "-r"} and i + 1 < len(tokens):
-            out[tok] = tokens[i + 1]
-            i += 2
-            continue
-        if tok.startswith("--") and i + 1 < len(tokens) and not tokens[i + 1].startswith("-"):
-            out[tok] = tokens[i + 1]
-            i += 2
-            continue
-        i += 1
-    return out
-
-
-def read_ic(ic_path: Path) -> List[List[float]]:
-    rows: List[List[float]] = []
-    with ic_path.open("r", encoding="utf-8") as fh:
-        for line in fh:
-            parts = line.strip().split()
-            if not parts:
-                continue
-            rows.append([float(x) for x in parts])
-    return rows
-
-
-def orbital_elements_from_two_body_rows(rows: List[List[float]]) -> Dict[str, float]:
-    p1, p2 = rows[0], rows[1]
-    m1, m2 = p1[0], p2[0]
-    r = np.array([p2[1] - p1[1], p2[2] - p1[2], p2[3] - p1[3]], dtype=float)
-    v = np.array([p2[4] - p1[4], p2[5] - p1[5], p2[6] - p1[6]], dtype=float)
-
-    rnorm = float(np.linalg.norm(r))
-    v2 = float(np.dot(v, v))
-    mu = G_MSUN_PC_MYR * (m1 + m2)
-    eps = 0.5 * v2 - mu / rnorm
-    a = -mu / (2.0 * eps)
-
-    h = np.cross(r, v)
-    h2 = float(np.dot(h, h))
-    e = math.sqrt(max(0.0, 1.0 + 2.0 * eps * h2 / (mu * mu)))
-    peri = a * (1.0 - e)
-    apo = a * (1.0 + e)
-    period = 2.0 * math.pi * math.sqrt(a * a * a / mu) if a > 0 else float("nan")
-
-    return {
-        "m1": m1,
-        "m2": m2,
-        "a": a,
-        "e": e,
-        "peri": peri,
-        "apo": apo,
-        "period": period,
-    }
-
-
-def parse_log_metadata(log_path: Path) -> Dict[str, object]:
-    text = log_path.read_text(encoding="utf-8", errors="replace")
-    lines = text.splitlines()
-    version = "unknown"
-    features: List[str] = []
-    capture_features = False
-    for line in lines:
-        stripped = line.strip()
-        vmatch = VERSION_RE.match(stripped)
-        if vmatch:
-            version = vmatch.group(1).strip()
-        if stripped == "=====================================" and not capture_features:
-            capture_features = True
-            continue
-        if capture_features:
-            if stripped.startswith("Data file output mode"):
-                break
-            if (
-                stripped.startswith("Use ")
-                or stripped.startswith("Print ")
-                or stripped.startswith("Check ")
-                or stripped.startswith("Count ")
-                or stripped.startswith("Calculate ")
-            ):
-                features.append(stripped)
-    return {"version": version, "features": features}
-
-
-def format_tick(value: float) -> str:
-    return f"{value:.3g}"
 
 
 def svg_multi_plot(

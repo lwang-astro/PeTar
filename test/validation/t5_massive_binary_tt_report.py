@@ -11,139 +11,17 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 import numpy as np
+from report_common import (
+    format_tick,
+    html_escape,
+    load_json,
+    parse_command_args,
+    svg_series_plot,
+)
 
 Point = Tuple[float, float]
 VERSION_RE = re.compile(r"^Version:\s*(.*)$")
 WORK_DIR = Path("test/validation/work/t5")
-
-
-def load_json(path: Path) -> Dict:
-    with path.open("r", encoding="utf-8") as fh:
-        return json.load(fh)
-
-
-def html_escape(text: str) -> str:
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
-
-
-def parse_command_args(command: str) -> Dict[str, str]:
-    tokens = shlex.split(command)
-    out: Dict[str, str] = {}
-    i = 0
-    while i < len(tokens):
-        tok = tokens[i]
-        if tok in {"-s", "-t", "-o", "-f", "-b", "-u", "-w", "-a", "-r"} and i + 1 < len(tokens):
-            out[tok] = tokens[i + 1]
-            i += 2
-            continue
-        if tok.startswith("--") and i + 1 < len(tokens) and not tokens[i + 1].startswith("-"):
-            out[tok] = tokens[i + 1]
-            i += 2
-            continue
-        i += 1
-    return out
-
-
-def format_tick(value: float) -> str:
-    return f"{value:.3g}"
-
-
-def svg_multi_plot(
-    series_map: Dict[str, List[Point]],
-    title: str,
-    x_label: str,
-    y_label: str,
-    hlines: List[Tuple[float, str]] = [],
-    max_x_ticks: int = 8,
-) -> str:
-    width, height = 940, 500
-    left, right, top, bottom = 88, 24, 44, 70
-    plot_w = width - left - right
-    plot_h = height - top - bottom
-
-    all_points = [p for points in series_map.values() for p in points]
-    if not all_points:
-        return "<p>No data available.</p>"
-
-    floor = 1e-9
-    xs = [p[0] for p in all_points]
-    ys = [max(p[1], floor) for p in all_points]
-
-    xmin, xmax = min(xs), max(xs)
-    if xmax == xmin:
-        xmax += 1.0
-    ymin, ymax = math.log10(min(ys)), math.log10(max(ys))
-    if ymax == ymin:
-        ymax += 1.0
-
-    def sx(v: float) -> float:
-        return left + (v - xmin) / (xmax - xmin) * plot_w
-
-    def sy(v: float) -> float:
-        return top + (ymax - math.log10(max(v, floor))) / (ymax - ymin) * plot_h
-
-    palette = ["#0b74de", "#d81b60", "#2e7d32", "#8e24aa", "#f4511e", "#00897b"]
-
-    parts: List[str] = []
-    legends: List[str] = []
-    for idx, (label, points) in enumerate(series_map.items()):
-        color = palette[idx % len(palette)]
-        poly = " ".join(f"{sx(x):.2f},{sy(y):.2f}" for x, y in points)
-        parts.append(f'<polyline points="{poly}" fill="none" stroke="{color}" stroke-width="2"/>')
-        ly = top + 18 + idx * 18
-        legends.append(f'<line x1="{width-right-320}" y1="{ly}" x2="{width-right-300}" y2="{ly}" stroke="{color}" stroke-width="2"/>')
-        legends.append(f'<text x="{width-right-295}" y="{ly+4}" font-size="11" font-family="Arial">{html_escape(label)}</text>')
-
-    for idx, (value, label) in enumerate(hlines):
-        py = sy(value)
-        parts.append(f'<line x1="{left}" y1="{py:.2f}" x2="{width-right}" y2="{py:.2f}" stroke="#555" stroke-width="1.2" stroke-dasharray="6,4"/>')
-        ly = height - bottom - 10 - idx * 16
-        parts.append(f'<text x="{left+6}" y="{ly}" font-size="11" font-family="Arial">{html_escape(label)}</text>')
-
-    x_unique = sorted(set(xs))
-    if len(x_unique) <= max_x_ticks:
-        x_tick_values = x_unique
-    else:
-        step = (x_unique[-1] - x_unique[0]) / (max_x_ticks - 1)
-        x_tick_values = [x_unique[0] + i * step for i in range(max_x_ticks)]
-
-    p0 = math.floor(ymin)
-    p1 = math.ceil(ymax)
-    y_tick_values = [10.0 ** p for p in range(int(p0), int(p1) + 1)]
-
-    x_marks: List[str] = []
-    for value in x_tick_values:
-        px = sx(value)
-        x_marks.append(f'<line x1="{px:.2f}" y1="{top}" x2="{px:.2f}" y2="{height-bottom}" stroke="#e0e0e0" stroke-dasharray="3,3"/>')
-        x_marks.append(f'<line x1="{px:.2f}" y1="{height-bottom}" x2="{px:.2f}" y2="{height-bottom+6}" stroke="#333"/>')
-        x_marks.append(f'<text x="{px:.2f}" y="{height-bottom+22}" text-anchor="middle" font-size="11" font-family="Arial">{format_tick(value)}</text>')
-
-    y_marks: List[str] = []
-    for value in y_tick_values:
-        py = sy(value)
-        y_marks.append(f'<line x1="{left}" y1="{py:.2f}" x2="{width-right}" y2="{py:.2f}" stroke="#e0e0e0" stroke-dasharray="3,3"/>')
-        y_marks.append(f'<line x1="{left-6}" y1="{py:.2f}" x2="{left}" y2="{py:.2f}" stroke="#333"/>')
-        y_marks.append(f'<text x="{left-10}" y="{py+4:.2f}" text-anchor="end" font-size="11" font-family="Arial">{format_tick(value)}</text>')
-
-    return f"""
-<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" xmlns="http://www.w3.org/2000/svg">
-  <rect x="0" y="0" width="{width}" height="{height}" fill="white"/>
-  <text x="{width/2:.1f}" y="24" text-anchor="middle" font-size="16" font-family="Arial">{html_escape(title)}</text>
-  {' '.join(x_marks)}
-  {' '.join(y_marks)}
-  <line x1="{left}" y1="{height-bottom}" x2="{width-right}" y2="{height-bottom}" stroke="#333"/>
-  <line x1="{left}" y1="{top}" x2="{left}" y2="{height-bottom}" stroke="#333"/>
-  {' '.join(parts)}
-  {' '.join(legends)}
-  <text x="{width/2:.1f}" y="{height-18}" text-anchor="middle" font-size="13" font-family="Arial">{html_escape(x_label)}</text>
-  <text x="22" y="{height/2:.1f}" transform="rotate(-90 22,{height/2:.1f})" text-anchor="middle" font-size="13" font-family="Arial">{html_escape(y_label)}</text>
-</svg>
-"""
 
 
 def read_ic(ic_path: Path) -> List[List[float]]:
@@ -366,7 +244,7 @@ group membership churns every outer orbit. Threshold calibration: pre-fix binary
 </div>
 
 <h2>Figure 1: Momentum Drift ||P|-|P0||/M vs Time</h2>
-{svg_multi_plot(series, 'T5: momentum drift for TT-on/off and hard/tree modes', 't [Myr]', '||P|-|P0||/M [pc/Myr]', hlines=[(0.005, 'r3 threshold 5e-3 (pre-fix ~1.0e-2 fails)'), (0.02, 'r1/r2 threshold 2e-2')], max_x_ticks=8)}
+{svg_series_plot(series, 'T5: momentum drift for TT-on/off and hard/tree modes', 't [Myr]', '||P|-|P0||/M [pc/Myr]', hlines=[(0.005, 'r3 threshold 5e-3 (pre-fix ~1.0e-2 fails)'), (0.02, 'r1/r2 threshold 2e-2')], max_x_ticks=8)}
 
 <h2>Initial Conditions (make_ic.py --case t5)</h2>
 <table><tr><th>#</th><th>m [Msun]</th><th>x</th><th>y</th><th>z</th><th>vx</th><th>vy</th><th>vz</th></tr>

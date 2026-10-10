@@ -10,6 +10,13 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 import numpy as np
+from report_common import (
+    format_tick,
+    html_escape,
+    load_json,
+    parse_command_args,
+    parse_log_metadata,
+)
 
 G_MSUN_PC_MYR = 0.00449830997959438
 VERSION_RE = re.compile(r"^Version:\s*(.*)$")
@@ -22,75 +29,6 @@ TREE_DT_RE = re.compile(r"^Tree time step\s*=\s*([0-9eE+\-.]+)$")
 OUTPUT_DT_RE = re.compile(r"^Output time step\s*=\s*([0-9eE+\-.]+)$")
 
 Point = Tuple[float, float]
-
-
-def format_tick(value: float) -> str:
-    if value == 0.0:
-        return "0"
-    av = abs(value)
-    if av >= 1e3 or av < 1e-3:
-        return f"{value:.2e}"
-    return f"{value:.3g}"
-
-
-def load_json(path: Path) -> Dict:
-    with path.open("r", encoding="utf-8") as fh:
-        return json.load(fh)
-
-
-def html_escape(text: str) -> str:
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
-
-
-def parse_command_args(command: str) -> Dict[str, str]:
-    tokens = shlex.split(command)
-    out: Dict[str, str] = {}
-    i = 0
-    while i < len(tokens):
-        tok = tokens[i]
-        if tok in {"-s", "-t", "-o", "-f", "-b", "-u", "-w", "-a", "-r"} and i + 1 < len(tokens):
-            out[tok] = tokens[i + 1]
-            i += 2
-            continue
-        if tok.startswith("--") and i + 1 < len(tokens) and not tokens[i + 1].startswith("-"):
-            out[tok] = tokens[i + 1]
-            i += 2
-            continue
-        i += 1
-    return out
-
-
-def parse_log_metadata(log_path: Path) -> Dict[str, object]:
-    text = log_path.read_text(encoding="utf-8", errors="replace")
-    lines = text.splitlines()
-    version = "unknown"
-    features: List[str] = []
-    capture_features = False
-    for line in lines:
-        stripped = line.strip()
-        vmatch = VERSION_RE.match(stripped)
-        if vmatch:
-            version = vmatch.group(1).strip()
-        if stripped == "=====================================" and not capture_features:
-            capture_features = True
-            continue
-        if capture_features:
-            if stripped.startswith("Data file output mode"):
-                break
-            if (
-                stripped.startswith("Use ")
-                or stripped.startswith("Print ")
-                or stripped.startswith("Check ")
-                or stripped.startswith("Count ")
-                or stripped.startswith("Calculate ")
-            ):
-                features.append(stripped)
-    return {"version": version, "features": features}
 
 
 def parse_time_metric_series(log_text: str, metric: str) -> List[Point]:

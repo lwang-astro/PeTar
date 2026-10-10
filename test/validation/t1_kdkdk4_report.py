@@ -7,6 +7,10 @@ import re
 import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
+from report_common import (
+    html_escape,
+    load_json,
+)
 
 
 G_MSUN_PC_MYR = 0.00449830997959438
@@ -17,11 +21,6 @@ VERSION_RE = re.compile(r"^Version:\s*(.*)$")
 
 
 Point = Tuple[float, float]
-
-
-def load_json(path: Path) -> Dict:
-    with path.open("r", encoding="utf-8") as fh:
-        return json.load(fh)
 
 
 def parse_command_args(command: str) -> Dict[str, str]:
@@ -134,15 +133,6 @@ def parse_log_metadata(log_path: Path) -> Dict[str, object]:
             ):
                 features.append(stripped)
     return {"version": version, "features": features}
-
-
-def html_escape(text: str) -> str:
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
 
 
 def extract_binary_from_command(command: str) -> str:
