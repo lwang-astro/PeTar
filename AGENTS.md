@@ -51,6 +51,19 @@ The capture process is canonical in [SDAR/AGENTS.md](../SDAR/AGENTS.md). PeTar r
 - Lessons about PeTar surfaces (configure/build, `petar.*` tools, clustering physics, `test/`) → `.github/skills/petar-nbody-simulation/assets/lessons-learned.md`
 - Lessons rooted in SDAR code (`SDAR/src/`, `SDAR/sample/*`, `SDAR/tools/`) → SDAR's lessons file, with a one-line pointer here if PeTar context matters.
 
+## Doc & Plan Organization
+
+- Every md in `doc/` belongs to exactly one class — unclassified notes are a defect:
+  - **plan** (`plan` in the filename): follow-up work; open items only (see below).
+  - **reference note** (e.g. `*_notes.md`): permanent documentation of current-code mechanism (implementation notes), theory, or removed legacy behavior; carries a one-line status header stating its nature, and is registered in the repo's documentation listing (SDAR: `AGENTS.md` → Documentation). Retained limitations/caveats of implemented schemes live here, not in plans.
+  - **temporary** (debug/handoff notes): no permanent home — distill then delete (below).
+  Reference material (papers, method PDFs) needs no classification.
+- When a plan item completes, distill its experience into the owning note in the same change; the plan keeps only open items plus pointers to where the completed content went.
+- Routing rule — **lessons-learned is the default home**. Lessons take anything with the Mistake / Root cause / Prevention shape: "what went wrong, why, how to avoid" (operational mistakes, methodology gotchas, diagnostic fingerprints); hard rules get promoted into SKILL assets. A reference note takes **only** documentation of how implemented code works or worked — mechanism, algebra, invariants, measured behavior, design rationale, retained limitations — answering "how/why does the code behave this way", never "what went wrong". An investigation yielding both splits: prevention rules → lessons entry, mechanism description → reference note, cross-linked. Boundary unclear → lessons.
+- One-off debug/handoff notes are temporary: distill the necessary experience into lessons first, then delete — tracked files keep git history, but untracked content is lost on `rm`, so lessons capture comes first.
+- Moving/renaming/deleting any doc updates its cross-references in the same change (`grep -rn "<name>"` across the workspace, including SDAR docs).
+- Keep `doc/` free of temp/backup artifacts (`*~`, `Zone.Identifier`, scratch dumps).
+
 ## Test Organization
 
 - Use `test/functional` to check the toolchain, binary selection, readback paths, and quick post-processing coverage.

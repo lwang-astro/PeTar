@@ -60,7 +60,7 @@ the very first hard step). Tree step `-s 0.1` does not help (same dump).
   primordial binary) inside the whole-cluster hard group; r_search chain
   (`r_in~0.4, r_out~4` pc for that member) links all particles.
 - Related family: `hard_large_energy` dumps also appear in these runs — see
-  `doc/hard-large-energy-se-mass-loss.md` (same investigation thread).
+  `doc/hard-large-energy-plan.md` (same investigation thread).
 
 **Replay**: the dumped system replays with the family-matched
 `petar.mpi.omp.avx512.bse.hard.debug` (ASan build, `setarch $(uname -m) -R`
