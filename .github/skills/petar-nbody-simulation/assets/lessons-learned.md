@@ -1289,3 +1289,21 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Fix(2026-10-13 终版,经 review 再改架构)**: 几何修复版(calcDtMonopole 改 eta·(r−r_dt_limit)⁺/|v|)虽正确但方向仍错——SDAR 是通用库,步长估计器不该读应用的 changeover 成员;边界约束本质是"外部步长约束",归属 dt_limit,归应用所有。终版:① SDAR block_time_step.h 整体还原到 ad5642d^ 形态(删 calcDtMonopole 与 HERMITE_MONOPOLE_DT_LIMIT 分支,签名还原,简并分支恢复返回 NUMERIC_FLOAT_MAX);② SDAR 新增通用 per-slot 目标半径 r_dt_limit_(索引同 time_next_:单粒子 k、组 c.m. k+offset;initialSystemSingle/addGroups 置 -1;setter setRDtLimitOne),四个 dt 调用点由 calcDtLimitCrossing 用粒子**当前**质心系状态现算 eta_4th·(r−r_dt_limit)⁺/|v| 并与 dt_limit 取 min——段内位置速度持续变化,段初设置的静态 cap 会陈旧(无力粒子逼近区域时真 cap 收紧而静态值不变,可能放任一步跨过坡道),故约束的"缓变几何量"(r_dt_limit)每段设一次、"步长界"每次 dt 评估现算;③ PeTar Makefile 删宏;PeTar hard.hpp initial() 每段以 eta_4th·(r−r_in)⁺/|v| 填充各 slot(质心系,r 对各自 changeover r_in)——slingshot 保护移到 PeTar 端,帧中心组 c.m.(r<r_in)天然无 cap=崩溃构型按构造解决;④ t_peri 减半循环 dt_min 兜底保留(独立 bug)。验证:复现器与 eta-init 变体跑净 t=3.2、dE/E~3e-12 且与几何版逐位一致;SDAR sample 默认构建/运行无影响。
 
 **Prevention rule**: ① "time step too small" 类 abort 先核对打印值与 dt_min 的幂关系(dt=dt_min/2ⁿ ⇒ dt_limit 本身已触底或 dt_ref 恰在网格下),再决定查力还是查界;② 通用库的步长估计器不得读取应用特有字段(changeover 等):应用级几何/物理约束一律以 dt_limit 形式注入——需要逐粒子约束时就给积分器加 per-slot 限步数组(与既有组级 info.dt_limit 对称),而非把应用概念下沉进库;③ 零力/零邻居粒子的任何 r/v 类时间尺度界,几何量必须指向"不可跨越的目标区域边界"而非坐标原点——质心系里帧中心粒子的 r、v 是舍入残差,指向原点的界会产出任意小伪影;③ 无下限的 while 减半循环一律加 dt_min 类网格底;④ gdb 条件断点读函数参数:用 `break *(PIE基址+nm符号地址)` 精确入口,`break 符号名` 会跳过 prologue 导致读错寄存器(本次浪费三轮排查)。
+
+### 2026-10-13: 【外部头文件依赖黑洞】Makefile 不跟踪 ../SDAR 头变更 + 版本戳 configure 时烧录——SDAR bisect 三重陷阱(部分重建/假版本戳/静默失败)全部踩中
+
+**Mistake**: 在笔记本上 bisect SDAR 回归:checkout 旧版+touch+make 测试,三轮"结果"全崩;后经 distclean+configure 发现版本戳仍是 _461e——多轮 make 实为空操作或静默失败,旧二进制反复被测。更早桌面机上的"回退重建"实验同样无效,导致错误排除了 SDAR 嫌疑。
+
+**Root cause**: ① PeTar Makefile 用 -I../SDAR/src 引用外部树但不生成对其头文件的依赖——SDAR checkout 后 make 视为最新,需 touch src/hard.hpp 或全清;② 版本串 _SDARver 在 ./configure 时写入 src/get_version.hpp,make clean 不重 stamp——二进制版本号可证明来源但只有 fresh configure 才刷新;③ 命令输出重定向到 /dev/null 后无法区分"编译失败留旧件"与"无操作",链条里 && 断掉也无声。
+
+**Fix**: 可信 bisect 流程:rm -rf build && ./configure && make -j(全清+新 configure,以版本戳为 provenance 证明),输出必可见;据此确认 SDAR 459e/460e/461e 全清构建均崩,排除 459-461e 回归假设。
+
+**Prevention rule**: ① 涉及 ../SDAR(FDPS 同理)的任何 bisect/验证,先 rm -rf build + fresh ./configure,用二进制版本戳核对实际编译的 SDAR 版本;② 构建命令永远保留输出或落盘检查 exit code;③ 跨机器对比结论前,先确认两边二进制的版本戳与构建来源一致。
+
+### 2026-10-13: 【§9 误归因结案】"T2 粗 dt 误差爆炸 4 个量级"实为单一二进制的构建状态伪影——抵消型误差体制下误差水平对构建标志敏感;A/B 端点必须记录两个二进制的 md5+版本戳
+
+**Mistake**: note §9 据同机 A/B(仅变 SDAR 源码)判定"回归在 63e8308..b51ffa6 链内"——但 A/B 的两个二进制来自同一种(受污染的)构建配置,源码变化自然显示逐位相同;缺 6020bfc 端点(API 不兼容被当作无法测试)。真因:产出 7.98e-3 的 B1 二进制构建于二分密集期(-O1/-O3-g/插桩 configure 轮换),autoconf 的 config.status 会跨裸 ./configure 继承旧参数,B1 的实际编译标志不可复原。
+
+**Root cause(机制)**: §9 自己观测到每次环带穿越注入 ~1e-2 误差且下一轨道基本相消(包络 2700× 摆动)——可观测量是大幅抵消后的残差;FMA/收缩类代码生成差异决定残差停在 1e-7 还是 1e-3~1e-2 注入水平。6020bfc+no-op shim 端点(补上缺失基线,当前 PeTar 无 MONOPOLE 定义故旧分支未激活)与 2c3dd3e 在同一构建配置下给出同一 2.748237e-07;全 T2 重跑粗半段逐位=桌面基线。另:checkout 带 shim 未提交改动会静默 Aborting(输出被 tail 吞掉),后续构建仍用旧 checkout——A/B 标签必须以构建后 grep/md5 验证。
+
+**Prevention rule**: ① 抵消型误差(逐穿越注入+轨道间相消)体制下,误差"水平"是构建敏感量——跨二进制比较水平前先记录双方 md5+configure 版本戳;② 二分/插桩会话后,裸 ./configure 不重置参数,产数前显式重配目标选项;③ API 不兼容不是 A/B 终点的豁免——写 no-op shim 补端点;④ git checkout 失败(Aborting)可能被管道吞掉:多步验证链中每步检查分支/版本(git branch --show-current、grep 特征代码、md5sum)后再贴标签。

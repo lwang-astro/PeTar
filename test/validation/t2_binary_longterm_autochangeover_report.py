@@ -13,6 +13,7 @@ from report_common import (
     PAPER_CSS,
     check_row,
     git_commit,
+    gradient_colors,
     html_escape,
     load_json,
     orbital_elements_from_two_body_rows,
@@ -26,7 +27,6 @@ from report_common import (
 
 REPO = Path(__file__).resolve().parents[2]
 Point = Tuple[float, float]
-RUN_COLORS = ["#0b74de", "#d81b60", "#2e7d32", "#8e24aa", "#f4511e", "#00897b"]
 RIN_RE = re.compile(r"^Mean inner changeover radius\s*=\s*([0-9.eE+\-.]+)")
 ROUT_RE = re.compile(r"^Mean outer changeover radius\s*=\s*([0-9.eE+\-.]+)")
 
@@ -204,11 +204,12 @@ def main() -> int:
     rows = sorted(rows, key=lambda x: x["dt"])
     log_version = parse_log_version(Path(rows[0]["log_path"]))
 
-    # Figure 1: per-period max energy error vs orbit number, color = run
+    # Figure 1: per-period max energy error vs orbit number, color = dt order
     curves: List[Tuple[str, List[Point], str, str]] = []
     legend_models: List[Tuple[str, str]] = []
+    sweep_colors = gradient_colors(len(rows))
     for i, row in enumerate(rows):
-        color = RUN_COLORS[i % len(RUN_COLORS)]
+        color = sweep_colors[i]
         model = f"{row['run_id']} (dt={row['dt']:.2e}, {row['regime']})"
         legend_models.append((model, color))
         xs = [k + 0.5 for k in range(row["n_orbits"])]
@@ -397,7 +398,8 @@ Table 2); <code>{{dt_out}}</code> = 2&middot;dt<sub>soft</sub> (bounded to 9.77&
     legend_quantities=[('per-period max |Error/Total|', '')],
 )}
 <div class="caption"><b>Figure 1.</b> Per-period envelope (Eq. 1) of |Error/Total| versus
-orbit number; <b>color = run</b> (dt<sub>soft</sub> and its regime, see legend). Read it as:
+orbit number; <b>color = dt<sub>soft</sub></b> on a viridis gradient from fine (dt17, dark
+purple) to coarse (dt8, yellow) &mdash; the sweep direction of Figure 2. Read it as:
 a curve flat in k is a stationary, bounded error &mdash; no secular drift; a systematically
 rising curve would be drift (T2-a failure). The &rho; column of Table 4 quantifies flatness:
 all runs sit at &rho; &asymp; 1. The vertical ordering of the curves is the level question of

@@ -1,7 +1,8 @@
 # Handoff note: isolated-cluster crash from pseudo-particle c.m.-changeover switch — ATTRIBUTION CORRECTED (not a 3848bc8 regression)
 
 Date: 2026-10-12 (original) · corrected 2026-10-12 (late) · Found by: validation-suite T3 rework (`t3_binary_sdar_grouplink`) ·
-Status: **RESOLVED 2026-10-12 (late): root cause found and fixed (SDAR `block_time_step.h` + `hermite_integrator.h`, uncommitted); NOT a 3848bc8 regression; reproducer + eta variant run clean to t=3.2 at dE/E~1.3e-12**
+Status: **RESOLVED 2026-10-12 (late): root cause found and fixed (SDAR `block_time_step.h` + `hermite_integrator.h`, uncommitted); NOT a 3848bc8 regression; reproducer + eta variant run clean to t=3.2 at dE/E~1.3e-12** ·
+**RESOLVED (2026-10-13 late): §9b — the T2 "explosion" was a build-state artifact of one specific binary, NOT an SDAR regression; clean paired A/B (incl. a 6020bfc shim endpoint) and a full T2 rerun reproduce the desktop baseline exactly**
 
 ## 0. CORRECTION (read first)
 
@@ -173,3 +174,118 @@ original note stand.
   reverted).
 - Build directory rebuilt at HEAD + fix (crash reproducible, same t=0.168945).
 - `/tmp/r1/` holds this session's runs (repro/fix/ei/ttoff logs+par); `/tmp/t3_diag/` as before.
+
+## 8. Follow-up (2026-10-13, laptop LWLaptop): T1 coarsest-dt full-crossing endpoint crashes
+
+After the 5765150+SDAR-63e8308 fix (T3 now passes 10/10 with bit-identical values on both
+machines), a remaining failure appears on the laptop (Intel, gcc 13.3, Ubuntu 24.04):
+T1 `crossfull_r015_si07` (coarsest dt_soft = 1.5625e-2, full crossing r_out=0.15, both 64b and
+non64b, avx2 and avx512) aborts with `time step size too small (2^-49 or 2^-48) < dt_min
+(2^-47)` near the first pericenter (t~0.40). The demanded dt sits exactly on the block-step
+grid floor. si00-si06 of the same family pass; the desktop (AMD, older gcc) completed this
+config with a large-but-stable error (3.4e-5).
+
+Verified: deterministic on the laptop; reproduces with clean builds of SDAR 459e/460e/461e
+(provenance checked via the configure-time version stamp; see build-hygiene notes below).
+Conclusion: this endpoint sits at a stability cliff of the Hermite block-step criterion where
+compiler/CPU FP details decide pass/fail; it is not an SDAR-version regression in 459-461e.
+
+Build-hygiene traps discovered (documented in lessons): (1) the Makefile does not track
+../SDAR header changes - SDAR checkouts require `touch src/hard.hpp` or a full clean; (2)
+the version stamp `_SDARver` is baked at configure time into src/get_version.hpp - only a
+fresh ./configure re-stamps it, so `make clean` alone keeps a stale stamp and misattributes
+provenance; (3) always show build output - several silent partial builds invalidated early
+bisect attempts.
+
+## 9. NEW (2026-10-13, laptop): T2 coarse-dt mix-regime error explosion — ~4 orders above desktop baseline
+
+After the 2c3dd3e gated fix resolved the §8 endpoint crashes (T1 64b now 6/6 PASS, mix
+follows Hermite exactly, ratio 1.0 at si00), the T2 rerun shows the coarse half of the dt
+sweep exploded while the fine half is bit-consistent with the desktop:
+
+| run | regime (auto radii) | desktop (SDAR 6020bfc) | laptop (2c3dd3e binary) |
+|---|---|---|---|
+| dt17-dt12 | tree / fine mix | 6e-8 … 6e-6 | **matches** (6.01e-8 … 6.10e-6) |
+| dt11 | mix, r_in=4.245e-3 (peri=4e-3 crosses it) | 2.8e-7 | **7.98e-3** |
+| dt10 | mix | 4.7e-7 | **1.58e-2** |
+| dt9 | mix | 6.3e-7 | **2.41e-3** |
+| dt8 | pure Hermite (m1 side still in annulus) | 7.5e-7 | **6.51e-3** |
+
+The "error suddenly small late in the run" curve first reported for this figure is **dt11**:
+its per-period envelope OSCILLATES orbit-to-orbit (drops 2700x at orbit 60, jumps back 2652x
+at orbit 63, again at 109/110) — each changeover-annulus crossing injects a ~1e-2-level error
+that swings back next orbit; the late-time "small" values are envelope sampling on individual
+orbits, not a real error decrease (quarters decline smoothly 8.0e-3 → 2.9e-4 for the same
+reason). No AR group ever forms in these runs (Form=0/End=0); the pair is integrated purely
+by Hermite/tree with the annulus crossing between them.
+
+Same-machine single-variable A/B on dt11 (PeTar ec1dc7a fixed, only SDAR source varied,
+fresh configure+build each time):
+
+| SDAR | dt11 max abs error |
+|---|---|
+| 63e8308 | aborts (known crash era, §8) |
+| b51ffa6 | 7.98e-3 |
+| 2c3dd3e (gated fix) | 7.98e-3, **bit-identical to b51ffa6** |
+
+Conclusion for handoff:
+- The gated fix is NOT the cause — the gate only fires on the degenerate (zero acc/jerk)
+  criterion branch, which this run never takes; b51ffa6 and 2c3dd3e are bit-identical here.
+- The regression entered in the 63e8308..b51ffa6 chain and SURVIVES the gate. Prime suspect:
+  63e8308's revert of the in-estimator monopole crossing bound — the annulus-crossing
+  regime is exactly what that estimator path exercised. Needs SDAR-side review.
+- Caveat: the 1e-7 desktop baseline ran SDAR 6020bfc against older PeTar (API-incompatible
+  with current HEAD), so it is cross-machine evidence, not a same-machine A/B endpoint.
+- T2's current checks pass despite the explosion (only rho-stationarity for dt17/dt12/dt8
+  plus a dt17/dt12 level ratio are checked); per-regime level bounds should be added once
+  the physics verdict is in.
+
+Reproducer (dt11, ~40 s single-thread on the laptop):
+
+```bash
+python3 test/validation/make_ic.py --case t2 --output input.base
+petar.init -f input input.base
+OMP_NUM_THREADS=1 petar.mpi.omp.avx512 -a 0 --r-group 5e-4 --r-search-group 1e-3 \
+  -u 1 -b 1 -t 3.2 -s 4.8828125e-4 -o 9.765625e-4 -w 2 -f dt11 input
+# desktop-era level: ~2.8e-7; current level: ~7.98e-3 (max |Error/Total|)
+```
+
+## 9b. RESOLUTION (2026-10-13 late): §9 was a build-state artifact, not an SDAR regression
+
+Same-machine paired A/B (PeTar ec1dc7a tree fixed, only the SDAR checkout varied,
+forced rebuilds `touch src/hard.hpp; make -j`, binary taken from `build/`):
+
+| SDAR | dt11 max \|err/total\| |
+|---|---|
+| 6020bfc + no-op `setRDtLimitOne` shim (the missing endpoint; note current PeTar builds without `HERMITE_MONOPOLE_DT_LIMIT`, so the old estimator branch was inactive) | **2.748237e-07** |
+| 2c3dd3e (experiment) | **2.748237e-07 — identical** |
+
+Provenance corroboration: a fresh forced rebuild of SDAR 2c3dd3e under the current configure
+state is md5-identical (`1cd98362...`) to the binary installed at 16:56, and independently
+reproduces 2.748237e-07; the 6020bfc-shim and 2c3dd3e builds give the same value, so the
+level is robust to the SDAR source difference under one build configuration.
+
+Full T2 rerun with the current build: dt11/dt10/dt9/dt8 = 2.75e-7 / 4.69e-7 / 6.25e-7 / 7.54e-7 —
+**matching the desktop baseline column to the digit**; the fine half unchanged. The "explosion"
+is not reproducible from the current tree.
+
+What produced the 7.98e-3: the binary installed at the time of the §9 runs (call it B1, since
+overwritten at 16:56 by a reinstall). B1 was built in the bisect-heavy window where -O1 /
+-O3-g / instrumented configure states were being cycled (§0 documents these); autoconf keeps
+previous arguments in `config.status`, so a plain `./configure` re-run can silently inherit
+non-default flags — B1's exact configure line is unrecoverable, but it is the only constant
+shared by every 7.98e-3 observation (the §9 "b51ffa6 bit-identical to 2c3dd3e" A/B ran the
+same B1-style build for both, which is why source variation showed nothing).
+
+Why build flags can flip 4 orders here: §9's own envelope observation — each annulus crossing
+injects a ~1e-2-level error that largely CANCELS the next orbit (2700x drops/swings) — means
+the observable error is a small residual of large cancelling injections. Such marginal
+cancellation is exactly where FMA/contraction codegen differences decide whether the residual
+stays 1e-7 or sits at the 1e-3..1e-2 injection level. Consistent with §8's cliff sensitivity
+and with §0's -O1/-O3 behavior flips.
+
+Hygiene rules going forward: (1) A/B endpoints must record BOTH binaries' md5 + configure-time
+version stamp before trusting a level difference; (2) after bisect/instrumented sessions,
+`./configure` does not reset flags — explicitly re-configure with the intended options before
+producing numbers; (3) level comparisons in cancelling-error regimes are build-sensitive —
+prefer same-binary A/B or report both binaries' provenance.

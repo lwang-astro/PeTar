@@ -380,6 +380,35 @@ def _svg_frame(
     return sx, sy, xmin, xmax, plot_w, plot_h
 
 
+# 10-stop approximation of matplotlib's viridis ramp (perceptual, colorblind-safe).
+_VIRIDIS_STOPS: List[Tuple[int, int, int]] = [
+    (68, 1, 84), (72, 40, 120), (62, 74, 137), (49, 104, 142), (38, 130, 142),
+    (31, 158, 137), (53, 183, 121), (109, 205, 89), (180, 222, 44), (253, 231, 37),
+]
+
+
+def gradient_colors(n: int) -> List[str]:
+    """Return n hex colors sampled evenly along the viridis ramp.
+
+    Used when a plot encodes an ordered sweep (e.g. dt from fine to coarse) in
+    color: adjacent palette entries repeat for >6 runs, a gradient keeps every
+    curve distinguishable while making the ordering visible at a glance.
+    """
+    if n <= 0:
+        return []
+    stops = _VIRIDIS_STOPS
+    if n == 1:
+        return ["#%02x%02x%02x" % stops[len(stops) // 2]]
+    colors = []
+    for i in range(n):
+        pos = i * (len(stops) - 1) / (n - 1)
+        k = min(int(pos), len(stops) - 2)
+        f = pos - k
+        c = tuple(round(stops[k][j] + (stops[k + 1][j] - stops[k][j]) * f) for j in range(3))
+        colors.append("#%02x%02x%02x" % c)
+    return colors
+
+
 def svg_curves_plot(
     curves: List[Tuple[str, List[Point], str, str]],
     legend_models: List[Tuple[str, str]],
