@@ -89,7 +89,8 @@ if __name__ == '__main__':
         print("       mass:   Select objects based on a mass range. The range is connected by '_'.")
         print("               For example, '0.5_1' indicates mass between 0.5 and 1.0.")
         print("       custom: Select particles based on a user-defined selection function in Python.")
-        print("               The filename of a Python script is provided as mode_argument.")
+        print("               The name of an importable Python module (available on sys.path, without the .py suffix)")
+        print("               is provided as mode_argument; the module must define 'petar_data_select_function'.")
         print("               1) When the option '-f' is origin, single, or binary, the script syntax:")
         print("               def petar_data_select_function(header, data):")
         print("                   # header: origin snapshot header")
@@ -208,7 +209,7 @@ if __name__ == '__main__':
             idlist.append(int(subtype))
         idlist=np.array(idlist)
         filename = remainder[1]
-        filename_out = filename_prefix+'.'+idarg
+        filename_out = filename_prefix+'.'+idarg+'.'+snap_type
     elif (mode=='idfile') | (mode=='bidfile'):
         idfile = open(remainder[0],'r')
         idlines=idfile.read().splitlines()
@@ -217,7 +218,7 @@ if __name__ == '__main__':
             idlist.extend([int(x) for x in line.split()])
         idlist=np.array(idlist)
         filename = remainder[1]
-        filename_out = filename_prefix+'.'+remainder[0]
+        filename_out = filename_prefix+'.'+os.path.basename(remainder[0])+'.'+snap_type
     elif (mode=='mass') :
         mass_range = [float(x) for x in remainder[0].split('_')]
         if (len(mass_range)!=2):
@@ -235,7 +236,7 @@ if __name__ == '__main__':
         custom_script = remainder[0]
         selfun = __import__(custom_script)
         filename = remainder[1]
-        filename_out = filename_prefix+'.'+remainder[0]
+        filename_out = filename_prefix+'.'+os.path.basename(remainder[0])+'.'+snap_type
     else:
         raise ValueError("Mode is not recognized, given ", mode, ", should be type, id, idfile, mass, bid, bidfile or custom.")
 

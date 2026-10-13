@@ -24,8 +24,8 @@ def _saveRealtimeData(data, filename, output_format):
         with open(filename, 'ab') as f:
             data[data.size-1:data.size].tofile(f)
     elif (output_format == 'npy'):
-        with open(filename, 'wb') as f:
-            data.save(f)
+        # npy cannot be appended: rewrite the full history so crash recovery keeps every processed snapshot
+        data.save(filename if filename.endswith('.npy') else filename + '.npy')
     else:
         raise ValueError('Output format %s is not supported, should be ascii, binary or npy' % output_format)
 
@@ -33,6 +33,10 @@ def _saveRealtimeData(data, filename, output_format):
 def _prepareRealtimeSaveFiles(filename_prefix, save_keys, output_format, write_mode):
     """Prepare output files for real-time saving."""
     if (write_mode == 'a'):
+        return
+
+    if (output_format == 'npy'):
+        # np.save creates the '.npy'-suffixed file itself; an empty bare file would confuse readers
         return
 
     file_mode = 'w'

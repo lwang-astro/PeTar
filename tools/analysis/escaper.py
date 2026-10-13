@@ -2,6 +2,18 @@ import numpy as np
 from sdar.base import *
 from .data import *
 
+
+def _replaceDataInPlace(obj, data_new):
+    """ Replace all data members of a DictNpArrayMix instance by another instance of the same type (in place) """
+    for key_type in obj.keys:
+        key = key_type[0]
+        item = data_new.__dict__[key]
+        obj.__dict__[key] = item
+        if (issubclass(type(item), DictNpArrayMix)):
+            item.setHost(obj)
+    obj.size = data_new.size
+
+
 class SingleEscaper(Particle):
     """ Single escaper recorder output from PeTar
     Keys: (class members)
@@ -69,11 +81,12 @@ class SingleEscaper(Particle):
 
     def removeDuplicate(self):
         """ removed duplicated escapers, keep the first appearing one
+        The data members are updated in place.
         """
         sindex=self.time.argsort()
         data_sort=self[sindex]
         unid, index= np.unique(data_sort.id, return_index=True)
-        self = data_sort[index]
+        _replaceDataInPlace(self, data_sort[index])
 
 class BinaryEscaper(Binary):
     """ Binary escaper information
@@ -149,10 +162,11 @@ class BinaryEscaper(Binary):
 
     def removeDuplicate(self):
         """ removed duplicated escapers, keep the first appearing one
-        Use the first component id to check duplicate. 
+        Use the first component id to check duplicate.
+        The data members are updated in place.
         """
         unid, index= np.unique(self.p1.id, return_index=True)
-        self = self[index]
+        _replaceDataInPlace(self, self[index])
 
 #def joinEscaper(*esc_list):
 #    single_type = type(esc_list[0].single)

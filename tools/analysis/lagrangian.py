@@ -813,11 +813,11 @@ class LagrangianMultiple(DictNpArrayMix):
             mmin = float(mmin)
             mmax = float(mmax)
             all_sort.mass = np.zeros(all_sort.size) # clear up mass, final mass is the sum of matched component masses
+            # singles carry the placeholder m2 = 0, so a component outside the range must not veto the object (union, as the stellar-type grouping above)
             sel1 = (all_sort.m1 >= mmin) & (all_sort.m1 < mmax)
             sel2 = (all_sort.m2 >= mmin) & (all_sort.m2 < mmax)
-            sel = (sel1 & sel2)
+            sel = (sel1 | sel2)
 
-            all_sort.mass = np.zeros(all_sort.size) # clear up mass, final mass is the sum of matched component masses
             all_sort.mass[sel1] += all_sort.m1[sel1]
             all_sort.mass[sel2] += all_sort.m2[sel2]
             all_sel_sort = all_sort[sel]

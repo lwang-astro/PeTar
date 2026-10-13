@@ -400,6 +400,16 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 2. `petar.data` 恢复时打印每 key 记录数与时间范围；输出 key 文件时间覆盖不一致时显式警告（多由不同 flags 的中断运行造成）。
 3. 排查 data.process 崩溃先看第一条 warning 而非最后的 traceback；重跑前清理 `.parallel.*` partial 并核对恢复日志。
 
+### 2026-10-13: 改了 `tools/analysis` 后 `import petar` 仍解析到 `~/include` 安装副本，运行时验证测了旧代码
+
+**Mistake**: 修复 escaper `removeDuplicate`（issue #82）后立即运行最小验证脚本，`sys.path.insert(0,'tools')` + `import petar` 下行为仍是旧的（4 行重复 id 未去重），一度怀疑修复写错。
+
+**Root cause**: `petar` 包通过 PYTHONPATH 优先解析到安装副本 `~/include/petar/`（`make install` 的目标），工作区 `tools/` 的改动在重新安装前不影响运行时。
+
+**Prevention rule**:
+1. 编辑 `tools/analysis/*.py` 或 `tools/*.py` 后、做任何运行时验证前，先重新安装：`install -m 644 tools/analysis/*.py ~/include/petar/` 及对应 `~/bin/petar.*`（C++ 构建独立，可跳过）。
+2. 验证脚本里打印 `petar.__file__` 确认实际加载路径再下结论。
+
 ---
 
 ## Restart / Resume

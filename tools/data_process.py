@@ -13,9 +13,21 @@ def getParallelRealtimePrefix(filename_prefix, rank):
     return filename_prefix + '.parallel.' + str(rank)
 
 
+def getMixFilename(filename, output_format):
+    """ Resolve the on-disk name of an aggregated product file.
+    npy products are stored with the '.npy' suffix; bare names from older runs are accepted when reading.
+    """
+    if (output_format == 'npy') and (not filename.endswith('.npy')):
+        if (not os.path.exists(filename + '.npy')) and os.path.exists(filename):
+            return filename
+        return filename + '.npy'
+    return filename
+
+
 def clearParallelRealtimeFiles(filename_prefix, save_keys):
     for key in save_keys:
-        flist = glob.glob(filename_prefix + '.parallel.*.' + key)
+        # '*' catches both bare names and '.npy'-suffixed realtime files
+        flist = glob.glob(filename_prefix + '.parallel.*.' + key + '*')
         for fname in flist:
             if os.path.exists(fname):
                 os.remove(fname)
@@ -38,7 +50,7 @@ def readMixDataByKey(key, filename, output_format, kwargs, strict=True):
     elif (output_format == 'binary'):
         data.fromfile(filename, strict_mismatch=strict)
     elif (output_format == 'npy'):
-        data.load(filename)
+        data.load(getMixFilename(filename, output_format))
     else:
         raise ValueError('Output format %s is unknown, should be ascii, binary or npy.' % output_format)
     return data
@@ -52,8 +64,8 @@ def writeMixData(data, filename, output_format):
         with open(filename, 'wb') as f:
             data.tofile(f)
     elif (output_format == 'npy'):
-        with open(filename, 'wb') as f:
-            data.save(f)
+        # np.save with a path (not a file handle) appends the '.npy' suffix readers expect
+        data.save(filename if filename.endswith('.npy') else filename + '.npy')
     else:
         raise ValueError('Output format %s is unknown, should be ascii, binary or npy.' % output_format)
 
@@ -77,12 +89,15 @@ def deduplicateByTime(data):
 def recoverParallelRealtimeFiles(filename_prefix, save_keys, output_format, kwargs, append_mode=False):
     recovered_keys = []
     for key in save_keys:
-        flist = glob.glob(filename_prefix + '.parallel.*.' + key)
+        # '*' catches both bare names and '.npy'-suffixed realtime files
+        flist = glob.glob(filename_prefix + '.parallel.*.' + key + '*')
         if (len(flist) == 0):
             continue
 
         def get_rank(fname):
             fs = fname.split('.')
+            if (fs[-1] == 'npy'):
+                fs = fs[:-1]
             if (len(fs) < 3):
                 return -1
             try:
@@ -105,7 +120,7 @@ def recoverParallelRealtimeFiles(filename_prefix, save_keys, output_format, kwar
         if (len(data_temp) > 1):
             data_merge = petar.join(*data_temp)
 
-        key_filename = filename_prefix + '.' + key
+        key_filename = getMixFilename(filename_prefix + '.' + key, output_format)
         if append_mode and os.path.exists(key_filename) and os.path.getsize(key_filename) > 0:
             data_old = readMixDataByKey(key, key_filename, output_format, kwargs)
             data_merge = petar.join(data_old, data_merge)
@@ -137,7 +152,7 @@ def getProcessedTimeSet(filename_prefix, output_format, kwargs):
     processed_time = None
     key_coverage = []
     for key in required_keys:
-        key_filename = filename_prefix + '.' + key
+        key_filename = getMixFilename(filename_prefix + '.' + key, output_format)
         if (not os.path.exists(key_filename)):
             return set()
         if (os.path.getsize(key_filename) == 0):
@@ -347,6 +362,7 @@ if __name__ == '__main__':
             elif opt in ('-b','--r-max-binary'):
                 kwargs['r_max_binary'] = float(arg)
             elif opt in ('-B','--full-binary'):
+                kwargs['simple_binary'] = False
                 kwargs['simple_mode'] = False
             elif opt in ('-a','--average-mode'):
                 kwargs['average_mode'] = arg
@@ -418,7 +434,6 @@ if __name__ == '__main__':
     fl.close()
 
     kwargs['filename_prefix'] = filename_prefix
-    kwargs['realtime_save'] = (n_cpu == 1)
     kwargs['realtime_save_mode'] = write_option
 
     recover_keys=['lagr','core','bse_status']
@@ -459,6 +474,10 @@ if __name__ == '__main__':
         print('No snapshot needs processing, stop.')
         sys.exit(0)
 
+    # npy cannot be appended in place: for npy resume runs, disable realtime saving and merge old+new below.
+    # Evaluated after the resume blocks, which may switch write_option to 'a'.
+    kwargs['realtime_save'] = (n_cpu == 1) and not (output_format == 'npy' and write_option == 'a')
+
     for key, item in kwargs.items(): print(key,':',item)
 
     result=dict()
@@ -479,30 +498,28 @@ if __name__ == '__main__':
         if key in result.keys():
             key_filename  = filename_prefix + '.' + key
             if (key in realtime_saved_keys) and (result[key].size > 0):
-                print (key,"data is updated during processing in file:",key_filename)
+                print (key,"data is updated during processing in file:",getMixFilename(key_filename, output_format))
                 continue
             if (output_format == 'npy') and (write_option == 'a'):
                 result_mix = result[key]
-                if os.path.exists(key_filename) and (os.path.getsize(key_filename) > 0):
+                if os.path.exists(getMixFilename(key_filename, output_format)) and (os.path.getsize(getMixFilename(key_filename, output_format)) > 0):
                     data_old = readMixDataByKey(key, key_filename, output_format, kwargs)
                     result_mix = petar.join(data_old, result[key])
                     result_mix = deduplicateByTime(result_mix)
                 writeMixData(result_mix, key_filename, output_format)
-                print (key,"data is saved in file:",key_filename)
+                print (key,"data is saved in file:",getMixFilename(key_filename, output_format))
                 continue
-            write_mode = write_option
-            if (output_format in ['binary','npy']):
-                write_mode += 'b'
-            with open(key_filename, write_mode) as f:
-                if (output_format=='ascii'):
+            if (output_format == 'ascii'):
+                with open(key_filename, write_option) as f:
                     result[key].savetxt(f)
-                elif (output_format=='binary'):
+            elif (output_format == 'binary'):
+                with open(key_filename, write_option+'b') as f:
                     result[key].tofile(f)
-                elif (output_format=='npy'):
-                    result[key].save(f)
-                else:
-                    raise ValueError('Output format %s is unknown, should be ascii, binary or npy.' % output_format)
-                print (key,"data is saved in file:",key_filename)
+            elif (output_format == 'npy'):
+                writeMixData(result[key], key_filename, output_format)
+            else:
+                raise ValueError('Output format %s is unknown, should be ascii, binary or npy.' % output_format)
+            print (key,"data is saved in file:",getMixFilename(key_filename, output_format))
 
     for key in ['esc_single','esc_binary']:
         if key in result.keys():
@@ -514,32 +531,25 @@ if __name__ == '__main__':
                     data_read=petar.SingleEscaper(**kwargs)
                 else:
                     data_read=petar.BinaryEscaper(**kwargs)
-                if os.path.getsize(key_filename)>0:
+                esc_key_filename = getMixFilename(key_filename, esc_snapshot_format)
+                if os.path.exists(esc_key_filename) and os.path.getsize(esc_key_filename)>0:
                     if (esc_snapshot_format=='ascii'):
-                        data_read.loadtxt(key_filename)
+                        data_read.loadtxt(esc_key_filename)
                     elif (esc_snapshot_format=='binary'):
-                        data_read.fromfile(key_filename)
+                        data_read.fromfile(esc_key_filename)
                     elif (esc_snapshot_format=='npy'):
-                        data_read.load(key_filename)
+                        data_read.load(esc_key_filename)
                     else:
-                        raise ValueError('Escape snapshot format %s unknown, should be ascii, binary or npy.' % esc_snapshot_format)                                            
+                        raise ValueError('Escape snapshot format %s unknown, should be ascii, binary or npy.' % esc_snapshot_format)
                     result_mix = petar.join(data_read,result[key])
                     result_mix.removeDuplicate()
-                
-            if (output_format=='ascii'):
-                with open(key_filename, 'w') as f:
-                    result_mix.savetxt(f)
-            elif (output_format=='binary'):
-                with open(key_filename, 'wb') as f:
-                    result_mix.tofile(f)
-            elif (output_format=='npy'):
-                with open(key_filename, 'wb') as f:
-                    result_mix.save(f)
-            else:
-                raise ValueError('Output format %s is unknown, should be ascii, binary or npy.' % output_format)
-            print ("%s data is saved in file: %s" % (key,key_filename))
 
-    if (n_cpu>1):
+            writeMixData(result_mix, key_filename, output_format)
+            print ("%s data is saved in file: %s" % (key,getMixFilename(key_filename, output_format)))
+
+    if (n_cpu!=1):
+        # parallel branch always uses per-rank realtime files; n_cpu==0 (default) is substituted inside
+        # parallelDataProcessList, so the main-flow value here can still be 0
         clearParallelRealtimeFiles(filename_prefix, fout_list)
 
     print ('CPU time profile:')

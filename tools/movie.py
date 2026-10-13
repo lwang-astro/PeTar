@@ -1663,5 +1663,9 @@ if __name__ == '__main__':
         anime = animation.FuncAnimation(fig, animate, init_func=init,
                                         frames=n_frame, interval=200, blit=True)
     
-        anime.save(output_file+'.'+plot_format, fps=fps, extra_args=['-vcodec', 'libx264'])    
+        # libx264 is only valid for H.264-capable containers; let ffmpeg pick the codec otherwise
+        save_args = {'fps': fps}
+        if (plot_format in ('mp4','mkv','mov','avi','m4v')):
+            save_args['extra_args'] = ['-vcodec', 'libx264']
+        anime.save(output_file+'.'+plot_format, **save_args)
 
