@@ -661,6 +661,11 @@ CXXNOMPI
 PROG_NAME
 PETAR_INCLUDE
 AGAMA_PATH
+configure_date
+sdar_git
+petar_git
+sdar_version
+petar_version
 SDAR_PATH
 GALPY_PATH
 MPFRCLIBS
@@ -5047,7 +5052,7 @@ then :
 printf %s "checking whether C++ compiler accepts -mcpu=tsv110... " >&6; }
 if test ${ax_cv_check_cxxflags___mcpu_tsv110+y}
 then :
-  printf "%s\n" "(cached) " >&6
+  printf %s "(cached) " >&6
 else $as_nop
 
   ax_check_save_flags=$CXXFLAGS
@@ -7219,7 +7224,7 @@ then :
 printf %s "checking whether C compiler accepts -mcpu=tsv110... " >&6; }
 if test ${ax_cv_check_cflags___mcpu_tsv110+y}
 then :
-  printf "%s\n" "(cached) " >&6
+  printf %s "(cached) " >&6
 else $as_nop
 
   ax_check_save_flags=$CFLAGS
@@ -8344,6 +8349,14 @@ fi
 
 VERSION=$petar_version'_'$sdar_version
 
+# git provenance for the run-log Build banner (best effort; "nogit" outside a checkout;
+# "-dirty" when tracked files have uncommitted changes - untracked files are ignored)
+petar_git=`git -C "$srcdir" rev-parse --short HEAD 2>/dev/null || echo nogit`
+if git -C "$srcdir" status --porcelain -uno 2>/dev/null | grep -q .; then petar_git="$petar_git-dirty"; fi
+sdar_git=`git -C "$SDAR_PATH" rev-parse --short HEAD 2>/dev/null || echo nogit`
+if git -C "$SDAR_PATH" status --porcelain -uno 2>/dev/null | grep -q .; then sdar_git="$sdar_git-dirty"; fi
+configure_date=`date '+%Y-%m-%d %H:%M:%S'`
+
 
 
 
@@ -8360,6 +8373,11 @@ if test x"$sevn_lib" == x || test x"$sevn_lib" == xnotfound
 then :
   sevn_lib=''
 fi
+
+
+
+
+
 
 
 

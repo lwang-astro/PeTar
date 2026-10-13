@@ -587,6 +587,43 @@ def run_shell(command: str, cwd: Path, output_path: Path) -> int:
     return proc.returncode
 
 
+def _binary_provenance(variables: Dict[str, str]) -> Dict[str, Any]:
+    """md5 + Build banner of every petar binary referenced by the run variables.
+
+    Provenance is recorded per report so that error levels can always be traced
+    back to the exact binaries that produced them (build-flag sensitivity made
+    this necessary; see NOTE 2026-10-12/13 9b)."""
+    import hashlib
+    import subprocess as _sp
+
+    seen: Dict[str, Dict[str, Any]] = {}
+    for value in variables.values():
+        cand = Path(value)
+        try:
+            if not cand.is_file() or not (cand.stat().st_mode & 0o111):
+                continue
+        except OSError:
+            continue
+        key = str(cand.resolve())
+        if key in seen:
+            continue
+        entry: Dict[str, Any] = {"path": key}
+        try:
+            entry["md5"] = hashlib.md5(cand.read_bytes()).hexdigest()
+        except OSError:
+            pass
+        try:
+            r = _sp.run([str(cand), "-h"], capture_output=True, text=True, timeout=60)
+            for line in (r.stdout + r.stderr).splitlines():
+                if line.startswith("Build:"):
+                    entry["build"] = line.strip()
+                    break
+        except Exception:
+            pass
+        seen[key] = entry
+    return {"binaries": list(seen.values())}
+
+
 def execute_scenario(
     scenario: Dict[str, Any],
     base_dir: Path,
@@ -1065,6 +1102,7 @@ def main() -> int:
     summary = summarize_results(all_checks) if not args.dry_run else {"passed": True, "n_total": 0, "n_failed": 0}
     report = {
         "dry_run": args.dry_run,
+        "petar_provenance": _binary_provenance(variables),
         "summary": summary,
         "runs": all_runs,
         "checks": all_checks,

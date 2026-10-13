@@ -3,6 +3,7 @@
 #include <string>
 #include<getopt.h>
 
+#include<get_version.hpp>
 #include <particle_simulator.hpp>
 #define HARD_DEBUG_PRINT_FEQ 1
 
@@ -178,6 +179,7 @@ public:
 };
 
 int main(int argc, char **argv){
+    std::cout<<"Build: "<<GetBuildInfo()<<std::endl;
     IOParamsHardDebug debug_io;
     IOParamsHard hard_io;
 #ifdef STELLAR_EVOLUTION

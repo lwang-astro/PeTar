@@ -671,6 +671,14 @@ AC_CHECK_FILE([VERSION],
               [AC_MSG_FAILURE([can't find the file VERSION])])
 VERSION=$petar_version'_'$sdar_version
 
+# git provenance for the run-log Build banner (best effort; "nogit" outside a checkout;
+# "-dirty" when tracked files have uncommitted changes - untracked files are ignored)
+petar_git=`git -C "$srcdir" rev-parse --short HEAD 2>/dev/null || echo nogit`
+if git -C "$srcdir" status --porcelain -uno 2>/dev/null | grep -q .; then petar_git="$petar_git-dirty"; fi
+sdar_git=`git -C "$SDAR_PATH" rev-parse --short HEAD 2>/dev/null || echo nogit`
+if git -C "$SDAR_PATH" status --porcelain -uno 2>/dev/null | grep -q .; then sdar_git="$sdar_git-dirty"; fi
+configure_date=`date '+%Y-%m-%d %H:%M:%S'`
+
 AC_SUBST([with_arch])
 AC_SUBST([use_simd])
 AC_SUBST([use_64b])
@@ -708,6 +716,11 @@ AC_SUBST([MPFRCFLAGS])
 AC_SUBST([MPFRCLIBS])
 AC_SUBST([GALPY_PATH])
 AC_SUBST([SDAR_PATH])
+AC_SUBST([petar_version])
+AC_SUBST([sdar_version])
+AC_SUBST([petar_git])
+AC_SUBST([sdar_git])
+AC_SUBST([configure_date])
 AC_SUBST([AGAMA_PATH])
 AC_SUBST([GSL_CFLAGS])
 AC_SUBST([GSL_LIBS])

@@ -44,11 +44,7 @@ This compact version prioritizes execution safety, option correctness, and repro
 
 ### Gate 4 — Build and binary integrity
 
-- **Check binary version against source before running a binary**, and ask whether to rebuild (`./configure` + `make install`) on mismatch:
-  ```bash
-  binary_version=$(strings <binary> | grep -A1 "^Version: $" | tail -1)
-  source_version=$(echo "$(cat VERSION)_$(cat ../SDAR/VERSION)")
-  ```
+- **Check the binary's `Build:` banner against the source state before running** (`<binary> -h | grep '^Build:'` — prints PeTar/SDAR versions, git SHAs, `-dirty` flags, compile flags, configure/build times), and ask whether to rebuild (`./configure` + `make install`) on mismatch. The banner is the provenance record: any `-dirty` or unexpected flags entry means the binary does not match a clean checkout — do not trust error levels from it.
 - **When rebuilding, pass only the flags the current scenario needs** — never reuse the previous `config.status` command verbatim; it may carry unneeded features (e.g. `gasdrag`, `pnhermite`) into an unnecessarily large binary. Derive flags from the features selected for this scenario:
   - `--with-interrupt=<bse|mobse|bseEmp|sevn|dsm>` for stellar evolution / disk star merger
   - `--with-external=<galpy|agama>` for external potential

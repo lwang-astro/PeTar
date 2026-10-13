@@ -1,6 +1,13 @@
 #pragma once
 #include<string>
+#include "build_info.hpp"
 
 std::string GetVersion() {
     return std::string("@VERSION@");
+}
+
+//! full provenance for run logs: configure-time repo states + build-time flags
+std::string GetBuildInfo() {
+    return std::string("PeTar @petar_version@ (@petar_git@) + SDAR @sdar_version@ (@sdar_git@)"
+                       "; flags [") + PETAR_BUILD_FLAGS + "]; configured @configure_date@; built " + PETAR_BUILD_DATE;
 }

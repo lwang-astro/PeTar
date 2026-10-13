@@ -1307,3 +1307,9 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause(机制)**: §9 自己观测到每次环带穿越注入 ~1e-2 误差且下一轨道基本相消(包络 2700× 摆动)——可观测量是大幅抵消后的残差;FMA/收缩类代码生成差异决定残差停在 1e-7 还是 1e-3~1e-2 注入水平。6020bfc+no-op shim 端点(补上缺失基线,当前 PeTar 无 MONOPOLE 定义故旧分支未激活)与 2c3dd3e 在同一构建配置下给出同一 2.748237e-07;全 T2 重跑粗半段逐位=桌面基线。另:checkout 带 shim 未提交改动会静默 Aborting(输出被 tail 吞掉),后续构建仍用旧 checkout——A/B 标签必须以构建后 grep/md5 验证。
 
 **Prevention rule**: ① 抵消型误差(逐穿越注入+轨道间相消)体制下,误差"水平"是构建敏感量——跨二进制比较水平前先记录双方 md5+configure 版本戳;② 二分/插桩会话后,裸 ./configure 不重置参数,产数前显式重配目标选项;③ API 不兼容不是 A/B 终点的豁免——写 no-op shim 补端点;④ git checkout 失败(Aborting)可能被管道吞掉:多步验证链中每步检查分支/版本(git branch --show-current、grep 特征代码、md5sum)后再贴标签。
+
+### 2026-10-13: 【溯源基础设施落地】Build 横幅+SDAR 头依赖+runner 溯源 preflight 三件套;首次运行即捕获坏安装件——SKILL Gate 4 已同步为 Build 横幅检查
+
+**内容**:① configure 生成双仓 git SHA+dirty 戳;make 生成 build_info.hpp(生效 CXXFLAGS+MT_FLAGS 全量+时刻,cmp 守卫防抖动);petar 与 hard.debug 启动打印 `Build:` 一行。② Makefile 将 ../SDAR/src 头列为 4 个编译目标前置依赖,touch SDAR 头即重链(陈旧对象类根除)。③ run_validation.py preflight 把涉及二进制的 path+md5+Build 行写入每份 report JSON。首次运行即发现 ~/bin 中一个坏替换窗口期构建的安装件(横幅含未替换 @petar_version@)。SKILL.md Gate 4 版本检查已由 strings 方案改为 Build 横幅方案(391→387 行,净 -4)。
+
+**Prevention rule**: 溯源检查用 `<binary> -h | grep '^Build:'`;`-dirty` 或异常 flags 条目=二进制不匹配干净检出,其误差水平不可信;验证报告的 petar_provenance 字段自动可用,无需手工 md5。

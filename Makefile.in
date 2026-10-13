@@ -23,6 +23,15 @@ TARGET=build/@PROG_NAME@ build/@PROG_NAME@.hard.debug build/@PROG_NAME@.format.t
 all: $(TARGET)
 
 SRC = main.cc ${shell ls ./src/*.hpp} 
+# SDAR headers are compile inputs: list them as prerequisites so any SDAR
+# checkout/edit triggers a rebuild (object rules cannot see ../SDAR paths)
+SDAR_SRC = ${shell ls ../SDAR/src/*.h ../SDAR/src/*.hpp ../SDAR/src/*/*.h ../SDAR/src/*/*.hpp 2>/dev/null}
+
+# build-time provenance (flags + date); rewritten only when content changes
+src/build_info.hpp:
+	@printf '// generated at build time; do not edit\n#pragma once\n#define PETAR_BUILD_FLAGS "%s"\n#define PETAR_BUILD_DATE "%s"\n' "$(CXXFLAGS) $(MT_FLAGS)" "`date '+%Y-%m-%d %H:%M'`" > $@.new
+	@cmp -s $@.new $@ || mv $@.new $@; rm -f $@.new
+
 HARD_SRC= io.hpp ptcl.hpp particle_base.hpp hard_assert.hpp cluster_list.hpp hard.hpp hard_ptcl.hpp hermite_interaction.hpp hermite_information.hpp hermite_perturber.hpp disk_star_merger.hpp ar_interaction.hpp ar_perturber.hpp search_group_candidate.hpp artificial_particles.hpp stability.hpp soft_ptcl.hpp static_variables.hpp tidal_tensor.hpp orbit_sampling.hpp pseudoparticle_multipole.hpp
 
 ifeq ($(use_fdps_comm),yes)
@@ -382,22 +391,22 @@ CUDA_INCLUDE += -I./src @PETAR_INCLUDE@
 build:
 	[ -d build ] || mkdir build
 
-build/@PROG_NAME@:  $(SRC) $(SE_OBJS) $(OBJS) $(LIBFILES) $(RANDFILES) |build
+build/@PROG_NAME@:  $(SRC) $(SE_OBJS) $(OBJS) $(LIBFILES) $(RANDFILES) $(SDAR_SRC) src/build_info.hpp |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(OMPFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(SE_OBJS) $(OBJS) $(CXXLIBS) $(RANDLIBS)
 
 build/@PROG_NAME@.format.transfer: format_transfer.cxx $(SE_OBJS) |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(OMPLINKFLAGS) $(MT_FLAGS) -o $@ $< $(SE_OBJS) $(CXXLIBS)
 
-build/@PROG_NAME@.hard.debug: hard_debug.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) $(SE_OBJS) |build
+build/@PROG_NAME@.hard.debug: hard_debug.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) $(SE_OBJS) $(SDAR_SRC) src/build_info.hpp |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(OMPFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(SE_OBJS) $(CXXLIBS) $(RANDLIBS)
 
-build/@PROG_NAME@.dump2test: dump2test.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) |build
+build/@PROG_NAME@.dump2test: dump2test.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) $(SDAR_SRC) src/build_info.hpp |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(OMPFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS) $(RANDLIBS)
 
 build/petar.external.$(ext_mode): external_test.cxx $(EXTLIBFILES) $(EXT_SRC) |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(EXTFLAGS) $< -o $@ $(EXTLIBS)
 
-build/petar.hard.test: hard_test.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) |build
+build/petar.hard.test: hard_test.cxx $(HARD_SRC) $(LIBFILES) $(RANDFILES) $(SDAR_SRC) src/build_info.hpp |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(HARD_FDPSFLAGS) $(OMPFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS) $(RANDLIBS)
 
 build/petar.simd.test: simd_test.cxx soft_force.hpp io.hpp hard_ptcl.hpp static_variables.hpp force_gpu_cuda.hpp phantomquad_for_p3t_k.hpp phantomquad_for_p3t_x86.hpp $(OBJS) |build
