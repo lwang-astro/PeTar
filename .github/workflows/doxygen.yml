@@ -21,13 +21,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       - name: Install doxygen
-        run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
+        run: sudo apt-get update && sudo apt-get install -y doxygen graphviz pandoc
       - name: Build documentation
         working-directory: doc
         run: ( cat doxygen.conf; echo 'GENERATE_LATEX = NO' ) | doxygen -
+      - name: Assemble site (README homepage + docs at original path)
+        run: |
+          mkdir -p _site/doc
+          pandoc -s --metadata title="PeTar" -f gfm -t html README.md -o _site/index.html
+          cp -r doc/html _site/doc/html
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: doc/html
+          path: _site
 
   deploy:
     needs: build
