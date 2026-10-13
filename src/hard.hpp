@@ -1471,8 +1471,9 @@ public:
             // and returns no limit for force-free particles (outside r_out); without a bound such
             // a particle can cross the whole r_in..r_out ramp in one dt_max step (2026-09-13 IMBH
             // slingshot). Pass the particle's own changeover r_in as the per-slot dt-limit radius;
-            // SDAR keeps each step below the flying time to that sphere, recomputed from the
-            // current c.m.-frame state, so the bound stays fresh as the particle moves.
+            // SDAR keeps each step below eta times the flying time across that radius,
+            // recomputed from the current c.m.-frame velocity, so the bound stays fresh as
+            // the particle moves.
             {
                 const PS::S32 n_ptcl_h4 = h4_int.particles.getSize();
                 auto* ptcl_h4 = h4_int.particles.getDataAddress();
