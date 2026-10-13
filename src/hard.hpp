@@ -1467,6 +1467,28 @@ public:
 */
             }
 
+            // changeover-crossing step constraint: the SDAR estimator is changeover-agnostic
+            // and returns no limit for force-free particles (outside r_out); without a bound such
+            // a particle can cross the whole r_in..r_out ramp in one dt_max step (2026-09-13 IMBH
+            // slingshot). Pass the particle's own changeover r_in as the per-slot dt-limit radius;
+            // SDAR keeps each step below the flying time to that sphere, recomputed from the
+            // current c.m.-frame state, so the bound stays fresh as the particle moves.
+            {
+                const PS::S32 n_ptcl_h4 = h4_int.particles.getSize();
+                auto* ptcl_h4 = h4_int.particles.getDataAddress();
+                for (PS::S32 k=0; k<n_ptcl_h4; k++) {
+                    const PS::F64 r_in = ptcl_h4[k].changeover.getRin();
+                    if (r_in>0.0) h4_int.setRDtLimitOne(k, r_in);
+                }
+                const PS::S32 n_group_h4 = h4_int.groups.getSize();
+                const PS::S32 offset_group = h4_int.getIndexOffsetGroup();
+                auto* group_h4 = h4_int.groups.getDataAddress();
+                for (PS::S32 k=0; k<n_group_h4; k++) {
+                    const PS::F64 r_in = group_h4[k].particles.cm.changeover.getRin();
+                    if (r_in>0.0) h4_int.setRDtLimitOne(k+offset_group, r_in);
+                }
+            }
+
             h4_int.initialIntegration();
             h4_int.sortDtAndSelectActParticle();
 
@@ -1585,6 +1607,8 @@ public:
                     ASSERT(m_fac>0.0);
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
                     syncMemberChangeoverScale(groupi.particles, _time_end);
+                    // crossing bound for the new group c.m. slot (see initial())
+                    h4_int.setRDtLimitOne(group_index[i]+h4_int.getIndexOffsetGroup(), pcm.changeover.getRin());
 
 #ifdef EXTERNAL_HARD
                     // hard external perturbation
@@ -3021,6 +3045,13 @@ public:
         for(PS::S32 i=0; i<n; i++){
             PS::S32 adr = adr_array[i];
             ptcl_hard_[i].DataCopy(sys[adr]);
+            // the soft system never maintains the Hermite state (acc0/acc1/pot/time/dt);
+            // unset fields (observed NaN from IC) poison paths that do not re-initialize them
+            ptcl_hard_[i].acc0[0] = ptcl_hard_[i].acc0[1] = ptcl_hard_[i].acc0[2] = 0.0;
+            ptcl_hard_[i].acc1[0] = ptcl_hard_[i].acc1[1] = ptcl_hard_[i].acc1[2] = 0.0;
+            ptcl_hard_[i].pot = 0.0;
+            ptcl_hard_[i].time = 0.0;
+            ptcl_hard_[i].dt = 0.0;
             ptcl_hard_[i].adr_org = adr;
             //n_ptcl_in_cluster_[i] = 1;
         }
@@ -3280,6 +3311,13 @@ public:
         for(PS::S32 i=0; i<n_ptcl; i++){
             PS::S32 adr = _adr_array[i];
             ptcl_hard_[i].DataCopy(sys[adr]);
+            // the soft system never maintains the Hermite state (acc0/acc1/pot/time/dt);
+            // unset fields (observed NaN from IC) poison paths that do not re-initialize them
+            ptcl_hard_[i].acc0[0] = ptcl_hard_[i].acc0[1] = ptcl_hard_[i].acc0[2] = 0.0;
+            ptcl_hard_[i].acc1[0] = ptcl_hard_[i].acc1[1] = ptcl_hard_[i].acc1[2] = 0.0;
+            ptcl_hard_[i].pot = 0.0;
+            ptcl_hard_[i].time = 0.0;
+            ptcl_hard_[i].dt = 0.0;
             ptcl_hard_[i].adr_org = adr;
             //  ptcl_hard_[i].n_ngb= sys[adr].n_ngb;
         }
