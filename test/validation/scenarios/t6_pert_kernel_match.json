@@ -3,7 +3,7 @@
   "description": "Single-tree-step AR perturber-list kernel match for the members-keep-own-changeover design. An engineered central massive triple (4+4+3 Msun) guarantees a tidal-tensor-active AR group from the first step, and running exactly one tree step removes chaotic divergence, so all three runs replicate the same trajectory: r1 measures the per-evaluation vector difference between the member kernel and the group-c.m. kernel of the list force (PERT_KERNEL_DIFF=1, dynamics unchanged); r2/r3 run the member kernel (design) and the c.m. kernel (upstream-consistent counterfactual) whose end-of-step energy error difference is then the pure in-step kernel effect. Guards: single step and TT-active group in every run, diagnostic sample size, mismatch ratio regression band, energy conservation, zero dumps/aborts.",
   "workdir": "{repo_root}",
   "setup_commands": [
-    "mkdir -p test/validation/work/t6",
+    "rm -rf test/validation/work/t6 && mkdir -p test/validation/work/t6",
     "python3 test/validation/make_ic.py --case t6 --output test/validation/work/t6/input.base",
     "cd test/validation/work/t6 && petar.init -f input input.base"
   ],

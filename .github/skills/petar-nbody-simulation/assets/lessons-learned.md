@@ -1313,3 +1313,23 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **内容**:① configure 生成双仓 git SHA+dirty 戳;make 生成 build_info.hpp(生效 CXXFLAGS+MT_FLAGS 全量+时刻,cmp 守卫防抖动);petar 与 hard.debug 启动打印 `Build:` 一行。② Makefile 将 ../SDAR/src 头列为 4 个编译目标前置依赖,touch SDAR 头即重链(陈旧对象类根除)。③ run_validation.py preflight 把涉及二进制的 path+md5+Build 行写入每份 report JSON。首次运行即发现 ~/bin 中一个坏替换窗口期构建的安装件(横幅含未替换 @petar_version@)。SKILL.md Gate 4 版本检查已由 strings 方案改为 Build 横幅方案(391→387 行,净 -4)。
 
 **Prevention rule**: 溯源检查用 `<binary> -h | grep '^Build:'`;`-dirty` 或异常 flags 条目=二进制不匹配干净检出,其误差水平不可信;验证报告的 petar_provenance 字段自动可用,无需手工 md5。
+
+### 2026-10-13: 【追加污染伪装成 schema 错配】T4 status 读回"bse 列数不符"实为 4 月遗留段+Append 模式混杂——工作目录 setup 必须先清;二进制读回错位先查多段追加再怀疑读写 schema
+
+**Mistake**: T4 重跑在度量提取阶段报"binary file size not aligned with dtype itemsize (1168), remaining 80",一度按"writer/reader schema 漂移"排查(对比 src/status.hpp 与 tools/analysis 列数)。实测解码:文件=头段 126224 B(4 月旧布局,784 B/记录) + 尾段 188048 B=161×1168 B(当日干净段,与 reader 期望完全一致)——reader 没错,纯粹是 PeTar status 以 Append 模式打开、T4 setup 只 `mkdir -p` 不清理,4 月陈旧输出与今日输出追加混杂(314272=269×1168+80 正是报错的 remaining)。另:runner 崩溃后 $REPORT 未重写,报告脚本读到旧 JSON 里旧绝对路径 → 二次 FileNotFoundError,加剧"多 bug"错觉。T5/T6 同样不清理,只是本机首跑目录干净才没踩。
+
+**Root cause**: ① PeTar status/esc/事件文件全部 Append 打开,工作目录跨管线调用存活;② 场景 setup_commands 只建目录不清产物;③ 二进制布局确实随版本变过(784→1168),使混杂段的错位表象酷似 schema 回归;④ 读回崩溃点在提取阶段,run 未完成 → 报告 JSON 陈旧,错误沿管线级联。
+
+**Fix**: 四个场景(T4/T4o/T5/T6)setup_commands 首条改为 `rm -rf <workdir> && mkdir -p <workdir>`;顺带修复 T4o 控制组漏 `-s bse`(其运行用 `-b 1`,IC 必须带恒星演化列)。重跑 T4:五模式全跑完、10/10 检查评估。
+
+**Prevention rule**: ① 验证场景 setup 一律先清工作目录(生成物目录 rm -rf 重建),Append 类输出的跨调用污染是必然而非偶然;② 二进制读回 size/dtype 不对齐时,先扫文件里多个 t=0 头/混合记录步长判断"多段追加",再怀疑读写 schema;③ runner 中途崩溃后,下游报告脚本的输入 JSON 是陈旧的——先看 mtime 再当新数据用。
+
+### 2026-10-13: 【小结合能系统上的比值阈值】T4 m1"参考误差 1.4e-6>1e-8"实为 BSE 风账务地板的比值放大:|E_tot|~1.7e-4 把 2.4e-10 绝对误差放大 4 个量级——弱束缚 IC 的能量检查用绝对量(Error_cum),比值阈值先做误差源分解
+
+**Mistake**: m1_reference_energy_bound 沿用 Error/Total 比值阈值 1e-8,在 T4 层级三体 IC(|E_tot|=1.7e-4)上必然失败:实测分解 AR 瞬时 |Error|max=2.4e-10、Error_cum 终值 5.9e-9(SDAR 参考质量极佳),2.4e-10/1.7e-4=1.4e-6 纯属归一化;m2/m3(Hermite 通道)同压 1.38e-6——整个硬通道家族的比值指标都退化到 BSE 风质量损失账务地板,通道间差异被完全掩盖。
+
+**Root cause**: ① 比值阈值的隐含假设是 |E_tot| 为 O(1) 量纲尺度;层级/弱束缚系统结合能小,同一绝对地板读出完全不同的比值;② BSE 每次恒星演化同步注入 ~1e-13-2.4e-10 绝对账务残差(T3 教训的推广:地板是绝对量,比值表现随 IC 漂移);③ 检查校准未做误差源分解。
+
+**Fix**: 判据改为 `regex_floats` 提取终值 Error_cum(绝对累计),阈值 1e-7(实测 5.9e-9,17× 裕度,远低于被比较模式);检查 comment 与 README 记录分解依据。重跑 10/10。
+
+**Prevention rule**: ① 弱束缚/层级 IC 的能量误差检查用绝对 Error 或 Error_cum,或以特征能量尺度(GM²/a)归一,不用 |E_tot|;② 比值阈值校准前先分解:瞬时 Error、Error_cum、Modify 项各自量级(本例一行 pandas 即分辨);③ 跨模式比较若各模式比值相同,先怀疑共同地板(BSE 账务/舍入)再解读为物理一致性。

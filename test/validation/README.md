@@ -86,7 +86,7 @@ Output: `test/out/t3_binary_sdar_grouplink_summary.html`
 ### T4: Hierarchical Triple, Five-Mode Comparison
 - Hierarchical triple IC (tidal-tensor 3-body test), evolved for 200 outer periods
 - Five modes compared: pure SDAR reference, hard/tree with and without tidal tensor, and variants
-- Automatic checks: energy-error ordering across modes, inner/outer orbital-element conservation, runtime-abort regex counts
+- Automatic checks (10): reference quality — `m1` final **absolute** cumulative energy error `Error_cum` ≤ 1e-7 (the `Error/Total` ratio is not usable on this IC: |E_tot| ~1.7e-4 turns the BSE wind-accounting residual ~2.4e-10 absolute into ~1.4e-6 in ratio, the shared floor of every hard-channel mode); tidal-tensor census — artificial particles ≥ 1 with `--tt-switch 1`, = 0 with `--tt-switch 0`; runtime-abort regex counts per mode
 - Control scenario `t4_tree_hard_from_triple_outer15.json` repeats the comparison with the original outer semi-major axis `a_out = 1.5`
 - Requires a bse-interrupt binary (IC has `petar.init -s bse` columns, runs use `-b 1`); the pipeline selects it via `petar.select --require bse --optional mpi,omp,avx2` and builds it (`./configure --with-interrupt=bse && make install`) if missing
 

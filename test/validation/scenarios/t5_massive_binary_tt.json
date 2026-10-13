@@ -3,7 +3,7 @@
   "description": "Massive-binary + light-churner tidal-tensor momentum conservation: reproduces the 2026-10-06 leak configuration (77.65 Msun binary, a=0.0081, e=0.667; 0.242 Msun churner crossing the group boundary). r1/r2 (pure hard mode): with only 3 particles the churner orbit (0.01-0.04 pc) necessarily overlaps the group-linking radius, so the system stays one isolated AR group with TT structurally inactive (r1 must match the r2 baseline, guarding the no-artificial path). r3 (tree mode, production configuration of the event): TT engaged with group-boundary churn; linear momentum must be conserved.",
   "workdir": "{repo_root}",
   "setup_commands": [
-    "mkdir -p test/validation/work/t5",
+    "rm -rf test/validation/work/t5 && mkdir -p test/validation/work/t5",
     "python3 test/validation/make_ic.py --case t5 --output test/validation/work/t5/input.base",
     "cd test/validation/work/t5 && petar.init -f input input.base"
   ],

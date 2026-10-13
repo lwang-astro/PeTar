@@ -3,9 +3,9 @@
   "description": "Five-mode hierarchical triple comparison control group with original outer semi-major axis a_out=1.5.",
   "workdir": "{repo_root}",
   "setup_commands": [
-    "mkdir -p test/validation/work/t4o",
+    "rm -rf test/validation/work/t4o && mkdir -p test/validation/work/t4o",
     "python3 test/validation/make_ic.py --case t4_outer15 --output test/validation/work/t4o/input.base",
-    "cd test/validation/work/t4o && petar.init -f input input.base"
+    "cd test/validation/work/t4o && petar.init -s bse -f input input.base"
   ],
   "extract": {
     "period": 0.02962478305322229,
