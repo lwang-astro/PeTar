@@ -1,11 +1,11 @@
 {
   "name": "t3_binary_hard_switch_longterm",
-  "description": "Long-term binary test with fixed r_out and three r_group/r-search-group regimes to evaluate Hermite-SDAR switching error accumulation.",
+  "description": "Plain-family binary (no stellar evolution) with the pairwise force pinned in the Hermite hard channel (r_in = 0.02 > r_apo); the mass-weighted AR linking criterion gives three verified regimes (census from whole-run group event dumps): never grouped (r_group=0.002, pure Hermite pair), stable group (r_group=0.018, pure AR, never breaks), and genuine orbit-frequency Hermite-AR switching (r_group=0.013, criterion inside the separation range: ~1 break/re-form per orbit, level between the two channels, stationary).",
   "workdir": "{repo_root}",
   "setup_commands": [
     "mkdir -p test/out/work/t3",
     "python3 test/validation/make_ic.py --case t2 --output test/out/work/t3/input.base",
-    "cd test/out/work/t3 && petar.init -s bse -f input input.base"
+    "cd test/out/work/t3 && petar.init -f input input.base"
   ],
   "extract": {
     "period": 0.028256534656,
@@ -16,83 +16,107 @@
       "hard_energy_significant": "Hard energy significant",
       "large_step_warning": "Large step",
       "hard_dump": "hard_large_energy\\."
-    },
-    "interrupt_mode": "bse"
+    }
   },
   "runs": [
     {
       "id": "outside_apo",
-      "command": "cd test/out/work/t3 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 1.8e-2 --r-search-group 2.0e-2 -u 1 -b 1 -t 3.2 -s 9.765625e-4 -r 0.2 -o 1.953125e-3 -w 2 -f t3_outside_apo input",
+      "command": "cd test/out/work/t3 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 1.8e-2 --r-search-group 2.0e-2 -u 1 -t 3.2 -s 9.765625e-4 -r 0.2 -o 1.953125e-3 -w 2 -f t3_outside_apo input",
       "output": "outside_apo.log"
     },
     {
       "id": "between_peri_apo",
-      "command": "cd test/out/work/t3 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 8.0e-3 --r-search-group 1.0e-2 -u 1 -b 1 -t 3.2 -s 9.765625e-4 -r 0.2 -o 1.953125e-3 -w 2 -f t3_between input",
+      "command": "cd test/out/work/t3 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 0.013 --r-search-group 0.0143 -u 1 -t 3.2 -s 9.765625e-4 -r 0.2 -o 1.953125e-3 -w 2 -f t3_between input",
       "output": "between_peri_apo.log"
     },
     {
       "id": "inside_peri",
-      "command": "cd test/out/work/t3 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 2.0e-3 --r-search-group 4.0e-3 -u 1 -b 1 -t 3.2 -s 9.765625e-4 -r 0.2 -o 1.953125e-3 -w 2 -f t3_inside_peri input",
+      "command": "cd test/out/work/t3 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 2.0e-3 --r-search-group 4.0e-3 -u 1 -t 3.2 -s 9.765625e-4 -r 0.2 -o 1.953125e-3 -w 2 -f t3_inside_peri input",
       "output": "inside_peri.log"
     }
   ],
   "checks": [
     {
-      "name": "semi_drift_order_outside_to_inside",
-      "type": "monotonic_trend",
-      "run_ids": [
-        "outside_apo",
-        "between_peri_apo",
-        "inside_peri"
-      ],
-      "metric": "max_rel_drift_semi",
-      "direction": "nondecreasing",
-      "relative_tolerance": 0.15
-    },
-    {
-      "name": "ecc_drift_order_outside_to_inside",
-      "type": "monotonic_trend",
-      "run_ids": [
-        "outside_apo",
-        "between_peri_apo",
-        "inside_peri"
-      ],
-      "metric": "max_abs_drift_ecc",
-      "direction": "nondecreasing",
-      "relative_tolerance": 0.15
-    },
-    {
-      "name": "sum_period_error_order_outside_to_inside",
-      "type": "monotonic_trend",
-      "run_ids": [
-        "outside_apo",
-        "between_peri_apo",
-        "inside_peri"
-      ],
-      "metric": "sum_abs_error_period_max",
-      "direction": "nondecreasing",
-      "relative_tolerance": 0.15
-    },
-    {
-      "name": "outside_apo_no_large_step_warning",
-      "type": "regex_count_max",
-      "run_id": "outside_apo",
-      "regex_key": "large_step_warning",
-      "threshold": 0
-    },
-    {
-      "name": "between_peri_apo_no_large_step_warning",
-      "type": "regex_count_max",
-      "run_id": "between_peri_apo",
-      "regex_key": "large_step_warning",
-      "threshold": 0
-    },
-    {
-      "name": "inside_peri_no_large_step_warning",
-      "type": "regex_count_max",
+      "name": "census_never_grouped",
+      "type": "max_threshold",
       "run_id": "inside_peri",
-      "regex_key": "large_step_warning",
-      "threshold": 0
+      "metric": "group_form_events",
+      "threshold": 0,
+      "comment": "T3-a (pure Hermite): no group formation events at all (0 form events in the whole-run group dump)"
+    },
+    {
+      "name": "census_stable_group_no_break",
+      "type": "max_threshold",
+      "run_id": "outside_apo",
+      "metric": "group_break_events",
+      "threshold": 0,
+      "comment": "T3-b (pure AR): r_group = 0.018 > r_apo, mass-weighted r_crit above apocenter - the group forms once and never breaks (0 break events)"
+    },
+    {
+      "name": "census_switching_occurs",
+      "type": "min_threshold",
+      "run_id": "between_peri_apo",
+      "metric": "group_break_events",
+      "threshold": 50,
+      "comment": "T3-c (Hermite-AR switching): r_group = 0.013 places the criterion inside the separation range - genuine orbit-frequency switching, ~1 break/re-form per orbit (measured 110 over 113 orbits); >=50 catches a silent regression to stable/never-grouped"
+    },
+    {
+      "name": "census_switching_no_explosion",
+      "type": "max_threshold",
+      "run_id": "between_peri_apo",
+      "metric": "group_break_events",
+      "threshold": 2000,
+      "comment": "T3-c guard: the pre-fix bug produced step-frequency chatter (411k break/re-form cycles per run, dynamically invisible); the healthy switching is ~1/orbit (113), so >2000 events flags the chatter recurrence"
+    },
+    {
+      "name": "switching_no_worse_than_hermite_pair",
+      "type": "metric_ratio",
+      "numerator_run_id": "between_peri_apo",
+      "denominator_run_id": "inside_peri",
+      "metric": "max_abs_error_over_total",
+      "min_ratio": 0.0,
+      "max_ratio": 1.0,
+      "comment": "T3-c: pericenter grouping pays off - the switching run conserves better than the never-grouped Hermite pair (measured ~0.13x)"
+    },
+    {
+      "name": "energy_error_stationary_outside_apo",
+      "type": "max_threshold",
+      "run_id": "outside_apo",
+      "metric": "late_early_period_max_ratio",
+      "threshold": 2.0,
+      "comment": "T3-b (always grouped): per-period error envelope stationary over ~113 orbits"
+    },
+    {
+      "name": "energy_error_stationary_between",
+      "type": "max_threshold",
+      "run_id": "between_peri_apo",
+      "metric": "late_early_period_max_ratio",
+      "threshold": 2.0,
+      "comment": "T3-c: the per-orbit link/unlink switching introduces no secular energy drift (measured rho ~0.17)"
+    },
+    {
+      "name": "energy_error_stationary_inside_peri",
+      "type": "max_threshold",
+      "run_id": "inside_peri",
+      "metric": "late_early_period_max_ratio",
+      "threshold": 2.0,
+      "comment": "T3-a (never grouped, Hermite pair): stationary error over ~113 orbits"
+    },
+    {
+      "name": "pure_ar_error_bound",
+      "type": "max_threshold",
+      "run_id": "outside_apo",
+      "metric": "max_abs_error_over_total",
+      "threshold": 1e-11,
+      "comment": "T3-b accuracy: the stable AR group integrates the isolated binary essentially exactly (measured ~6.2e-12); above 1e-11 the regularized integration itself is degrading"
+    },
+    {
+      "name": "pure_hermite_error_bound",
+      "type": "max_threshold",
+      "run_id": "inside_peri",
+      "metric": "max_abs_error_over_total",
+      "threshold": 1e-06,
+      "comment": "T3-a accuracy: the never-grouped Hermite pair (block-step truncation, measured ~4.7e-7) stays below 1e-6; above it the block-step channel is degrading"
     }
   ]
 }

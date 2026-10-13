@@ -1,25 +1,29 @@
 #!/usr/bin/env python3
+"""T4 hierarchical-triple five-mode comparison HTML report (paper style, see REPORT_DESIGN.md)."""
 import argparse
-import json
 import math
 import re
-import shlex
 import sys
 import warnings
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
+
 from report_common import (
-    format_tick,
+    G_MSUN_PC_MYR,
+    PAPER_CSS,
+    check_row,
+    git_commit,
     html_escape,
     load_json,
     parse_command_args,
-    parse_log_metadata,
+    parse_log_version,
+    svg_curves_plot,
 )
 
-G_MSUN_PC_MYR = 0.00449830997959438
-VERSION_RE = re.compile(r"^Version:\s*(.*)$")
+REPO = Path(__file__).resolve().parents[2]
+Point = Tuple[float, float]
 TIME_RE = re.compile(r"^Time:\s*([0-9eE+\-.]+)")
 ENERGY_HEADER_RE = re.compile(r"^Energy:\s+(.*)$")
 ENERGY_PHYSIC_RE = re.compile(r"^Physic:\s+(.*)$")
@@ -28,7 +32,21 @@ UNIT_SET_RE = re.compile(r"^----- Unit set\s*(\d+)\s*:\s*(.*)-----$")
 TREE_DT_RE = re.compile(r"^Tree time step\s*=\s*([0-9eE+\-.]+)$")
 OUTPUT_DT_RE = re.compile(r"^Output time step\s*=\s*([0-9eE+\-.]+)$")
 
-Point = Tuple[float, float]
+MODE_ORDER = ["m1_pure_sdar_ref", "m2_hard_no_tt", "m3_hard_tt", "m4_tree_no_tt", "m5_tree_tt"]
+MODE_COLORS = {
+    "m1_pure_sdar_ref": "#0b74de",
+    "m2_hard_no_tt": "#d81b60",
+    "m3_hard_tt": "#2e7d32",
+    "m4_tree_no_tt": "#8e24aa",
+    "m5_tree_tt": "#f4511e",
+}
+MODE_LABELS = {
+    "m1_pure_sdar_ref": "m1 pure SDAR reference",
+    "m2_hard_no_tt": "m2 hard, TT off",
+    "m3_hard_tt": "m3 hard, TT on",
+    "m4_tree_no_tt": "m4 tree, TT off",
+    "m5_tree_tt": "m5 tree, TT on",
+}
 
 
 def parse_time_metric_series(log_text: str, metric: str) -> List[Point]:
@@ -101,7 +119,7 @@ def resolve_status_path(run_record: Dict) -> Path:
 
 
 def load_status_particles(path: Path, n_particle: int):
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
+    sys.path.insert(0, str(REPO / "tools"))
     from analysis.status import Status  # pylint: disable=import-outside-toplevel  # pyright: ignore[reportMissingImports]
 
     # T4 runs with -b 1 on a bse-interrupt binary: status rows carry stellar columns
@@ -118,7 +136,7 @@ def load_status_particles(path: Path, n_particle: int):
     return st
 
 
-def derive_inner_binary_drift(status_path: Path, n_particle: int) -> Dict[str, object]:
+def derive_inner_binary_drift(status_path: Path, n_particle: int) -> Dict[str, Any]:
     st = load_status_particles(status_path, n_particle)
 
     p0 = st.particles.p0
@@ -259,123 +277,8 @@ def derive_orbital_series_from_status(status_path: Path, n_particle: int) -> Dic
     }
 
 
-def svg_multi_plot(
-    series_map: Dict[str, List[Point]],
-    title: str,
-    x_label: str,
-    y_label: str,
-    logx: bool = False,
-    logy: bool = True,
-) -> str:
-    width, height = 900, 500
-    left, right, top, bottom = 88, 24, 44, 70
-    plot_w = width - left - right
-    plot_h = height - top - bottom
-
-    all_points = [p for points in series_map.values() for p in points]
-    if not all_points:
-        return "<p>No data available.</p>"
-
-    xs = [p[0] for p in all_points]
-    ys = [max(p[1], 1e-15) if logy else p[1] for p in all_points]
-
-    def tx(v: float) -> float:
-        return math.log10(v) if logx else v
-
-    def ty(v: float) -> float:
-        return math.log10(v) if logy else v
-
-    xvals = [tx(x) for x in xs]
-    yvals = [ty(y) for y in ys]
-    xmin, xmax = min(xvals), max(xvals)
-    ymin, ymax = min(yvals), max(yvals)
-    if xmax == xmin:
-        xmax += 1.0
-    if ymax == ymin:
-        ymax += 1.0
-
-    def sx(v: float) -> float:
-        return left + (tx(v) - xmin) / (xmax - xmin) * plot_w
-
-    def sy(v: float) -> float:
-        y = max(v, 1e-15) if logy else v
-        return top + (ymax - ty(y)) / (ymax - ymin) * plot_h
-
-    palette = ["#0b74de", "#d81b60", "#2e7d32", "#8e24aa", "#f4511e", "#00897b"]
-    polylines: List[str] = []
-    legends: List[str] = []
-
-    x0 = min(xs)
-    x1 = max(xs)
-    if x1 == x0:
-        x1 = x0 + 1.0
-    x_tick_values = [x0 + (x1 - x0) * i / 5.0 for i in range(6)]
-
-    y0 = min(ys)
-    y1 = max(ys)
-    y_tick_values: List[float]
-    if logy:
-        p0 = int(math.floor(math.log10(max(y0, 1e-15))))
-        p1 = int(math.ceil(math.log10(max(y1, 1e-15))))
-        y_tick_values = [10.0 ** p for p in range(p0, p1 + 1)]
-    else:
-        if y1 == y0:
-            y1 = y0 + 1.0
-        y_tick_values = [y0 + (y1 - y0) * i / 5.0 for i in range(6)]
-
-    x_grid: List[str] = []
-    x_ticks: List[str] = []
-    for value in x_tick_values:
-        px = sx(value)
-        x_grid.append(f'<line x1="{px:.2f}" y1="{top}" x2="{px:.2f}" y2="{height-bottom}" stroke="#e0e0e0" stroke-dasharray="3,3"/>')
-        x_ticks.append(f'<line x1="{px:.2f}" y1="{height-bottom}" x2="{px:.2f}" y2="{height-bottom+6}" stroke="#333"/>')
-        x_ticks.append(f'<text x="{px:.2f}" y="{height-bottom+22}" text-anchor="middle" font-size="11" font-family="Arial">{html_escape(format_tick(value))}</text>')
-
-    y_grid: List[str] = []
-    y_ticks: List[str] = []
-    for value in y_tick_values:
-        py = sy(value)
-        y_grid.append(f'<line x1="{left}" y1="{py:.2f}" x2="{width-right}" y2="{py:.2f}" stroke="#e0e0e0" stroke-dasharray="3,3"/>')
-        y_ticks.append(f'<line x1="{left-6}" y1="{py:.2f}" x2="{left}" y2="{py:.2f}" stroke="#333"/>')
-        y_ticks.append(f'<text x="{left-10}" y="{py+4:.2f}" text-anchor="end" font-size="11" font-family="Arial">{html_escape(format_tick(value))}</text>')
-
-    items = list(series_map.items())
-    # Draw m1 last and thicker so it is always visible even if curves overlap.
-    items = [it for it in items if "m1_pure_sdar_ref" not in it[0]] + [it for it in items if "m1_pure_sdar_ref" in it[0]]
-
-    for idx, (label, points) in enumerate(items):
-        color = palette[idx % len(palette)]
-        stroke_w = "3.5" if "m1_pure_sdar_ref" in label else "2"
-        poly = " ".join(f"{sx(x):.2f},{sy(y):.2f}" for x, y in points)
-        polylines.append(f'<polyline points="{poly}" fill="none" stroke="{color}" stroke-width="{stroke_w}"/>')
-        ly = top + 18 + idx * 18
-        legends.append(
-            f'<line x1="{width-right-310}" y1="{ly}" x2="{width-right-290}" y2="{ly}" stroke="{color}" stroke-width="{stroke_w}"/>'
-        )
-        legends.append(
-            f'<text x="{width-right-285}" y="{ly+4}" font-size="11" font-family="Arial">{html_escape(label)}</text>'
-        )
-
-    return f"""
-<svg width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\" xmlns=\"http://www.w3.org/2000/svg\">
-  <rect x=\"0\" y=\"0\" width=\"{width}\" height=\"{height}\" fill=\"white\"/>
-  <text x=\"{width/2:.1f}\" y=\"24\" text-anchor=\"middle\" font-size=\"16\" font-family=\"Arial\">{html_escape(title)}</text>
-    {' '.join(x_grid)}
-    {' '.join(y_grid)}
-  <line x1=\"{left}\" y1=\"{height-bottom}\" x2=\"{width-right}\" y2=\"{height-bottom}\" stroke=\"#333\"/>
-  <line x1=\"{left}\" y1=\"{top}\" x2=\"{left}\" y2=\"{height-bottom}\" stroke=\"#333\"/>
-  {' '.join(polylines)}
-  {' '.join(legends)}
-    {' '.join(x_ticks)}
-    {' '.join(y_ticks)}
-  <text x=\"{width/2:.1f}\" y=\"{height-18}\" text-anchor=\"middle\" font-size=\"13\" font-family=\"Arial\">{html_escape(x_label)}</text>
-  <text x=\"22\" y=\"{height/2:.1f}\" transform=\"rotate(-90 22,{height/2:.1f})\" text-anchor=\"middle\" font-size=\"13\" font-family=\"Arial\">{html_escape(y_label)}</text>
-</svg>
-"""
-
-
 def extract_binary_from_command(command: str) -> str:
-    tokens = shlex.split(command)
+    tokens = command.split()
     for idx, token in enumerate(tokens):
         if token.startswith("OMP_NUM_THREADS=") and idx + 1 < len(tokens):
             return tokens[idx + 1]
@@ -390,7 +293,7 @@ def normalize_mode_id(run_id: str) -> str:
     return run_id[:-4] if run_id.endswith("_o15") else run_id
 
 
-def collect_plot_series(rows: List[Dict]) -> Dict[str, object]:
+def collect_plot_series(rows: List[Dict]) -> Dict[str, Any]:
     energy_total_series: Dict[str, List[Point]] = {}
     energy_pp_series: Dict[str, List[Point]] = {}
     a_in_series: Dict[str, List[Point]] = {}
@@ -440,38 +343,97 @@ def collect_plot_series(rows: List[Dict]) -> Dict[str, object]:
     }
 
 
-def build_orbit_figure_section(title_prefix: str, figure_offset: int, series: Dict[str, Dict[str, List[Point]]]) -> str:
-    return f"""
-<h2>{html_escape(title_prefix)}: Energy Error</h2>
-<h3>Figure {figure_offset}: Total Relative Energy Error vs Time</h3>
-{svg_multi_plot(series['energy_total_series'], f'{title_prefix}: |Error/Total|(t)', 'time [Myr]', '|Error/Total|', logx=False, logy=True)}
+def mode_curves(series_map: Dict[str, List[Point]], modes: List[str]) -> List[Tuple[str, List[Point], str, str]]:
+    """Convert a {label: points} map into svg_curves_plot curves keyed by mode id."""
+    by_mode: Dict[str, List[Point]] = {}
+    for label, points in series_map.items():
+        mode = label.split("|")[0].strip()
+        by_mode[mode] = points
+    return [(m, by_mode.get(m, []), MODE_COLORS.get(m, "#555"), "") for m in modes if by_mode.get(m)]
 
-<h3>Figure {figure_offset + 1}: Short-range Energy Error (PP) vs Time</h3>
-{svg_multi_plot(series['energy_pp_series'], f'{title_prefix}: |Error_PP|(t)', 'time [Myr]', '|Error_PP|', logx=False, logy=True)}
 
-<h2>{html_escape(title_prefix)}: Orbital Evolution of Inner Orbit</h2>
-<h3>Figure {figure_offset + 2}: Inner Semi-major Axis a_in(t)</h3>
-{svg_multi_plot(series['a_in_series'], f'{title_prefix}: inner orbit a(t)', 'time [Myr]', 'a_in [pc]', logx=False, logy=False)}
+def build_orbit_figure_section(title_prefix: str, series: Dict[str, Any], modes: List[str]) -> str:
+    """Energy + orbital-element figures for one run group."""
+    energy_curves = [
+        (m, series["energy_total_series"].get(f"{m} | tt=0", series["energy_total_series"].get(f"{m} | tt=1", [])), MODE_COLORS.get(m, "#555"), "")
+        for m in modes
+    ]
+    energy_curves = [(m, pts, c, "") for m, pts, c, _ in energy_curves if pts]
+    pp_curves = [
+        (m, series["energy_pp_series"].get(f"{m} | tt=0", series["energy_pp_series"].get(f"{m} | tt=1", [])), MODE_COLORS.get(m, "#555"), "7,4")
+        for m in modes
+    ]
+    pp_curves = [(m, pts, c, "7,4") for m, pts, c, _ in pp_curves if pts]
+    legend_models = [(MODE_LABELS.get(m, m), MODE_COLORS.get(m, "#555")) for m in modes]
 
-<h3>Figure {figure_offset + 3}: Inner Eccentricity e_in(t)</h3>
-{svg_multi_plot(series['e_in_series'], f'{title_prefix}: inner orbit e(t)', 'time [Myr]', 'e_in', logx=False, logy=False)}
-
-<h3>Figure {figure_offset + 4}: Inner Inclination i_in(t)</h3>
-{svg_multi_plot(series['i_in_series'], f'{title_prefix}: inner orbit inclination i(t)', 'time [Myr]', 'i_in [deg]', logx=False, logy=False)}
-
-<h2>{html_escape(title_prefix)}: Orbital Evolution of Outer Orbit</h2>
-<h3>Figure {figure_offset + 5}: Outer Semi-major Axis a_out(t)</h3>
-{svg_multi_plot(series['a_out_series'], f'{title_prefix}: outer orbit a(t)', 'time [Myr]', 'a_out [pc]', logx=False, logy=False)}
-
-<h3>Figure {figure_offset + 6}: Outer Eccentricity e_out(t)</h3>
-{svg_multi_plot(series['e_out_series'], f'{title_prefix}: outer orbit e(t)', 'time [Myr]', 'e_out', logx=False, logy=False)}
-
-<h3>Figure {figure_offset + 7}: Outer Inclination i_out(t)</h3>
-{svg_multi_plot(series['i_out_series'], f'{title_prefix}: outer orbit inclination i(t)', 'time [Myr]', 'i_out [deg]', logx=False, logy=False)}
-
-<h3>Figure {figure_offset + 8}: Mutual Inclination i_mutual(t)</h3>
-{svg_multi_plot(series['i_mutual_series'], f'{title_prefix}: mutual inclination i_mutual(t)', 'time [Myr]', 'i_mutual [deg]', logx=False, logy=False)}
-"""
+    html_parts: List[str] = []
+    html_parts.append(
+        svg_curves_plot(
+            energy_curves + pp_curves,
+            legend_models,
+            f"{title_prefix}: energy error vs time",
+            "time [Myr]",
+            "relative energy error",
+            logy=True,
+            legend_quantities=[("|Error/Total|", ""), ("|Error_PP|", "7,4")],
+        )
+    )
+    html_parts.append(
+        svg_curves_plot(
+            mode_curves(series["a_in_series"], modes),
+            legend_models,
+            f"{title_prefix}: inner semi-major axis vs time",
+            "time [Myr]",
+            "a_in [pc]",
+            logy=False,
+            legend_quantities=[("a_in", "")],
+        )
+    )
+    html_parts.append(
+        svg_curves_plot(
+            mode_curves(series["e_in_series"], modes),
+            legend_models,
+            f"{title_prefix}: inner eccentricity vs time",
+            "time [Myr]",
+            "e_in",
+            logy=False,
+            legend_quantities=[("e_in", "")],
+        )
+    )
+    html_parts.append(
+        svg_curves_plot(
+            mode_curves(series["a_out_series"], modes),
+            legend_models,
+            f"{title_prefix}: outer semi-major axis vs time",
+            "time [Myr]",
+            "a_out [pc]",
+            logy=False,
+            legend_quantities=[("a_out", "")],
+        )
+    )
+    html_parts.append(
+        svg_curves_plot(
+            mode_curves(series["e_out_series"], modes),
+            legend_models,
+            f"{title_prefix}: outer eccentricity vs time",
+            "time [Myr]",
+            "e_out",
+            logy=False,
+            legend_quantities=[("e_out", "")],
+        )
+    )
+    html_parts.append(
+        svg_curves_plot(
+            mode_curves(series["i_mutual_series"], modes),
+            legend_models,
+            f"{title_prefix}: mutual inclination vs time",
+            "time [Myr]",
+            "i_mutual [deg]",
+            logy=False,
+            legend_quantities=[("i_mutual", "")],
+        )
+    )
+    return "".join(html_parts)
 
 
 def main() -> int:
@@ -547,37 +509,14 @@ def main() -> int:
             }
         )
 
-    order = [
-        "m1_pure_sdar_ref",
-        "m2_hard_no_tt",
-        "m3_hard_tt",
-        "m4_tree_no_tt",
-        "m5_tree_tt",
-    ]
-    rows = sorted(rows, key=lambda x: order.index(x["run_id"]) if x["run_id"] in order else 999)
-    log_path0 = Path(rows[0]["log_path"])
-    metadata = parse_log_metadata(log_path0)
+    rows = sorted(rows, key=lambda x: MODE_ORDER.index(x["run_id"]) if x["run_id"] in MODE_ORDER else 999)
+    log_version = parse_log_version(Path(rows[0]["log_path"]))
 
     series = collect_plot_series(rows)
-    energy_total_series = series["energy_total_series"]
-    energy_pp_series = series["energy_pp_series"]
-    a_in_series = series["a_in_series"]
-    e_in_series = series["e_in_series"]
-    i_in_series = series["i_in_series"]
-    a_out_series = series["a_out_series"]
-    e_out_series = series["e_out_series"]
-    i_out_series = series["i_out_series"]
-    i_mutual_series = series["i_mutual_series"]
     unit_rows = series["unit_rows"]
 
-    run_rows_html = "\n".join(
-        "<tr>"
-        f"<td>{html_escape(r['run_id'])}</td><td>{r['tt_switch']}</td><td>{r['tt_nstep']}</td><td>{r['r_group']:.6e}</td><td>{r['r_search_group']:.6e}</td><td>{r['rout']:.6e}</td><td>{r['dt_soft']:.6e}</td><td>{r['tree_dt']:.6e}</td><td>{'YES' if r['dt_le_tree'] else 'NO'}</td><td>{r['a_in0']:.6e}</td><td>{r['e_in0']:.6e}</td><td>{r['i_in0']:.3f}</td><td>{r['a_out0']:.6e}</td><td>{r['e_out0']:.6e}</td><td>{r['i_out0']:.3f}</td><td>{r['i_mutual0']:.3f}</td><td>{r['t_end']:.6e}</td><td>{r['inner_period_covered']:.2f}</td><td>{r['outer_period_covered']:.2f}</td><td>{r['max_abs_error_over_total']:.6e}</td><td>{r['max_abs_error_pp']:.6e}</td><td>{r['da_rel_max']:.6e}</td><td>{r['de_abs_max']:.6e}</td><td>{r['max_n_real_glb']}</td><td>{r['max_n_all_glb']}</td><td>{r['max_artificial_particles_glb']}</td>"
-        "</tr>"
-        for r in rows
-    )
+    base_figures_html = build_orbit_figure_section("Base group", series, MODE_ORDER)
 
-    base_figures_html = build_orbit_figure_section("Base Group", 1, series)
     control_compare_html = ""
     control_figures_html = ""
     if args.report_control:
@@ -623,9 +562,9 @@ def main() -> int:
                     }
                 )
 
-            control_rows = sorted(control_rows, key=lambda x: order.index(x["mode_id"]) if x["mode_id"] in order else 999)
+            control_rows = sorted(control_rows, key=lambda x: MODE_ORDER.index(x["mode_id"]) if x["mode_id"] in MODE_ORDER else 999)
             control_series = collect_plot_series(control_rows)
-            control_figures_html = build_orbit_figure_section("Control Group (Outer a=1.5)", 10, control_series)
+            control_figures_html = build_orbit_figure_section("Control group", control_series, MODE_ORDER)
 
             base_by_mode = {
                 normalize_mode_id(str(r["run_id"])): r
@@ -634,129 +573,238 @@ def main() -> int:
             ctrl_by_mode = {r["mode_id"]: r for r in control_rows}
 
             lines = []
-            for mode in ["m1_pure_sdar_ref", "m2_hard_no_tt", "m3_hard_tt", "m4_tree_no_tt", "m5_tree_tt"]:
+            for mode in MODE_ORDER:
                 if mode not in base_by_mode or mode not in ctrl_by_mode:
                     continue
                 b = base_by_mode[mode]
                 c = ctrl_by_mode[mode]
                 lines.append(
                     "<tr>"
-                    f"<td>{html_escape(mode)}</td>"
-                    f"<td>{b['max_abs_error_over_total']:.6e}</td>"
-                    f"<td>{c['err_tot']:.6e}</td>"
-                    f"<td>{b['max_abs_error_pp']:.6e}</td>"
-                    f"<td>{c['err_pp']:.6e}</td>"
-                    f"<td>{b['da_rel_max']:.6e}</td>"
-                    f"<td>{c['da']:.6e}</td>"
-                    f"<td>{b['de_abs_max']:.6e}</td>"
-                    f"<td>{c['de']:.6e}</td>"
+                    f"<td>{html_escape(MODE_LABELS.get(mode, mode))}</td>"
+                    f"<td>{b['max_abs_error_over_total']:.3e}</td>"
+                    f"<td>{c['err_tot']:.3e}</td>"
+                    f"<td>{b['max_abs_error_pp']:.3e}</td>"
+                    f"<td>{c['err_pp']:.3e}</td>"
+                    f"<td>{b['da_rel_max']:.3e}</td>"
+                    f"<td>{c['da']:.3e}</td>"
+                    f"<td>{b['de_abs_max']:.3e}</td>"
+                    f"<td>{c['de']:.3e}</td>"
                     f"<td>{b['max_artificial_particles_glb']}</td>"
                     f"<td>{c['max_art']:.0f}</td>"
                     "</tr>"
                 )
             if lines:
-                control_compare_html = (
-                    "<h2>Control Group Comparison (Outer a=1.5)</h2>"
-                    "<table><tr><th>mode</th><th>base |Error/Total|</th><th>control |Error/Total|</th><th>base |Error_PP|</th><th>control |Error_PP|</th><th>base |Δa/a0|</th><th>control |Δa/a0|</th><th>base |Δe|</th><th>control |Δe|</th><th>base max artificial</th><th>control max artificial</th></tr>"
-                    + "\n".join(lines)
-                    + "</table>"
-                )
+                control_compare_html = "".join(lines)
 
-    command_rows_html = "\n".join(
-        "<tr>"
-        f"<td>{html_escape(r['run_id'])}</td><td><code>{html_escape(r['command'])}</code></td><td><code>{html_escape(r['status_path'])}</code></td><td><code>{html_escape(r['log_path'])}</code></td>"
-        "</tr>"
+    run_rows_html = "".join(
+        f"<tr><td>{html_escape(str(MODE_LABELS.get(r['run_id'], r['run_id'])))}</td>"
+        f"<td>{r['tt_switch']}</td><td>{r['tt_nstep']}</td>"
+        f"<td>{r['r_group']:.3g}</td><td>{r['rout']:.3g}</td><td>{r['dt_soft']:.3e}</td>"
+        f"<td>{'YES' if r['dt_le_tree'] else 'NO'}</td>"
+        f"<td>{r['max_abs_error_over_total']:.3e}</td><td>{r['max_abs_error_pp']:.3e}</td>"
+        f"<td>{r['da_rel_max']:.3e}</td><td>{r['de_abs_max']:.3e}</td>"
+        f"<td>{r['max_n_real_glb']}</td><td>{r['max_n_all_glb']}</td><td>{r['max_artificial_particles_glb']}</td>"
+        f"<td>{r['a_in0']:.3e}</td><td>{r['e_in0']:.3f}</td><td>{r['a_out0']:.3e}</td><td>{r['e_out0']:.3f}</td><td>{r['i_mutual0']:.1f}</td>"
+        f"<td>{r['t_end']:.3g}</td><td>{r['outer_period_covered']:.0f}</td></tr>"
         for r in rows
     )
 
-    checks_html = "\n".join(
-        f"<li><b>{html_escape(c['check'])}</b>: {'PASS' if c.get('passed') else 'FAIL'} - {html_escape(c.get('message', ''))}</li>"
-        for c in checks
+    command_rows_html = "".join(
+        f"<tr><td>{html_escape(r['run_id'])}</td><td><code>{html_escape(r['command'])}</code></td></tr>"
+        for r in rows
     )
+
+    checks_html = "".join(check_row(c) for c in checks)
 
     setup_commands = scenario_data.get("setup_commands", []) if isinstance(scenario_data, dict) else []
     if not isinstance(setup_commands, list):
         setup_commands = []
-    setup_rows_html = "\n".join(
-        f"<tr><td>{idx + 1}</td><td><code>{html_escape(str(cmd))}</code></td></tr>"
-        for idx, cmd in enumerate(setup_commands)
+    setup_html = "<br>".join(html_escape(str(cmd)) for cmd in setup_commands)
+
+    all_pass = all(c.get("passed", False) for c in checks)
+    verdict = "ALL CHECKS PASSED" if all_pass else "CHECKS FAILED"
+
+    unit_rows_html = "".join(
+        f'<tr><td>{html_escape(rid)}</td><td>{html_escape(iu)}</td><td>{html_escape(us)}</td></tr>'
+        for rid, iu, us in unit_rows
     )
 
-    feature_list = metadata.get("features", [])
-    if not isinstance(feature_list, list):
-        feature_list = []
-    feature_html = "".join(f"<li>{html_escape(str(item))}</li>" for item in feature_list)
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>T4 hierarchical triple five-mode comparison</title>
+<style>{PAPER_CSS}</style></head><body>
 
-    html = f"""<!doctype html>
-<html lang=\"en\"><head><meta charset=\"utf-8\"><title>T4 Triple Mode Comparison Report</title>
-<style>
-body{{font-family:Arial,Helvetica,sans-serif;margin:20px;line-height:1.45;}}
-h1,h2,h3{{color:#1f2d3d;}}
-table{{border-collapse:collapse;width:100%;margin:8px 0 16px 0;}}
-th,td{{border:1px solid #cfd8dc;padding:6px 8px;font-size:13px;vertical-align:top;}}
-th{{background:#f5f7fa;}}
-.note{{background:#eef7ff;border-left:4px solid #0b74de;padding:8px 10px;margin:10px 0;}}
-code{{white-space:pre-wrap;word-break:break-all;}}
-</style></head><body>
-<h1>T4: Triple Algorithm-Mode Comparison (SDAR/Hermite/Tree with Tidal Tensor)</h1>
-<div class=\"note\">
-Five-mode comparison from notebook-style hierarchical triple scales: <code>m1_pure_sdar_ref</code>, <code>m2_hard_no_tt</code>, <code>m3_hard_tt</code>, <code>m4_tree_no_tt</code>, <code>m5_tree_tt</code>.
-Tidal tensor activation is validated by checking <code>N_all(glb)-N_real(glb) &gt; 0</code> when <code>--tt-switch=1</code>.
-</div>
+<h1>T4 &nbsp;Hierarchical triple under five integration modes:<br>pure SDAR, Hermite&ndash;SDAR and tree, with and without tidal tensor</h1>
+<div class="subtitle">validation report &middot; scenario <i>t4_tree_hard_from_triple</i> &middot; <span class="verdict {'pass' if all_pass else 'fail'}">{verdict}</span></div>
 
-{base_figures_html}
+<h2>1&nbsp;&nbsp;Background and purpose</h2>
+<p>When a compact subsystem is integrated as an AR (SDAR) group inside a larger system, the rest
+of the system perturbs it through two channels: the direct perturber-list force and the tidal
+tensor (TT) correction that represents the smooth field gradient across the group. The
+--tt-switch option enables the tidal-tensor channel; whether it is active is not visible in the
+trajectory alone, so this test compares five integration modes of one engineered hierarchical
+triple over 200 outer orbits: a pure SDAR reference (the whole triple one AR group, no tree),
+hard-mode and tree-mode runs with TT off and on. It establishes (i) that the energy error of the
+production modes stays far below the pure-SDAR reference scale, (ii) that the inner orbit is
+conserved relative to the reference, and (iii) &mdash; by counting artificial particles &mdash;
+that the tidal tensor is actually engaged exactly in the runs where it is switched on, and
+nowhere else. A control group repeats the comparison with the original outer scale
+(a<sub>out</sub> = 1.5 pc) to separate scale-dependent from structural effects.</p>
 
-{control_figures_html}
+<h2>2&nbsp;&nbsp;Method</h2>
+<h3>2.1&nbsp;&nbsp;Quantities under comparison</h3>
+<p>From the run energy logs:</p>
+<div class="eq">&epsilon;<sub>E</sub> = max<sub>t</sub> |Error/Total|(t),&nbsp;&nbsp;
+&epsilon;<sub>PP</sub> = max<sub>t</sub> |Error_PP|(t),<span class="tag">(1)</span></div>
+<p>the total and short-range (particle&ndash;particle/AR) relative energy errors. From the status
+particle states, the inner orbit (m<sub>1</sub>, m<sub>2</sub>), the outer orbit (inner c.m.,
+m<sub>3</sub>), and the mutual inclination:</p>
+<div class="eq">a = &minus;&mu;/(2&epsilon;), &epsilon; = v&sup2;/2 &minus; &mu;/r,&nbsp;&nbsp;
+e = &radic;(1 + 2&epsilon;h&sup2;/&mu;&sup2;),&nbsp;&nbsp; h = |r &times; v|,
+<span class="tag">(2)</span></div>
+<div class="eq">cos&thinsp;i<sub>mut</sub> = &#292;<sub>in</sub> &middot;
+&#292;<sub>out</sub>,<span class="tag">(3)</span></div>
+<div class="eq">&Delta;a/a<sub>0</sub> = max<sub>t</sub> |a(t)&minus;a<sub>0</sub>|/a<sub>0</sub>
+(inner), &nbsp; &Delta;e = max<sub>t</sub> |e(t)&minus;e<sub>0</sub>| (inner).
+<span class="tag">(4)</span></div>
+<p>The tidal-tensor activity guard is the artificial-particle census:</p>
+<div class="eq">N<sub>art</sub> = max<sub>t</sub> [N<sub>all</sub>(glb) &minus;
+N<sub>real</sub>(glb)],<span class="tag">(5)</span></div>
+<p>which is positive only when tidal-tensor probes (or other artificial group particles)
+exist.</p>
 
-<h2>Unit Consistency Check</h2>
-<table><tr><th>run_id</th><th>Input data unit</th><th>Unit set line</th></tr>
-{''.join(f'<tr><td>{html_escape(rid)}</td><td>{html_escape(iu)}</td><td>{html_escape(us)}</td></tr>' for rid, iu, us in unit_rows)}
+<h3>2.2&nbsp;&nbsp;Metrics</h3>
+<table class="data">
+<tr><th>symbol</th><th>definition</th><th>interpretation</th></tr>
+<tr><td>&epsilon;<sub>E</sub>, &epsilon;<sub>PP</sub></td><td>Eq. (1)</td>
+<td>global and short-range energy conservation per mode</td></tr>
+<tr><td>&Delta;a/a<sub>0</sub>, &Delta;e</td><td>Eq. (4)</td>
+<td>inner-orbit conservation relative to its first output sample</td></tr>
+<tr><td>i<sub>mut</sub>(t)</td><td>Eq. (3)</td>
+<td>angular-momentum exchange between inner and outer orbit (Kozai indicator)</td></tr>
+<tr><td>N<sub>art</sub></td><td>Eq. (5)</td>
+<td>guard: proves the TT path executed (on-modes) and only there (off-modes)</td></tr>
+<tr><td>t<sub>end</sub>/P<sub>out</sub></td><td>coverage in outer periods</td>
+<td>integration length in orbital units</td></tr>
 </table>
+<div class="caption"><b>Table 1.</b> Metrics used in this report. Orbital elements are computed
+from the *.status particle states (N_particle = 3, bse columns) at every output step.</div>
 
-<h2>Period Coverage</h2>
-<ul>
-<li>Inner period (from initial status): <code>{period_inner:.6e}</code> Myr</li>
-<li>Outer period (from initial status): <code>{period_outer:.6e}</code> Myr</li>
-<li>Configured end time: <code>{rows[0]['t_end']:.6e}</code> Myr, equivalent to <code>{rows[0]['outer_period_covered']:.2f}</code> outer periods</li>
-</ul>
-
-<h2>Run Summary</h2>
-<table><tr><th>run_id</th><th>tt_switch</th><th>tt_nstep</th><th>r_group</th><th>r_search_group</th><th>r_out</th><th>dt_soft</th><th>tree_dt(auto)</th><th>dt_soft&lt;=tree_dt</th><th>a_in(0)</th><th>e_in(0)</th><th>i_in(0) [deg]</th><th>a_out(0)</th><th>e_out(0)</th><th>i_out(0) [deg]</th><th>i_mutual(0) [deg]</th><th>t_end</th><th>inner periods</th><th>outer periods</th><th>max |Error/Total|</th><th>max |Error_PP|</th><th>max |Δa/a0| (dynamic)</th><th>max |Δe| (dynamic)</th><th>max N_real</th><th>max N_all</th><th>max artificial</th></tr>
-{run_rows_html}
+<h3>2.3&nbsp;&nbsp;Runs</h3>
+<table class="data">
+<tr><th>run</th><th>tt-switch</th><th>configuration</th><th>purpose</th></tr>
+<tr><td>m1_pure_sdar_ref</td><td>0</td><td>r_group = 0.18 pc &gt; outer apo; r_out = 2; dt_soft = 3&times;10<sup>-5</sup></td>
+<td>whole triple always one SDAR group: regularized reference for element conservation</td></tr>
+<tr><td>m2_hard_no_tt</td><td>0</td><td>hard mode (r_out = 2), r_group = 0.01, dt_soft = 0.03125</td>
+<td>AR group in the hard channel without the TT correction</td></tr>
+<tr><td>m3_hard_tt</td><td>1 (nstep 8)</td><td>as m2 + tidal tensor</td>
+<td>the TT design under test in the hard channel</td></tr>
+<tr><td>m4_tree_no_tt</td><td>0</td><td>tree mode (r_out = 0.08, r-ratio 0.3), r_group = 0.01, dt_soft = 0.03125</td>
+<td>soft-tree background without TT</td></tr>
+<tr><td>m5_tree_tt</td><td>1 (nstep 8)</td><td>as m4 + tidal tensor</td>
+<td>production configuration: tree background with TT-corrected AR group</td></tr>
 </table>
+<div class="caption"><b>Table 2.</b> Five modes of one IC, identical apart from the listed
+knobs; all run with -b 1 (block steps), 1 rank &times; 1 thread, to t<sub>end</sub> = 20 Myr
+&asymp; 200 outer periods. The pairs (m2, m3) and (m4, m5) are A/B pairs isolating the TT knob
+in one channel each; m1 anchors the achievable conservation scale; r<sub>search,group</sub> =
+0.02 pc throughout.</div>
 
-{control_compare_html}
-
-<h2>PeTar Version and Executable Info</h2>
-<ul>
-<li>Executable: <code>{html_escape(extract_binary_from_command(rows[0]['command']))}</code></li>
-<li>PeTar version: <code>{html_escape(str(metadata.get('version', 'unknown')))}</code></li>
-</ul>
-
-<h3>Build/Runtime Features Parsed from Logs</h3>
-<ul>{feature_html}</ul>
-
-<h2>Initialization Commands</h2>
-<table><tr><th>#</th><th>exact setup command</th></tr>
-{setup_rows_html}
+<h3>2.4&nbsp;&nbsp;Reproducibility: software, build and execution</h3>
+<p><b>Software.</b> PeTar version {html_escape(log_version)}, git commit
+<code>{html_escape(git_commit(REPO))}</code>, 1 MPI rank &times; 1 OpenMP thread. The IC carries
+stellar-evolution columns (petar.init -s bse) and the runs use -b 1, so a bse-interrupt family
+binary is required; the pipeline selects it via <code>petar.select --require bse --optional
+mpi,omp,avx2</code> and builds it (<code>./configure --with-interrupt=bse &amp;&amp; make
+install</code>) when missing:</p>
+<pre class="cmd">{setup_html}</pre>
+<table class="data">
+<tr><th>parameter</th><th>value</th></tr>
+<tr><td>system</td><td>hierarchical triple, both orbits started at pericenter, c.m. position and
+velocity subtracted exactly</td></tr>
+<tr><td>masses</td><td>m<sub>1</sub> = 0.001, m<sub>2</sub> = 0.009, m<sub>3</sub> = 1.0
+M<sub>sun</sub></td></tr>
+<tr><td>inner orbit</td><td>r<sub>peri,in</sub> = 10<sup>-4</sup> pc, e<sub>in</sub> = 0.9
+(a<sub>in</sub> = 10<sup>-3</sup> pc)</td></tr>
+<tr><td>outer orbit</td><td>e<sub>out</sub> = 0.01, a<sub>out</sub> = 0.15 pc base group
+(control group: a<sub>out</sub> = 1.5 pc)</td></tr>
+<tr><td>derived periods</td><td>P<sub>in</sub> = {period_inner:.4g} Myr,
+P<sub>out</sub> = {period_outer:.4g} Myr (from the first status sample)</td></tr>
+<tr><td>units / constants</td><td>M<sub>sun</sub>, pc, pc Myr<sup>-1</sup>;
+G = 4.49830997959438 &times; 10<sup>-3</sup> pc&sup3; M<sub>sun</sub><sup>-1</sup> Myr<sup>-2</sup></td></tr>
+<tr><td>file format</td><td>ASCII m x y z v<sub>x</sub> v<sub>y</sub> v<sub>z</sub>
+(+ petar.init -s bse conversion, stellar-evolution columns)</td></tr>
 </table>
-
-<h2>All Executed Run Commands</h2>
-<table><tr><th>run_id</th><th>exact command</th><th>status path</th><th>log path</th></tr>
+<div class="caption"><b>Table 3.</b> IC generation parameters (<code>make_ic.py --case t4</code>;
+control group <code>--case t4_outer15</code>). Scales follow the notebook tidal-tensor 3-body
+test; the shortened outer orbit (0.15 pc vs the original 1.5 pc) keeps the runtime practical
+while preserving the hierarchy.</div>
+<table class="data">
+<tr><th>run_id</th><th>input data unit</th><th>unit set line</th></tr>
+{unit_rows_html}
+</table>
+<div class="caption"><b>Table 4.</b> Unit consistency across runs (parsed from each log): all
+modes must read the IC with the same unit set for the comparison to be meaningful.</div>
+<p><b>Execution commands</b> (as recorded by the runner):</p>
+<table class="data">
+<tr><th>run_id</th><th>command</th></tr>
 {command_rows_html}
 </table>
 
-<h2>Automated Checks</h2>
-<ul>{checks_html}</ul>
+<h2>3&nbsp;&nbsp;Results</h2>
+<h3>3.1&nbsp;&nbsp;Energy conservation by mode</h3>
+{base_figures_html}
+<div class="caption"><b>Figures 1&ndash;6 (base group).</b> Energy and orbital-element evolution
+of the five modes; <b>color = mode</b> (see legend), solid/dashed = quantity where two are
+shown. Figure 1: |Error/Total| (solid) and |Error_PP| (dashed) vs time (log y) &mdash; the
+check metric is the curve maximum; bounded flat curves mean conservative behaviour, upward
+steps mark discrete events (group re-linking, BSE kicks). Figures 2&ndash;6: inner and outer
+semi-major axes, eccentricities and mutual inclination vs time (linear y) &mdash; conservation
+means a flat curve; systematic drift or growing oscillation in a production mode (m2&ndash;m5)
+relative to the m1 reference flags channel-induced element loss; i<sub>mut</sub> growth
+indicates angular-momentum exchange beyond the reference level.</div>
 
+<h3>3.2&nbsp;&nbsp;Run summary</h3>
+<table class="data">
+<tr><th>run</th><th>tt</th><th>tt-nstep</th><th>r_group</th><th>r_out</th><th>dt_soft</th><th>dt_soft &le; tree_dt</th><th>&epsilon;<sub>E</sub></th><th>&epsilon;<sub>PP</sub></th><th>&Delta;a/a<sub>0</sub></th><th>&Delta;e</th><th>max N_real</th><th>max N_all</th><th>N<sub>art</sub></th><th>a_in(0)</th><th>e_in(0)</th><th>a_out(0)</th><th>e_out(0)</th><th>i_mut(0) [&deg;]</th><th>t_end</th><th>P_out covered</th></tr>
+{run_rows_html}
+</table>
+<div class="caption"><b>Table 5.</b> Per-mode summary. N<sub>art</sub> (Eq. 5) is the execution
+guard: it must be &ge; 1 in m3/m5 (TT engaged) and 0 in m1/m2/m4. The dt_soft &le; tree_dt
+column guards that no run steps the tree faster than its auto-derived step.</div>
+
+<h3>3.3&nbsp;&nbsp;Control group (outer a<sub>out</sub> = 1.5 pc)</h3>
+{control_figures_html}
+<div class="caption"><b>Figures 7&ndash;12 (control group).</b> Same quantities and encoding as
+Figures 1&ndash;6 for the original outer scale; read against the base figures to distinguish
+structural (present at both scales) from scale-dependent effects.</div>
+{('<table class="data"><tr><th>mode</th><th>base &epsilon;_E</th><th>control &epsilon;_E</th><th>base &epsilon;_PP</th><th>control &epsilon;_PP</th><th>base &Delta;a/a0</th><th>control &Delta;a/a0</th><th>base &Delta;e</th><th>control &Delta;e</th><th>base N_art</th><th>control N_art</th></tr>' + control_compare_html + '</table><div class="caption"><b>Table 6.</b> Base (a_out = 0.15 pc) versus control (a_out = 1.5 pc) maxima per mode; both groups use identical mode configurations apart from the IC outer scale.</div>') if control_compare_html else ''}
+
+<h3>3.4&nbsp;&nbsp;Automatic checks</h3>
+<table class="data">
+<tr><th>check</th><th>status</th><th>value</th><th>threshold</th><th>message</th></tr>
+{checks_html}
+</table>
+<div class="caption"><b>Table 7.</b> Automatic checks. <i>Accuracy threshold</i>:
+m1_reference_energy_bound caps &epsilon;<sub>E</sub> of the pure-SDAR reference at
+10<sup>-8</sup> (the regularized channel should conserve far below the production modes).
+<i>Guards</i>: m3/m5_tidal_tensor_effective require N<sub>art</sub> &ge; 1 (the tested TT path
+actually executed &mdash; all-green on an unexecuted path would be a silent failure);
+m2/m4_no_tidal_tensor_particles require N<sub>art</sub> = 0 (TT stays off where switched off);
+one no_runtime_abort per mode requires zero segmentation faults / assertion failures /
+aborts.</div>
+
+<div class="meta">petar version: {html_escape(log_version)} &middot; scenario:
+<i>t4_tree_hard_from_triple</i> &middot; report: {html_escape(args.report)}</div>
 </body></html>
 """
 
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(html, encoding="utf-8")
-    print(f"HTML report written to: {out_path}")
-    return 0
+    n_pass = sum(1 for c in checks if c.get("passed", False))
+    print(f"[T4] Summary: passed={n_pass == len(checks) and len(checks) > 0} total={len(checks)} failed={len(checks) - n_pass} report={out_path}")
+    return 0 if n_pass == len(checks) and checks else 1
 
 
 if __name__ == "__main__":

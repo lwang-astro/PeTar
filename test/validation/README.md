@@ -1,15 +1,21 @@
 # Validation Framework (T1–T6)
 
-**Design rules**: new validation reports follow [REPORT_DESIGN.md](REPORT_DESIGN.md) (paper-style
+**Design rules**: all validation reports follow [REPORT_DESIGN.md](REPORT_DESIGN.md) (paper-style
 sections, symbol definitions, figure encoding, threshold semantics, test-design principles, shared
-`report_common.py` helpers). T6 is the reference implementation; T1–T5 are legacy style pending
-migration.
+`report_common.py` helpers). T6 is the reference implementation.
 
 Scriptable validation scenarios for PeTar algorithm changes.
 
 ## Quick Start
 
 **Prerequisites**: Run `make install` or `petar.select <suffix>` so `petar` is in PATH.
+
+**Binary selection rule (all tests)**: tests never hardcode binary suffixes or use the default
+`petar` symlink directly. They select by feature via `petar.select --require/--optional`; if the
+selection fails **or the installed binary's version does not match the repository `VERSION`**,
+the configured family is rebuilt and reinstalled automatically
+(`report_common.select_or_install_petar`; the T4 pipeline implements the same rule in shell).
+The only exception is T6, which builds its instrumented binary from source by construction.
 
 Run any full pipeline (binary selection → scenario → HTML report, all auto):
 
@@ -33,42 +39,49 @@ python3 test/validation/run_validation.py
 
 The runner auto-detects `petar` via `command -v petar`.
 
+**Exit codes**: report scripts (`t1`–`t6` `*_report.py`) exit 0 when all recorded checks pass
+and 1 otherwise (also when re-rendering stored JSON reports — a failed check fails the script).
+Chain regenerations with `;` instead of `&&` when a stored FAIL is expected.
+
 ---
 
 ## Scenarios
 
-### T1: KDKDK4 Changeover (64b vs non64b)
-- Notebook-faithful binary IC: `m1=1`, `m2=10`, `semi=0.1 pc`, `e=0.9`, apocenter start
-- Sweeps `dt_soft = 2^[-13,-6]` across inside, peri-between, and crossing `rout` regimes
-- HTML report with overlay comparison of 64b vs non64b KDKDK4
+### T1: Kepler Orbit Crossing the Changeover Region
+- Notebook-faithful binary IC: `m1=1`, `m2=10`, `semi=0.1 pc`, `e=0.9`, apocenter start; three families at the same `dt_soft` sweep (`2^[-13,-6]`), both 64b and non64b builds (report merges both)
+- **7 checks organised by three purposes** (one-sided slope bounds; build-specific windows skip on the other build via `require_var_[not_]contains`):
+  - **pure tree** (`r_out=0.005`, `r_peri > r_out`): KDKDK4 slope > 3.5 above the round-off floor — dt `1.22e-4–7.81e-3` for 64b, `9.77e-4–7.81e-3` for non64b
+  - **pure Hermite** (`r_out=2.0`, `r_apo < r_in`): slope > 3.5 below the block-step threshold (dt `2.44e-4–4.88e-4`); slope ≤ 1 (weak dt dependence) above it
+  - **mix / full crossing** (`r_out=0.15`, `r_peri < r_in < r_out < r_apo`): follows pure Hermite inside `r_in` at fine dt (ratio in [0.5, 2], 64b — non64b annulus floor sits above the Hermite level so it is skipped); slope > 3.5 at the tree-dominated coarse end; error between the two references at fine dt (≤ pure tree)
+- The crossing-vs-references table (Q ratios per build) documents the follow-Hermite coincidence; commands are documented as one template + variable table
 
 ```bash
 python3 test/validation/run_validation.py --pipeline t1
 ```
 
-Output: `test/out/t1_kdkdk4_summary.html`
+Output: `test/out/t1_binary_changeover_kdkdk4_summary.html`
 
-### T2: Long-term Binary Conservation
-- Pure binary, ≥100 orbital periods, `dt_soft` sweep, auto changeover radii (no `-r`)
-- Tracks `max |Δa/a0|`, `max |Δe|`, and period-binned error proxies
-- Automatic checks: monotonic error growth from fine to coarse `dt_soft`
+### T2: Long-term Binary under Auto Changeover Radii
+- Pure binary, >100 periods; no `-r`: the auto changeover tracks `dt_soft`, so the contiguous sweep (dt17→dt8, ten values, 2⁻¹⁷…2⁻⁸) naturally covers **pure-tree (dt17: `r_out < r_peri`) / mix (dt16–dt9) / pure-Hermite (dt8: `r_in > r_apo`)** regimes; per-run auto radii and regime are tabulated in the report
+- **Two purposes, 4 checks**: (a) no secular energy-error drift — per-period error envelope stationary over ~113 orbits, half-run ratio ρ ≤ 2 checked once per regime; (b) the auto-derived changeover keeps the error level approximately consistent across `dt_soft` (span ≤ 300× over the 512× dt sweep; fixed radii would scale as dt⁴)
+- Osculating-element drift (|Δa/a0|, |Δe| run-maxima) reported as supporting numbers in the run table
 
 ```bash
 python3 test/validation/run_validation.py --pipeline t2
 ```
 
-Output: `test/out/t2_binary_conservation_summary.html`
+Output: `test/out/t2_binary_longterm_autochangeover_summary.html`
 
-### T3: Binary Hermite–SDAR Switching
-- Fixed `r_out` and `dt_soft`, force stays in hard region (`r_in > r_apo`)
-- Three `r_group` regimes: outside apocenter ↔ between peri/apo ↔ inside pericenter
-- Automatic checks: ordering of semi/ecc drift and cumulative error across regimes
+### T3: Binary AR Group Linking in the Hermite Channel (Census-Verified)
+- Plain-family binary (no stellar evolution — the earlier bse IC's 1.45e-7 "AR error" was the BSE energy floor), force pinned in the hard channel (`r_in = 0.02 > r_apo`); census from whole-run group event dumps (`<prefix>.group.n<m>`)
+- Three verified regimes: **never grouped** (`r_group=0.002`, pure Hermite pair, 4.7e-7 block-step truncation) / **stable group** (`r_group=0.018`, pure AR, never breaks, ~6e-12 — essentially exact) / **orbit-frequency Hermite↔AR switching** (`r_group=0.013`, criterion inside the separation range: ~1 break/re-form per orbit, measured 110/113; level between channels at ~1e4× AR but ~7× better than never grouping; stationary)
+- 10 checks: 3 census + 1 anti-explosion guard (>2000 breaks flags the pre-fix 411k step-frequency chatter bug, fixed in PeTar 5765150 + SDAR 63e8308) + 3 level ratios + 3 stationarity
 
 ```bash
 python3 test/validation/run_validation.py --pipeline t3
 ```
 
-Output: `test/out/t3_binary_hard_switch_summary.html`
+Output: `test/out/t3_binary_sdar_grouplink_summary.html`
 
 ### T4: Hierarchical Triple, Five-Mode Comparison
 - Hierarchical triple IC (tidal-tensor 3-body test), evolved for 200 outer periods
@@ -85,7 +98,7 @@ Output: `test/out/t4_triple_mode_summary.html`
 
 ### T5: Massive Binary + Light Churner, Tidal-Tensor Momentum Conservation
 - IC from the 2026-10-06 momentum-leak event: 77.65 Msun binary (`a=0.0081` pc, `e=0.667`) plus a 0.242 Msun star whose pericenter (0.01 pc) lies inside the group radius and apocenter (0.04 pc) outside it, so AR group membership churns every outer orbit (the T3 ~ r^-4 close-passage regime)
-- Three runs: pure hard mode with `--tt-switch 1/0` (with 3 particles the churner orbit necessarily overlaps the group-linking radius, so the system stays one isolated AR group — TT structurally inactive, and the TT-on run must match the TT-off baseline) plus tree mode with `--tt-switch 1` (production configuration of the event: TT engaged with group-boundary churn)
+- Three runs: pure hard mode with `--tt-switch 1/0` (the hard cluster is always the whole system — no tree perturbers — so however the AR group census splits as the churner crosses the linking radius (~10³ topology switches, verified from group event dumps), the TT channel stays structurally inactive and the TT-on run must match the TT-off baseline) plus tree mode with `--tt-switch 1` (production configuration of the event: TT engaged with group-boundary churn)
 - Automatic checks: linear-momentum drift `max ||P|-|P0||/M` from `.status` readback (tree-mode threshold 0.005 chosen so the pre-fix binary fails at ~0.0103 while the fixed binary passes at ~0.0014), artificial-particle counts (TT engaged in tree mode, none in hard mode), runtime-abort regex counts
 - Requires a plain-family binary (no interrupt/external): the IC is plain-format, so galpy- or BSE-enabled builds cannot read it; `t5_massive_binary_tt_report.py --run` selects it automatically via `petar.select --optional mpi,omp,avx2` (this changes the active binary selection)
 
@@ -120,9 +133,9 @@ Output: `test/out/t6_pert_kernel_match_summary.html` (paper-style sections: back
 | `metrics.py` | Common check functions |
 | `make_ic.py` | Deterministic IC generator (`--case t1…t6`) |
 | `criteria.json` | Centralized threshold reference |
-| `t1_kdkdk4_report.py` | T1 report generation |
-| `t2_binary_conservation_report.py` | T2 report generation |
-| `t3_binary_hard_switch_report.py` | T3 report generation |
+| `t1_binary_changeover_kdkdk4_report.py` | T1 report generation |
+| `t2_binary_longterm_autochangeover_report.py` | T2 report generation |
+| `t3_binary_sdar_grouplink_report.py` | T3 report generation |
 | `t4_triple_mode_report.py` / `t4_triple_pipeline.sh` | T4 report generation & pipeline |
 | `t5_massive_binary_tt_report.py` | T5 report generation (`--run` executes the scenario first) |
 | `t6_pert_kernel_match_report.py` | T6 report generation (`--run` executes the scenario first; reuses T5 SVG helpers) |

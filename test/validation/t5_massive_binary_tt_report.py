@@ -1,41 +1,39 @@
 #!/usr/bin/env python3
-"""T5 massive-binary tidal-tensor momentum-conservation HTML report."""
+"""T5 massive-binary tidal-tensor momentum-conservation HTML report (paper style, see REPORT_DESIGN.md)."""
 import argparse
-import json
-import math
-import re
-import shlex
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
+
 from report_common import (
-    format_tick,
+    PAPER_CSS,
+    check_row,
+    git_commit,
     html_escape,
     load_json,
     parse_command_args,
-    svg_series_plot,
+    parse_log_version,
+    read_ic,
+    select_or_install_petar,
+    svg_curves_plot,
 )
 
+REPO = Path(__file__).resolve().parents[2]
 Point = Tuple[float, float]
-VERSION_RE = re.compile(r"^Version:\s*(.*)$")
 WORK_DIR = Path("test/validation/work/t5")
 
-
-def read_ic(ic_path: Path) -> List[List[float]]:
-    rows: List[List[float]] = []
-    with ic_path.open("r", encoding="utf-8") as fh:
-        for line in fh:
-            parts = line.strip().split()
-            if parts:
-                rows.append([float(x) for x in parts])
-    return rows
+MODE_LABELS = {
+    "r1_hard_tt": ("r1 hard, TT on (isolated group)", "#0b74de"),
+    "r2_hard_no_tt": ("r2 hard, TT off (baseline)", "#d81b60"),
+    "r3_tree_tt": ("r3 tree, TT on (event configuration)", "#2e7d32"),
+}
 
 
 def load_status(status_path: Path, n_particle: int):
-    tools_path = (Path(__file__).resolve().parents[2] / "tools").resolve()
+    tools_path = (REPO / "tools").resolve()
     if str(tools_path) not in sys.path:
         sys.path.insert(0, str(tools_path))
     from analysis.status import Status  # pylint: disable=import-outside-toplevel  # pyright: ignore[reportMissingImports]
@@ -45,7 +43,7 @@ def load_status(status_path: Path, n_particle: int):
     return st
 
 
-def momentum_series(status_path: Path, n_particle: int) -> Dict[str, object]:
+def momentum_series(status_path: Path, n_particle: int) -> Dict[str, Any]:
     st = load_status(status_path, n_particle)
     px = np.zeros(st.size)
     py = np.zeros(st.size)
@@ -67,43 +65,13 @@ def momentum_series(status_path: Path, n_particle: int) -> Dict[str, object]:
     }
 
 
-def parse_log_version(log_path: Path) -> str:
-    text = log_path.read_text(encoding="utf-8", errors="replace")
-    for line in text.splitlines():
-        m = VERSION_RE.match(line.strip())
-        if m:
-            return m.group(1).strip()
-    return "unknown"
-
-
 def _select_plain_petar() -> str:
-    """Select the plain (no interrupt/external) family via petar.select.
+    """Select (and if needed reinstall) the plain-family binary via petar.select.
 
     The scenario IC is plain-format, so BSE/galpy-enabled builds cannot read it;
-    petar.select without --require picks the plain family. If no plain binary is
-    installed, build one (./configure && make install), mirroring the T1-T3
-    _select_or_build_petar behavior. Note this changes the configure state.
+    plain family is selected without --require.
     """
-    import os
-    import shutil
-    sel = shutil.which("petar.select")
-    if not sel:
-        raise RuntimeError("petar.select not found in PATH")
-    r = subprocess.run([sel, "--optional", "mpi,omp,avx2"], capture_output=True, text=True)
-    if r.returncode != 0:
-        print("[T5] Plain-family binary not found; building (./configure && make install)...")
-        subprocess.run("./configure", shell=True, check=True)
-        subprocess.run(f"make -j{os.cpu_count() or 4} install", shell=True, check=True)
-        r = subprocess.run([sel, "--optional", "mpi,omp,avx2"], capture_output=True, text=True)
-        if r.returncode != 0:
-            raise RuntimeError(
-                "petar.select still cannot select a plain-family binary after rebuild:\n"
-                f"{r.stdout}{r.stderr}"
-            )
-    petar = shutil.which("petar")
-    if not petar:
-        raise RuntimeError("petar not found in PATH after petar.select")
-    return petar
+    return select_or_install_petar(optional=["mpi", "omp", "avx2"], repo_root=REPO)
 
 
 def main() -> int:
@@ -139,7 +107,6 @@ def main() -> int:
     if not runs:
         raise RuntimeError(f"No runs found for scenario '{scenario_name}' in report: {args.report}")
     checks = [c for c in report.get("checks", []) if c.get("scenario") == scenario_name]
-    check_by_name = {c["check"]: c for c in checks}
     momentum_thresholds = {
         c["run_id"]: c["threshold"]
         for c in checks
@@ -149,16 +116,11 @@ def main() -> int:
     ic_rows = read_ic(Path(args.ic))
     n_particle = len(ic_rows)
 
-    mode_labels = {
-        "r1_hard_tt": "hard, TT on (isolated group path)",
-        "r2_hard_no_tt": "hard, TT off (baseline)",
-        "r3_tree_tt": "tree, TT on (event configuration)",
-    }
-
-    series: Dict[str, List[Point]] = {}
+    curves: List[Tuple[str, List[Point], str, str]] = []
+    legend_models: List[Tuple[str, str]] = []
     table_rows: List[str] = []
-    command_rows: List[str] = []
     version = "unknown"
+    run_records: List[Dict] = []
     for run in runs:
         run_id = run["run_id"]
         args_map = parse_command_args(run["command"])
@@ -170,111 +132,198 @@ def main() -> int:
         ms = momentum_series(status_path, n_particle)
         metrics = run.get("metrics", {})
         artificials = float(metrics.get("max_artificial_particles_glb", 0.0))
-        label = mode_labels.get(run_id, run_id)
-        series[label] = list(zip(ms["time"], ms["drift"]))
+        label = MODE_LABELS.get(run_id, (run_id, "#555"))[0]
+        color = MODE_LABELS.get(run_id, (run_id, "#555"))[1]
+        legend_models.append((label, color))
+        # r2 is dashed so its exact overlap with r1 stays visible (the two
+        # hard-mode runs track the same drift trajectory; TT is inactive)
+        dash = "7,4" if run_id == "r2_hard_no_tt" else ""
+        curves.append((label, list(zip(ms["time"], ms["drift"])), color, dash))
         threshold = momentum_thresholds.get(run_id)
+        threshold_str = str(threshold) if threshold is not None else "\u2014"
         verdict = ""
         if threshold is not None:
             ok = ms["max_drift"] <= threshold
-            verdict = (
-                '<span style="color:#2e7d32">PASS</span>' if ok
-                else '<span style="color:#d81b60">FAIL</span>'
-            )
+            verdict = "PASS" if ok else "FAIL"
         table_rows.append(
-            "<tr>"
-            f"<td>{html_escape(run_id)}</td><td>{html_escape(label)}</td><td>{ms['n_sample']}</td>"
-            f"<td>{ms['max_drift']:.4e}</td><td>{threshold if threshold is not None else '—'}</td><td>{verdict}</td>"
-            f"<td>{artificials:.0f}</td>"
-            "</tr>"
+            f"<tr><td>{html_escape(run_id)}</td><td>{html_escape(label)}</td><td>{ms['n_sample']}</td>"
+            f"<td>{ms['max_drift']:.4e}</td><td>{threshold_str}</td>"
+            f"<td class=\"{'pass' if verdict == 'PASS' else 'fail' if verdict else ''}\">{verdict}</td>"
+            f"<td>{artificials:.0f}</td></tr>"
         )
-        command_rows.append(
-            f"<tr><td>{html_escape(run_id)}</td><td><code>{html_escape(run['command'])}</code></td></tr>"
-        )
+        run_records.append({"run_id": run_id, "command": run["command"], "artificials": artificials})
 
-    ic_table = "\n".join(
-        "<tr>"
-        f"<td>{i + 1}</td><td>{row[0]:.6e}</td><td>{row[1]:.6e}</td><td>{row[2]:.6e}</td><td>{row[3]:.6e}</td><td>{row[4]:.6e}</td><td>{row[5]:.6e}</td><td>{row[6]:.6e}</td>"
-        "</tr>"
-        for i, row in enumerate(ic_rows)
+    threshold_lines = [
+        (0.005, "r3 threshold 5\u00d710\u207b\u00b3 (pre-fix \u22481.0\u00d710\u207b\u00b2 fails)"),
+        (0.02, "r1/r2 threshold 2\u00d710\u207b\u00b2"),
+    ]
+    all_pass = all(c.get("passed", False) for c in checks)
+    verdict = "ALL CHECKS PASSED" if all_pass else "CHECKS FAILED"
+
+    command_rows_html = "".join(
+        f"<tr><td>{html_escape(r['run_id'])}</td><td><code>{html_escape(r['command'])}</code></td></tr>"
+        for r in run_records
     )
+    checks_html = "".join(check_row(c) for c in checks)
 
-    check_descriptions = {
-        "r1_hard_tt_momentum_conserved": "max ||P|-|P0||/M in pure hard mode with TT on. With 3 particles the churner orbit overlaps the group-linking radius, so the system stays one isolated AR group; drift must stay at integration-noise level.",
-        "r2_hard_no_tt_momentum_conserved": "Same as r1 with TT off: the baseline drift level without tidal tensor.",
-        "r3_tree_tt_momentum_conserved": "max ||P|-|P0||/M in tree mode with TT engaged and group-boundary churn (the production configuration of the 2026-10-06 event). Threshold 0.005 calibrated so the pre-fix binary (~1.0e-2) fails and the fixed binary (~1.4e-3) passes with margin.",
-        "r1_hard_tt_matches_no_tt_baseline": "Artificial-particle count in r1 must be zero: TT is structurally inactive in the isolated-group path, so r1 must reproduce the r2 baseline.",
-        "r3_tt_engaged": "Artificial-particle count in r3 must be >= 1, proving the tidal tensor was actually exercised.",
-        "r2_no_tt_particles": "Artificial-particle count in r2 must be zero (TT off).",
-        "r1_no_runtime_abort": "No segmentation faults, assertion failures, or aborts in r1.",
-        "r2_no_runtime_abort": "No segmentation faults, assertion failures, or aborts in r2.",
-        "r3_no_runtime_abort": "No segmentation faults, assertion failures, or aborts in r3.",
-    }
-    checks_html = "\n".join(
-        "<li><b>{name}</b>: {status} — {msg}<br><i>{desc}</i></li>".format(
-            name=html_escape(c["check"]),
-            status='<span style="color:#2e7d32">PASS</span>' if c.get("passed") else '<span style="color:#d81b60">FAIL</span>',
-            msg=html_escape(c.get("message", "")),
-            desc=html_escape(check_descriptions.get(c["check"], "")),
-        )
-        for c in checks
-    )
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>T5 tidal-tensor momentum conservation</title>
+<style>{PAPER_CSS}</style></head><body>
 
-    summary = report.get("summary", {})
-    html = f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>T5 Massive-Binary Tidal-Tensor Momentum Report</title>
-<style>
-body{{font-family:Arial,Helvetica,sans-serif;margin:20px;line-height:1.45;}}
-h1,h2,h3{{color:#1f2d3d;}}
-table{{border-collapse:collapse;width:100%;margin:8px 0 16px 0;}}
-th,td{{border:1px solid #cfd8dc;padding:6px 8px;font-size:13px;vertical-align:top;}}
-th{{background:#f5f7fa;}}
-.note{{background:#eef7ff;border-left:4px solid #0b74de;padding:8px 10px;margin:10px 0;}}
-code{{white-space:pre-wrap;word-break:break-all;}}
-</style></head><body>
-<h1>T5: Massive Binary + Light Churner, Tidal-Tensor Momentum Conservation</h1>
-<div class="note">
-Regression test for the 2026-10-06 tidal-tensor momentum leak: the even-order (T3 ~ r^-4)
-term of the perturber tidal tensor had a non-zero mass-weighted mean over AR group members,
-pushing the group center of mass every AR substep with no counter-reaction. The fix removes
-the tensor member mean in <code>calcAccPert</code> (src/ar_interaction.hpp). The IC reproduces
-the event: a 77.65 Msun binary (a = 0.0081 pc, e = 0.667) plus a 0.242 Msun churner whose
-pericenter (0.01 pc) lies inside the group radius and apocenter (0.04 pc) outside it, so AR
-group membership churns every outer orbit. Threshold calibration: pre-fix binary drifts to
-~1.0e-2 (fails the r3 threshold), fixed binary stays at ~1.4e-3.
-</div>
+<h1>T5 &nbsp;Tidal-tensor linear-momentum conservation under<br>AR group-boundary churn</h1>
+<div class="subtitle">validation report &middot; scenario <i>t5_massive_binary_tt</i> &middot; <span class="verdict {'pass' if all_pass else 'fail'}">{verdict}</span></div>
 
-<h2>Figure 1: Momentum Drift ||P|-|P0||/M vs Time</h2>
-{svg_series_plot(series, 'T5: momentum drift for TT-on/off and hard/tree modes', 't [Myr]', '||P|-|P0||/M [pc/Myr]', hlines=[(0.005, 'r3 threshold 5e-3 (pre-fix ~1.0e-2 fails)'), (0.02, 'r1/r2 threshold 2e-2')], max_x_ticks=8)}
+<h2>1&nbsp;&nbsp;Background and purpose</h2>
+<p>On 2026-10-06 a production run (N = 1000, 200 Myr) developed a linear-momentum leak traced to
+the AR-group tidal tensor: the even-order (T<sub>3</sub> ~ r<sup>-4</sup>) term of the perturber
+tidal tensor had a non-zero mass-weighted mean over the group members, so it pushed the group
+centre of mass by a small amount every AR substep with no counter-reaction &mdash; and with a
+light star churning through the group boundary every outer orbit, the bias never averaged out.
+The fix removes the member mean of the tensor in <code>calcAccPert</code>
+(src/ar_interaction.hpp). This test reproduces the event in a 3-particle system &mdash; a
+77.65 M<sub>sun</sub> binary plus a 0.242 M<sub>sun</sub> churner whose pericenter (0.01 pc)
+lies inside the group radius and apocenter (0.04 pc) outside it &mdash; and establishes (i) that
+the fixed binary conserves momentum in the event configuration (tree mode, TT on, boundary
+churn), (ii) that in the isolated-group hard-mode path the TT is structurally inactive, so the
+TT-on run must reproduce the TT-off baseline, and (iii) via the artificial-particle census that
+the TT is engaged exactly in the tree-mode run.</p>
 
-<h2>Initial Conditions (make_ic.py --case t5)</h2>
-<table><tr><th>#</th><th>m [Msun]</th><th>x</th><th>y</th><th>z</th><th>vx</th><th>vy</th><th>vz</th></tr>
-{ic_table}
+<h2>2&nbsp;&nbsp;Method</h2>
+<h3>2.1&nbsp;&nbsp;Quantities under comparison</h3>
+<p>At every status output the total linear momentum and its drift are</p>
+<div class="eq"><b>P</b>(t) = &Sigma;<sub>i</sub> m<sub>i</sub><b>v</b><sub>i</sub>(t),&nbsp;&nbsp;
+&Pi;(t) = ||<b>P</b>(t)| &minus; |<b>P</b>(0)|| / M,<span class="tag">(1)</span></div>
+<p>with M the total mass; a momentum-conserving integrator keeps &Pi; at the round-off /
+integration-noise floor. The tidal-tensor activity guard is the artificial-particle census</p>
+<div class="eq">N<sub>art</sub> = max<sub>t</sub> [N<sub>all</sub>(glb) &minus;
+N<sub>real</sub>(glb)],<span class="tag">(2)</span></div>
+<p>positive only while tidal-tensor probes exist.</p>
+
+<h3>2.2&nbsp;&nbsp;Metrics</h3>
+<table class="data">
+<tr><th>symbol</th><th>definition</th><th>interpretation</th></tr>
+<tr><td>&Pi;<sub>max</sub></td><td>max over the run of Eq. (1)</td>
+<td>momentum-drift level per run; the check metric</td></tr>
+<tr><td>N<sub>art</sub></td><td>Eq. (2)</td>
+<td>guard: TT engaged (tree mode) / structurally inactive (hard mode)</td></tr>
+<tr><td>N<sub>sample</sub></td><td>status outputs per run</td><td>drift-curve sampling</td></tr>
+</table>
+<div class="caption"><b>Table 1.</b> Metrics used in this report. Momentum is computed from the
+*.status particle states (N_particle = 3, plain format, interrupt_mode none).</div>
+
+<h3>2.3&nbsp;&nbsp;Runs</h3>
+<table class="data">
+<tr><th>run</th><th>configuration</th><th>purpose</th></tr>
+<tr><td>r1_hard_tt</td><td>hard mode (r_out = 2), --tt-switch 1, r_group = 0.03, dt_soft = 3&times;10<sup>-5</sup></td>
+<td>the hard cluster is always the whole system (no tree perturbers); the AR
+group census still splits and re-joins as the churner crosses the linking
+radius (group event dumps show &asymp;10<sup>3</sup> three-member/binary-group
+topology switches), but every cluster stays isolated, so the TT channel is
+structurally inactive and this run must match the r2 baseline</td></tr>
+<tr><td>r2_hard_no_tt</td><td>as r1 with --tt-switch 0</td>
+<td>TT-off baseline of the isolated-group path (A/B counterpart of r1)</td></tr>
+<tr><td>r3_tree_tt</td><td>tree mode (r_out = 0.08, r-ratio 0.3), --tt-switch 1, r_group = 0.02, dt_soft = 0.0039</td>
+<td>the production configuration of the event: TT engaged with group-boundary churn every outer
+orbit</td></tr>
+</table>
+<div class="caption"><b>Table 2.</b> Three runs of one IC; r1/r2 are an A/B pair isolating the
+TT knob in the isolated-group path (expected identical), r3 exercises the churn + TT combination
+that leaked before the fix. All runs integrate to t<sub>end</sub> = 3 Myr with output interval
+0.05 Myr, 1 rank &times; 1 thread.</div>
+
+<h3>2.4&nbsp;&nbsp;Reproducibility: software, build and execution</h3>
+<p><b>Software.</b> PeTar version {html_escape(version)}, git commit
+<code>{html_escape(git_commit(REPO))}</code>, 1 MPI rank &times; 1 OpenMP thread. The IC is
+plain-format (no stellar-evolution or external-potential columns), so a plain-family binary is
+required and selected via <code>petar.select --optional mpi,omp,avx2</code> (built with
+<code>./configure &amp;&amp; make install</code> when missing; note this changes the configure
+state).</p>
+<p><b>Initial conditions</b> (deterministic, both orbits started at apocenter, c.m. position and
+velocity subtracted exactly, no RNG):</p>
+<pre class="cmd">python3 test/validation/make_ic.py --case t5 --output test/validation/work/t5/input.base
+cd test/validation/work/t5 &amp;&amp; petar.init -f input input.base</pre>
+<table class="data">
+<tr><th>parameter</th><th>value</th></tr>
+<tr><td>system</td><td>massive binary + light churner (3 particles), reproducing the 2026-10-06
+event (run_N1k_200Myr at t &asymp; 47.6 Myr)</td></tr>
+<tr><td>masses</td><td>m<sub>1</sub> = 46.06, m<sub>2</sub> = 31.59 (binary),
+m<sub>3</sub> = 0.242 M<sub>sun</sub> (churner)</td></tr>
+<tr><td>inner (binary) orbit</td><td>a = 0.0081 pc, e = 0.667 (r<sub>peri</sub> = 2.7&times;10<sup>-3</sup>,
+r<sub>apo</sub> = 1.35&times;10<sup>-2</sup> pc)</td></tr>
+<tr><td>outer (churner) orbit</td><td>a = 0.025 pc, e = 0.6 (r<sub>peri</sub> = 0.01 pc inside
+the group radius, r<sub>apo</sub> = 0.04 pc outside it &mdash; membership churns every outer
+orbit)</td></tr>
+<tr><td>units / constants</td><td>M<sub>sun</sub>, pc, pc Myr<sup>-1</sup>;
+G = 4.49830997959438 &times; 10<sup>-3</sup> pc&sup3; M<sub>sun</sub><sup>-1</sup> Myr<sup>-2</sup></td></tr>
+<tr><td>file format</td><td>ASCII m x y z v<sub>x</sub> v<sub>y</sub> v<sub>z</sub>
+(+ petar.init -f conversion)</td></tr>
+</table>
+<div class="caption"><b>Table 3.</b> IC generation parameters (<code>make_ic.py --case t5</code>).
+The churner pericenter/apocenter straddle the group radius by construction, so the group census
+changes every outer orbit without relying on a spontaneous rare event.</div>
+<p><b>Execution commands</b> (as recorded by the runner):</p>
+<table class="data">
+<tr><th>run_id</th><th>command</th></tr>
+{command_rows_html}
 </table>
 
-<h2>Run Summary</h2>
-<table><tr><th>run_id</th><th>mode</th><th>status samples</th><th>max drift [pc/Myr]</th><th>threshold</th><th>verdict</th><th>max artificial particles</th></tr>
-{"".join(table_rows)}
+<h2>3&nbsp;&nbsp;Results</h2>
+<h3>3.1&nbsp;&nbsp;Momentum drift by mode</h3>
+{svg_curves_plot(
+    curves,
+    legend_models,
+    'T5: linear-momentum drift vs time for the three modes',
+    't [Myr]',
+    'Π (Eq. 1) [pc Myr^-1]',
+    hlines=threshold_lines,
+    logy=True,
+    legend_quantities=[('Π(t)', ''), ('r2 baseline (dashed, overlaps r1)', '7,4')],
+)}
+<div class="caption"><b>Figure 1.</b> &Pi;(t) (Eq. 1) versus time; <b>color = run</b> (see
+legend), threshold lines dotted. <b>Only two distinct tracks are visible, and this is the
+result, not a missing curve</b>: with the TT channel structurally inactive in the isolated
+hard cluster, the TT-on run r1 reproduces the TT-off baseline r2 (identical run-max
+2.7&times;10<sup>-5</sup>); r2 is drawn dashed so the exact overlap stays visible. The check
+metric is the curve maximum per run. Read it as: a
+curve hugging the plot floor is momentum-conserving (r1/r2 and the fixed r3); a curve that ramps
+up over the outer-orbit time (0.05&ndash;0.1 Myr scale) and keeps growing is the pre-fix leak
+signature &mdash; the r3 threshold (5&times;10<sup>-3</sup>) is calibrated so the pre-fix binary
+(&Pi; &asymp; 1.03&times;10<sup>-2</sup>) fails and the fixed binary (&Pi; &asymp;
+1.4&times;10<sup>-3</sup>) passes with margin; the r1/r2 threshold (2&times;10<sup>-2</sup>)
+only bounds gross breakage of the isolated-group path.</div>
+
+<h3>3.2&nbsp;&nbsp;Run summary</h3>
+<table class="data">
+<tr><th>run</th><th>mode</th><th>N<sub>sample</sub></th><th>&Pi;<sub>max</sub> [pc Myr<sup>-1</sup>]</th><th>threshold</th><th>verdict</th><th>N<sub>art</sub></th></tr>
+{''.join(table_rows)}
 </table>
+<div class="caption"><b>Table 4.</b> Per-run maxima. The verdict column restates the momentum
+checks of &sect;3.3 against the calibrated thresholds; N<sub>art</sub> (Eq. 2) is the engagement
+guard (zero in both hard-mode runs, non-zero in the tree-mode run).</div>
 
-<h2>Automatic Checks</h2>
-<ul>{checks_html}</ul>
-
-<h2>PeTar Version</h2>
-<ul><li>PeTar version: <code>{html_escape(version)}</code></li></ul>
-
-<h2>Commands</h2>
-<table><tr><th>run_id</th><th>command</th></tr>
-{"".join(command_rows)}
+<h3>3.3&nbsp;&nbsp;Automatic checks</h3>
+<table class="data">
+<tr><th>check</th><th>status</th><th>value</th><th>threshold</th><th>message</th></tr>
+{checks_html}
 </table>
+<div class="caption"><b>Table 5.</b> Automatic checks. <i>Accuracy thresholds</i>: the three
+momentum checks cap &Pi;<sub>max</sub> &mdash; r1/r2 at 2&times;10<sup>-2</sup> (gross bound for
+the TT-inactive path), r3 at 5&times;10<sup>-3</sup>, calibrated on this IC so that the pre-fix
+binary fails and the fixed binary passes (a threshold property of the IC, not a universal
+constant). <i>Guards</i>: r1/r2 artificial-particle counts must be zero (TT structurally
+inactive &mdash; a non-zero count there would mean r1 silently exercised a different path than
+r2), r3 must have &ge; 1 (TT actually engaged), and every run must abort-free.</div>
 
-<hr>
-<p>Scenario summary: passed={summary.get("passed")}, total={summary.get("n_total", summary.get("total"))}, failed={summary.get("n_failed", summary.get("failed"))}. Report JSON: <code>{html_escape(args.report)}</code></p>
+<div class="meta">petar version: {html_escape(version)} &middot; scenario:
+<i>t5_massive_binary_tt</i> &middot; report: {html_escape(args.report)}</div>
 </body></html>
 """
 
     Path(args.output).write_text(html, encoding="utf-8")
-    print(f"[T5] HTML report written: {args.output}")
-    return 0
+    n_pass = sum(1 for c in checks if c.get("passed", False))
+    print(f"[T5] Summary: passed={n_pass == len(checks) and len(checks) > 0} total={len(checks)} failed={len(checks) - n_pass} report={args.output}")
+    return 0 if n_pass == len(checks) and checks else 1
 
 
 if __name__ == "__main__":

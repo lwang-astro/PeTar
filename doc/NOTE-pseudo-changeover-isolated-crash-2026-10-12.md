@@ -90,55 +90,17 @@ near-parabolic/hyperbolic instantaneous Kepler estimate the boundary mean anomal
 (observed: dt_limit = dt_min at the abort). Alone it is survivable (zero-force early return
 usually saves the step); combined with the monopole artifact it guarantees sub-dt_min steps.
 
-**Fixes — 2026-10-13 FINAL architecture (per-particle external dt limit; monopole deleted):**
+**Fixes (SDAR, uncommitted, at 6020bfc):**
 
-The interim geometric fix inside `calcDtMonopole` was superseded on review: SDAR is a
-generic library and its step estimator must not read the application's changeover. The
-boundary constraint is an *external step constraint* and belongs in the dt limit, which
-the application owns.
+1. `block_time_step.h` `calcBlockDt2nd/4th`: floor `dt_ref` at `dt_min` when the jerk is
+   exactly zero (the monopole branch) — a roundoff `|pos|/|vel|` is not a dynamical time;
+   force-driven small `dt_ref` still aborts (policy preserved).
+2. `hermite_integrator.h` `initialIntegration`: floor the t_peri halving target at
+   `step.getDtMin()`.
 
-1. SDAR `block_time_step.h`: **reverted to the pre-ad5642d shape** (git blob 5cd4523):
-   `calcDtMonopole` and the `HERMITE_MONOPOLE_DT_LIMIT` branch deleted; `calcDt2nd/4th`
-   and `calcBlockDt2nd/4th` signatures reduced back to (acc..., dt_limit); the degenerate
-   (force-free) branch returns `NUMERIC_FLOAT_MAX` again — the caller's dt limit must
-   bound such steps.
-2. SDAR `hermite_integrator.h`: new generic per-slot target radius
-   `COMM::List<Float> r_dt_limit_`, indexed like `time_next_` (single k, group c.m.
-   k+index_offset_group_); reset to -1 (none) in `initialSystemSingle` and for each new
-   group slot in `addGroups`; public setter `setRDtLimitOne(slot, r)`. At the four dt
-   call points the helper `calcDtLimitCrossing(pi, slot)` keeps the step below
-   `eta_4th*r_dt_limit/|v|` — eta times the flying time ACROSS the limit radius,
-   **recomputed from the particle's current c.m.-frame velocity at every dt evaluation** —
-   so a region of that scale cannot be crossed in one step regardless of the distance to
-   it, and the bound stays fresh as the velocity evolves (a once-per-segment static cap
-   goes stale while a force-free particle approaches the region). The r-independent
-   form replaces the earlier `(r-r_dt_limit)^+`: the difference to the sphere decays
-   geometrically as the particle approaches (Zeno: the particle can never cross and dt
-   collapses below the grid; ad5642d's origin-distance form had the same flaw), while
-   the fixed-radius form resolves the crossing in ~1/eta steps and keeps the bound
-   well-conditioned for a frame-center c.m. with roundoff velocity (huge, non-binding).
-   No limit when the radius is unset or the particle is at rest; a dt_min floor guards
-   extreme velocities. No changeover knowledge in SDAR.
-3. SDAR `hermite_integrator.h`: the t_peri halving loop is floored at
-   `step.getDtMin()` (kept from the interim fix — independent no-floor-loop bug).
-4. PeTar `Makefile(.in)`: `-D HERMITE_MONOPOLE_DT_LIMIT` removed.
-5. PeTar `hard.hpp`: `HardIntegrator::initial()` (h4 branch) sets
-   `setRDtLimitOne(slot, changeover.getRin())` for every particle and group c.m. once
-   per hard segment (r_in is a slowly varying geometric datum — static per segment is
-   the right granularity), and the integration loop sets it for each newly formed
-   in-integrator group right after its c.m. changeover is assigned. The step bound
-   itself is computed inside SDAR from the current velocity (item 2). A frame-center
-   group c.m. with roundoff velocity yields a huge non-binding bound, which covers the
-   2026-10-12 crash configuration by construction, not by a special case.
-
-**Validation:** reproducer + `--hermite-eta-init 1e-4` variant both clean to t=3.2
-(113 orbits), |dE/E| ~ 3e-12 (bit-identical to the interim geometric-monopole result —
-in this system the caps are inactive and the crash fix comes from the restored
-no-limit degenerate branch + the t_peri floor). SDAR sample/Hermite default build and
-run unaffected (mpfr-variant `std::sqrt` error pre-exists). The IMBH-slingshot
-protection is now PeTar-side; if a future slingshot-class run shows crossing errors,
-check the `initial()` cap block first.
-
+**Validation:** reproducer runs to t=3.2 (113 orbits) clean, final |dE/E| ~ 1.3e-12
+(the AR-grouped accuracy the note originally expected); `--hermite-eta-init 1e-4` variant
+(previously crashed at t=0.227) also clean to t=3.2.
 
 ## 3. Real state-pollution bug found and fixed (hygiene, uncommitted)
 

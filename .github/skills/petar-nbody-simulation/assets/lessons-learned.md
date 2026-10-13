@@ -612,7 +612,7 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Mistake**: 前条把组事件注入计入 `de_change_cum` 的"治标"修复，经用户审查撤回：`de_change_cum`/`de_sd_change_cum` 设计语义是**物理**能量变化（恒星演化质量损失、双星中断）；把算法误差折入等于让簿记列失去诊断意义、并掩盖真实误差信号。告警压力本身是"过渡层注入真实误差"的正确信号。
 
-**Root cause**: 修复定位（事件步重基线）在诊断上有效（三案例 dE→1e-10）但语义错误；正确的根本方向是消除注入本身——SDAR 过渡层逐事件互逆 + 派生量纯态化（form/break 互为逆正则变换、辅助量由当前态经共享代码推导、切换对齐共同同步边界），可执行计划见 `SDAR/docs/transition_unification_plan.md`。
+**Root cause**: 修复定位（事件步重基线）在诊断上有效（三案例 dE→1e-10）但语义错误；正确的根本方向是消除注入本身——SDAR 过渡层逐事件互逆 + 混合量纯态化（form/break 互为逆正则变换、辅助量由当前态经共享代码推导、切换对齐共同同步边界），可执行计划见 `SDAR/docs/transition_unification_plan.md`。
 
 **Prevention rule**: 数值方案中的簿记列各有语义边界（物理变化 vs 算法残差 vs 参考重置），任何"把 X 挪到 Y 列"的修复必须先核对 Y 的设计语义；治标修复落地时必须在文档中标注其掩盖性质与撤回条件。
 
@@ -672,7 +672,6 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: 回放只能复现不能重parametrize 判据;判据参数的生产效应要么改 dump 二进制里的粒子半径,要么跑真实段。归因任何判据行为先打印事件触发点的 dr/r_crit/κ_org,判断卡在半径分支还是 κ 分支,再谈参数。
 
-
 ### 2026-10-05: 防御性 clamp 照搬前先查危害是否已被根修——"单星路径有防护"不是加 clamp 的理由;isCallBSENeeded 的 SEVN 轮询是死代码
 
 **Mistake**: 修复双星两断言后,我在 postProcess 又加了 `std::max(time_interrupt_max, time_now)` clamp,理由是"单星路径 modifyOneParticle 已有同款防护,注释列了两个危害"。用户追问后查证:两个危害都是已修复的 bug——hard dump 时间偏移(40b1ee4 已在 hard_debug 源头修复,clamp 只是残留 harden)、Hermite dt-max 超 drift 步宽(1bc65f9 已修)。Case-A dump 里 stale-max 也从未发生(触发是正常排程 ti=rec+dtstar 恰落在 time_now)。同轮还发现 isCallBSENeeded 的 SEVN 分支里 `getTimeStepBinary(...) < dt_sevn` 轮询自 SEVN 集成起就是死代码:束缚对走第一判据,else 分支要求束缚对与 !call_flag 矛盾;SEVN 下一事件时间本就由 postProcess 的 getTimeStepBinary 写进 time_interrupt,不需要检查时二次查询。均已移除。
@@ -708,7 +707,7 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Mistake**: run_N1k_200Myr(N=1000, W0=5, Rh=1 pc, 583 Msun, Kroupa IMF, 纯引力, 自动 changeover: r_out=0.079/r_in=0.008 pc)在 t≈47-48 出现"77.6 Msun 巨双星(id 184+377, 13% 簇质量)携 ~40 颗近邻星逃逸、data.core 随之漂移到 (-110,18,-31) pc"。若只看 data.core/data.esc 或逃逸速度量级(1.5-2.1 km/s,与该处 v_esc 同量级),会误判为物理弹射。
 
-**Root cause**: 质量分层后巨双星沉入核内;changeover 半径按 (m/m_avg)^{1/3} 质量放大(77.6 Msun → ~5×)叠加 r_search 链式连通(见 2026-10-04 条目),把大块核心粘进**单个连通 Hermite 硬簇**(内嵌小 AR 组,非巨型 AR 组——`hard.debug` 重放 dump 证实:t≈11 为 111-134 粒子 Hermite 簇 + 1 个 2→3 成员 AR 组;日志 "N_members" 直方图统计的就是连通簇,来源 `petar.hpp:2399-2413` `clusterCount(connected_cluster_n_list)`);t=47-48 该系统硬积分失败:output 日志 E_total -303→-159(+144,占 |E0| 48%,注入走 de_change_cum/Modify 列 +143,Modify_single/Modify_group=0)、|L| 58→270、N_all 1000→1012(≈2-3 个 AR 组的人工粒子);相邻快照全粒子总动量 P: (9.2,-1.7,-2.3)→(-119,8.6,-54.4) Msun·pc/Myr(|ΔP|≈130 Msun·km/s,为事件前 46 Myr 累计漂移 9.6 的 14 倍),且簇剩余部分反冲方向与逃逸组同向(物理反冲必须反向);能量来源不足且动量无载体:全局注入 +144 中双星硬化仅贡献 ΔEb≈+31(Eb=G m1 m2/(2a):370.8→401.8;**勿用 Binary.mass(总质量)代 m1m2——Eb=G·m_tot/(2a) 无物理意义,首次分析即错成 21.4**);动量侧决定性:双星 CM 获得 |Δp|≈114 Msun·km/s,事件中的三体入侵者星 87 仅 0.242 M☉、事件后速度 0.9-2.8 km/s(动量 ~0.25-0.67,需 ~471 km/s 才能平衡),簇剩余部分反冲方向还与逃逸组同向——逃逸速度是在 AR 组 (87,184,377) form/break 状态回写瞬间凭空写入的(data.group.n2/n3 事件级记录:两次速度阶跃 0.68→1.40→1.77 km/s 精确落在 t=47.8203/48.0664 组解散时刻,期间双星内部 a/e 三位有效数字不变)。dump 重放(petar.mpi.omp.avx2.hard.debug -p data.par,版本比 run 新 9 天但 dE_SD=0.250278 与 run stderr 逐位一致)直接测得该硬系统单树步相对能量误差 ~1e-3(阈值 1e-4,PeTar 自身告警),步内发生 AR 组 form(2→3 成员),与 2026-10-02 组转换注入机制同源。
+**Root cause**: 质量分层后巨双星沉入核内;changeover 半径按 (m/m_avg)^{1/3} 质量放大(77.6 Msun → ~5×)叠加 r_search 链式连通(见 2026-10-04 条目),把大块核心粘进**单个连通 Hermite 簇**(内嵌小 AR 组,非巨型 AR 组——`hard.debug` 重放 dump 证实:t≈11 为 111-134 粒子 Hermite 簇 + 1 个 2→3 成员 AR 组;日志 "N_members" 直方图统计的就是连通簇,来源 `petar.hpp:2399-2413` `clusterCount(connected_cluster_n_list)`);t=47-48 该系统硬积分失败:output 日志 E_total -303→-159(+144,占 |E0| 48%,注入走 de_change_cum/Modify 列 +143,Modify_single/Modify_group=0)、|L| 58→270、N_all 1000→1012(≈2-3 个 AR 组的人工粒子);相邻快照全粒子总动量 P: (9.2,-1.7,-2.3)→(-119,8.6,-54.4) Msun·pc/Myr(|ΔP|≈130 Msun·km/s,为事件前 46 Myr 累计漂移 9.6 的 14 倍),且簇剩余部分反冲方向与逃逸组同向(物理反冲必须反向);能量来源不足且动量无载体:全局注入 +144 中双星硬化仅贡献 ΔEb≈+31(Eb=G m1 m2/(2a):370.8→401.8;**勿用 Binary.mass(总质量)代 m1m2——Eb=G·m_tot/(2a) 无物理意义,首次分析即错成 21.4**);动量侧决定性:双星 CM 获得 |Δp|≈114 Msun·km/s,事件中的三体入侵者星 87 仅 0.242 M☉、事件后速度 0.9-2.8 km/s(动量 ~0.25-0.67,需 ~471 km/s 才能平衡),簇剩余部分反冲方向还与逃逸组同向——逃逸速度是在 AR 组 (87,184,377) form/break 状态回写瞬间凭空写入的(data.group.n2/n3 事件级记录:两次速度阶跃 0.68→1.40→1.77 km/s 精确落在 t=47.8203/48.0664 组解散时刻,期间双星内部 a/e 三位有效数字不变)。dump 重放(petar.mpi.omp.avx2.hard.debug -p data.par,版本比 run 新 9 天但 dE_SD=0.250278 与 run stderr 逐位一致)直接测得该硬系统单树步相对能量误差 ~1e-3(阈值 1e-4,PeTar 自身告警),步内发生 AR 组 form(2→3 成员),与 2026-10-02 组转换注入机制同源。
 
 **Prevention rule**: 判定逃逸/喷出事件是否物理,按序审计:① 相邻快照算全粒子总动量 P(t)(孤立系统严格守恒,比能量灵敏;快照坐标为单一惯性系,初始 P=0 可作基准;output 日志的 "C.M." 行是势中心 _mode=3 不是动量 CM,勿混用);② output 日志事件步的 E_total/Modify/|L|err_cum 跳变;③ 能量预算:逃逸组动能 vs 全部双星硬化增量(事后无残留硬化双星=数值注入);④ 反冲方向核对。大 AR 组(>10 成员)是红旗:致密核+大质量 IMF 下自动 changeover 的质量放大项会让巨双星捕获整核,须显式收紧 -s/-r 并复跑。
 
@@ -748,7 +747,7 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Mistake**: 联锁修复虽在真实失配事件正确触发,但主泄漏窗口组员稳定、matched 更新,无改善——按"无改善不改码"回退(质量置零亦有引入双表示/失重的风险)。另:geid 转换探针初版只测簇坐标系动量(恒≈0),不含簇 CM 项,是假排除;补上 `particles.cm.mass*cm.vel` 后才有效。
 
-**Root cause**(最终状态):泄漏与 `kappa_org = kref·pert_in/pert_out` 的尖峰步逐一对应(SDorg 基线 0.0017 ↔ 尖峰 0.02→0.22 递增,阈值 groupedCriterion 1e-2 恰在中间;NB 12↔14 交替 = perturber 列表 churn);kappa(实际应用因子)恒 1。组 form/break 状态重写经 CM 含入审计确认动量中性;泄漏在**转换之间的 AR 积分段**内累积(geid P_pre 序列平滑漂移 +0.1-0.15/步而非跳变)。即:perturber 列表churn → pert_out 骤降 → kappa_org 尖峰(宽对成组翻转,判据 5a62e4e 2026-10-01,晚于原 run)→ 该步 AR 积分(含 slowdown 状态机更新)单向注入簇 CM 速度 +0.018/步。
+**Root cause**(最终状态):泄漏与 `kappa_org = kref·pert_in/pert_out` 的尖峰步逐一对应(SDorg 基线 0.0017 ↔ 尖峰 0.02→0.22 递增,阈值 groupedCriterion 1e-2 恰在中间;NB 12↔14 交替 = perturber 列表 churn);kappa(实际应用因子)恒 1。组 form/break 状态重写经 CM 含入审计确认动量中性;泄漏在**转换之间的 AR 积分段**内累积(geid P_pre 序列平滑漂移 +0.1-0.15/步而非跳变)。即:perturber 列表churn → pert_out 骤降 → kappa_org=kref·pin/pout 尖峰(跨 1e-2 判据阈值)→ 尖峰步 AR 积分段注入簇 CM 速度 +0.018/步。
 
 **Prevention rule**: ① 探针测动量必须含 CM 项(簇/组坐标系动量恒≈0 是结构性盲区,两次踩坑);② 下一步唯一悬置实验:在每个 AR integrateToTime 段前后打印 CM 含入 P + 内层(非根)树节点的 κ 值——注入点应在 slowdown 因子更新路径(syncTreeSlowDownAndDs/calcBinaryTreeSlowDown 之后的状态调整);③ 判据阈值(kappa_org≥1e-2)与 perturber 列表更新均无滞回,churn 环境下必然翻转——修复可考虑双阈值滞回或列表变化平滑,但须先定位积分段内的注入函数;④ Makefile 追加行不触发重编(SDAR 头文件不在依赖),改 Makefile 后必须 make -B;configure 备份要在 configure 之前拷贝(时序错误曾把 plain 当 bse.g 恢复)。
 
@@ -782,13 +781,7 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Root cause**(数学+测量双确认):calcAccPert 对列表力做 CM 扣除(Σm·a 精确=0)之后加入潮汐张量;fit() 按构造 T1=0("assume input force already remove the c.m.")、T2 线性项 Σm·T2·x=0(CM 系精确抵消),但 **T3 二次项 Σm·T3·x²≠0(x² 为偶函数,±x 成员不抵消)**——张量给组成员留下非零质量加权平均力,无任何反作用通道。近距暂现体主导张量拟合时 T3∝r⁻⁴ 爆炸(0.01-0.06 pc 源 → 净力 11-30 pc/Myr²,实测 29-39 ✓)。kappa_org 尖峰/pert_out 振荡/NB churn 全是同一近距源的伴生症状。TT-off 无张量故无泄漏;drift 尾 calcCenterOfMass 重算只是测量结果。
 
-**Fix**(ar_interaction.hpp,已验证):张量 eval 后同列表力一样扣除其质量加权平均(pot 同步修正)。验证:|P| 55→57.3(修复前→143.7,tt-off→56.7);能量 err_cum 29.9→3.2;TT-on 守恒性与 TT-off 等同。原始 200 Myr run 的逃逸事件(+144 能量/+130 动量、巨双星 1.5-2 km/s 假逃逸、data.core 崩坏)即此机制在无近距暂现体猝发时段的持续累积。
-
-**Prevention rule**: ① 微分/差分化校验必须逐项做**偶宇称检验**:奇阶(线性)项在 CM 系自动抵消,偶阶(常数/二次)项的平均非零——任何"扣除均值"操作之后加入的场展开都要重新扣除均值;② 聚合探针(Σ/均值)必须放完整循环后,放循环内会测到部分和假信号;③ 守恒审计的最短路径是直接测"力通道的净输出"(Σm·a per call)而非层层追状态写入——写入者(calcCenterOfMass)往往只是测量者;④ 修复后验证必须同时查动量(|P| 序列)与能量(err_cum),二者同源时应同时恢复。
-
-**修正语义对照论文复核(2026-10-06 续)**:PeTar_code.pdf §6.4.1 自身定义 A′=A−A(rcm)(测量点先扣 CM 值,零阶项由 CM 粒子单独交付)——但内部动力学需要的严格量是 A′−⟨A′⟩(⟨A′⟩=⟨T3x²⟩≠0 即泄漏),扣均值是把论文定义执行到底而非改变设计。**T3 差分贡献完整保留**:对成员减同一常数使相对力 (a_i−a_j) 严格不变;非等质量双星 x1≠x2(m1/m2 缩放),T3·x1²≠T3·x2² 的差分项(论文测得的轨道修正效应)原封不动;等质量时 T3 项纯均匀,扣除是恒等变换。净分量的物理内容是 O((a/L)²) 有限尺寸净力修正,可忽略且已由 CM 通道(A(rcm))覆盖。反作用(§6.4.2 sampling/伪粒子)与张量均值处理无关,修复恢复一致性。
-
-**修复重构(用户方案,2026-10-06 再续)**:张量 eval 挪入循环 1(列表力之后、acc_pert_cm 累加之前),既有 CM 扣除自动覆盖张量均值,独立修正循环删除——与分离循环版逐位等价(|P| 序列完全一致)。**n_pert==0 分支勘误(用户纠正)**:该分支原本就有张量施加(else 内 SOFT_PERT 块,我此前误读为"完全不施加"),同样无均值扣除——即**两个分支都有同一泄漏**;修正:原块就地加均值扣除(非新增张量),我误加的重复块已删。教训:① python 字符串手术连吞三处结构性括号/宏(每次以不同编译错误显形),多 edits 必须从 git 原版一次性重放并逐锚点断言;② 读分支代码必须读到块尾(EXTERNAL_HARD 嵌套截断了我的视野);③ 未触发路径的错误重构不会被验证场景暴露(n_pert==0 在本测试中不执行)——重构后要静态核对所有分支的施加次数恰好一次。
+**Fix**(ar_interaction.hpp,已验证):张量 eval 挪入循环 1(列表力之后、acc_pert_cm 累加之前),既有 CM 扣除自动覆盖张量均值,独立修正循环删除——与分离循环版逐位等价(|P| 序列完全一致)。**n_pert==0 分支勘误(用户纠正)**:该分支原本就有张量施加(else 内 SOFT_PERT 块,我此前误读为"完全不施加"),同样无均值扣除——即**两个分支都有同一泄漏**;修正:原块就地加均值扣除(非新增张量),我误加的重复块已删。教训:① python 字符串手术连吞三处结构性括号/宏(每次以不同编译错误显形),多 edits 必须从 git 原版一次性重放并逐锚点断言;② 读分支代码必须读到块尾(EXTERNAL_HARD 嵌套截断了我的视野);③ 未触发路径的错误重构不会被验证场景暴露(n_pert==0 在本测试中不执行)——重构后要静态核对所有分支的施加次数恰好一次。
 
 ### 2026-10-06: T5 验证场景落地——回归阈值必须用未修复二进制实测定标;3 体 hard 模式 TT 结构性不触发
 
@@ -816,9 +809,9 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 ### 2026-10-07: 模拟配置先查记录再推测——并行/时长/重启三连错被用户纠正;实测基准统一进 performance-log.md
 
-**Mistake**: N1k 验证重启的启动配置连错三轮,均为"推测优先、查证滞后":① 提议 OMP 4 线程(SKILL 明文 N≲10³ 用 1 线程,script-tools 有 N=500 实测 4 线程 +19%,我引用"binaries-rich 2-4"例外却未按 quick rule 先 benchmark);② wall 实测显示"mpirun -n 4 快 8×"推荐 MPI——实为对照探针缺 `UCX_VFS_ENABLE=n` 的混淆(环境变量只设了 MPI 组),直跑+环境变量后差距消失;③ 用短探针 wall 外推时长(0.25 Myr 探针 wall 5 s 里计算仅 1.3 s,启动/IO 占 3/4),先后报出 2 h→52 min→10 min 三个错误估计,真值(prof: 2.6 s/Myr)自始至终可一步获得。另:重启命令最初漏 `-p data.par`(SKILL Restart/resume 节明文"Use -p before overrides"与"-i 0 for binary snapshot"),该节内容我未读即拼命令。
+**Mistake**: N1k 验证重启的启动配置连错三轮,均为"推测优先、查证滞后":① 提议 OMP 4 线程(SKILL 明文 N≲10³ 用 1 线程,script-tools 有 N=500 实测 4 线程 +19%);② wall 实测显示"mpirun -n 4 快 8×"推荐 MPI——实为对照探针缺 `UCX_VFS_ENABLE=n` 的混淆(环境变量只设了 MPI 组),直跑+环境变量后差距消失;③ 用短探针 wall 外推时长(0.25 Myr 探针 wall 5 s 里计算仅 1.3 s,启动/IO 占 3/4),先后报出 2 h→52 min→10 min 三个错误估计,真值(prof: 2.6 s/Myr)自始至终可一步获得。另:重启命令最初漏 `-p data.par`(SKILL Restart/resume 节明文"Use -p before overrides"与"-i 0 for binary snapshot"),该节内容我未读即拼命令。
 
-**Root cause**: 并行规模与时长属于"有实测数据可查"的问题,却被当作可直觉推断的问题;wall 计时在短探针上系统性失真(启动+IO+UCX 逐通信开销),且 A/B 对照未控制环境变量;SKILL 相关节(Restart/resume、Parallel Launch Heuristics、UCX 环境要求)都已覆盖,失败在"没有先读对应章节"。
+**Root cause**: 并行规模与时长属于"有实测数据可查"的问题,却被当作可直觉推断的问题;wall 计时在短探针上系统性失真(启动+IO+UCX 逐通信开销),且 A/B 对照未控制环境变量;SKILL 相节日录(Restart/resume、Parallel Launch Heuristics、UCX 环境要求)都已覆盖,失败在"没有先读对应章节"。
 
 **Prevention rule**: ① 提议任何多线程/多进程配置前,先查 `assets/performance-log.md` 实测记录,无记录则当场用 prof 输出(`Wallclock time per step: Total`)做基准,不得凭直觉;② 时长估算一律用 prof 每步 Total × 总步数(或输出文件 mtime 间隔),禁止短探针 wall 外推;③ A/B 对照必须逐变量控制环境(UCX/OMP/MPI 变量在两组间完全一致);④ 拼重启命令前重读 SKILL "Workflow Patterns → Restart/resume"(-p 前置、-i 匹配快照格式、.par.* 伴随文件);⑤ 每次正式/验证模拟后向 performance-log.md 追加一行实测(N、家族、启动配置、ms/step、s/Myr)——该文件是实测基准唯一权威家,script-tools/SKILL 只留指针。
 
@@ -834,7 +827,7 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Mistake**: fix47 在 t≈167 NaN abort 后,先后用"快照 166/167 重启"与"data.47 完整重跑"试图复现,全部干净通过,一度归因于"重启重建内态不可复现"并怀疑内存问题。完整重跑(同快照/同 par/同二进制/同 seed/单线程)在第一个输出 t=48 即与 fix47 字节级不同(C.M. 打印仍相同——差异在打印精度下),证明**同配置重跑本来就不同**。
 
-**Root cause**: 判别实验:`setarch $(uname -m) -R`(关 ASLR)下连跑两次输出**逐位一致**;ASLR 开时每次进程堆布局不同→某处存在地址依赖行为(指针序/布局敏感路径,值键容器与值排序已排除)→FP 求和序等微差被混沌放大。因此每个进程是一次"实现采样",NaN 是该实现系综的稀有事件(fix47 命中、repfull 未命中);不可复现是常态而非异常。内存泄漏假设排除(泄漏不产生 FP 分歧);经典越界损坏未被证实(地址依赖在固定布局下是确定性的)。
+**Root cause**: 判别实验:`setarch $(uname -m) -R`(关 ASLR)下连跑两次输出**逐位一致**;ASLR 开时每次进程堆布局不同→某处存在地址依赖行为(指针序/布局敏感路径,值键容器与值排序已排除)→FP 求和序等微差被混沌放大。因此每个进程是一次"实现采样",NaN 是该实现系综的稀有事件(fix47 命中、repfull 未命中)。
 
 **Prevention rule**: ① 需要复现/对拍/调试的 run 一律加 `setarch $(uname -m) -R` 前缀(与 ASan 构建并用时本就是仓库惯例);② 采样可复现实现系综:关 ASLR + 改变环境变量填充(如加无效 env pad)平移初始栈→不同布局且可复现;③ 判定"是否位级可复现"用输出快照 `cmp` 而非日志打印(打印精度会掩盖分歧);④ "重启不复现"不能作为排除 bug 的证据——完整重跑不可复现时先做 setarch -R 对照;⑤ 下次 NaN 出现时:先打印失败簇成员(id/质量/间距)再 abort 的一行诊断 + 上述可复现采样,即可闭环定位。
 
@@ -928,7 +921,7 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Final design**: ① 删除形成时赋值(collectGroupMemberAdrAndSetMemberParametersIter 不再改成员 changeover);② 删除两处 ex-member 重缩放(driveForOneClusterOMP 写回、findGroups 重置循环);③ syncMemberChangeoverScale 只拷 r_search 且加 max 下限 `std::max(pcm.r_search, 成员.r_out)`(c.m. 速度近零时 r_search 可小于成员 r_out);④ 写回路径 Ptcl::calcRSearch 天然含 +r_out 项、setRNeighbor/轨道粒子处各有下限,不变量全覆盖;⑤ SDAR 侧 addDEChangeModifySingle 公共接口一并移除。副作用:i_cluster_changeover_update_/changeover_update_flag 机构成为死代码(标志永不置真)——留作防御,因发送列表侧 MPI 轨道粒子修正仍活跃。验证:6 实现电池 6/6 干净 dump=**0**(优于记账版 5);T5 9/9;n100 dump 回放 dE=-1e-9 无事件;功能冒烟通过。
 
-**Prevention rule**: ① 加补偿层前先审计补偿对象的**全部消费路径**——若力路径根本不用被同步的量,同步本身就是噪声源;② "配套修改链"(2fa15b7→f14606f)回退时必须整链回退,靠 git log 找齐依赖 commit;③ 最小设计优于记账修补:消除跳变源 vs 为跳变记账,前者使 dump 从 5→0 且删代码;④ 回退上游固有行为(形成时赋值是 master 既有代码)前,先 `git show <commit>^` 确认归属,避免误删上游机制。
+**Prevention rule**: ① 加补偿层前先审计补偿对象的**全部消费路径**——若力路径根本不用被同步的量,同步本身就是噪声源;② "配套修改链"(2fa15b7+f14606f)回退时必须整链回退,靠 git log 找齐依赖 commit;③ 最小设计优于记账修补:消除跳变源 vs 为跳变记账,前者使 dump 从 5→0 且删代码;④ 回退上游固有行为(形成时赋值是 master 既有代码)前,先 `git show <commit>^` 确认归属,避免误删上游机制。
 
 ### 2026-10-09: data.group.n2 爆炸复现归因——统一判据 break 侧 NaN 角点（未评估 CM 力场 0/0）；galpy 家族 make install 从不重建二进制二次坑
 
@@ -977,3 +970,322 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Fix**: IC 工程化——中心三体(4+4+3 M☉,a_in=0.0012/a_out=0.008 pc 近心点起始)保证第一步即有带 TT 的组(N_all-N_real=12 恒定);运行恰好 1 个树步(-t 0.00390625 = 自动 dt_soft),舍入无时间被混沌放大 → 三运行复刻同一轨迹。结果:r1(测量开)与 r2(干净)ε_E 逐位相同(2.008576e-5)——测量中立性的直接证明;r3(CM 核)1.78e-5,差 11% = 纯核内效应。14 项检查含每运行的单步与 TT 激活守护(final_time≤0.005、人工粒子≥12)。
 
 **Prevention rule**: ① A/B 类验证必须守护"被测路径确实被运行"(TT 激活/人工粒子计数入检查),否则全绿也是空转;② 消除混沌比较噪声的最强手段是缩短至单步而非增加统计;③ 依赖"自发事件"(成组、并合)的测试 IC 应改为工程化构造(植入目标构型);④ -t 与 dt_soft 网格:结束时间向上补齐整步,精确单步须 -t == dt_soft;⑤ r_search_group/r_in 耦合断言先查 --r-ratio。
+
+### 2026-10-12: 【模板字符串静默吞文本】粘贴到 HTML f-string 内部的 import 语句原样渲染进报告正文——f-string 是输出不是代码;改完报告脚本须 grep 生成物中的源码 token
+
+**Mistake**: T6 参考实现里混入了一段 `from report_common import (...)`,位置在 `build_html` 的三引号 f-string 正中(Table 2 caption 内)。Python 语法完全合法(纯字符串内容),脚本能跑、检查全绿,但重新生成后该代码片段会原样出现在 HTML 报告正文里;由于现存 HTML 是在粘贴前生成的,问题被输出文件掩盖,直到 T1-T5 迁移通读全文件才发现。
+
+**Root cause**: ① 报告脚本的 HTML 以巨型 f-string 形式内嵌,编辑器/语言服务把 import 视为普通文本,不会有任何告警;② 生成的 .html 输出不会被 diff 审查,坏文本只要不触发异常就永久潜伏;③ "脚本可运行 + 检查通过"不等于"报告内容正确"——渲染层没有守护。
+
+**Fix**: 删除串内文本;迁移后用 `grep -n 'report_common import' test/out/*.html` 验证生成物不含源码 token(结果 0 处)。
+
+**Prevention rule**: ① 编辑含巨型 f-string 的报告脚本后,必须重新生成并对生成 HTML 做源码 token 扫描(`grep -E 'import |def |return ' test/out/*.html`),把"渲染层无源码泄漏"当作生成物检查项;② 在 f-string 内粘贴代码片段前先确认光标在字符串外;③ 大段文本改动后 diff 生成的前后两个 HTML,比只看退出码更能发现静默内容损坏。
+
+### 2026-10-12: 【静默未执行的 regime】T3 "churn" 组 8e-3>2×r_peri 却从未成组——质量加权使有效阈值≈0.013;两体系统周期性 link/unlink 结构上不可能;组普查计数器才是 regime 守护
+
+**Mistake**: T3 设计三 regime:恒成组/成组切换(churn)/永不成组,但从未验证组 census 是否真的按设计发生。实测(Form/End_Ngroup 累计计数器):churn 组(r_group=8e-3,>2×近心距)Form=0——从未成组,一直是纯 Hermite;即三 regime 实际只有两种,中位 run 与 inside_peri 完全同质,检查却"通过"(排序检查在简并数据上靠容差通过)。
+
+**Root cause**: ① 组链接判据质量加权(成员自身质量缩放,与 own-mass changeover 同源):1:10 双星的有效成组阈值≈0.013 pc,远高于按 r_peri 的朴素预期,名义 r_group<阈值即永不成组;② 统一成员判据 grouped=(d<r_crit)&&(apo≤r_crit||κ≥1e-2) 中 form/break 互为逆:两体孤立系统外场为零→κ 分支恒真→一旦成组永不解散;且重组员的加权 r_crit 在任何能成组的 r_group 下都≥apo→周期性切换在结构上不可能(需≥3 体的成员进出,T5 的 churner 即此);③ 无微扰者的组不产生人工粒子,N_all−N_real 恒为 0——人工粒子计数不是组 census 的可靠探测器,Form/End 计数器才是。
+
+**Fix**: runner 新增 `ar_form_ngroup`/`ar_end_ngroup` 度量(解析日志 AR 统计块);中位 run 移到 r_group=0.014(阈值上方,成组后保持)作为质量加权判据守护;三 regime 用 census 检查钉死(0/0、1/0、1/0),§1 明文记录结构不可能性并指向 T5。
+
+**Prevention rule**: ① 依赖某机制"发生"的测试必须先解析日志计数器验证该机制确实执行(census/guard 思想的再次实例);② 非等质量系统的半径类判据先实测有效阈值再设 regime 分组,不要按等质量直觉取值;③ 探测组存在性优先用 Form/End_Ngroup 累计计数器,人工粒子计数仅在有微扰者时可用。
+
+### 2026-10-12: 【阈值校准必须用 runner 度量】自写分析脚本把 si 索引↔dt 映射弄反,平台带 [0.1,1.9] 按错值校准,首轮重跑即失败(真实 si06/si04=2.007)
+
+**Mistake**: T1 目标修正时用临时 python 脚本从日志重算各族 ε_E 与斜率来定检查阈值。脚本里把 dt 写成 `2^-(13+si)`(实际应为 `2^-(13-si)`,si 越大 dt 越粗),x 轴反向导致所有斜率符号翻转;又把 hard 族 si05 的值(5.29e-7)当成 si04 参与比值,得出"平台比值 0.79",据此设带 [0.1, 1.9]。正式重跑 ratio=2.0069 立刻 FAIL。
+
+**Root cause**: ① 临时脚本重新实现数据映射(si→dt、族内排序),与 runner 已记录的 `dt_soft` 度量脱节,映射错误无交叉验证;② 阈值校准用了"记忆中的数值"而非当场从 per_run 度量打印的数值;③ 斜率符号翻转本可通过"误差应随 dt 增大而增大→斜率必为正"这一物理直觉当场发现,但没有做符号 sanity check。
+
+**Fix**: 改为以实测为中心设带(expected_ratio=2.0, relative_tolerance=0.9 → [0.2, 3.8]),重跑 12/12 通过;窗口斜率检查(si03–si06)与 Hermite 细端斜率检查均以 runner `dt_soft` 为 x 轴,符号与量级与设计预期一致后才定容差。
+
+**Prevention rule**: ① 校准检查阈值时直接读 runner JSON 里的 `metrics`(含 dt_soft),不要用临时脚本重推映射;② 任何 log-log 斜率计算先做符号 sanity check(截断误差斜率为正、舍入地板斜率≈0);③ 阈值写进场景后先跑一次再收工,"首轮必失败再修"本身说明校准链路绕开了数据源。
+
+### 2026-10-12: 【T6 单步重设计】成组历史是混沌量——多步 A/B 靠运气成组使对照失效;工程化三体 IC + 恰好一个树步消除混沌,r1≡r2 逐位一致反证测量中立
+
+**Mistake**: T6 多步版依赖团簇"自然"成组:A/B 运行(r2/r3)在所有输出时刻竟无一带人工粒子的组(成组事件本身是混沌稀有事件,三实现各不相同),被测代码路径根本没运行;r1 的组纯属运气。能量演化图也随之失去意义(另发现 -t 会被步长网格向上取整,-t 0.004 跑了 2 步,单步须 -t 恰为 dt_soft)。
+
+**Root cause**: ① 紧凑 IC 的"大质量组形成"是稀有混沌事件,跨实现不可复现;A/B 等效性检验要求两运行遍历相同构型,多步模拟无法保证。② 参数耦合陷阱:r_search_group ≤ r_in = r-ratio·r_out 有断言;组半径大就得配大 r-ratio(T5 用 0.3 即为此),或压缩三体尺度适配默认 r-ratio。
+
+**Fix**: IC 工程化——中心三体(4+4+3 M☉,a_in=0.0012/a_out=0.008 pc 近心点起始)保证第一步即有带 TT 的组(N_all-N_real=12 恒定);运行恰好 1 个树步(-t 0.00390625 = 自动 dt_soft),舍入无时间被混沌放大 → 三运行复刻同一轨迹。结果:r1(测量开)与 r2(干净)ε_E 逐位相同(2.008576e-5)——测量中立性的直接证明;r3(CM 核)1.78e-5,差 11% = 纯核内效应。14 项检查含每运行的单步与 TT 激活守护(final_time≤0.005、人工粒子≥12)。
+
+**Prevention rule**: ① A/B 类验证必须守护"被测路径确实被运行"(TT 激活/人工粒子计数入检查),否则全绿也是空转;② 消除混沌比较噪声的最强手段是缩短至单步而非增加统计;③ 依赖"自发事件"(成组、并合)的测试 IC 应改为工程化构造(植入目标构型);④ -t 与 dt_soft 网格:结束时间向上补齐整步,精确单步须 -t == dt_soft;⑤ r_search_group/r_in 耦合断言先查 --r-ratio。
+
+### 2026-10-12: 【静默未执行的 regime】T3 "churn" 组 8e-3>2×r_peri 却从未成组——质量加权使有效阈值≈0.013;两体系统周期性 link/unlink 结构上不可能;组普查计数器才是 regime 守护
+
+**Mistake**: T3 设计三 regime:恒成组/成组切换(churn)/永不成组,但从未验证组 census 是否真的按设计发生。实测(Form/End_Ngroup 累计计数器):churn 组(r_group=8e-3,>2×近心距)Form=0——从未成组,一直是纯 Hermite;即三 regime 实际只有两种,中位 run 与 inside_peri 完全同质,检查却"通过"(排序检查在简并数据上靠容差通过)。
+
+**Root cause**: ① 组链接判据质量加权(成员自身质量缩放,与 own-mass changeover 同源):1:10 双星的有效成组阈值≈0.013 pc,远高于按 r_peri 的朴素预期,名义 r_group<阈值即永不成组;② 统一成员判据 grouped=(d<r_crit)&&(apo≤r_crit||κ≥1e-2) 中 form/break 互为逆:两体孤立系统外场为零→κ 分支恒真→一旦成组永不解散;且重组员的加权 r_crit 在任何能成组的 r_group 下都≥apo→周期性切换在结构上不可能(需≥3 体的成员进出,T5 的 churner 即此);③ 无微扰者的组不产生人工粒子,N_all−N_real 恒为 0——人工粒子计数不是组 census 的可靠探测器,Form/End 计数器才是。
+
+**Fix**: runner 新增 `ar_form_ngroup`/`ar_end_ngroup` 度量(解析日志 AR 统计块);中位 run 移到 r_group=0.014(阈值上方,成组后保持)作为质量加权判据守护;三 regime 用 census 检查钉死(0/0、1/0、1/0),§1 明文记录结构不可能性并指向 T5。
+
+**Prevention rule**: ① 依赖某机制"发生"的测试必须先解析日志计数器验证该机制确实执行(census/guard 思想的再次实例);② 非等质量系统的半径类判据先实测有效阈值再设 regime 分组,不要按等质量直觉取值;③ 探测组存在性优先用 Form/End_Ngroup 累计计数器,人工粒子计数仅在有微扰者时可用。
+
+### 2026-10-12: 【阈值校准必须用 runner 度量】自写分析脚本把 si 索引↔dt 映射弄反,平台带 [0.1,1.9] 按错值校准,首轮重跑即失败(真实 si06/si04=2.007)
+
+**Mistake**: T1 目标修正时用临时 python 脚本从日志重算各族 ε_E 与斜率来定检查阈值。脚本里把 dt 写成 `2^-(13+si)`(实际应为 `2^-(13-si)`,si 越大 dt 越粗),x 轴反向导致所有斜率符号翻转;又把 hard 族 si05 的值(5.29e-7)当成 si04 参与比值,得出"平台比值 0.79",据此设带 [0.1, 1.9]。正式重跑 ratio=2.0069 立刻 FAIL。
+
+**Root cause**: ① 临时脚本重新实现数据映射(si→dt、族内排序),与 runner 已记录的 `dt_soft` 度量脱节,映射错误无交叉验证;② 阈值校准用了"记忆中的数值"而非当场从 per_run 度量打印的数值;③ 斜率符号翻转本可通过"误差应随 dt 增大而增大→斜率必为正"这一物理直觉当场发现,但没有做符号 sanity check。
+
+**Fix**: 改为以实测为中心设带(expected_ratio=2.0, relative_tolerance=0.9 → [0.2, 3.8]),重跑 12/12 通过;窗口斜率检查(si03–si06)与 Hermite 细端斜率检查均以 runner `dt_soft` 为 x 轴,符号与量级与设计预期一致后才定容差。
+
+**Prevention rule**: ① 校准检查阈值时直接读 runner JSON 里的 `metrics`(含 dt_soft),不要用临时脚本重推映射;② 任何 log-log 斜率计算先做符号 sanity check(截断误差斜率为正、舍入地板斜率≈0);③ 阈值写进场景后先跑一次再收工,"首轮必失败再修"本身说明校准链路绕开了数据源。
+
+### 2026-10-12: 【T6 单步重设计】成组历史是混沌量——多步 A/B 靠运气成组使对照失效;工程化三体 IC + 恰好一个树步消除混沌,r1≡r2 逐位一致反证测量中立
+
+**Mistake**: T6 多步版依赖团簇"自然"成组:A/B 运行(r2/r3)在所有输出时刻竟无一带人工粒子的组(成组事件本身是混沌稀有事件,三实现各不相同),被测代码路径根本没运行;r1 的组纯属运气。能量演化图也随之失去意义(另发现 -t 会被步长网格向上取整,-t 0.004 跑了 2 步,单步须 -t 恰为 dt_soft)。
+
+**Root cause**: ① 紧凑 IC 的"大质量组形成"是稀有混沌事件,跨实现不可复现;A/B 等效性检验要求两运行遍历相同构型,多步模拟无法保证。② 参数耦合陷阱:r_search_group ≤ r_in = r-ratio·r_out 有断言;组半径大就得配大 r-ratio(T5 用 0.3 即为此),或压缩三体尺度适配默认 r-ratio。
+
+**Fix**: IC 工程化——中心三体(4+4+3 M☉,a_in=0.0012/a_out=0.008 pc 近心点起始)保证第一步即有带 TT 的组(N_all-N_real=12 恒定);运行恰好 1 个树步(-t 0.00390625 = 自动 dt_soft),舍入无时间被混沌放大 → 三运行复刻同一轨迹。结果:r1(测量开)与 r2(干净)ε_E 逐位相同(2.008576e-5)——测量中立性的直接证明;r3(CM 核)1.78e-5,差 11% = 纯核内效应。14 项检查含每运行的单步与 TT 激活守护(final_time≤0.005、人工粒子≥12)。
+
+**Prevention rule**: ① A/B 类验证必须守护"被测路径确实被运行"(TT 激活/人工粒子计数入检查),否则全绿也是空转;② 消除混沌比较噪声的最强手段是缩短至单步而非增加统计;③ 依赖"自发事件"(成组、并合)的测试 IC 应改为工程化构造(植入目标构型);④ -t 与 dt_soft 网格:结束时间向上补齐整步,精确单步须 -t == dt_soft;⑤ r_search_group/r_in 耦合断言先查 --r-ratio。
+
+### 2026-10-12: 【静默未执行的 regime】T3 "churn" 组 8e-3>2×r_peri 却从未成组——质量加权使有效阈值≈0.013;两体系统周期性 link/unlink 结构上不可能;组普查计数器才是 regime 守护
+
+**Mistake**: T3 设计三 regime:恒成组/成组切换(churn)/永不成组,但从未验证组 census 是否真的按设计发生。实测(Form/End_Ngroup 累计计数器):churn 组(r_group=8e-3,>2×近心距)Form=0——从未成组,一直是纯 Hermite;即三 regime 实际只有两种,中位 run 与 inside_peri 完全同质,检查却"通过"(排序检查在简并数据上靠容差通过)。
+
+**Root cause**: ① 组链接判据质量加权(成员自身质量缩放,与 own-mass changeover 同源):1:10 双星的有效成组阈值≈0.013 pc,远高于按 r_peri 的朴素预期,名义 r_group<阈值即永不成组;② 统一成员判据 grouped=(d<r_crit)&&(apo≤r_crit||κ≥1e-2) 中 form/break 互为逆:两体孤立系统外场为零→κ 分支恒真→一旦成组永不解散;且重组员的加权 r_crit 在任何能成组的 r_group 下都≥apo→周期性切换在结构上不可能(需≥3 体的成员进出,T5 的 churner 即此);③ 无微扰者的组不产生人工粒子,N_all−N_real 恒为 0——人工粒子计数不是组 census 的可靠探测器,Form/End 计数器才是。
+
+**Fix**: runner 新增 `ar_form_ngroup`/`ar_end_ngroup` 度量(解析日志 AR 统计块);中位 run 移到 r_group=0.014(阈值上方,成组后保持)作为质量加权判据守护;三 regime 用 census 检查钉死(0/0、1/0、1/0),§1 明文记录结构不可能性并指向 T5。
+
+**Prevention rule**: ① 依赖某机制"发生"的测试必须先解析日志计数器验证该机制确实执行(census/guard 思想的再次实例);② 非等质量系统的半径类判据先实测有效阈值再设 regime 分组,不要按等质量直觉取值;③ 探测组存在性优先用 Form/End_Ngroup 累计计数器,人工粒子计数仅在有微扰者时可用。
+
+### 2026-10-12: 【阈值校准必须用 runner 度量】自写分析脚本把 si 索引↔dt 映射弄反,平台带 [0.1,1.9] 按错值校准,首轮重跑即失败(真实 si06/si04=2.007)
+
+**Mistake**: T1 目标修正时用临时 python 脚本从日志重算各族 ε_E 与斜率来定检查阈值。脚本里把 dt 写成 `2^-(13+si)`(实际应为 `2^-(13-si)`,si 越大 dt 越粗),x 轴反向导致所有斜率符号翻转;又把 hard 族 si05 的值(5.29e-7)当成 si04 参与比值,得出"平台比值 0.79",据此设带 [0.1, 1.9]。正式重跑 ratio=2.0069 立刻 FAIL。
+
+**Root cause**: ① 临时脚本重新实现数据映射(si→dt、族内排序),与 runner 已记录的 `dt_soft` 度量脱节,映射错误无交叉验证;② 阈值校准用了"记忆中的数值"而非当场从 per_run 度量打印的数值;③ 斜率符号翻转本可通过"误差应随 dt 增大而增大→斜率必为正"这一物理直觉当场发现,但没有做符号 sanity check。
+
+**Fix**: 改为以实测为中心设带(expected_ratio=2.0, relative_tolerance=0.9 → [0.2, 3.8]),重跑 12/12 通过;窗口斜率检查(si03–si06)与 Hermite 细端斜率检查均以 runner `dt_soft` 为 x 轴,符号与量级与设计预期一致后才定容差。
+
+**Prevention rule**: ① 校准检查阈值时直接读 runner JSON 里的 `metrics`(含 dt_soft),不要用临时脚本重推映射;② 任何 log-log 斜率计算先做符号 sanity check(截断误差斜率为正、舍入地板斜率≈0);③ 阈值写进场景后先跑一次再收工,"首轮必失败再修"本身说明校准链路绕开了数据源。
+
+### 2026-10-12: 【T6 单步重设计】成组历史是混沌量——多步 A/B 靠运气成组使对照失效;工程化三体 IC + 恰好一个树步消除混沌,r1≡r2 逐位一致反证测量中立
+
+**Mistake**: T6 多步版依赖团簇"自然"成组:A/B 运行(r2/r3)在所有输出时刻竟无一带人工粒子的组(成组事件本身是混沌稀有事件,三实现各不相同),被测代码路径根本没运行;r1 的组纯属运气。能量演化图也随之失去意义(另发现 -t 会被步长网格向上取整,-t 0.004 跑了 2 步,单步须 -t 恰为 dt_soft)。
+
+**Root cause**: ① 紧凑 IC 的"大质量组形成"是稀有混沌事件,跨实现不可复现;A/B 等效性检验要求两运行遍历相同构型,多步模拟无法保证。② 参数耦合陷阱:r_search_group ≤ r_in = r-ratio·r_out 有断言;组半径大就得配大 r-ratio(T5 用 0.3 即为此),或压缩三体尺度适配默认 r-ratio。
+
+**Fix**: IC 工程化——中心三体(4+4+3 M☉,a_in=0.0012/a_out=0.008 pc 近心点起始)保证第一步即有带 TT 的组(N_all-N_real=12 恒定);运行恰好 1 个树步(-t 0.00390625 = 自动 dt_soft),舍入无时间被混沌放大 → 三运行复刻同一轨迹。结果:r1(测量开)与 r2(干净)ε_E 逐位相同(2.008576e-5)——测量中立性的直接证明;r3(CM 核)1.78e-5,差 11% = 纯核内效应。14 项检查含每运行的单步与 TT 激活守护(final_time≤0.005、人工粒子≥12)。
+
+**Prevention rule**: ① A/B 类验证必须守护"被测路径确实被运行"(TT 激活/人工粒子计数入检查),否则全绿也是空转;② 消除混沌比较噪声的最强手段是缩短至单步而非增加统计;③ 依赖"自发事件"(成组、并合)的测试 IC 应改为工程化构造(植入目标构型);④ -t 与 dt_soft 网格:结束时间向上补齐整步,精确单步须 -t == dt_soft;⑤ r_search_group/r_in 耦合断言先查 --r-ratio。
+
+### 2026-10-12: 【静默未执行的 regime】T3 "churn" 组 8e-3>2×r_peri 却从未成组——质量加权使有效阈值≈0.013;两体系统周期性 link/unlink 结构上不可能;组普查计数器才是 regime 守护
+
+**Mistake**: T3 设计三 regime:恒成组/成组切换(churn)/永不成组,但从未验证组 census 是否真的按设计发生。实测(Form/End_Ngroup 累计计数器):churn 组(r_group=8e-3,>2×近心距)Form=0——从未成组,一直是纯 Hermite;即三 regime 实际只有两种,中位 run 与 inside_peri 完全同质,检查却"通过"(排序检查在简并数据上靠容差通过)。
+
+**Root cause**: ① 组链接判据质量加权(成员自身质量缩放,与 own-mass changeover 同源):1:10 双星的有效成组阈值≈0.013 pc,远高于按 r_peri 的朴素预期,名义 r_group<阈值即永不成组;② 统一成员判据 grouped=(d<r_crit)&&(apo≤r_crit||κ≥1e-2) 中 form/break 互为逆:两体孤立系统外场为零→κ 分支恒真→一旦成组永不解散;且重组员的加权 r_crit 在任何能成组的 r_group 下都≥apo→周期性切换在结构上不可能(需≥3 体的成员进出,T5 的 churner 即此);③ 无微扰者的组不产生人工粒子,N_all−N_real 恒为 0——人工粒子计数不是组 census 的可靠探测器,Form/End 计数器才是。
+
+**Fix**: runner 新增 `ar_form_ngroup`/`ar_end_ngroup` 度量(解析日志 AR 统计块);中位 run 移到 r_group=0.014(阈值上方,成组后保持)作为质量加权判据守护;三 regime 用 census 检查钉死(0/0、1/0、1/0),§1 明文记录结构不可能性并指向 T5。
+
+**Prevention rule**: ① 依赖某机制"发生"的测试必须先解析日志计数器验证该机制确实执行(census/guard 思想的再次实例);② 非等质量系统的半径类判据先实测有效阈值再设 regime 分组,不要按等质量直觉取值;③ 探测组存在性优先用 Form/End_Ngroup 累计计数器,人工粒子计数仅在有微扰者时可用。
+
+### 2026-10-12: 【阈值校准必须用 runner 度量】自写分析脚本把 si 索引↔dt 映射弄反,平台带 [0.1,1.9] 按错值校准,首轮重跑即失败(真实 si06/si04=2.007)
+
+**Mistake**: T1 目标修正时用临时 python 脚本从日志重算各族 ε_E 与斜率来定检查阈值。脚本里把 dt 写成 `2^-(13+si)`(实际应为 `2^-(13-si)`,si 越大 dt 越粗),x 轴反向导致所有斜率符号翻转;又把 hard 族 si05 的值(5.29e-7)当成 si04 参与比值,得出"平台比值 0.79",据此设带 [0.1, 1.9]。正式重跑 ratio=2.0069 立刻 FAIL。
+
+**Root cause**: ① 临时脚本重新实现数据映射(si→dt、族内排序),与 runner 已记录的 `dt_soft` 度量脱节,映射错误无交叉验证;② 阈值校准用了"记忆中的数值"而非当场从 per_run 度量打印的数值;③ 斜率符号翻转本可通过"误差应随 dt 增大而增大→斜率必为正"这一物理直觉当场发现,但没有做符号 sanity check。
+
+**Fix**: 改为以实测为中心设带(expected_ratio=2.0, relative_tolerance=0.9 → [0.2, 3.8]),重跑 12/12 通过;窗口斜率检查(si03–si06)与 Hermite 细端斜率检查均以 runner `dt_soft` 为 x 轴,符号与量级与设计预期一致后才定容差。
+
+**Prevention rule**: ① 校准检查阈值时直接读 runner JSON 里的 `metrics`(含 dt_soft),不要用临时脚本重推映射;② 任何 log-log 斜率计算先做符号 sanity check(截断误差斜率为正、舍入地板斜率≈0);③ 阈值写进场景后先跑一次再收工,"首轮必失败再修"本身说明校准链路绕开了数据源。
+
+### 2026-10-12: 【T6 单步重设计】成组历史是混沌量——多步 A/B 靠运气成组使对照失效;工程化三体 IC + 恰好一个树步消除混沌,r1≡r2 逐位一致反证测量中立
+
+**Mistake**: T6 多步版依赖团簇"自然"成组:A/B 运行(r2/r3)在所有输出时刻竟无一带人工粒子的组(成组事件本身是混沌稀有事件,三实现各不相同),被测代码路径根本没运行;r1 的组纯属运气。能量演化图也随之失去意义(另发现 -t 会被步长网格向上取整,-t 0.004 跑了 2 步,单步须 -t 恰为 dt_soft)。
+
+**Root cause**: ① 紧凑 IC 的"大质量组形成"是稀有混沌事件,跨实现不可复现;A/B 等效性检验要求两运行遍历相同构型,多步模拟无法保证。② 参数耦合陷阱:r_search_group ≤ r_in = r-ratio·r_out 有断言;组半径大就得配大 r-ratio(T5 用 0.3 即为此),或压缩三体尺度适配默认 r-ratio。
+
+**Fix**: IC 工程化——中心三体(4+4+3 M☉,a_in=0.0012/a_out=0.008 pc 近心点起始)保证第一步即有带 TT 的组(N_all-N_real=12 恒定);运行恰好 1 个树步(-t 0.00390625 = 自动 dt_soft),舍入无时间被混沌放大 → 三运行复刻同一轨迹。结果:r1(测量开)与 r2(干净)ε_E 逐位相同(2.008576e-5)——测量中立性的直接证明;r3(CM 核)1.78e-5,差 11% = 纯核内效应。14 项检查含每运行的单步与 TT 激活守护(final_time≤0.005、人工粒子≥12)。
+
+**Prevention rule**: ① A/B 类验证必须守护"被测路径确实被运行"(TT 激活/人工粒子计数入检查),否则全绿也是空转;② 消除混沌比较噪声的最强手段是缩短至单步而非增加统计;③ 依赖"自发事件"(成组、并合)的测试 IC 应改为工程化构造(植入目标构型);④ -t 与 dt_soft 网格:结束时间向上补齐整步,精确单步须 -t == dt_soft;⑤ r_search_group/r_in 耦合断言先查 --r-ratio。
+
+### 2026-10-12: 【静默未执行的 regime】T3 "churn" 组 8e-3>2×r_peri 却从未成组——质量加权使有效阈值≈0.013;两体系统周期性 link/unlink 结构上不可能;组普查计数器才是 regime 守护
+
+**Mistake**: T3 设计三 regime:恒成组/成组切换(churn)/永不成组,但从未验证组 census 是否真的按设计发生。实测(Form/End_Ngroup 累计计数器):churn 组(r_group=8e-3,>2×近心距)Form=0——从未成组,一直是纯 Hermite;即三 regime 实际只有两种,中位 run 与 inside_peri 完全同质,检查却"通过"(排序检查在简并数据上靠容差通过)。
+
+**Root cause**: ① 组链接判据质量加权(成员自身质量缩放,与 own-mass changeover 同源):1:10 双星的有效成组阈值≈0.013 pc,远高于按 r_peri 的朴素预期,名义 r_group<阈值即永不成组;② 统一成员判据 grouped=(d<r_crit)&&(apo≤r_crit||κ≥1e-2) 中 form/break 互为逆:两体孤立系统外场为零→κ 分支恒真→一旦成组永不解散;且重组员的加权 r_crit 在任何能成组的 r_group 下都≥apo→周期性切换在结构上不可能(需≥3 体的成员进出,T5 的 churner 即此);③ 无微扰者的组不产生人工粒子,N_all−N_real 恒为 0——人工粒子计数不是组 census 的可靠探测器,Form/End 计数器才是。
+
+**Fix**: runner 新增 `ar_form_ngroup`/`ar_end_ngroup` 度量(解析日志 AR 统计块);中位 run 移到 r_group=0.014(阈值上方,成组后保持)作为质量加权判据守护;三 regime 用 census 检查钉死(0/0、1/0、1/0),§1 明文记录结构不可能性并指向 T5。
+
+**Prevention rule**: ① 依赖某机制"发生"的测试必须先解析日志计数器验证该机制确实执行(census/guard 思想的再次实例);② 非等质量系统的半径类判据先实测有效阈值再设 regime 分组,不要按等质量直觉取值;③ 探测组存在性优先用 Form/End_Ngroup 累计计数器,人工粒子计数仅在有微扰者时可用。
+
+### 2026-10-12: 【阈值校准必须用 runner 度量】自写分析脚本把 si 索引↔dt 映射弄反,平台带 [0.1,1.9] 按错值校准,首轮重跑即失败(真实 si06/si04=2.007)
+
+**Mistake**: T1 目标修正时用临时 python 脚本从日志重算各族 ε_E 与斜率来定检查阈值。脚本里把 dt 写成 `2^-(13+si)`(实际应为 `2^-(13-si)`,si 越大 dt 越粗),x 轴反向导致所有斜率符号翻转;又把 hard 族 si05 的值(5.29e-7)当成 si04 参与比值,得出"平台比值 0.79",据此设带 [0.1, 1.9]。正式重跑 ratio=2.0069 立刻 FAIL。
+
+**Root cause**: ① 临时脚本重新实现数据映射(si→dt、族内排序),与 runner 已记录的 `dt_soft` 度量脱节,映射错误无交叉验证;② 阈值校准用了"记忆中的数值"而非当场从 per_run 度量打印的数值;③ 斜率符号翻转本可通过"误差应随 dt 增大而增大→斜率必为正"这一物理直觉当场发现,但没有做符号 sanity check。
+
+**Fix**: 改为以实测为中心设带(expected_ratio=2.0, relative_tolerance=0.9 → [0.2, 3.8]),重跑 12/12 通过;窗口斜率检查(si03–si06)与 Hermite 细端斜率检查均以 runner `dt_soft` 为 x 轴,符号与量级与设计预期一致后才定容差。
+
+**Prevention rule**: ① 校准检查阈值时直接读 runner JSON 里的 `metrics`(含 dt_soft),不要用临时脚本重推映射;② 任何 log-log 斜率计算先做符号 sanity check(截断误差斜率为正、舍入地板斜率≈0);③ 阈值写进场景后先跑一次再收工,"首轮必失败再修"本身说明校准链路绕开了数据源。
+
+### 2026-10-12: 【T6 单步重设计】成组历史是混沌量——多步 A/B 靠运气成组使对照失效;工程化三体 IC + 恰好一个树步消除混沌,r1≡r2 逐位一致反证测量中立
+
+**Mistake**: T6 多步版依赖团簇"自然"成组:A/B 运行(r2/r3)在所有输出时刻竟无一带人工粒子的组(成组事件本身是混沌稀有事件,三实现各不相同),被测代码路径根本没运行;r1 的组纯属运气。能量演化图也随之失去意义(另发现 -t 会被步长网格向上取整,-t 0.004 跑了 2 步,单步须 -t 恰为 dt_soft)。
+
+**Root cause**: ① 紧凑 IC 的"大质量组形成"是稀有混沌事件,跨实现不可复现;A/B 等效性检验要求两运行遍历相同构型,多步模拟无法保证。② 参数耦合陷阱:r_search_group ≤ r_in = r-ratio·r_out 有断言;组半径大就得配大 r-ratio(T5 用 0.3 即为此),或压缩三体尺度适配默认 r-ratio。
+
+**Fix**: IC 工程化——中心三体(4+4+3 M☉,a_in=0.0012/a_out=0.008 pc 近心点起始)保证第一步即有带 TT 的组(N_all-N_real=12 恒定);运行恰好 1 个树步(-t 0.00390625 = 自动 dt_soft),舍入无时间被混沌放大 → 三运行复刻同一轨迹。结果:r1(测量开)与 r2(干净)ε_E 逐位相同(2.008576e-5)——测量中立性的直接证明;r3(CM 核)1.78e-5,差 11% = 纯核内效应。14 项检查含每运行的单步与 TT 激活守护(final_time≤0.005、人工粒子≥12)。
+
+**Prevention rule**: ① A/B 类验证必须守护"被测路径确实被运行"(TT 激活/人工粒子计数入检查),否则全绿也是空转;② 消除混沌比较噪声的最强手段是缩短至单步而非增加统计;③ 依赖"自发事件"(成组、并合)的测试 IC 应改为工程化构造(植入目标构型);④ -t 与 dt_soft 网格:结束时间向上补齐整步,精确单步须 -t == dt_soft;⑤ r_search_group/r_in 耦合断言先查 --r-ratio。
+
+### 2026-10-12: 【静默未执行的 regime】T3 "churn" 组 8e-3>2×r_peri 却从未成组——质量加权使有效阈值≈0.013;两体系统周期性 link/unlink 结构上不可能;组普查计数器才是 regime 守护
+
+**Mistake**: T3 设计三 regime:恒成组/成组切换(churn)/永不成组,但从未验证组 census 是否真的按设计发生。实测(Form/End_Ngroup 累计计数器):churn 组(r_group=8e-3,>2×近心距)Form=0——从未成组,一直是纯 Hermite;即三 regime 实际只有两种,中位 run 与 inside_peri 完全同质,检查却"通过"(排序检查在简并数据上靠容差通过)。
+
+**Root cause**: ① 组链接判据质量加权(成员自身质量缩放,与 own-mass changeover 同源):1:10 双星的有效成组阈值≈0.013 pc,远高于按 r_peri 的朴素预期,名义 r_group<阈值即永不成组;② 统一成员判据 grouped=(d<r_crit)&&(apo≤r_crit||κ≥1e-2) 中 form/break 互为逆:两体孤立系统外场为零→κ 分支恒真→一旦成组永不解散;且重组员的加权 r_crit 在任何能成组的 r_group 下都≥apo→周期性切换在结构上不可能(需≥3 体的成员进出,T5 的 churner 即此);③ 无微扰者的组不产生人工粒子,N_all−N_real 恒为 0——人工粒子计数不是组 census 的可靠探测器,Form/End 计数器才是。
+
+**Fix**: runner 新增 `ar_form_ngroup`/`ar_end_ngroup` 度量(解析日志 AR 统计块);中位 run 移到 r_group=0.014(阈值上方,成组后保持)作为质量加权判据守护;三 regime 用 census 检查钉死(0/0、1/0、1/0),§1 明文记录结构不可能性并指向 T5。
+
+**Prevention rule**: ① 依赖某机制"发生"的测试必须先解析日志计数器验证该机制确实执行(census/guard 思想的再次实例);② 非等质量系统的半径类判据先实测有效阈值再设 regime 分组,不要按等质量直觉取值;③ 探测组存在性优先用 Form/End_Ngroup 累计计数器,人工粒子计数仅在有微扰者时可用。
+
+### 2026-10-12: 【阈值校准必须用 runner 度量】自写分析脚本把 si 索引↔dt 映射弄反,平台带 [0.1,1.9] 按错值校准,首轮重跑即失败(真实 si06/si04=2.007)
+
+**Mistake**: T1 目标修正时用临时 python 脚本从日志重算各族 ε_E 与斜率来定检查阈值。脚本里把 dt 写成 `2^-(13+si)`(实际应为 `2^-(13-si)`,si 越大 dt 越粗),x 轴反向导致所有斜率符号翻转;又把 hard 族 si05 的值(5.29e-7)当成 si04 参与比值,得出"平台比值 0.79",据此设带 [0.1, 1.9]。正式重跑 ratio=2.0069 立刻 FAIL。
+
+**Root cause**: ① 临时脚本重新实现数据映射(si→dt、族内排序),与 runner 已记录的 `dt_soft` 度量脱节,映射错误无交叉验证;② 阈值校准用了"记忆中的数值"而非当场从 per_run 度量打印的数值;③ 斜率符号翻转本可通过"误差应随 dt 增大而增大→斜率必为正"这一物理直觉当场发现,但没有做符号 sanity check。
+
+**Fix**: 改为以实测为中心设带(expected_ratio=2.0, relative_tolerance=0.9 → [0.2, 3.8]),重跑 12/12 通过;窗口斜率检查(si03–si06)与 Hermite 细端斜率检查均以 runner `dt_soft` 为 x 轴,符号与量级与设计预期一致后才定容差。
+
+**Prevention rule**: ① 校准检查阈值时直接读 runner JSON 里的 `metrics`(含 dt_soft),不要用临时脚本重推映射;② 任何 log-log 斜率计算先做符号 sanity check(截断误差斜率为正、舍入地板斜率≈0);③ 阈值写进场景后先跑一次再收工,"首轮必失败再修"本身说明校准链路绕开了数据源。
+
+### 2026-10-12: 【T6 单步重设计】成组历史是混沌量——多步 A/B 靠运气成组使对照失效;工程化三体 IC + 恰好一个树步消除混沌,r1≡r2 逐位一致反证测量中立
+
+**Mistake**: T6 多步版依赖团簇"自然"成组:A/B 运行(r2/r3)在所有输出时刻竟无一带人工粒子的组(成组事件本身是混沌稀有事件,三实现各不相同),被测代码路径根本没运行;r1 的组纯属运气。能量演化图也随之失去意义(另发现 -t 会被步长网格向上取整,-t 0.004 跑了 2 步,单步须 -t 恰为 dt_soft)。
+
+**Root cause**: ① 紧凑 IC 的"大质量组形成"是稀有混沌事件,跨实现不可复现;A/B 等效性检验要求两运行遍历相同构型,多步模拟无法保证。② 参数耦合陷阱:r_search_group ≤ r_in = r-ratio·r_out 有断言;组半径大就得配大 r-ratio(T5 用 0.3 即为此),或压缩三体尺度适配默认 r-ratio。
+
+**Fix**: IC 工程化——中心三体(4+4+3 M☉,a_in=0.0012/a_out=0.008 pc 近心点起始)保证第一步即有带 TT 的组(N_all-N_real=12 恒定);运行恰好 1 个树步(-t 0.00390625 = 自动 dt_soft),舍入无时间被混沌放大 → 三运行复刻同一轨迹。结果:r1(测量开)与 r2(干净)ε_E 逐位相同(2.008576e-5)——测量中立性的直接证明;r3(CM 核)1.78e-5,差 11% = 纯核内效应。14 项检查含每运行的单步与 TT 激活守护(final_time≤0.005、人工粒子≥12)。
+
+**Prevention rule**: ① A/B 类验证必须守护"被测路径确实被运行"(TT 激活/人工粒子计数入检查),否则全绿也是空转;② 消除混沌比较噪声的最强手段是缩短至单步而非增加统计;③ 依赖"自发事件"(成组、并合)的测试 IC 应改为工程化构造(植入目标构型);④ -t 与 dt_soft 网格:结束时间向上补齐整步,精确单步须 -t == dt_soft;⑤ r_search_group/r_in 耦合断言先查 --r-ratio。
+
+### 2026-10-12: 【静默未执行的 regime】T3 "churn" 组 8e-3>2×r_peri 却从未成组——质量加权使有效阈值≈0.013;两体系统周期性 link/unlink 结构上不可能;组普查计数器才是 regime 守护
+
+**Mistake**: T3 设计三 regime:恒成组/成组切换(churn)/永不成组,但从未验证组 census 是否真的按设计发生。实测(Form/End_Ngroup 累计计数器):churn 组(r_group=8e-3,>2×近心距)Form=0——从未成组,一直是纯 Hermite;即三 regime 实际只有两种,中位 run 与 inside_peri 完全同质,检查却"通过"(排序检查在简并数据上靠容差通过)。
+
+**Root cause**: ① 组链接判据质量加权(成员自身质量缩放,与 own-mass changeover 同源):1:10 双星的有效成组阈值≈0.013 pc,远高于按 r_peri 的朴素预期,名义 r_group<阈值即永不成组;② 统一成员判据 grouped=(d<r_crit)&&(apo≤r_crit||κ≥1e-2) 中 form/break 互为逆:两体孤立系统外场为零→κ 分支恒真→一旦成组永不解散;且重组员的加权 r_crit 在任何能成组的 r_group 下都≥apo→周期性切换在结构上不可能(需≥3 体的成员进出,T5 的 churner 即此);③ 无微扰者的组不产生人工粒子,N_all−N_real 恒为 0——人工粒子计数不是组 census 的可靠探测器,Form/End 计数器才是。
+
+**Fix**: runner 新增 `ar_form_ngroup`/`ar_end_ngroup` 度量(解析日志 AR 统计块);中位 run 移到 r_group=0.014(阈值上方,成组后保持)作为质量加权判据守护;三 regime 用 census 检查钉死(0/0、1/0、1/0),§1 明文记录结构不可能性并指向 T5。
+
+**Prevention rule**: ① 依赖某机制"发生"的测试必须先解析日志计数器验证该机制确实执行(census/guard 思想的再次实例);② 非等质量系统的半径类判据先实测有效阈值再设 regime 分组,不要按等质量直觉取值;③ 探测组存在性优先用 Form/End_Ngroup 累计计数器,人工粒子计数仅在有微扰者时可用。
+
+### 2026-10-12: 【阈值校准必须用 runner 度量】自写分析脚本把 si 索引↔dt 映射弄反,平台带 [0.1,1.9] 按错值校准,首轮重跑即失败(真实 si06/si04=2.007)
+
+**Mistake**: T1 目标修正时用临时 python 脚本从日志重算各族 ε_E 与斜率来定检查阈值。脚本里把 dt 写成 `2^-(13+si)`(实际应为 `2^-(13-si)`,si 越大 dt 越粗),x 轴反向导致所有斜率符号翻转;又把 hard 族 si05 的值(5.29e-7)当成 si04 参与比值,得出"平台比值 0.79",据此设带 [0.1, 1.9]。正式重跑 ratio=2.0069 立刻 FAIL。
+
+**Root cause**: ① 临时脚本重新实现数据映射(si→dt、族内排序),与 runner 已记录的 `dt_soft` 度量脱节,映射错误无交叉验证;② 阈值校准用了"记忆中的数值"而非当场从 per_run 度量打印的数值;③ 斜率符号翻转本可通过"误差应随 dt 增大而增大→斜率必为正"这一物理直觉当场发现,但没有做符号 sanity check。
+
+**Fix**: 改为以实测为中心设带(expected_ratio=2.0, relative_tolerance=0.9 → [0.2, 3.8]),重跑 12/12 通过;窗口斜率检查(si03–si06)与 Hermite 细端斜率检查均以 runner `dt_soft` 为 x 轴,符号与量级与设计预期一致后才定容差。
+
+**Prevention rule**: ① 校准检查阈值时直接读 runner JSON 里的 `metrics`(含 dt_soft),不要用临时脚本重推映射;② 任何 log-log 斜率计算先做符号 sanity check(截断误差斜率为正、舍入地板斜率≈0);③ 阈值写进场景后先跑一次再收工,"首轮必失败再修"本身说明校准链路绕开了数据源。
+
+### 2026-10-12: 【T6 单步重设计】成组历史是混沌量——多步 A/B 靠运气成组使对照失效;工程化三体 IC + 恰好一个树步消除混沌,r1≡r2 逐位一致反证测量中立
+
+**Mistake**: T6 多步版依赖团簇"自然"成组:A/B 运行(r2/r3)在所有输出时刻竟无一带人工粒子的组(成组事件本身是混沌稀有事件,三实现各不相同),被测代码路径根本没运行;r1 的组纯属运气。能量演化图也随之失去意义(另发现 -t 会被步长网格向上取整,-t 0.004 跑了 2 步,单步须 -t 恰为 dt_soft)。
+
+**Root cause**: ① 紧凑 IC 的"大质量组形成"是稀有混沌事件,跨实现不可复现;A/B 等效性检验要求两运行遍历相同构型,多步模拟无法保证。② 参数耦合陷阱:r_search_group ≤ r_in = r-ratio·r_out 有断言;组半径大就得配大 r-ratio(T5 用 0.3 即为此),或压缩三体尺度适配默认 r-ratio。
+
+**Fix**: IC 工程化——中心三体(4+4+3 M☉,a_in=0.0012/a_out=0.008 pc 近心点起始)保证第一步即有带 TT 的组(N_all-N_real=12 恒定);运行恰好 1 个树步(-t 0.00390625 = 自动 dt_soft),舍入无时间被混沌放大 → 三运行复刻同一轨迹。结果:r1(测量开)与 r2(干净)ε_E 逐位相同(2.008576e-5)——测量中立性的直接证明;r3(CM 核)1.78e-5,差 11% = 纯核内效应。14 项检查含每运行的单步与 TT 激活守护(final_time≤0.005、人工粒子≥12)。
+
+**Prevention rule**: ① A/B 类验证必须守护"被测路径确实被运行"(TT 激活/人工粒子计数入检查),否则全绿也是空转;② 消除混沌比较噪声的最强手段是缩短至单步而非增加统计;③ 依赖"自发事件"(成组、并合)的测试 IC 应改为工程化构造(植入目标构型);④ -t 与 dt_soft 网格:结束时间向上补齐整步,精确单步须 -t == dt_soft;⑤ r_search_group/r_in 耦合断言先查 --r-ratio。
+
+### 2026-10-12: 【静默未执行的 regime】T3 "churn" 组 8e-3>2×r_peri 却从未成组——质量加权使有效阈值≈0.013;两体系统周期性 link/unlink 结构上不可能;组普查计数器才是 regime 守护
+
+**Mistake**: T3 设计三 regime:恒成组/成组切换(churn)/永不成组,但从未验证组 census 是否真的按设计发生。实测(Form/End_Ngroup 累计计数器):churn 组(r_group=8e-3,>2×近心距)Form=0——从未成组,一直是纯 Hermite;即三 regime 实际只有两种,中位 run 与 inside_peri 完全同质,检查却"通过"(排序检查在简并数据上靠容差通过)。
+
+**Root cause**: ① 组链接判据质量加权(成员自身质量缩放,与 own-mass changeover 同源):1:10 双星的有效成组阈值≈0.013 pc,远高于按 r_peri 的朴素预期,名义 r_group<阈值即永不成组;② 统一成员判据 grouped=(d<r_crit)&&(apo≤r_crit||κ≥1e-2) 中 form/break 互为逆:两体孤立系统外场为零→κ 分支恒真→一旦成组永不解散;且重组员的加权 r_crit 在任何能成组的 r_group 下都≥apo→周期性切换在结构上不可能(需≥3 体的成员进出,T5 的 churner 即此);③ 无微扰者的组不产生人工粒子,N_all−N_real 恒为 0——人工粒子计数不是组 census 的可靠探测器,Form/End 计数器才是。
+
+**Fix**: runner 新增 `ar_form_ngroup`/`ar_end_ngroup` 度量(解析日志 AR 统计块);中位 run 移到 r_group=0.014(阈值上方,成组后保持)作为质量加权判据守护;三 regime 用 census 检查钉死(0/0、1/0、1/0),§1 明文记录结构不可能性并指向 T5。
+
+**Prevention rule**: ① 依赖某机制"发生"的测试必须先解析日志计数器验证该机制确实执行(census/guard 思想的再次实例);② 非等质量系统的半径类判据先实测有效阈值再设 regime 分组,不要按等质量直觉取值;③ 探测组存在性优先用 Form/End_Ngroup 累计计数器,人工粒子计数仅在有微扰者时可用。
+
+### 2026-10-12: 【阈值校准必须用 runner 度量】自写分析脚本把 si 索引↔dt 映射弄反,平台带 [0.1,1.9] 按错值校准,首轮重跑即失败(真实 si06/si04=2.007)
+
+**Mistake**: T1 目标修正时用临时 python 脚本从日志重算各族 ε_E 与斜率来定检查阈值。脚本里把 dt 写成 `2^-(13+si)`(实际应为 `2^-(13-si)`,si 越大 dt 越粗),x 轴反向导致所有斜率符号翻转;又把 hard 族 si05 的值(5.29e-7)当成 si04 参与比值,得出"平台比值 0.79",据此设带 [0.1, 1.9]。正式重跑 ratio=2.0069 立刻 FAIL。
+
+**Root cause**: ① 临时脚本重新实现数据映射(si→dt、族内排序),与 runner 已记录的 `dt_soft` 度量脱节,映射错误无交叉验证;② 阈值校准用了"记忆中的数值"而非当场从 per_run 度量打印的数值;③ 斜率符号翻转本可通过"误差应随 dt 增大而增大→斜率必为正"这一物理直觉当场发现,但没有做符号 sanity check。
+
+**Fix**: 改为以实测为中心设带(expected_ratio=2.0, relative_tolerance=0.9 → [0.2, 3.8]),重跑 12/12 通过;窗口斜率检查(si03–si06)与 Hermite 细端斜率检查均以 runner `dt_soft` 为 x 轴,符号与量级与设计预期一致后才定容差。
+
+**Prevention rule**: ① 校准检查阈值时直接读 runner JSON 里的 `metrics`(含 dt_soft),不要用临时脚本重推映射;② 任何 log-log 斜率计算先做符号 sanity check(截断误差斜率为正、舍入地板斜率≈0);③ 阈值写进场景后先跑一次再收工,"首轮必失败再修"本身说明校准链路绕开了数据源。
+
+### 2026-10-12: 【T6 单步重设计】成组历史是混沌量——多步 A/B 靠运气成组使对照失效;工程化三体 IC + 恰好一个树步消除混沌,r1≡r2 逐位一致反证测量中立
+
+**Mistake**: T6 多步版依赖团簇"自然"成组:A/B 运行(r2/r3)在所有输出时刻竟无一带人工粒子的组(成组事件本身是混沌稀有事件,三实现各不相同),被测代码路径根本没运行;r1 的组纯属运气。能量演化图也随之失去意义(另发现 -t 会被步长网格向上取整,-t 0.004 跑了 2 步,单步须 -t 恰为 dt_soft)。
+
+**Root cause**: ① 紧凑 IC 的"大质量组形成"是稀有混沌事件,跨实现不可复现;A/B 等效性检验要求两运行遍历相同构型,多步模拟无法保证。② 参数耦合陷阱:r_search_group ≤ r_in = r-ratio·r_out 有断言;组半径大就得配大 r-ratio(T5 用 0.3 即为此),或压缩三体尺度适配默认 r-ratio。
+
+**Fix**: IC 工程化——中心三体(4+4+3 M☉,a_in=0.0012/a_out=0.008 pc 近心点起始)保证第一步即有带 TT 的组(N_all-N_real=12 恒定);运行恰好 1 个树步(-t 0.00390625 = 自动 dt_soft),舍入无时间被混沌放大 → 三运行复刻同一轨迹。结果:r1(测量开)与 r2(干净)ε_E 逐位相同(2.008576e-5)——测量中立性的直接证明;r3(CM 核)1.78e-5,差 11% = 纯核内效应。14 项检查含每运行的单步与 TT 激活守护(final_time≤0.005、人工粒子≥12)。
+
+**Prevention rule**: ① A/B 类验证必须守护"被测路径确实被运行"(TT 激活/人工粒子计数入检查),否则全绿也是空转;② 消除混沌比较噪声的最强手段是缩短至单步而非增加统计;③ 依赖"自发事件"(成组、并合)的测试 IC 应改为工程化构造(植入目标构型);④ -t 与 dt_soft 网格:结束时间向上补齐整步,精确单步须 -t == dt_soft;⑤ r_search_group/r_in 耦合断言先查 --r-ratio。
+
+### 2026-10-12: 【静默未执行的 regime】T3 "churn" 组 8e-3>2×r_peri 却从未成组——质量加权使有效阈值≈0.013;两体系统周期性 link/unlink 结构上不可能;组普查计数器才是 regime 守护
+
+**Mistake**: T3 设计三 regime:恒成组/成组切换(churn)/永不成组,但从未验证组 census 是否真的按设计发生。实测(Form/End_Ngroup 累计计数器):churn 组(r_group=8e-3,>2×近心距)Form=0——从未成组,一直是纯 Hermite;即三 regime 实际只有两种,中位 run 与 inside_peri 完全同质,检查却"通过"(排序检查在简并数据上靠容差通过)。
+
+**Root cause**: ① 组链接判据质量加权(成员自身质量缩放,与 own-mass changeover 同源):1:10 双星的有效成组阈值≈0.013 pc,远高于按 r_peri 的朴素预期,名义 r_group<阈值即永不成组;② 统一成员判据 grouped=(d<r_crit)&&(apo≤r_crit||κ≥1e-2) 中 form/break 互为逆:两体孤立系统外场为零→κ 分支恒真→一旦成组永不解散;且重组员的加权 r_crit 在任何能成组的 r_group 下都≥apo→周期性切换在结构上不可能(需≥3 体的成员进出,T5 的 churner 即此);③ 无微扰者的组不产生人工粒子,N_all−N_real 恒为 0——人工粒子计数不是组 census 的可靠探测器,Form/End 计数器才是。
+
+**Fix**: runner 新增 `ar_form_ngroup`/`ar_end_ngroup` 度量(解析日志 AR 统计块);中位 run 移到 r_group=0.014(阈值上方,成组后保持)作为质量加权判据守护;三 regime 用 census 检查钉死(0/0、1/0、1/0),§1 明文记录结构不可能性并指向 T5。
+
+**Prevention rule**: ① 依赖某机制"发生"的测试必须先解析日志计数器验证该机制确实执行(census/guard 思想的再次实例);② 非等质量系统的半径类判据先实测有效阈值再设 regime 分组,不要按等质量直觉取值;③ 探测组存在性优先用 Form/End_Ngroup 累计计数器,人工粒子计数仅在有微扰者时可用。
+
+### 2026-10-12: 【阈值校准必须用 runner 度量】自写分析脚本把 si 索引↔dt 映射弄反,平台带 [0.1,1.9] 按错值校准,首轮重跑即失败(真实 si06/si04=2.007)
+
+**Mistake**: T1 目标修正时用临时 python 脚本从日志重算各族 ε_E 与斜率来定检查阈值。脚本里把 dt 写成 `2^-(13+si)`(实际应为 `2^-(13-si)`,si 越大 dt 越粗),x 轴反向导致所有斜率符号翻转;又把 hard 族 si05 的值(5.29e-7)当成 si04 参与比值,得出"平台比值 0.79",据此设带 [0.1, 1.9]。正式重跑 ratio=2.0069 立刻 FAIL。
+
+**Root cause**: ① 临时脚本重新实现数据映射(si→dt、族内排序),与 runner 已记录的 `dt_soft` 度量脱节,映射错误无交叉验证;② 阈值校准用了"记忆中的数值"而非当场从 per_run 度量打印的数值;③ 斜率符号翻转本可通过"误差应随 dt 增大而增大→斜率必为正"这一物理直觉当场发现,但没有做符号 sanity check。
+
+**Fix**: 改为以实测为中心设带(expected_ratio=2.0, relative_tolerance=0.9 → [0.2, 3.8]),重跑 12/12 通过;窗口斜率检查(si03–si06)与 Hermite 细端斜率检查均以 runner `dt_soft` 为 x 轴,符号与量级与设计预期一致后才定容差。
+
+**Prevention rule**: ① 校准检查阈值时直接读 runner JSON 里的 `metrics`(含 dt_soft),不要用临时脚本重推映射;② 任何 log-log 斜率计算先做符号 sanity check(截断误差斜率为正、舍入地板斜率≈0);③ 阈值写进场景后先跑一次再收工,"首轮必失败再修"本身说明校准链路绕开了数据源。
+
+### 2026-10-12: 【T6 单步重设计】成组历史是混沌量——多步 A/B 靠运气成组使对照失效;工程化三体 IC + 恰好一个树步消除混沌,r1≡r2 逐位一致反证测量中立
+
+**Mistake**: T6 多步版依赖团簇"自然"成组:A/B 运行(r2/r3)在所有输出时刻竟无一带人工粒子的组(成组事件本身是混沌稀有事件,三实现各不相同),被测代码路径根本没运行;r1 的组纯属运气。能量演化图也随之失去意义(另发现 -t 会被步长网格向上取整,-t 0.004 跑了 2 步,单步须 -t 恰为 dt_soft)。
+
+**Root cause**: ① 紧凑 IC 的"大质量组形成"是稀有混沌事件,跨实现不可复现;A/B 等效性检验要求两运行遍历相同构型,多步模拟无法保证。② 参数耦合陷阱:r_search_group ≤ r_in = r-ratio·r_out 有断言;组半径大就得配大 r-ratio(T5 用 0.3 即为此),或压缩三体尺度适配默认 r-ratio。
+
+**Fix**: IC 工程化——中心三体(4+4+3 M☉,a_in=0.0012/a_out=0.008 pc 近心点起始)保证第一步即有带 TT 的组(N_all-N_real=12 恒定);运行恰好 1 个树步(-t 0.00390625 = 自动 dt_soft),舍入无时间被混沌放大 → 三运行复刻同一轨迹。结果:r1(测量开)与 r2(干净)ε_E 逐位相同(2.008576e-5)——测量中立性的直接证明;r3(CM 核)1.78e-5,差 11% = 纯核内效应。14 项检查含每运行的单步与 TT 激活守护(final_time≤0.005、人工粒子≥12)。
+
+**Prevention rule**: ① A/B 类验证必须守护"被测路径确实被运行"(TT 激活/人工粒子计数入检查),否则全绿也是空转;② 消除混沌比较噪声的最强手段是缩短至单步而非增加统计;③ 依赖"自发事件"(成组、并合)的测试 IC 应改为工程化构造(植入目标构型);④ -t 与 dt_soft 网格:结束时间向上补齐整步,精确单步须 -t == dt_soft;⑤ r_search_group/r_in 耦合断言先查 --r-ratio。
+
+### 2026-10-12: 【静默未执行的 regime】T3 "churn" 组 8e-3>2×r_peri 却从未成组——质量加权使有效阈值≈0.013;两体系统周期性 link/unlink 结构上不可能;组普查计数器才是 regime 守护
+
+**Mistake**: T3 设计三 regime:恒成组/成组切换(churn)/永不成组,但从未验证组 census 是否真的按设计发生。实测(Form/End_Ngroup 累计计数器):churn 组(r_group=8e-3,>2×近心距)Form=0——从未成组,一直是纯 Hermite;即三 regime 实际只有两种,中位 run 与 inside_peri 完全同质,检查却"通过"(排序检查在简并数据上靠容差通过)。
+
+**
+**Root cause**: ① 组链接判据质量加权(成员自身质量缩放,与 own-mass changeover 同源):1:10 双星的有效成组阈值实测≈0.013 pc,远高于按 r_peri 的朴素预期,名义 r_group 低于阈值即永不成组;② 统一成员判据 grouped=(d<r_crit)&&(apo≤r_crit||κ≥1e-2) 中 form/break 互为逆:两体孤立系统外场为零→κ 分支恒真→一旦成组永不解散;且大质量成员的加权 r_crit 在任何可成组的 r_group 下都≥apo——周期性切换在结构上不可能(需≥3 体的成员进出,T5 的 churner 即此);③ 无微扰者的组不产生人工粒子,N_all−N_real 恒 0——人工粒子计数不是组 census 的可靠探测器,Form/End_Ngroup 计数器才是。
+
+**Fix**: runner 新增 ar_form_ngroup/ar_end_ngroup 度量(解析日志 AR 统计块累计计数);中位 run 移到 r_group=0.014(阈值上方,实测 Form=1 End=0)作为质量加权判据守护;三 regime 用 census 检查钉死(0/0、1/0、1/0),§1 明文记录结构不可能性并指向 T5;全时长重跑 8/8 通过。
+
+**Prevention rule**: ① 依赖某机制"发生"的测试必须先解析日志计数器验证该机制确实执行(census/guard 的再次实例);② 非等质量系统的半径类判据先实测有效阈值再划分 regime,不要按等质量直觉取值;③ 探测组存在性优先用 Form/End_Ngroup 累计计数器,人工粒子计数仅在有微扰者时可用。
+
+### 2026-10-12: 【BSE 地板掩盖 AR 精度】bse IC 的分组 run 误差 1.45e-7 全来自恒星演化记账而非 sym_int——无 BSE 孪生对照才见 AR 真实 ~4e-12;跨 run 水平比较先做误差源分解
+
+**Mistake**: T3 分组 run(纯 AR sym_int)能量误差 1.45e-7,与 Hermite 对(4.7e-7)仅差 3.3×,报告据此写"block-step Hermite resolves the pericenter less cleanly than the regularized AR group"——暗示两者是同一类积分误差的对比。用户质疑:纯 AR 对孤立双星不该有这么大误差。
+
+**Root cause**: ① bse IC 的 10 M☉ 恒星在 3.2 Myr 内质量损失/modify 记账给能量预算注入 ~1.45e-7 的演化地板,分组 run 的 AR 积分误差(~4e-12)被完全掩盖;② Hermite 对的 4.7e-7 是真实块步长截断(有无 BSE 逐位相同),恰好高于 BSE 地板,使两个水平看起来"可比";③ 无对照实验时,水平比较隐含假设误差同源。
+
+**Fix**: 无 BSE 孪生对照(plain 家族+plain IC 同参数):分组 run 4.0e-12(dt 细 8×→1.8e-12,随 AR 步长微降),Hermite 对 4.7e-7(与 bse 版逐位一致)。报告 Table 4 caption 改为误差源分解:AR≈4e-12 / 分组水平=bse 演化地板 1.45e-7 / 未分组=真实 Hermite 截断 4.7e-7;水平比值检查注释同步。
+
+**Prevention rule**: ① 跨 run/跨通道的误差水平比较前先做误差源分解(无扰动对照:去演化、去外场等单变量孪生 run);② bse/演化 IC 上读到"平坦误差地板"时,先怀疑演化记账而非积分器;③ 宣称"A 比 B 准"类结论前,确认两者误差同源。
+
+### 2026-10-12: 【假回归:装好的二进制不能当 bisect 基线】"pre-regression 干净运行"A.log 实际同样崩溃(行2347 同一 t=0.168945);A/B 还原 3848bc8、强制重编译回滚 SDAR 均不修复——崩溃是代码生成敏感的预存数值发散,跨安装二进制 bisect 把布局差异误当源码回归
+
+**Mistake**: 用不同时间构建的已安装二进制做回归判定:声称 980e6ad+1799e "干净完成"的 A.log 尾部其实带着与崩溃运行完全相同的 abort(同 t、同栈、同 dump 文件名前缀),当初只看了能量序列没看退出状态;SDAR 回滚测试又因 Makefile 不跟踪 ../SDAR/src 头文件依赖而链接了旧对象,等于没测。据此把崩溃归因于 3848bc8 的 12 行伪粒子改动,并据此写了 handoff note。
+
+**Root cause**: ① 判定"运行干净"必须查 log 尾部的 abort/退出码,不能只看指标序列;② 该崩溃本身是临界数值发散:-O1/-O3+g/加打印即消失,-O3 无 -g 必崩,崩溃时刻还随 --hermite-eta-init 移动(0.169→0.227)——代码生成/浮点细节决定是否触发,任何改变布局的构建差异都会伪装成"源码回归"或"修复";③ PeTar Makefile 的依赖只含 ./src/*.hpp,切换 SDAR checkout 后必须 touch 强制重编译,否则回滚实验无效。
+
+**Prevention rule**: ① 源码归因只能用"同一构建配置下仅还原目标 hunk"的 A/B(本次做法),且 SDAR/FDPS 侧回滚必须强制全量重编译;② "baseline 干净"要有退出码/abort 扫描证据;③ 遇到随优化级别翻转的崩溃先按未初始化/临界数值处理:修复已知未初始化流(本次:soft 粒子 acc0/acc1/pot/time/dt 从 IC 起为 NaN,经 setPtcl/writeBack 双向流动,已在 4 个拷贝点清零),再用运行时参数(eta 等)看崩溃时刻是否移动来区分 UB 与数值发散;④ 已安装二进制的时间戳/VERSION 只能提示,不能证明源码等价。
+
+### 2026-10-12: 【零力粒子的 |pos|/|vel| 飞行时间界】dt 塌缩 abort 的输入 acc 全为零——dt_ref 来自 HERMITE_MONOPOLE_DT_LIMIT 的 eta·r/|v|,孤立 cluster 质心系里组 c.m. 的 r、v 均为舍入残差,比值可落在网格底以下;无 floor 的 t_peri 减半循环再把 dt_limit 压到 dt_min 加成致死
+
+**Mistake**: 接手调查时先入为主按"力爆炸/数值发散"排查:给 dt 计算入口加"加速度指数位>0x430"断点屡次未命中后,一度转而怀疑未初始化内存(确实另发现 NaN 流动并修了,但对崩溃无效);两轮无效后才回头核对 abort 值本身——dt=2.22e-16 恰为 dt_min/2、一个减半,说明 dt_limit=dt_min 而 dt_ref<dt_min,与输入无关。
+
+**Root cause**: ① 零力(邻居空)粒子在 calcDt* 走 HERMITE_MONOPOLE_DT_LIMIT 分支返回 eta·|pos|/|vel|(2026-09-13 IMBH slingshot 引入的飞行时间界);孤立 cluster 在自身质心系积分,组 c.m. 的 pos/vel 都是质心化舍入残差,比值任意——可小于 dt_min → 减半一次越界 abort。这解释全部"玄学":优化级别翻转、插桩消失、eta-init 使崩溃时刻移动(全都只改变 ulp 级舍入)。② SDAR initialIntegration 的宽双星保护 `while(dt_limit>t_peri) dt_limit*=0.5` 无下限:近抛物线瞬时开普勒估计下边界平近点角≈0 → t_peri≈1e-16,把 info.dt_limit 从 dt_max 压到网格底,与①叠加保证越界。③ gdb 符号断点默认落在 entry+0x20(prologue 后),参数寄存器已被改写——条件断点读 args 必须用 `break *(base+nm地址)` 的精确入口;PIE 下还要先确认基址。
+
+**Fix(2026-10-13 终版,经 review 再改架构)**: 几何修复版(calcDtMonopole 改 eta·(r−r_dt_limit)⁺/|v|)虽正确但方向仍错——SDAR 是通用库,步长估计器不该读应用的 changeover 成员;边界约束本质是"外部步长约束",归属 dt_limit,归应用所有。终版:① SDAR block_time_step.h 整体还原到 ad5642d^ 形态(删 calcDtMonopole 与 HERMITE_MONOPOLE_DT_LIMIT 分支,签名还原,简并分支恢复返回 NUMERIC_FLOAT_MAX);② SDAR 新增通用 per-slot 目标半径 r_dt_limit_(索引同 time_next_:单粒子 k、组 c.m. k+offset;initialSystemSingle/addGroups 置 -1;setter setRDtLimitOne),四个 dt 调用点由 calcDtLimitCrossing 用粒子**当前**质心系状态现算 eta_4th·(r−r_dt_limit)⁺/|v| 并与 dt_limit 取 min——段内位置速度持续变化,段初设置的静态 cap 会陈旧(无力粒子逼近区域时真 cap 收紧而静态值不变,可能放任一步跨过坡道),故约束的"缓变几何量"(r_dt_limit)每段设一次、"步长界"每次 dt 评估现算;③ PeTar Makefile 删宏;PeTar hard.hpp initial() 每段以 eta_4th·(r−r_in)⁺/|v| 填充各 slot(质心系,r 对各自 changeover r_in)——slingshot 保护移到 PeTar 端,帧中心组 c.m.(r<r_in)天然无 cap=崩溃构型按构造解决;④ t_peri 减半循环 dt_min 兜底保留(独立 bug)。验证:复现器与 eta-init 变体跑净 t=3.2、dE/E~3e-12 且与几何版逐位一致;SDAR sample 默认构建/运行无影响。
+
+**Prevention rule**: ① "time step too small" 类 abort 先核对打印值与 dt_min 的幂关系(dt=dt_min/2ⁿ ⇒ dt_limit 本身已触底或 dt_ref 恰在网格下),再决定查力还是查界;② 通用库的步长估计器不得读取应用特有字段(changeover 等):应用级几何/物理约束一律以 dt_limit 形式注入——需要逐粒子约束时就给积分器加 per-slot 限步数组(与既有组级 info.dt_limit 对称),而非把应用概念下沉进库;③ 零力/零邻居粒子的任何 r/v 类时间尺度界,几何量必须指向"不可跨越的目标区域边界"而非坐标原点——质心系里帧中心粒子的 r、v 是舍入残差,指向原点的界会产出任意小伪影;③ 无下限的 while 减半循环一律加 dt_min 类网格底;④ gdb 条件断点读函数参数:用 `break *(PIE基址+nm符号地址)` 精确入口,`break 符号名` 会跳过 prologue 导致读错寄存器(本次浪费三轮排查)。

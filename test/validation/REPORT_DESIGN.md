@@ -1,8 +1,8 @@
 # Validation Report Design Rules
 
 Rules for designing validation scenarios and their HTML reports. **T6
-(`t6_pert_kernel_match_report.py`) is the reference implementation**; T1-T5 are
-legacy style and will be migrated to these rules when next touched.
+(`t6_pert_kernel_match_report.py`) is the reference implementation**; all reports
+(T1–T6) follow these rules.
 
 ## 1. Report structure (paper style)
 
@@ -82,10 +82,12 @@ Numbered sections in this order:
 ## 5. Shared code
 
 All generic helpers live in `report_common.py` (JSON loading, HTML escaping,
-log/version parsing, command parsing, IC reading, metric cards, check rows,
-and the plotting functions). Report scripts **must not redefine them**;
-script-specific parsers stay in the script. Two plot styles:
+log/version parsing, command parsing, IC reading, check rows, git-commit
+lookup, the shared paper stylesheet `PAPER_CSS`, and the plotting
+functions). Report scripts **must not redefine them**; script-specific parsers
+stay in the script. Plot helper:
 
-- `svg_series_plot` — auto-palette per-series legend (legacy, T1-T5).
 - `svg_curves_plot` — color = model, dash = quantity, bottom legend strip,
-  optional translucent activity bands (current style; use for new reports).
+  optional translucent activity bands, log/linear x and y axes
+  (`logx`/`logy`), custom legend-quantity entries
+  (`legend_quantities`). Used by all reports.

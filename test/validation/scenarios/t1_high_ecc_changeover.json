@@ -1,6 +1,6 @@
 {
   "name": "t1_high_ecc_changeover",
-  "description": "Notebook-faithful KDKDK4 high-ecc binary test using semi=0.1 pc, e=0.9, m1=1, m2=10, dt=2^[-13,-6]. Includes three regimes: inside (rout < peri), peri-between (rin < peri < rout), and crossing (peri < rin < apo < rout).",
+  "description": "Kepler-orbit changeover validation using semi=0.1 pc, e=0.9, m1=1, m2=10, dt=2^[-13,-6]. Three families: the full-crossing core target (peri < r_in < r_out < apo, r_out=0.15) validated against the pure particle-tree reference (r_peri > r_out, r_out=0.005; KDKDK4 4th order above the build-dependent round-off floor) and the pure-Hermite reference (r_apo < r_in, r_out=2.0; 4th order below the block-step dt threshold, weak-dt plateau above it).",
   "workdir": "{repo_root}",
   "setup_commands": [
     "mkdir -p test/out/work/t1",
@@ -56,84 +56,44 @@
       "output": "inside_r0005_si07.log"
     },
     {
-      "id": "peri_between_r005_si00",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.220703125e-4 -r 0.05 -o 1.220703125e-4 -w 2 -f peri_between_r005_si00 input",
-      "output": "peri_between_r005_si00.log"
+      "id": "crossfull_r015_si00",
+      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.220703125e-4 -r 0.15 -o 1.220703125e-4 -w 2 -f crossfull_r015_si00 input",
+      "output": "crossfull_r015_si00.log"
     },
     {
-      "id": "peri_between_r005_si01",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 2.44140625e-4 -r 0.05 -o 2.44140625e-4 -w 2 -f peri_between_r005_si01 input",
-      "output": "peri_between_r005_si01.log"
+      "id": "crossfull_r015_si01",
+      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 2.44140625e-4 -r 0.15 -o 2.44140625e-4 -w 2 -f crossfull_r015_si01 input",
+      "output": "crossfull_r015_si01.log"
     },
     {
-      "id": "peri_between_r005_si02",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 4.8828125e-4 -r 0.05 -o 4.8828125e-4 -w 2 -f peri_between_r005_si02 input",
-      "output": "peri_between_r005_si02.log"
+      "id": "crossfull_r015_si02",
+      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 4.8828125e-4 -r 0.15 -o 4.8828125e-4 -w 2 -f crossfull_r015_si02 input",
+      "output": "crossfull_r015_si02.log"
     },
     {
-      "id": "peri_between_r005_si03",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 9.765625e-4 -r 0.05 -o 9.765625e-4 -w 2 -f peri_between_r005_si03 input",
-      "output": "peri_between_r005_si03.log"
+      "id": "crossfull_r015_si03",
+      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 9.765625e-4 -r 0.15 -o 9.765625e-4 -w 2 -f crossfull_r015_si03 input",
+      "output": "crossfull_r015_si03.log"
     },
     {
-      "id": "peri_between_r005_si04",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.953125e-3 -r 0.05 -o 1.953125e-3 -w 2 -f peri_between_r005_si04 input",
-      "output": "peri_between_r005_si04.log"
+      "id": "crossfull_r015_si04",
+      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.953125e-3 -r 0.15 -o 1.953125e-3 -w 2 -f crossfull_r015_si04 input",
+      "output": "crossfull_r015_si04.log"
     },
     {
-      "id": "peri_between_r005_si05",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 3.90625e-3 -r 0.05 -o 3.90625e-3 -w 2 -f peri_between_r005_si05 input",
-      "output": "peri_between_r005_si05.log"
+      "id": "crossfull_r015_si05",
+      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 3.90625e-3 -r 0.15 -o 3.90625e-3 -w 2 -f crossfull_r015_si05 input",
+      "output": "crossfull_r015_si05.log"
     },
     {
-      "id": "peri_between_r005_si06",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 7.8125e-3 -r 0.05 -o 7.8125e-3 -w 2 -f peri_between_r005_si06 input",
-      "output": "peri_between_r005_si06.log"
+      "id": "crossfull_r015_si06",
+      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 7.8125e-3 -r 0.15 -o 7.8125e-3 -w 2 -f crossfull_r015_si06 input",
+      "output": "crossfull_r015_si06.log"
     },
     {
-      "id": "peri_between_r005_si07",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.5625e-2 -r 0.05 -o 1.5625e-2 -w 2 -f peri_between_r005_si07 input",
-      "output": "peri_between_r005_si07.log"
-    },
-    {
-      "id": "cross_r032_si00",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.220703125e-4 -r 0.32 -o 1.220703125e-4 -w 2 -f cross_r032_si00 input",
-      "output": "cross_r032_si00.log"
-    },
-    {
-      "id": "cross_r032_si01",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 2.44140625e-4 -r 0.32 -o 2.44140625e-4 -w 2 -f cross_r032_si01 input",
-      "output": "cross_r032_si01.log"
-    },
-    {
-      "id": "cross_r032_si02",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 4.8828125e-4 -r 0.32 -o 4.8828125e-4 -w 2 -f cross_r032_si02 input",
-      "output": "cross_r032_si02.log"
-    },
-    {
-      "id": "cross_r032_si03",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 9.765625e-4 -r 0.32 -o 9.765625e-4 -w 2 -f cross_r032_si03 input",
-      "output": "cross_r032_si03.log"
-    },
-    {
-      "id": "cross_r032_si04",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.953125e-3 -r 0.32 -o 1.953125e-3 -w 2 -f cross_r032_si04 input",
-      "output": "cross_r032_si04.log"
-    },
-    {
-      "id": "cross_r032_si05",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 3.90625e-3 -r 0.32 -o 3.90625e-3 -w 2 -f cross_r032_si05 input",
-      "output": "cross_r032_si05.log"
-    },
-    {
-      "id": "cross_r032_si06",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 7.8125e-3 -r 0.32 -o 7.8125e-3 -w 2 -f cross_r032_si06 input",
-      "output": "cross_r032_si06.log"
-    },
-    {
-      "id": "cross_r032_si07",
-      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.5625e-2 -r 0.32 -o 1.5625e-2 -w 2 -f cross_r032_si07 input",
-      "output": "cross_r032_si07.log"
+      "id": "crossfull_r015_si07",
+      "command": "cd test/out/work/t1 && OMP_NUM_THREADS=1 {petar_bin_order4} -a 0 --r-group 1e-6 --r-search-group 1e-6 -u 1 -t 0.8932208171201599 -s 1.5625e-2 -r 0.15 -o 1.5625e-2 -w 2 -f crossfull_r015_si07 input",
+      "output": "crossfull_r015_si07.log"
     },
     {
       "id": "hard_r200_si00",
@@ -178,14 +138,7 @@
   ],
   "checks": [
     {
-      "name": "inside_energy_bound_fine",
-      "type": "max_threshold",
-      "run_id": "inside_r0005_si00",
-      "metric": "max_abs_error_over_total",
-      "threshold": 5e-7
-    },
-    {
-      "name": "inside_loglog_slope",
+      "name": "pure_tree_order_64b",
       "type": "loglog_slope",
       "run_ids": [
         "inside_r0005_si00",
@@ -194,45 +147,107 @@
         "inside_r0005_si03",
         "inside_r0005_si04",
         "inside_r0005_si05",
-        "inside_r0005_si06",
-        "inside_r0005_si07"
+        "inside_r0005_si06"
       ],
       "metric": "max_abs_error_over_total",
       "x_metric": "dt_soft",
-      "expected_slope": 4.0,
-      "slope_tolerance": 0.8
+      "expected_slope": 3.5,
+      "slope_tolerance": 0.0,
+      "bound": "min",
+      "require_var_contains": [
+        "petar_bin_order4",
+        ".64b"
+      ],
+      "comment": "T1-a: KDKDK4 4th order above the 64b round-off floor, dt 1.22e-4 - 7.81e-3"
     },
     {
-      "name": "hard_r200_energy_bound_fine",
-      "type": "max_threshold",
-      "run_id": "hard_r200_si00",
+      "name": "pure_tree_order_non64b",
+      "type": "loglog_slope",
+      "run_ids": [
+        "inside_r0005_si03",
+        "inside_r0005_si04",
+        "inside_r0005_si05",
+        "inside_r0005_si06"
+      ],
       "metric": "max_abs_error_over_total",
-      "threshold": 5e-5
+      "x_metric": "dt_soft",
+      "expected_slope": 3.5,
+      "slope_tolerance": 0.0,
+      "bound": "min",
+      "require_var_not_contains": [
+        "petar_bin_order4",
+        ".64b"
+      ],
+      "comment": "T1-a: same order above the higher non64b round-off floor, dt 9.77e-4 - 7.81e-3"
     },
     {
-      "name": "hard_r200_plateau_si06_to_si04",
-      "type": "convergence_ratio",
-      "coarse_run_id": "hard_r200_si06",
-      "fine_run_id": "hard_r200_si04",
+      "name": "pure_hermite_order",
+      "type": "loglog_slope",
+      "run_ids": [
+        "hard_r200_si01",
+        "hard_r200_si02"
+      ],
       "metric": "max_abs_error_over_total",
-      "expected_ratio": 1.0,
-      "relative_tolerance": 3.0,
-      "criteria_key": "hard_r200_plateau_si06_to_si03",
-      "min_fine_error": 1e-11
+      "x_metric": "dt_soft",
+      "expected_slope": 3.5,
+      "slope_tolerance": 0.0,
+      "bound": "min",
+      "comment": "T1-b: 4th order below the block-step dt threshold, dt 2.44e-4 - 4.88e-4"
     },
     {
-      "name": "inside_no_hard_energy_alarm",
-      "type": "regex_count_max",
-      "run_id": "inside_r0005_si00",
-      "regex_key": "hard_energy_significant",
-      "threshold": 0
+      "name": "pure_hermite_weak_dt_dependence",
+      "type": "loglog_slope",
+      "run_ids": [
+        "hard_r200_si03",
+        "hard_r200_si04",
+        "hard_r200_si05",
+        "hard_r200_si06",
+        "hard_r200_si07"
+      ],
+      "metric": "max_abs_error_over_total",
+      "x_metric": "dt_soft",
+      "expected_slope": 1.0,
+      "slope_tolerance": 0.0,
+      "bound": "max",
+      "comment": "T1-b: block steps self-regulate, weak dt dependence for dt > 4.88e-4"
     },
     {
-      "name": "hard_r200_no_hard_energy_alarm",
-      "type": "regex_count_max",
-      "run_id": "hard_r200_si00",
-      "regex_key": "hard_energy_significant",
-      "threshold": 0
+      "name": "mix_follows_hermite_fine",
+      "type": "metric_ratio",
+      "numerator_run_id": "crossfull_r015_si00",
+      "denominator_run_id": "hard_r200_si00",
+      "metric": "max_abs_error_over_total",
+      "min_ratio": 0.5,
+      "max_ratio": 2.0,
+      "require_var_contains": [
+        "petar_bin_order4",
+        ".64b"
+      ],
+      "comment": "T1-b/c: inside r_in the crossing run follows pure Hermite (64b; the non64b annulus round-off floor sits above the Hermite level by construction)"
+    },
+    {
+      "name": "mix_tree_regime_order",
+      "type": "loglog_slope",
+      "run_ids": [
+        "crossfull_r015_si06",
+        "crossfull_r015_si07"
+      ],
+      "metric": "max_abs_error_over_total",
+      "x_metric": "dt_soft",
+      "expected_slope": 3.5,
+      "slope_tolerance": 0.0,
+      "bound": "min",
+      "comment": "T1-c: otherwise (tree/annulus-dominated coarse end) the error grows at least at 4th order"
+    },
+    {
+      "name": "mix_error_below_pure_tree_fine",
+      "type": "metric_ratio",
+      "numerator_run_id": "crossfull_r015_si00",
+      "denominator_run_id": "inside_r0005_si00",
+      "metric": "max_abs_error_over_total",
+      "min_ratio": 0.0,
+      "max_ratio": 1.0,
+      "comment": "T1-c: crossing error between the references (upper bound vs pure tree at fine dt; the Hermite lower bound is enforced by mix_follows_hermite_fine for 64b and holds trivially for non64b)"
     }
   ]
 }

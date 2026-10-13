@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 """T6 AR perturber-kernel-match HTML report (members-keep-own-changeover design)."""
 import argparse
-import json
 import re
 import subprocess
 import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from report_common import html_escape, load_json, parse_log_version
+from report_common import (
+    PAPER_CSS,
+    check_row,
+    git_commit,
+    html_escape,
+    load_json,
+    parse_log_version,
+)
 
-Point = Tuple[float, float]
 REPO = Path(__file__).resolve().parents[2]
 WORK_DIR = Path("test/validation/work/t6")
 
@@ -98,38 +103,6 @@ def ensure_diag_binary() -> str:
     return str(binary)
 
 
-def metric_card(label: str, value: str, note: str = "") -> str:
-    note_html = f'<div class="note">{html_escape(note)}</div>' if note else ""
-    return (
-        f'<div class="card"><div class="card-label">{html_escape(label)}</div>'
-        f'<div class="card-value">{html_escape(value)}</div>{note_html}</div>'
-    )
-
-
-def check_row(check: Dict) -> str:
-    status = "PASS" if check.get("passed") else "FAIL"
-    style = "pass" if check.get("passed") else "fail"
-    message = check.get("message", "")
-    return (
-        f'<tr><td>{html_escape(str(check.get("check", "")))}</td>'
-        f'<td class="{style}">{status}</td>'
-        f'<td>{html_escape(str(check.get("value", "")))}</td>'
-        f'<td>{html_escape(str(check.get("threshold", "")))}</td>'
-        f'<td class="msg">{html_escape(str(message))}</td></tr>'
-    )
-
-
-def git_commit() -> str:
-    try:
-        r = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"], cwd=REPO,
-            capture_output=True, text=True, check=True,
-        )
-        return r.stdout.strip()
-    except Exception:
-        return "unknown"
-
-
 def build_html(
     checks: List[Dict],
     diag_rows: List[Dict[str, float]],
@@ -165,32 +138,7 @@ def build_html(
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <title>T6 perturber-kernel consistency</title>
-<style>
- body {{ font-family: Georgia, 'Times New Roman', serif; margin: 32px auto; max-width: 960px; color: #1a1a1a; line-height: 1.5; }}
- h1 {{ font-size: 22px; text-align: center; margin-bottom: 4px; }}
- h2 {{ font-size: 17px; margin-top: 30px; border-bottom: 1px solid #999; padding-bottom: 3px; }}
- h3 {{ font-size: 15px; margin-top: 18px; }}
- .subtitle {{ text-align: center; color: #555; font-size: 14px; margin-bottom: 14px; }}
- .verdict {{ display: inline-block; padding: 5px 14px; font-weight: bold; border-radius: 4px; font-family: Arial; }}
- .verdict.pass {{ background: #2e7d32; color: #fff; }}
- .verdict.fail {{ background: #c62828; color: #fff; }}
- .eq {{ text-align: center; margin: 10px 0; font-style: italic; font-size: 15px; }}
- .eq .tag {{ float: right; color: #777; font-style: normal; }}
- .caption {{ font-size: 12.5px; color: #444; margin: 6px 0 18px 0; }}
- table.data {{ border-collapse: collapse; font-size: 13.5px; margin: 8px 0 2px 0; font-family: Arial; }}
- table.data th, table.data td {{ border: 1px solid #999; padding: 4px 9px; text-align: left; vertical-align: top; }}
- table.data th {{ background: #eee; }}
- td.pass {{ color: #2e7d32; font-weight: bold; }}
- td.fail {{ color: #c62828; font-weight: bold; }}
- td.msg {{ color: #555; }}
- .cards {{ display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 2px 0; }}
- .card {{ border: 1px solid #bbb; border-radius: 5px; padding: 8px 14px; min-width: 150px; font-family: Arial; }}
- .card-label {{ font-size: 12px; color: #666; }}
- .card-value {{ font-size: 19px; font-weight: bold; margin-top: 3px; }}
- pre.cmd {{ background: #f6f6f6; border: 1px solid #ddd; border-radius: 4px; padding: 8px 12px; font-size: 12px; font-family: 'Courier New', monospace; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }}
- .meta {{ color: #777; font-size: 12px; margin-top: 26px; border-top: 1px solid #ccc; padding-top: 8px; }}
- i, .sym {{ font-family: Georgia, serif; }}
-</style></head><body>
+<style>{PAPER_CSS}</style></head><body>
 
 <h1>T6 &nbsp;AR perturber-list kernel consistency:<br>members-keep-own-mass-changeover design</h1>
 <div class="subtitle">validation report &middot; scenario <i>t6_pert_kernel_match</i> &middot; <span class="verdict {'pass' if all_pass else 'fail'}">{verdict}</span></div>
@@ -274,11 +222,6 @@ group linking r<sub>group</sub>/r<sub>search,group</sub> = 0.008/0.01; tree mode
 measurement code inside r1 changes the compiled instruction schedule of the perturbation loop, so
 r1 and r2 need not be bit-identical; keeping r2/r3 free of instrumentation isolates the A/B pair
 from even this channel. Over a single tree step the round-off difference has no time to amplify,
-from report_common import (
-    html_escape,
-    load_json,
-    parse_log_version,
-)
 and r1 and r2 indeed end bit-identically (&sect;3.2), which doubles as a direct proof that the
 measurement is neutral.</div>
 
@@ -410,7 +353,7 @@ def main() -> int:
         (run["run_id"], str(run.get("command", ""))) for run in runs
     ]
 
-    html = build_html(checks, diag_rows, run_metrics, run_commands, log_version, git_commit(), Path(args.report))
+    html = build_html(checks, diag_rows, run_metrics, run_commands, log_version, git_commit(REPO), Path(args.report))
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")

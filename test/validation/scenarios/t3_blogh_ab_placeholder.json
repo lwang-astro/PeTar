@@ -1,0 +1,59 @@
+{
+  "name": "t3_blogh_ab_placeholder",
+  "description": "Placeholder A/B scenario for future blogh integration. Currently compares two configurable binaries on identical hierarchical-triple setup.",
+  "workdir": "{repo_root}",
+  "setup_commands": [
+    "mkdir -p test/validation/work/t3_blogh",
+    "python3 test/validation/make_ic.py --case t3 --output test/validation/work/t3_blogh/input.base",
+    "cd test/validation/work/t3_blogh && petar.init -f input input.base"
+  ],
+  "extract": {
+    "regex_counts": {
+      "hard_energy_significant": "Hard energy significant",
+      "large_step_warning": "Large step",
+      "hard_dump": "hard_large_energy\\."
+    }
+  },
+  "runs": [
+    {
+      "id": "method_a",
+      "command": "cd test/validation/work/t3_blogh && OMP_NUM_THREADS=1 {petar_bin_blogh_a} -a 0 --r-group 5e-4 --r-search-group 1.0e-3 -u 1 -b 1 -t 0.12 -s 1e-4 -r 0.05 -o 1e-3 -w 2 -f t3_blogh_a input",
+      "output": "method_a.log"
+    },
+    {
+      "id": "method_b",
+      "command": "cd test/validation/work/t3_blogh && OMP_NUM_THREADS=1 {petar_bin_blogh_b} -a 0 --r-group 5e-4 --r-search-group 1.0e-3 -u 1 -b 1 -t 0.12 -s 1e-4 -r 0.05 -o 1e-3 -w 2 -f t3_blogh_b input",
+      "output": "method_b.log"
+    }
+  ],
+  "checks": [
+    {
+      "name": "method_a_energy_bound",
+      "type": "max_threshold",
+      "run_id": "method_a",
+      "metric": "max_abs_error_over_total",
+      "threshold": 2e-6
+    },
+    {
+      "name": "method_b_energy_bound",
+      "type": "max_threshold",
+      "run_id": "method_b",
+      "metric": "max_abs_error_over_total",
+      "threshold": 2e-6
+    },
+    {
+      "name": "method_a_no_large_step_warning",
+      "type": "regex_count_max",
+      "run_id": "method_a",
+      "regex_key": "large_step_warning",
+      "threshold": 0
+    },
+    {
+      "name": "method_b_no_hard_dump",
+      "type": "regex_count_max",
+      "run_id": "method_b",
+      "regex_key": "hard_dump",
+      "threshold": 0
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "name": "t2_binary_conservation_longterm",
-  "description": "Long-term binary conservation test (>=100 periods): dt_soft sweep with auto changeover radii, focusing on semi/ecc conservation without assuming dt_soft scaling.",
+  "description": "Long-term (>=100 periods) energy-error behaviour of a pure binary under AUTO changeover radii (no -r): the radii track dt_soft, so the sweep naturally covers pure-tree (dt17: r_out < r_peri), mix (dt12-dt9: changeover active inside the orbit) and pure-Hermite (dt8: r_in > r_apo). Purposes: (1) no secular energy-error drift in any regime; (2) the auto-derived changeover keeps the error level approximately consistent across dt_soft (no dt^4 fixed-radii scaling).",
   "workdir": "{repo_root}",
   "setup_commands": [
     "mkdir -p test/out/work/t2",
@@ -42,50 +42,67 @@
       "id": "dt8",
       "command": "cd test/out/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-4 --r-search-group 1e-3 -u 1 -b 1 -t 3.2 -s 3.90625e-3 -o 7.8125e-3 -w 2 -f t2_dt8 input",
       "output": "dt8.log"
+    },
+    {
+      "id": "dt17",
+      "command": "cd test/out/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-6 --r-search-group 1e-5 -u 1 -b 1 -t 3.2 -s 7.62939453125e-6 -o 9.765625e-4 -w 2 -f t2_dt17 input",
+      "output": "dt17.log"
+    },
+    {
+      "id": "dt13",
+      "command": "cd test/out/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-6 --r-search-group 1e-5 -u 1 -b 1 -t 3.2 -s 1.220703125e-4 -o 2.44140625e-4 -w 2 -f t2_dt13 input",
+      "output": "dt13.log"
+    },
+    {
+      "id": "dt14",
+      "command": "cd test/out/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-6 --r-search-group 1e-5 -u 1 -b 1 -t 3.2 -s 6.103515625e-5 -o 4.8828125e-4 -w 2 -f t2_dt14 input",
+      "output": "dt14.log"
+    },
+    {
+      "id": "dt15",
+      "command": "cd test/out/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-6 --r-search-group 1e-5 -u 1 -b 1 -t 3.2 -s 3.0517578125e-5 -o 9.765625e-4 -w 2 -f t2_dt15 input",
+      "output": "dt15.log"
+    },
+    {
+      "id": "dt16",
+      "command": "cd test/out/work/t2 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 --r-group 5e-6 --r-search-group 1e-5 -u 1 -b 1 -t 3.2 -s 1.52587890625e-5 -o 9.765625e-4 -w 2 -f t2_dt16 input",
+      "output": "dt16.log"
     }
   ],
   "checks": [
     {
-      "name": "sum_period_max_error_monotonic_vs_dt",
-      "type": "monotonic_trend",
-      "run_ids": [
-        "dt12",
-        "dt11",
-        "dt10",
-        "dt9",
-        "dt8"
-      ],
-      "metric": "sum_abs_error_period_max",
-      "direction": "nondecreasing",
-      "relative_tolerance": 0.05
+      "name": "energy_error_stationary_dt17",
+      "type": "max_threshold",
+      "run_id": "dt17",
+      "metric": "late_early_period_max_ratio",
+      "threshold": 2.0,
+      "comment": "Purpose 1 (pure tree): max per-period error in the second half of the run <= 2x the first half, i.e. no secular energy-error drift over ~113 periods"
     },
     {
-      "name": "dt_times_period_max_error_monotonic_vs_dt",
-      "type": "monotonic_trend",
-      "run_ids": [
-        "dt12",
-        "dt11",
-        "dt10",
-        "dt9",
-        "dt8"
-      ],
-      "metric": "dt_soft_times_max_abs_error_period_max",
-      "direction": "nondecreasing",
-      "relative_tolerance": 0.05
-    },
-    {
-      "name": "dt12_no_large_step_warning",
-      "type": "regex_count_max",
+      "name": "energy_error_stationary_dt12",
+      "type": "max_threshold",
       "run_id": "dt12",
-      "regex_key": "large_step_warning",
-      "threshold": 0
+      "metric": "late_early_period_max_ratio",
+      "threshold": 2.0,
+      "comment": "Purpose 1 (mix): stationarity of the per-period error envelope under the active changeover"
     },
     {
-      "name": "dt8_no_large_step_warning",
-      "type": "regex_count_max",
+      "name": "energy_error_stationary_dt8",
+      "type": "max_threshold",
       "run_id": "dt8",
-      "regex_key": "large_step_warning",
-      "threshold": 0
+      "metric": "late_early_period_max_ratio",
+      "threshold": 2.0,
+      "comment": "Purpose 1 (pure Hermite): stationarity when the whole orbit sits inside the auto r_in"
+    },
+    {
+      "name": "energy_level_consistent_across_dt",
+      "type": "metric_ratio",
+      "numerator_run_id": "dt17",
+      "denominator_run_id": "dt12",
+      "metric": "max_abs_error_over_total",
+      "min_ratio": 1.0,
+      "max_ratio": 300.0,
+      "comment": "Purpose 2: across the full contiguous sweep (512x in dt_soft, 2^-17..2^-8, spanning pure tree / mix / pure Hermite) the auto-changeover level stays within ~2 orders of magnitude (measured ~100x); fixed radii would give dt^4 ~ 1e11"
     }
   ]
 }

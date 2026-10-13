@@ -5,6 +5,7 @@ import math
 import os
 import re
 import shlex
+import struct
 import subprocess
 import sys
 import warnings
@@ -14,7 +15,14 @@ from typing import Any, Dict, List, Tuple
 
 import numpy as np
 
-from metrics import check_convergence_ratio, check_loglog_slope, check_max_threshold, check_min_threshold, summarize_results
+from metrics import (
+    check_convergence_ratio,
+    check_loglog_slope,
+    check_max_threshold,
+    check_metric_ratio,
+    check_min_threshold,
+    summarize_results,
+)
 
 
 ENERGY_HEADER_RE = re.compile(r"^Energy:\s+(.*)$")
@@ -408,6 +416,15 @@ def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any], command: str
     max_period_error = max(pmax) if pmax else 0.0
     sum_period_error = sum(pmax) if pmax else 0.0
     mean_period_error = (sum_period_error / len(pmax)) if pmax else 0.0
+    # stationarity: max of the second half of the period maxima over the first
+    # half (≈1 stationary; >>1 secular drift, <<1 anomalous decay)
+    if len(pmax) >= 2:
+        half = len(pmax) // 2
+        early_half = max(pmax[:half]) if half > 0 else pmax[0]
+        late_half = max(pmax[half:]) if pmax[half:] else early_half
+        late_early_period_max_ratio = late_half / early_half if early_half > 0.0 else float("inf")
+    else:
+        late_early_period_max_ratio = float("nan")
 
     orbital_metrics: Dict[str, float] = {}
     status_n_particle = int(extract_cfg.get("status_n_particle", 0) or 0)
@@ -424,6 +441,68 @@ def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any], command: str
                         interrupt_mode=str(extract_cfg.get("interrupt_mode", "none")),
                     )
                 )
+
+    # AR group census from the final statistics block (cumulative counters):
+    # header " AR_tsyn_sum Stab_Ngroup Iso_Ngroup Form_Ngroup End_Ngroup ..."
+    # NOTE: these profile counters reset per hard-integration segment, so they
+    # only reflect the last segment; the authoritative cumulative census is
+    # parsed from the group event dumps (group_dump_* below).
+    ar_form_ngroup = -1
+    ar_end_ngroup = -1
+    log_lines = text.splitlines()
+    for i, line in enumerate(log_lines):
+        if line.startswith(" AR_tsyn_sum Stab_Ngroup"):
+            parts = log_lines[i + 1].split()
+            if len(parts) >= 5:
+                ar_form_ngroup = int(float(parts[3]))
+                ar_end_ngroup = int(float(parts[4]))
+
+    # Cumulative group form/break events from the ADJUST_GROUP_PRINT binary
+    # dumps <prefix>.group.n<m> next to the status file. Record header:
+    # [int32 type (0=form, 1=break)][int32 n_member][float64 time]...
+    # Records have fixed size per file (n_member fixed), so candidates are
+    # filtered onto the dominant stride grid to reject payload bit patterns
+    # that mimic the header.
+    group_form_events = -1
+    group_break_events = -1
+    status_path = resolve_status_path_from_command(command, workdir)
+    if status_path is not None:
+        group_files = sorted(status_path.parent.glob(status_path.stem + ".group.n*"))
+        n_form = 0
+        n_break = 0
+        for gfile in group_files:
+            try:
+                n_member_expected = int(gfile.name.rsplit(".n", 1)[1])
+                raw = gfile.read_bytes()
+            except (OSError, ValueError):
+                continue
+            a = np.frombuffer(raw[: len(raw) // 4 * 4], dtype=np.int32)
+            cand = np.where(((a[:-1] == 0) | (a[:-1] == 1)))[0]
+            cand = cand[(a[cand + 1] == n_member_expected) & (cand % 2 == 0)]
+            keep = []
+            for i in cand:
+                off = i * 4 + 8
+                if off + 8 > len(raw):
+                    continue
+                tval = struct.unpack_from("<d", raw, off)[0]
+                if 0.0 <= tval <= 1.0e3:
+                    keep.append(int(i))
+            if len(keep) >= 3:
+                diffs = np.diff(keep)
+                stride = int(np.median(diffs))
+                if stride > 0:
+                    base = keep[0]
+                    keep = [i for i in keep if (i - base) % stride == 0]
+            for i in keep:
+                if a[i] == 0:
+                    n_form += 1
+                else:
+                    n_break += 1
+        # no group dump files at all = no group events (petar deletes empty
+        # dumps on exit); only an unresolvable status path keeps the -1 sentinel
+        if group_files or status_path is not None:
+            group_form_events = n_form
+            group_break_events = n_break
 
     max_n_real_glb = max((row["n_real_glb"] for row in count_rows), default=0.0)
     max_n_all_glb = max((row["n_all_glb"] for row in count_rows), default=0.0)
@@ -444,6 +523,10 @@ def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any], command: str
         "max_n_all_loc": max_n_all_loc,
         "max_artificial_particles_glb": max_artificial_particles_glb,
         "max_artificial_particles_loc": max_artificial_particles_loc,
+        "ar_form_ngroup": float(ar_form_ngroup),
+        "ar_end_ngroup": float(ar_end_ngroup),
+        "group_form_events": float(group_form_events),
+        "group_break_events": float(group_break_events),
         "final_time_log": final_time,
         "regex_counts": regex_counts,
         "regex_floats": regex_floats,
@@ -452,6 +535,7 @@ def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any], command: str
         "max_abs_error_period_max": max_period_error,
         "sum_abs_error_period_max": sum_period_error,
         "mean_abs_error_period_max": mean_period_error,
+        "late_early_period_max_ratio": late_early_period_max_ratio,
         **orbital_metrics,
     }
 
@@ -563,6 +647,24 @@ def execute_scenario(
         per_run = {item.run_id: item.metrics for item in run_results}
         for check in scenario.get("checks", []):
             ctype = check["type"]
+            skip = False
+            req = check.get("require_var_contains")
+            if req and req[1] not in str(variables.get(req[0], "")):
+                skip = True
+            reqn = check.get("require_var_not_contains")
+            if reqn and reqn[1] in str(variables.get(reqn[0], "")):
+                skip = True
+            if skip:
+                check_results.append(
+                    {
+                        "passed": True,
+                        "skipped": True,
+                        "scenario": scenario_name,
+                        "check": check["name"],
+                        "message": "skipped: build condition not met (require_var_[not_]contains)",
+                    }
+                )
+                continue
             if ctype == "max_threshold":
                 run_id = check["run_id"]
                 metric = check["metric"]
@@ -643,6 +745,28 @@ def execute_scenario(
                 result = check_max_threshold(float(value), float(threshold))
                 result.update({"scenario": scenario_name, "check": check["name"], "value": value, "threshold": threshold})
                 check_results.append(result)
+            elif ctype == "metric_ratio":
+                numerator_id = check["numerator_run_id"]
+                denominator_id = check["denominator_run_id"]
+                metric = check["metric"]
+                missing = [rid for rid in (numerator_id, denominator_id) if rid not in per_run]
+                if missing:
+                    check_results.append(
+                        {
+                            "passed": False,
+                            "scenario": scenario_name,
+                            "check": check["name"],
+                            "message": f"missing metrics for runs: {', '.join(missing)}",
+                        }
+                    )
+                    continue
+                numerator = float(per_run[numerator_id][metric])
+                denominator = float(per_run[denominator_id][metric])
+                result = check_metric_ratio(
+                    numerator, denominator, float(check["min_ratio"]), float(check["max_ratio"])
+                )
+                result.update({"scenario": scenario_name, "check": check["name"]})
+                check_results.append(result)
             elif ctype == "loglog_slope":
                 run_ids = check["run_ids"]
                 metric = check["metric"]
@@ -673,7 +797,9 @@ def execute_scenario(
                     )
                     continue
                 expected, tolerance = resolve_slope(check, scenario_name, criteria)
-                result = check_loglog_slope(x_values, y_values, expected, tolerance)
+                result = check_loglog_slope(
+                    x_values, y_values, expected, tolerance, bound=str(check.get("bound", "both"))
+                )
                 result.update({"scenario": scenario_name, "check": check["name"]})
                 check_results.append(result)
             elif ctype == "monotonic_trend":
@@ -784,26 +910,17 @@ def _validate_variables(variables: Dict[str, str], scenario: Dict[str, Any]) -> 
 
 
 def _select_or_build_petar(require_64b: bool | None = None) -> str:
-    """Use petar.select to pick a binary; build with ./configure if missing.
-    Since 64b is treated as require-only by petar.select, omitting it picks non-64b.
+    """Select a petar binary via petar.select; reinstall when the selection
+    fails or the installed binary version does not match the repository
+    VERSION (see report_common.select_or_install_petar). Never falls back to
+    hardcoded binary names or the default `petar` symlink.
     """
-    import shutil, subprocess as _sp
-    sel = shutil.which("petar.select")
-    if not sel:
-        return shutil.which("petar") or "petar"
+    from report_common import select_or_install_petar
 
-    args = ["--require", "64b", "--optional", "avx2,omp"] if require_64b else ["--optional", "avx2,omp"]
-    r = _sp.run([sel] + args, capture_output=True, text=True)
-    if r.returncode == 0:
-        return shutil.which("petar") or "petar"
-
-    print(f"[pipeline] {'64b ' if require_64b else ''}KDKDK4 binary not found. Building...")
-    config = "--enable-64b" if require_64b else ""
-    _sp.run(f"./configure {config}", shell=True, check=True, capture_output=True)
-    _sp.run(f"make -j{os.cpu_count() or 4}", shell=True, check=True, capture_output=True)
-    _sp.run("make install", shell=True, check=True, capture_output=True)
-    _sp.run([sel] + args, check=True, capture_output=True)
-    return shutil.which("petar") or "petar"
+    repo_root = Path(__file__).resolve().parents[2]
+    if require_64b:
+        return select_or_install_petar(require=["64b"], optional=["avx2", "omp"], repo_root=repo_root)
+    return select_or_install_petar(optional=["avx2", "omp"], repo_root=repo_root)
 
 
 def _pipeline(scenario_file: str, report_json: str, out_dir: str, petar_var: str, petar_bin: str) -> int:
@@ -840,15 +957,15 @@ def main() -> int:
         bin_non64 = str(Path(_select_or_build_petar(False)).resolve())
         print(f"[pipeline] 64b: {bin_64}")
         sfile = "test/validation/scenarios/t1_high_ecc_changeover.json"
-        _pipeline(sfile, "test/out/report.t1.64b.overlay.json", "test/out/validation_t1_kdkdk4_64b", "petar_bin_order4", bin_64)
-        _pipeline(sfile, "test/out/report.t1.non64b.overlay.json", "test/out/validation_t1_kdkdk4_non64b", "petar_bin_order4", bin_non64)
+        _pipeline(sfile, "test/out/report.t1.64b.overlay.json", "test/out/validation_t1_binary_changeover_64b", "petar_bin_order4", bin_64)
+        _pipeline(sfile, "test/out/report.t1.non64b.overlay.json", "test/out/validation_t1_binary_changeover_non64b", "petar_bin_order4", bin_non64)
         subprocess.run([
-            sys.executable, "test/validation/t1_kdkdk4_report.py",
+            sys.executable, "test/validation/t1_binary_changeover_kdkdk4_report.py",
             "--report", "test/out/report.t1.64b.overlay.json",
             "--primary-tag", "64b",
             "--compare-report", "test/out/report.t1.non64b.overlay.json",
             "--compare-tag", "non64b",
-            "--output", "test/out/t1_kdkdk4_summary.html",
+            "--output", "test/out/t1_binary_changeover_kdkdk4_summary.html",
         ], check=False)
         return 0
     if args.pipeline == "t2":
@@ -857,9 +974,9 @@ def main() -> int:
         sfile = "test/validation/scenarios/t2_binary_conservation_longterm.json"
         _pipeline(sfile, "test/out/report.t2.binary.json", "test/out/validation_t2_binary", "petar_bin_switch", bin_pet)
         subprocess.run([
-            sys.executable, "test/validation/t2_binary_conservation_report.py",
+            sys.executable, "test/validation/t2_binary_longterm_autochangeover_report.py",
             "--report", "test/out/report.t2.binary.json",
-            "--output", "test/out/t2_binary_conservation_summary.html",
+            "--output", "test/out/t2_binary_longterm_autochangeover_summary.html",
         ], check=False)
         return 0
     if args.pipeline == "t3":
@@ -867,9 +984,9 @@ def main() -> int:
         sfile = "test/validation/scenarios/t3_binary_hard_switch_longterm.json"
         _pipeline(sfile, "test/out/report.t3.binary.json", "test/out/validation_t3_binary", "petar_bin_switch", bin_pet)
         subprocess.run([
-            sys.executable, "test/validation/t3_binary_hard_switch_report.py",
+            sys.executable, "test/validation/t3_binary_sdar_grouplink_report.py",
             "--report", "test/out/report.t3.binary.json",
-            "--output", "test/out/t3_binary_hard_switch_summary.html",
+            "--output", "test/out/t3_binary_sdar_grouplink_summary.html",
         ], check=False)
         return 0
 

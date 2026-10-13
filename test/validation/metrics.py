@@ -44,6 +44,7 @@ def check_convergence_ratio(
     return {
         "passed": passed,
         "value": ratio,
+        "threshold": f"[{lower:g}, {upper:g}]",
         "expected": expected_ratio,
         "tolerance": ratio_tolerance,
         "message": (
@@ -54,11 +55,40 @@ def check_convergence_ratio(
     }
 
 
+def check_metric_ratio(
+    numerator: float,
+    denominator: float,
+    min_ratio: float,
+    max_ratio: float,
+) -> Dict[str, object]:
+    if denominator == 0.0:
+        return {
+            "passed": False,
+            "value": math.inf if numerator > 0.0 else math.nan,
+            "threshold": f"[{min_ratio}, {max_ratio}]",
+            "message": "denominator metric is zero, cannot evaluate ratio",
+        }
+
+    ratio = numerator / denominator
+    passed = min_ratio <= ratio <= max_ratio
+    return {
+        "passed": passed,
+        "value": ratio,
+        "threshold": f"[{min_ratio}, {max_ratio}]",
+        "message": (
+            f"ratio={ratio:.4f} within [{min_ratio:.4f}, {max_ratio:.4f}]"
+            if passed
+            else f"ratio={ratio:.4f} outside [{min_ratio:.4f}, {max_ratio:.4f}]"
+        ),
+    }
+
+
 def check_loglog_slope(
     x_values: List[float],
     y_values: List[float],
     expected_slope: float,
     slope_tolerance: float,
+    bound: str = "both",
 ) -> Dict[str, object]:
     if len(x_values) != len(y_values) or len(x_values) < 2:
         return {
@@ -93,19 +123,39 @@ def check_loglog_slope(
         }
 
     slope = sum((x - mx) * (y - my) for x, y in zip(lx, ly)) / denom
-    lower = expected_slope - slope_tolerance
-    upper = expected_slope + slope_tolerance
-    passed = lower <= slope <= upper
-    return {
-        "passed": passed,
-        "value": slope,
-        "expected": expected_slope,
-        "tolerance": slope_tolerance,
-        "message": (
+    if bound == "min":
+        passed = slope >= expected_slope
+        threshold_str = f">= {expected_slope:g}"
+        message = (
+            f"slope={slope:.4f} >= {expected_slope:.4f}"
+            if passed
+            else f"slope={slope:.4f} < {expected_slope:.4f}"
+        )
+    elif bound == "max":
+        passed = slope <= expected_slope
+        threshold_str = f"<= {expected_slope:g}"
+        message = (
+            f"slope={slope:.4f} <= {expected_slope:.4f}"
+            if passed
+            else f"slope={slope:.4f} > {expected_slope:.4f}"
+        )
+    else:
+        lower = expected_slope - slope_tolerance
+        upper = expected_slope + slope_tolerance
+        passed = lower <= slope <= upper
+        threshold_str = f"[{lower:g}, {upper:g}]"
+        message = (
             f"slope={slope:.4f} within [{lower:.4f}, {upper:.4f}]"
             if passed
             else f"slope={slope:.4f} outside [{lower:.4f}, {upper:.4f}]"
-        ),
+        )
+    return {
+        "passed": passed,
+        "value": slope,
+        "threshold": threshold_str,
+        "expected": expected_slope,
+        "tolerance": slope_tolerance,
+        "message": message,
     }
 
 

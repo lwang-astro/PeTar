@@ -4,41 +4,47 @@
     "usage": "Copy values into scenario checks or update runner to read this file as the next step."
   },
   "t1_high_ecc_changeover": {
-    "max_abs_error_over_total": {
-      "inside_r0005_si00": 5e-07,
-      "hard_r200_si00": 5e-05
-    },
+    "notes": "Thresholds mirror the scenario file (2026-10-12 redesign: 7 checks organised by the three purposes; one-sided slope bounds, build-specific windows via require_var_[not_]contains).",
     "loglog_slope": {
-      "inside_slope": {
-        "expected": 4.0,
-        "tolerance": 0.8
-      }
+      "pure_tree_order_64b": {"expected": 3.5, "bound": "min"},
+      "pure_tree_order_non64b": {"expected": 3.5, "bound": "min"},
+      "pure_hermite_order": {"expected": 3.5, "bound": "min"},
+      "pure_hermite_weak_dt_dependence": {"expected": 1.0, "bound": "max"},
+      "mix_tree_regime_order": {"expected": 3.5, "bound": "min"}
     },
-    "convergence": {
-      "hard_r200_plateau_si06_to_si03": {
-        "expected": 1.0,
-        "relative_tolerance": 3.0
-      }
-    },
-    "regex_count_max": {
-      "hard_energy_significant": 0
+    "metric_ratio": {
+      "mix_follows_hermite_fine": [0.5, 2.0],
+      "mix_error_below_pure_tree_fine": [0.0, 1.0]
     }
   },
   "t2_binary_conservation_longterm": {
-    "max_abs_error_over_total": {
-      "baseline": 1e-06
+    "notes": "Thresholds mirror the scenario file (2026-10-12 purpose redesign: stationarity of the energy error under auto changeover + level consistency across dt; dt17 pure-tree endpoint added, r_group shrunk below auto r_in).",
+    "late_early_period_max_ratio": {
+      "stationarity_band": 2.0
     },
-    "max_abs_error_pp": {
-      "stress": 1e-05
-    },
-    "regex_count_max": {
-      "large_step_warning": 0,
-      "hard_dump": 0
+    "metric_ratio": {
+      "energy_level_consistent_across_dt": [1.0, 300.0]
     }
   },
   "t3_binary_hard_switch_longterm": {
-    "regex_count_max": {
-      "large_step_warning": 0
+    "notes": "Thresholds mirror the scenario file (2026-10-13 post-fix calibration: genuine orbit-frequency switching at r_group=0.013, ~1 break/orbit, level between channels; plain family, no BSE).",
+    "group_form_events": {
+      "never_grouped_max": 0
+    },
+    "group_break_events": {
+      "stable_group_max": 0,
+      "switching_min": 50,
+      "switching_max": 2000
+    },
+    "metric_ratio": {
+      "switching_no_worse_than_hermite_pair": [0.0, 1.0]
+    },
+    "max_abs_error_over_total": {
+      "pure_ar_error_bound": 1e-11,
+      "pure_hermite_error_bound": 1e-06
+    },
+    "late_early_period_max_ratio": {
+      "stationarity_band": 2.0
     }
   },
   "t4_tree_hard_from_triple": {
