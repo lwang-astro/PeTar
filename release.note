@@ -67,13 +67,26 @@
 65. Add new petar.dump2test tool; allow to convert dump file to init snapshot of petar.hard.test
 66. Fix two BSE binary-interrupt assertion aborts in `src/ar_interaction.hpp`: (1) `dt>0` at the first interrupt check of a freshly formed group with mixed member time records — the pair check now performs the lagging member's SSE catch-up first, computes one common remaining interval and skips the empty-interval binary call; (2) zero-mass star assertion when a member vanishes without a supernova remnant (BSE kw=15, e.g. pair-instability SN) — `evolveBinary`'s kw=15 branch now records a no-remnant event (type 12) so `isNoRemnant()` classifies the pair and the existing mass-zero cleanup runs; all vanish sites (pair catch-up, postProcess mass-zero, tree-branch single member) set the interrupt status to merge and propagate return code 3 for member removal.
 67. Simplify `isCallBSENeeded` to a single-dt interface with the caller handling the skip decision; remove the dead SEVN check-time `getTimeStepBinary` re-query (the next event time is already scheduled into `time_interrupt` by `postProcess` at the end of each evolution).
+68. Add a static dump readback mode (`-m 2`) to `petar.hard.debug` and fix the standalone-BSE assert macro use; fix the configure-time MPI include detection when only `mpicxx` exists; fix the SEVN build broken by an unbalanced brace in `isCallBSENeeded`.
+69. Drop the invalid STELLAR_EVOLUTION mass-backup assertion in `checkConsistence` (the assertion point precedes the `setMassBackup` refresh, so the checked backup is structurally stale under stellar evolution).
+70. Fix the AR tidal-tensor even-order mean momentum leak and a 1-ULP `r_search` assertion; add the T5 tidal-tensor validation scenario and T4 pipeline auto-select.
+71. Fix orbit-sampling NaN for hyperbolic group roots: skip the artificial refresh (flag-set changed) in the writeback and assert the elliptic contract instead.
+72. Changeover redesign: group members keep their own-mass changeover radii (c.m. sync, ex-member rescale, and the corresponding energy booking removed); pseudo particles take the group c.m. changeover; the functional changeover-invariant check is re-scoped to the IC-pinned contract; add the T6 kernel-match validation scenario.
+73. Add `petar.group.dedup` to repair and deduplicate group output files; fix the `data.group.n2` record explosion (SDAR kappa NaN corner).
+74. Add NEON (TSV110/Kunpeng-920) tree force and neighbor search kernels (merged from RESBI PR #83).
+75. Add changeover-crossing dt limits via the SDAR per-slot limit radius (eta*r_limit/|v|, velocity-only guard); reset the Hermite state (acc/jerk/pot/time/dt) on cluster copy-in to stop uninitialized-field flow between the soft and hard systems.
+76. Build provenance chain: Build banner (configure flags + SDAR version), SDAR header dependency tracking in the Makefile, and a validation-runner binary preflight.
+77. Validation suite: purpose-driven T1-T3 redesign with group-census verification and a suite-wide binary-selection rule; T4-T6 harness hygiene (clean work dirs, outer15 bse init, absolute Error_cum bound for weakly bound ICs); shared report helpers codifying the report design rules.
+78. Documentation reorganization: completed diagnosis/handoff notes distilled into `lessons-learned`; doc taxonomy rules (plan / reference note / temporary, routing lessons-vs-notes) added to `AGENTS.md`; `doc/` now holds only active plans and reference PDFs.
+79. Doxygen HTML/LaTeX output no longer tracked in git (stale since 2024-04); published from `master` by a GitHub Actions workflow that also renders the README homepage and preserves the original `/doc/html/` URL path.
+
 **Some existing issues include**
 
 1. In cases where a high-eccentric binary system transitions from a binary to a hyperbolic orbit temporarily due to significant perturbations at a large separation, the BSE code may incorrectly identify it as an immediate merger, even though the binary system does not actually merge. It is essential to establish a more precise criterion for invoking binary evolution codes in such scenarios. (need validation)
-2. Need better stability criterion
-3. Need to check criterion of TT method for binaries
-4. Need to check slowdown factor criterion
-5. Need better group information output (need validation)
+2. ~~Need better stability criterion~~ — largely addressed (2026-10, SDAR >= 5a62e4e): the legacy velocity-gated form/break criteria are replaced by the unified symmetric state-function criterion (`grouped(d, apo, r_crit, kappa_org)`), palindrome-verified; the remaining environment-dependent lever is the switch radius (`--r-group`), see `doc/hard-large-energy-plan.md`.
+3. ~~Need to check criterion of TT method for binaries~~ — addressed (2026-10): even-order mean momentum leak fixed, T5 tidal-tensor validation added; groups can opt out via `--use-tidal-tensor 0`.
+4. ~~Need to check slowdown factor criterion~~ — addressed (2026-10): the slowdown estimate (kappa) is centralized and shared by both the formation and break sides of the unified criterion (SDAR); the kappa-gate × kappa_ref coupling is documented in the SDAR reference notes.
+5. Need better group information output — partially addressed: binary per-member-number files, `petar.group.dedup` repair tool, and the `data.group.n2` record-explosion fix landed; member-resolution output for long-lived chatter groups still needs validation.
 
 **1255**
 
