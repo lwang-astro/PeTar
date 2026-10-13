@@ -70,3 +70,6 @@ compile_commands.json
 autom4te.cache/
 doc/html/
 doc/latex/
+
+# generated build-info header
+src/build_info.hpp
