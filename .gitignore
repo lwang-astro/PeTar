@@ -68,3 +68,5 @@ PeTar.code-workspace
 compile_commands.json
 # autotools cache
 autom4te.cache/
+doc/html/
+doc/latex/
