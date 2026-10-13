@@ -1117,8 +1117,10 @@ public:
                     r_search_max.second = ptcl_origin[i].r_search;
                 }
             }
-            std::cerr<<"Maximum rsearch particle i = "<<r_search_max.first<<" ";
-            ptcl_origin[r_search_max.first].print(std::cerr);
+            std::cerr<<"Maximum rsearch particle i = "<<r_search_max.first<<"; "
+                     <<"id = "<<ptcl_origin[r_search_max.first].id<<"; "
+                     <<"mass = "<<ptcl_origin[r_search_max.first].mass<<"; "
+                     <<"r_search = "<<ptcl_origin[r_search_max.first].r_search;
             std::cerr<<std::endl;
         }
 #endif
