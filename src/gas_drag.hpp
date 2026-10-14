@@ -524,8 +524,8 @@ public:
             Float pot_vel[3];
             galpy_manager->getSetVel(galpy_gaspot_index, pot_vel);
             vel_rel[0] += status->pcm.vel[0] - pot_vel[0];
-            vel_rel[2] += status->pcm.vel[1] - pot_vel[1];
-            vel_rel[3] += status->pcm.vel[2] - pot_vel[2];
+            vel_rel[1] += status->pcm.vel[1] - pot_vel[1];
+            vel_rel[2] += status->pcm.vel[2] - pot_vel[2];
         }
 
         // in galactic frame, required by galpy and used to calculate radial direction
