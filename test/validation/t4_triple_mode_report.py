@@ -40,6 +40,11 @@ MODE_COLORS = {
     "m4_tree_no_tt": "#8e24aa",
     "m5_tree_tt": "#f4511e",
 }
+# m2 (TT off) and m3 (TT on) agree to ~1e-12 in every plotted quantity (the
+# tensor and direct perturber treatments of the inner AR group are equivalent
+# at that level), so the m3 curve would fully occlude m2. Dashing m3 lets the
+# solid m2 line show through the gaps; the legend swatch repeats the pattern.
+MODE_DASH = {"m3_hard_tt": "12,6"}
 MODE_LABELS = {
     "m1_pure_sdar_ref": "m1 pure SDAR reference",
     "m2_hard_no_tt": "m2 hard, TT off",
@@ -349,22 +354,22 @@ def mode_curves(series_map: Dict[str, List[Point]], modes: List[str]) -> List[Tu
     for label, points in series_map.items():
         mode = label.split("|")[0].strip()
         by_mode[mode] = points
-    return [(m, by_mode.get(m, []), MODE_COLORS.get(m, "#555"), "") for m in modes if by_mode.get(m)]
+    return [(m, by_mode.get(m, []), MODE_COLORS.get(m, "#555"), MODE_DASH.get(m, "")) for m in modes if by_mode.get(m)]
 
 
 def build_orbit_figure_section(title_prefix: str, series: Dict[str, Any], modes: List[str]) -> str:
     """Energy + orbital-element figures for one run group."""
     energy_curves = [
-        (m, series["energy_total_series"].get(f"{m} | tt=0", series["energy_total_series"].get(f"{m} | tt=1", [])), MODE_COLORS.get(m, "#555"), "")
+        (m, series["energy_total_series"].get(f"{m} | tt=0", series["energy_total_series"].get(f"{m} | tt=1", [])), MODE_COLORS.get(m, "#555"), MODE_DASH.get(m, ""))
         for m in modes
     ]
-    energy_curves = [(m, pts, c, "") for m, pts, c, _ in energy_curves if pts]
+    energy_curves = [(m, pts, c, d) for m, pts, c, d in energy_curves if pts]
     pp_curves = [
-        (m, series["energy_pp_series"].get(f"{m} | tt=0", series["energy_pp_series"].get(f"{m} | tt=1", [])), MODE_COLORS.get(m, "#555"), "7,4")
+        (m, series["energy_pp_series"].get(f"{m} | tt=0", series["energy_pp_series"].get(f"{m} | tt=1", [])), MODE_COLORS.get(m, "#555"), MODE_DASH.get(m, ""))
         for m in modes
     ]
     pp_curves = [(m, pts, c, "7,4") for m, pts, c, _ in pp_curves if pts]
-    legend_models = [(MODE_LABELS.get(m, m), MODE_COLORS.get(m, "#555")) for m in modes]
+    legend_models = [(MODE_LABELS.get(m, m), MODE_COLORS.get(m, "#555"), *([MODE_DASH[m]] if m in MODE_DASH else [])) for m in modes]
 
     html_parts: List[str] = []
     html_parts.append(
@@ -756,7 +761,12 @@ modes must read the IC with the same unit set for the comparison to be meaningfu
 {base_figures_html}
 <div class="caption"><b>Figures 1&ndash;6 (base group).</b> Energy and orbital-element evolution
 of the five modes; <b>color = mode</b> (see legend), solid/dashed = quantity where two are
-shown. Figure 1: |Error/Total| (solid) and |Error_PP| (dashed) vs time (log y) &mdash; the
+shown. <b>m3 is drawn dashed</b> so that m2 remains visible: the two hard modes agree to
+~1e-12 in every plotted quantity (the tidal-tensor and direct perturber treatments of the
+inner AR group are equivalent at that level &mdash; the TT-consistency result T5 verifies
+structurally), so their curves coincide within line width everywhere; exact values are in
+Table 5. Figure 1: |Error/Total| (long dash for m3) and |Error_PP| (short dash 7,4) vs time
+(log y) &mdash; the
 check metric is the curve maximum; bounded flat curves mean conservative behaviour, upward
 steps mark discrete events (group re-linking, BSE kicks). Figures 2&ndash;6: inner and outer
 semi-major axes, eccentricities and mutual inclination vs time (linear y) &mdash; conservation
@@ -776,7 +786,8 @@ column guards that no run steps the tree faster than its auto-derived step.</div
 <h3>3.3&nbsp;&nbsp;Control group (outer a<sub>out</sub> = 1.5 pc)</h3>
 {control_figures_html}
 <div class="caption"><b>Figures 7&ndash;12 (control group).</b> Same quantities and encoding as
-Figures 1&ndash;6 for the original outer scale; read against the base figures to distinguish
+Figures 1&ndash;6 for the original outer scale (including the dashed-m3 convention; expect the
+same m2/m3 coincidence); read against the base figures to distinguish
 structural (present at both scales) from scale-dependent effects.</div>
 {('<table class="data"><tr><th>mode</th><th>base &epsilon;_E</th><th>control &epsilon;_E</th><th>base &epsilon;_PP</th><th>control &epsilon;_PP</th><th>base &Delta;a/a0</th><th>control &Delta;a/a0</th><th>base &Delta;e</th><th>control &Delta;e</th><th>base N_art</th><th>control N_art</th></tr>' + control_compare_html + '</table><div class="caption"><b>Table 6.</b> Base (a_out = 0.15 pc) versus control (a_out = 1.5 pc) maxima per mode; both groups use identical mode configurations apart from the IC outer scale.</div>') if control_compare_html else ''}
 

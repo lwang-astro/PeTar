@@ -411,7 +411,7 @@ def gradient_colors(n: int) -> List[str]:
 
 def svg_curves_plot(
     curves: List[Tuple[str, List[Point], str, str]],
-    legend_models: List[Tuple[str, str]],
+    legend_models: List[Tuple[str, ...]],
     title: str,
     x_label: str,
     y_label: str,
@@ -425,8 +425,10 @@ def svg_curves_plot(
 ) -> str:
     """Paper-style plot: color encodes the model (run) and dash pattern the
     quantity (current style): curves are (label, points, color, dash) with
-    dash == "" for solid; legend_models lists (model label, color) and
-    legend_quantities lists (quantity label, dash) for the second legend column
+    dash == "" for solid; legend_models lists (model label, color[, dash])
+    where an optional third element gives the model swatch/curve dash (used
+    when two models coincide within line width); legend_quantities lists
+    (quantity label, dash) for the second legend column
     (default: instantaneous/cumulative); legend_headers overrides the two
     column titles when the encoding roles differ. The legend is a dedicated
     strip below the plot whose height adapts to the entry count, so it can
@@ -480,9 +482,12 @@ def svg_curves_plot(
     col1_x = width - right - 500
     col2_x = width - right - 240
     legends: List[str] = [f'<text x="{col1_x}" y="{leg_y}" font-size="11" font-family="Arial" font-weight="bold">{html_escape(legend_headers[0])}</text>']
-    for i, (label, color) in enumerate(legend_models):
+    for i, model in enumerate(legend_models):
+        label, color = model[0], model[1]
+        mdash = model[2] if len(model) > 2 else ""
+        mdash_attr = f' stroke-dasharray="{mdash}"' if mdash else ""
         ly = leg_y + 17 + i * 17
-        legends.append(f'<line x1="{col1_x}" y1="{ly}" x2="{col1_x+26}" y2="{ly}" stroke="{color}" stroke-width="3"/>')
+        legends.append(f'<line x1="{col1_x}" y1="{ly}" x2="{col1_x+26}" y2="{ly}" stroke="{color}" stroke-width="3"{mdash_attr}/>')
         legends.append(f'<text x="{col1_x+31}" y="{ly+4}" font-size="11" font-family="Arial">{html_escape(label)}</text>')
     legends.append(f'<text x="{col2_x}" y="{leg_y}" font-size="11" font-family="Arial" font-weight="bold">{html_escape(legend_headers[1])}</text>')
     for i, (label, dash) in enumerate(quantities):
