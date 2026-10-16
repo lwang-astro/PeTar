@@ -347,7 +347,6 @@ Use these as primary references:
 - `sample/star_cluster_plummer_N1k_binaries_bse_GalpyMWPot.sh`
 - `sample/star_cluster_plummer_N1k_AgamaMWPotHunter24.sh`
 - `sample/data_analysis.ipynb`
-- `.github/skills/petar-nbody-simulation/assets/option-matrix.md`
 - `.github/skills/petar-nbody-simulation/assets/option-reference.md`
 - `.github/skills/petar-nbody-simulation/assets/script-tools.md`
 
@@ -376,7 +375,7 @@ When a task falls into the corresponding category, **read the file explicitly** 
 | **Changeover / timestep override** (non-cluster systems, or overriding `-r`/`-s`/`--r-group` defaults) | `assets/changeover-tuning.md` | Switching-criterion selection, per-environment strategies, related-parameter trade-offs |
 | **Reconfigure / rebuild** (Gate 4 version mismatch or feature-flag change) | `assets/build-toolchain.md` | Toolchain environment checks, Makefile verification, clean-rebuild procedure |
 | **Parameter scan / cross-build comparison** (before running a scan) | `assets/controlled-experiments.md` | Pre-scan control checklist |
-| **Skill maintenance / new-machine recovery** (never for simulation tasks) | `assets/prompt-starters.md`, `HANDOFF.md` | Recovery and regression prompts, and the current skill-maintenance state |
+| **Skill maintenance / new-machine recovery** (never for simulation tasks) | `assets/prompt-starters.md`, [`.github/skills/README.md`](../README.md) | Recovery and regression prompts; maintenance scripts, new-machine recovery, and the health-check procedure |
 
 ## Scope Notes
 

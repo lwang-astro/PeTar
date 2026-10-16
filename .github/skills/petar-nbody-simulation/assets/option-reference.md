@@ -6,8 +6,7 @@ Generated from source headers — no binary compilation needed.
 > Generated: 2026-09-29 05:53 UTC
 > Regenerate: `python3 .github/skills/petar-nbody-simulation/assets/generate_option_reference.py`
 
-See [`option-matrix.md`](option-matrix.md) for currently installed binaries.
-Use `<binary> -h` for exact runtime option validation.
+Use `petar.select` to list installed binary families and `<binary> -h` for exact runtime option validation.
 
 ---
 

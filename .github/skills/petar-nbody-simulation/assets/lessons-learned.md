@@ -1116,6 +1116,14 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: ① 追加前 `grep -n '^### ' lessons-learned.md` 查同题条目,同题就地扩展(更新既有条目)而非另起;② 新条目按日期放入正确分类的时间序位置,同步维护顶部 Categories 列表;③ 每次 doc 整理或健康检查跑一次 `grep '^### ' <file> | sort | uniq -d` 全文查重;④ 规则 canonical 固化于 `SDAR/AGENTS.md` 捕获流程第 2 步(两仓库共用,PeTar AGENTS.md 经指针路由)。
 
+### 2026-10-16: 【快照型资产退役】option-matrix/option-list 久未刷新实为无承重——机器耦合快照与无消费者副产物不入库;skill 健康检查按 README 流程跑
+
+**Mistake**: skill 资产中混入两类"看似要维护、实际无承重"的生成物:`option-matrix.md`(单机 ~/bin 二进制快照,换机即全错;12 天未刷新+一次换机,无人执行也无人发现缺失)与 `option-list.txt`(生成器 write-only 副产物,166 行无任何读者)。两者还让 HANDOFF 新机恢复步骤背负多余的"记得执行"义务。
+
+**Root cause**: 早期把动态可查的信息(`petar.select` 列家族、`<binary> -h` 实测选项、Build 横幅核对)缓存成落盘快照;agent 时代现查成本低于维护缓存成本,快照只剩过期误导价值;write-only 副产物从未被清理。判别标准就两问:谁读它?从上次生成到发现缺失隔了多久(没人发现=无承重)?
+
+**Prevention rule**: ① 生成物入库前两问:有消费者吗?机器无关吗?机器耦合快照与无消费者副产物一律不入库;② skill 维护按 `README.md` Health-Check Procedure 执行(死指针扫描:grep 引用→验存在;冗余/矛盾/泛化扫描;读路径预算记录)——本次(2026-10-16)结果:死指针 0、`script-tools` 链条健康(6 天前仍在更新、在读路径、保留)、agents 三件齐全、SKILL.md 预算基线 386 行/35 KB;③ HANDOFF 恢复步骤只保留有承重的刷新项(现为 script-tools 刷新+一致性检查两项)。
+
 ### 2026-10-16: 【全绿但图是空的】T4 控制组图自 4 月重设计起静默空白——报告渲染路径也要"存在性守护";改名/合并场景时先查渲染键匹配
 
 **Mistake**: T4 报告 19/19 检查全绿、控制组对比表(Table 6)有数据,但控制组 6 张图一直是空白(HTML 里 0 个 svg)。排查发现:`build_orbit_figure_section` 按 MODE_ORDER 基名(m1_pure_sdar_ref)查 series 标签,而控制组 run id 带 `_o15` 后缀 → 全部曲线查不到被过滤,`svg_curves_plot` 对空曲线列表返回空串——渲染层静默吞掉,检查层无感知。该 bug 自 4 月 paper-style 重设计起就存在,因控制组此后从未重跑而一直潜伏,直到本次合并单 JSON 重跑才暴露。

@@ -5,18 +5,18 @@
 ## 1) 完整恢复上下文
 
 ```text
-请先阅读 .github/skills/petar-nbody-simulation/HANDOFF.md。
-然后执行：
-1) .github/skills/petar-nbody-simulation/assets/update_option_inventory.sh
-2) .github/skills/petar-nbody-simulation/assets/update_script_tool_help.sh
-最后总结当前机器上的 solver/helper 划分和可用脚本工具。
+请执行：
+1) .github/skills/petar-nbody-simulation/assets/update_script_tool_help.sh
+2) .github/skills/petar-nbody-simulation/assets/check_skill_consistency.sh
+最后用 petar.select 总结当前机器上的 solver/helper 划分和可用脚本工具。
 ```
 
 ## 2) 仅更新二进制能力
 
 ```text
-请刷新并检查 .github/skills/petar-nbody-simulation/assets/option-matrix.md，
-并把 SKILL.md 里的 solver 列表更新为与本机一致。
+请用 petar.select 列出本机已安装的 petar 二进制家族，
+并按 binary-scenario-map.md 报告 solver/helper 划分与场景映射；
+每个待用二进制以 -h 实测选项（Build 横幅核对构建状态）。
 ```
 
 ## 3) 仅更新脚本工具能力

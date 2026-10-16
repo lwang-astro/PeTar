@@ -9,8 +9,6 @@ This file is the root entry point for agents working in this repository. Keep it
 3. [test/functional/README.md](test/functional/README.md) for functional smoke design and current defaults.
 4. [test/validation/README.md](test/validation/README.md) for validation scenarios and thresholds.
 
-Skill-maintenance notes and session-recovery context live in [HANDOFF.md](.github/skills/petar-nbody-simulation/HANDOFF.md). Read it only when maintaining the skill — not for ordinary simulation or development tasks.
-
 **Before changing any customization file** (`AGENTS.md`, `.github/agents/*.md`, `.github/skills/**`), read [.github/skills/README.md](.github/skills/README.md) — it owns the design goals, layering rules, update rules, and health-check procedure for this workspace.
 
 ## Repository Map

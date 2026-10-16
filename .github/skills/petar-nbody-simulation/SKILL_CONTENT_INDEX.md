@@ -38,7 +38,7 @@ Status: restored-in-skill
 
 - Primary rule (compact): `.github/skills/petar-nbody-simulation/SKILL.md`
 - Binary-suffix → scenario inference and solver vs helper classification: `.github/skills/petar-nbody-simulation/assets/binary-scenario-map.md`
-- Detailed capability inventory: `.github/skills/petar-nbody-simulation/assets/option-matrix.md`
+- Detailed capability inventory (source-generated, machine-independent): `.github/skills/petar-nbody-simulation/assets/option-reference.md`
 - Installed tool surfaces and help-derived descriptions: `.github/skills/petar-nbody-simulation/assets/script-tools.md`
 - In-skill coverage now includes:
   - physics-sensitive tokens stay in `--require`
@@ -165,10 +165,10 @@ Status: covered
 
 ### 7. Prompt templates and session recovery shortcuts
 
-- Recovery and maintenance notes: `.github/skills/petar-nbody-simulation/HANDOFF.md`
 - Prompt templates: `.github/skills/petar-nbody-simulation/assets/prompt-starters.md`
+- Maintenance scripts and new-machine recovery: `.github/skills/README.md` ("Maintenance Scripts", "Verifying a Change")
 
-Status: covered. Both are **maintenance-only** and are referenced from SKILL.md's "Reference Documents" table under "Skill maintenance / new-machine recovery". They are never part of the simulation read path — `AGENTS.md` deliberately does not list HANDOFF.md as a starting document.
+Status: covered. Both are **maintenance-only** and are referenced from SKILL.md's "Reference Documents" table under "Skill maintenance / new-machine recovery"; they are never part of the simulation read path. (`HANDOFF.md` retired 2026-10-16 — its remaining content duplicated the skills README.)
 
 ## What Stays Out Of SKILL.md
 

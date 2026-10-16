@@ -251,8 +251,7 @@ def main():
         f.write("Generated from source headers — no binary compilation needed.\n\n")
         f.write(f"> Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n")
         f.write(f"> Regenerate: `python3 .github/skills/petar-nbody-simulation/assets/generate_option_reference.py`\n\n")
-        f.write("See [`option-matrix.md`](option-matrix.md) for currently installed binaries.\n")
-        f.write("Use `<binary> -h` for exact runtime option validation.\n\n---\n\n")
+        f.write("Use `petar.select` to list installed binary families and `<binary> -h` for exact runtime option validation.\n\n---\n\n")
 
         f.write("## Summary\n\n")
         f.write("| Configure Flag Group | Option Count |\n")
@@ -293,14 +292,6 @@ def main():
                 f.write("\n")
 
     print(f"Wrote {output_path} ({total} options)", file=sys.stderr)
-
-    # ---- option-list.txt ----
-    list_path = os.path.join(ASSET_DIR, "option-list.txt")
-    all_names = sorted(set(o["option_name"] for o in all_options if o["option_name"]))
-    with open(list_path, "w") as f:
-        for n in all_names:
-            f.write(f"{n}\n")
-    print(f"Wrote {list_path} ({len(all_names)} option names)", file=sys.stderr)
 
 
 if __name__ == "__main__":

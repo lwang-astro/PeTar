@@ -37,7 +37,7 @@ Rules about maintaining the customization files themselves belong **here** — n
 
 ## Update Rules
 
-- **Always-loaded files hold rules and pointers only.** `AGENTS.md` must not copy agent-file content, SKILL rules, or HANDOFF material. Maintenance/recovery material (`HANDOFF.md`, `prompt-starters.md`) must never enter the always-loaded read path.
+- **Always-loaded files hold rules and pointers only.** `AGENTS.md` must not copy agent-file content or SKILL rules. Maintenance/recovery material (`prompt-starters.md`) must never enter the always-loaded read path.
 - **Never restate a fact in a second place.** After adding a rule, grep for it; convert other occurrences into `<path> → "<section>"` pointers.
 - **State the budget in the change**: report the line/byte delta of `SKILL.md` (and of `AGENTS.md` and `.github/agents/*.md` when touched). Adding a reference-style table or benchmark to `SKILL.md` is a defect — move it to an asset and leave one line behind.
 - **Length budget per addition**: a new `SKILL.md` rule is at most 2 lines (~25 words) — one rule plus one pointer; measurements, rationale, and examples belong in `assets/` or `assets/lessons-learned.md`. A longer addition is a defect even when its content is correct; compress it in the same change.
@@ -61,7 +61,6 @@ Run this as a standalone review (not while writing new content), then land the f
 
 - `petar-nbody-simulation/SKILL.md`: compact, execution-focused skill rules. **Authority for running simulations and analysing output**; self-sufficient for simulation tasks.
 - `petar-nbody-simulation/SKILL_CONTENT_INDEX.md`: coverage map and the layering contract (where each fact's authoritative home is).
-- `petar-nbody-simulation/HANDOFF.md`: cross-session skill-maintenance state.
 
 ## Assets (Detailed References)
 
@@ -81,15 +80,14 @@ Read on demand from `SKILL.md`'s "Reference Documents (Must Read)" table:
 
 Generated or maintenance material (not part of the simulation read path):
 
-- `petar-nbody-simulation/assets/option-matrix.md` (machine-specific binary snapshot)
 - `petar-nbody-simulation/assets/option-reference.md` (source-generated option catalog)
-- `petar-nbody-simulation/assets/option-list.txt`
 - `petar-nbody-simulation/assets/prompt-starters.md` (recovery and regression prompts)
 - `petar-nbody-simulation/assets/lessons-learned.md`
 
 ## Maintenance Scripts
 
-- `petar-nbody-simulation/assets/update_option_inventory.sh`
+New-machine skill recovery: run `update_script_tool_help.sh` (regenerates `script-tools.md` + `tool-help/`), then the consistency check below.
+
 - `petar-nbody-simulation/assets/update_script_tool_help.sh`
 - `petar-nbody-simulation/assets/check_skill_consistency.sh`
 - `petar-nbody-simulation/assets/generate_option_reference.py`
