@@ -3,7 +3,7 @@
     "purpose": "Centralized threshold reference for validation scenarios.",
     "usage": "Copy values into scenario checks or update runner to read this file as the next step."
   },
-  "t1_high_ecc_changeover": {
+  "t1_binary_changeover_kdkdk4": {
     "notes": "Thresholds mirror the scenario file (2026-10-12 redesign: 7 checks organised by the three purposes; one-sided slope bounds, build-specific windows via require_var_[not_]contains).",
     "loglog_slope": {
       "pure_tree_order_64b": {"expected": 3.5, "bound": "min"},
@@ -17,7 +17,7 @@
       "mix_error_below_pure_tree_fine": [0.0, 1.0]
     }
   },
-  "t2_binary_conservation_longterm": {
+  "t2_binary_longterm_autochangeover": {
     "notes": "Thresholds mirror the scenario file (2026-10-12 purpose redesign: stationarity of the energy error under auto changeover + level consistency across dt; dt17 pure-tree endpoint added, r_group shrunk below auto r_in).",
     "late_early_period_max_ratio": {
       "stationarity_band": 2.0
@@ -26,7 +26,7 @@
       "energy_level_consistent_across_dt": [1.0, 300.0]
     }
   },
-  "t3_binary_hard_switch_longterm": {
+  "t3_binary_sdar_grouplink": {
     "notes": "Thresholds mirror the scenario file (2026-10-13 post-fix calibration: genuine orbit-frequency switching at r_group=0.013, ~1 break/orbit, level between channels; plain family, no BSE).",
     "group_form_events": {
       "never_grouped_max": 0

@@ -8,6 +8,8 @@ import shlex
 import struct
 import subprocess
 import sys
+import threading
+import time
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
@@ -631,6 +633,7 @@ def execute_scenario(
     variables: Dict[str, str],
     criteria: Dict[str, Any],
     dry_run: bool,
+    max_workers: int = 1,
 ) -> Tuple[List[RunResult], List[Dict[str, Any]]]:
     scenario_name = scenario["name"]
     workdir = Path(substitute_vars(scenario.get("workdir", "."), variables))
@@ -650,8 +653,7 @@ def execute_scenario(
         if code != 0:
             raise RuntimeError(f"Setup command failed in {scenario_name}: {resolved}")
 
-    run_results: List[RunResult] = []
-    for run in scenario["runs"]:
+    def _execute_run(run: Dict[str, Any]) -> RunResult:
         run_id = run["id"]
         cmd = substitute_vars(run["command"], variables)
         output_name = run.get("output", f"{run_id}.log")
@@ -677,7 +679,17 @@ def execute_scenario(
                 metrics["dt_soft_times_max_abs_error_period_max"] = dt_soft * float(metrics.get("max_abs_error_period_max", 0.0))
                 metrics["dt_soft_times_sum_abs_error_period_max"] = dt_soft * float(metrics.get("sum_abs_error_period_max", 0.0))
 
-        run_results.append(RunResult(run_id=run_id, command=cmd, output_path=output_path, metrics=metrics))
+        return RunResult(run_id=run_id, command=cmd, output_path=output_path, metrics=metrics)
+
+    # Runs are independent (own -f prefixes/logs); parallelism is opt-in per
+    # scenario ("parallel_runs": true) and bounded by the caller's core budget.
+    runs_cfg = scenario.get("runs", [])
+    if max_workers > 1 and scenario.get("parallel_runs", False) and len(runs_cfg) > 1 and not dry_run:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(max_workers, len(runs_cfg))) as pool:
+            run_results = list(pool.map(_execute_run, runs_cfg))
+    else:
+        run_results = [_execute_run(run) for run in runs_cfg]
 
     check_results = []
     if not dry_run:
@@ -956,26 +968,224 @@ def _select_or_build_petar(require_64b: bool | None = None) -> str:
 
     repo_root = Path(__file__).resolve().parents[2]
     if require_64b:
-        return select_or_install_petar(require=["64b"], optional=["avx2", "omp"], repo_root=repo_root)
-    return select_or_install_petar(optional=["avx2", "omp"], repo_root=repo_root)
+        return select_or_install_petar(require=["64b"], optional=["mpi", "omp", "avx2"], repo_root=repo_root)
+    return select_or_install_petar(optional=["mpi", "omp", "avx2"], repo_root=repo_root)
 
 
-def _pipeline(scenario_file: str, report_json: str, out_dir: str, petar_var: str, petar_bin: str) -> int:
-    """Run a single scenario via run_validation.py subprocess."""
-    cmd = [
-        sys.executable, __file__,
-        "--scenario", scenario_file,
-        "--out-dir", out_dir,
-        "--report", report_json,
-        "--var", f"{petar_var}={petar_bin}",
-    ]
-    print(f"[pipeline] {' '.join(cmd)}")
-    return subprocess.run(cmd, check=False).returncode
+def _resolve_bse_petar() -> str:
+    """bse-interrupt family (T4): IC has stellar-evolution columns, runs use -b 1."""
+    from report_common import select_or_install_petar
+
+    return select_or_install_petar(require=["bse"], optional=["mpi", "omp", "avx2"],
+                                   repo_root=Path(__file__).resolve().parents[2])
+
+
+def _resolve_diag_petar() -> str:
+    """Plain family with -D PERT_KERNEL_DIAG (T6); builds without install."""
+    from t6_pert_kernel_match_report import ensure_diag_binary
+
+    return ensure_diag_binary()
+
+
+# Binary kinds resolved during preflight. Resolution order follows first use
+# in PIPELINES, so builds are serialized and the T6 diag build (which
+# reconfigures CXXFLAGS) always comes last, after the plain/bse installs.
+BINARY_RESOLVERS = {
+    "plain64": lambda: _select_or_build_petar(True),
+    "plain": lambda: _select_or_build_petar(False),
+    "bse": _resolve_bse_petar,
+    "diag": _resolve_diag_petar,
+}
+
+
+def _pipeline_job(scenario: str, report: str, out_dir: str, petar_var: str, binary: str) -> Dict[str, str]:
+    return {"scenario": scenario, "report": report, "out_dir": out_dir, "petar_var": petar_var, "binary": binary}
+
+
+# One entry per validation suite. Jobs of a suite run sequentially (they may
+# share the scenario workdir, e.g. T1 64b/non64b overlays); suites run in
+# parallel, each occupying its scenario's "cores" slots (default 1).
+PIPELINES: Dict[str, Dict[str, Any]] = {
+    "t1": {
+        "jobs": [
+            _pipeline_job("test/validation/scenarios/t1_binary_changeover_kdkdk4.json",
+                          "test/out/report.t1.64b.overlay.json",
+                          "test/out/validation_t1_binary_changeover_kdkdk4_64b",
+                          "petar_bin_order4", "plain64"),
+            _pipeline_job("test/validation/scenarios/t1_binary_changeover_kdkdk4.json",
+                          "test/out/report.t1.non64b.overlay.json",
+                          "test/out/validation_t1_binary_changeover_kdkdk4_non64b",
+                          "petar_bin_order4", "plain"),
+        ],
+        "html": ["test/validation/t1_binary_changeover_kdkdk4_report.py",
+                 "--report", "test/out/report.t1.64b.overlay.json", "--primary-tag", "64b",
+                 "--compare-report", "test/out/report.t1.non64b.overlay.json", "--compare-tag", "non64b",
+                 "--output", "test/out/t1_binary_changeover_kdkdk4_summary.html"],
+    },
+    "t2": {
+        "jobs": [_pipeline_job("test/validation/scenarios/t2_binary_longterm_autochangeover.json",
+                               "test/out/report.t2.binary.json",
+                               "test/out/validation_t2_binary_longterm_autochangeover",
+                               "petar_bin_switch", "plain")],
+        "html": ["test/validation/t2_binary_longterm_autochangeover_report.py",
+                 "--report", "test/out/report.t2.binary.json",
+                 "--output", "test/out/t2_binary_longterm_autochangeover_summary.html"],
+    },
+    "t3": {
+        "jobs": [_pipeline_job("test/validation/scenarios/t3_binary_sdar_grouplink.json",
+                               "test/out/report.t3.binary.json",
+                               "test/out/validation_t3_binary_sdar_grouplink",
+                               "petar_bin_switch", "plain")],
+        "html": ["test/validation/t3_binary_sdar_grouplink_report.py",
+                 "--report", "test/out/report.t3.binary.json",
+                 "--output", "test/out/t3_binary_sdar_grouplink_summary.html"],
+    },
+    "t4": {
+        "jobs": [_pipeline_job("test/validation/scenarios/t4_tree_hard_from_triple.json",
+                               "test/out/report.t4.triple.json",
+                               "test/out/validation_t4_tree_hard_from_triple",
+                               "petar_bin_switch", "bse")],
+        "html": ["test/validation/t4_triple_mode_report.py",
+                 "--report", "test/out/report.t4.triple.json",
+                 "--output", "test/out/t4_triple_mode_summary.html"],
+    },
+    "t5": {
+        "jobs": [_pipeline_job("test/validation/scenarios/t5_massive_binary_tt.json",
+                               "test/out/report.t5.massive_binary_tt.json",
+                               "test/out/validation_t5_massive_binary_tt",
+                               "petar_bin_switch", "plain")],
+        "html": ["test/validation/t5_massive_binary_tt_report.py",
+                 "--report", "test/out/report.t5.massive_binary_tt.json",
+                 "--output", "test/out/t5_massive_binary_tt_summary.html"],
+    },
+    "t6": {
+        "jobs": [_pipeline_job("test/validation/scenarios/t6_pert_kernel_match.json",
+                               "test/out/report.t6.pert_kernel_match.json",
+                               "test/out/validation_t6_pert_kernel_match",
+                               "petar_bin_switch", "diag")],
+        "html": ["test/validation/t6_pert_kernel_match_report.py",
+                 "--report", "test/out/report.t6.pert_kernel_match.json",
+                 "--output", "test/out/t6_pert_kernel_match_summary.html"],
+    },
+}
+
+
+def _suite_cores(name: str) -> int:
+    """Core slots a suite occupies, from its scenario JSON ("cores", default 1)."""
+    sfile = Path(PIPELINES[name]["jobs"][0]["scenario"])
+    data = load_json(sfile) if sfile.exists() else {}
+    return max(1, int(data.get("cores", 1)))
+
+
+def _preflight_binaries(names: List[str], dry_run: bool = False) -> Dict[str, str]:
+    """Resolve every binary kind used by the given suites, sequentially.
+
+    Sequential resolution serializes configure/make (shared build tree) and
+    checks version freshness per suite via select_or_install_petar: a stale
+    or missing family is rebuilt and installed automatically. In dry-run mode
+    nothing is built; a detected binary path is used for printing commands.
+    """
+    resolved: Dict[str, str] = {}
+    for name in names:
+        for job in PIPELINES[name]["jobs"]:
+            key = job["binary"]
+            if key in resolved:
+                continue
+            if dry_run:
+                resolved[key] = _detect_petar_binary()
+            else:
+                print(f"[preflight] resolving binary kind '{key}' ({name})")
+                resolved[key] = BINARY_RESOLVERS[key]()
+                print(f"[preflight] {key}: {resolved[key]}")
+    return resolved
+
+
+def _run_suite(name: str, binaries: Dict[str, str], dry_run: bool = False) -> int:
+    """Run one suite: jobs sequentially, then the HTML report step."""
+    cfg = PIPELINES[name]
+    rc = 0
+    for job in cfg["jobs"]:
+        binpath = binaries[job["binary"]]
+        cmd = [
+            sys.executable, __file__,
+            "--scenario", job["scenario"],
+            "--out-dir", job["out_dir"],
+            "--report", job["report"],
+            "--var", f"{job['petar_var']}={binpath}",
+        ]
+        sfile = Path(job["scenario"])
+        sdata = load_json(sfile) if sfile.exists() else {}
+        if sdata.get("parallel_runs", False) and len(sdata.get("runs", [])) > 1:
+            cmd += ["--jobs", str(min(int(sdata.get("cores", 1)), len(sdata["runs"])))]
+        if dry_run:
+            cmd += ["--dry-run"]
+        print(f"[{name}] scenario job: {job['scenario']} (binary {binpath})")
+        rc |= subprocess.run(cmd, check=False).returncode
+    html = cfg.get("html")
+    if html and not dry_run:
+        print(f"[{name}] html: {html[0]}")
+        rc |= subprocess.run([sys.executable] + html, check=False).returncode
+    return rc
+
+
+def _run_pipelines(names: List[str], max_cores: int, dry_run: bool = False) -> Dict[str, int]:
+    """Preflight all binaries, then run suites in parallel under a core budget.
+
+    Greedy scheduler: a suite starts as soon as its declared "cores" fit into
+    the remaining budget; suites occupy their slots for their whole duration
+    (their internal run parallelism is bounded by the same value).
+    """
+    binaries = _preflight_binaries(names, dry_run=dry_run)
+    core_need = {n: _suite_cores(n) for n in names}
+    for n in names:
+        print(f"[sched] {n}: cores={core_need[n]}")
+    if max(map(int, core_need.values())) > max_cores:
+        print(f"[sched] WARNING: a suite needs more cores than the budget ({max_cores}); "
+              f"it will run oversubscribed")
+    results: Dict[str, int] = {}
+    cond = threading.Condition()
+    free = [max(1, max_cores)]
+    pending = list(names)
+
+    def worker(suite: str) -> None:
+        t0 = time.time()
+        try:
+            rc = _run_suite(suite, binaries, dry_run=dry_run)
+        except Exception as exc:  # noqa: BLE001 - suite isolation is the point
+            print(f"[{suite}] ERROR: {exc}", file=sys.stderr)
+            rc = 2
+        with cond:
+            results[suite] = rc
+            free[0] += core_need[suite]
+            cond.notify_all()
+        print(f"[{suite}] finished rc={rc} ({time.time() - t0:.0f}s)")
+
+    threads: List[threading.Thread] = []
+    with cond:
+        while pending or threads:
+            launched = False
+            for suite in list(pending):
+                if core_need[suite] <= free[0]:
+                    pending.remove(suite)
+                    free[0] -= core_need[suite]
+                    t = threading.Thread(target=worker, args=(suite,))
+                    t.start()
+                    threads.append(t)
+                    launched = True
+            if pending and not launched:
+                cond.wait(timeout=1.0)
+                continue
+            if not pending:
+                break
+    for t in threads:
+        t.join()
+    return results
+
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="PeTar validation runner")
-    parser.add_argument("--scenario", action="append", help="Scenario JSON path (can be repeated)")
+    parser.add_argument("--scenario", action="append", help="Scenario JSON path (can be repeated); omit to run ALL pipelines (default)")
     parser.add_argument("--scenario-dir", default="test/validation/scenarios", help="Default scenario directory")
     parser.add_argument("--out-dir", default="test/out", help="Output directory")
     parser.add_argument("--var", action="append", default=[], help="Template variables key=value")
@@ -984,48 +1194,29 @@ def main() -> int:
     parser.add_argument("--criteria", default="test/validation/criteria.json", help="Criteria JSON path")
     parser.add_argument("--continue-on-error", action="store_true",
                         help="Continue with remaining scenarios/runs even if one fails")
-    parser.add_argument("--pipeline", choices=["t1", "t2", "t3"],
-                        help="Run full pipeline: select/build binary, run scenario, generate HTML report")
+    parser.add_argument("--pipeline", choices=list(PIPELINES),
+                        help="Run one suite end-to-end: preflight binary (auto-install when stale), run scenario, generate HTML report")
+    parser.add_argument("--jobs", type=int, default=1,
+                        help="Max parallel runs inside one scenario (only scenarios with \"parallel_runs\": true)")
+    parser.add_argument("--max-cores", type=int, default=(os.cpu_count() or 1),
+                        help="Total core budget for parallel suites in the default all-pipelines mode")
     args = parser.parse_args()
 
-    # --pipeline mode: single-test end-to-end with HTML report
-    if args.pipeline == "t1":
-        bin_64 = str(Path(_select_or_build_petar(True)).resolve())
-        bin_non64 = str(Path(_select_or_build_petar(False)).resolve())
-        print(f"[pipeline] 64b: {bin_64}")
-        sfile = "test/validation/scenarios/t1_high_ecc_changeover.json"
-        _pipeline(sfile, "test/out/report.t1.64b.overlay.json", "test/out/validation_t1_binary_changeover_64b", "petar_bin_order4", bin_64)
-        _pipeline(sfile, "test/out/report.t1.non64b.overlay.json", "test/out/validation_t1_binary_changeover_non64b", "petar_bin_order4", bin_non64)
-        subprocess.run([
-            sys.executable, "test/validation/t1_binary_changeover_kdkdk4_report.py",
-            "--report", "test/out/report.t1.64b.overlay.json",
-            "--primary-tag", "64b",
-            "--compare-report", "test/out/report.t1.non64b.overlay.json",
-            "--compare-tag", "non64b",
-            "--output", "test/out/t1_binary_changeover_kdkdk4_summary.html",
-        ], check=False)
-        return 0
-    if args.pipeline == "t2":
-        bin_pet = _select_or_build_petar()
-        print(f"[pipeline] t2 binary: {bin_pet}")
-        sfile = "test/validation/scenarios/t2_binary_conservation_longterm.json"
-        _pipeline(sfile, "test/out/report.t2.binary.json", "test/out/validation_t2_binary", "petar_bin_switch", bin_pet)
-        subprocess.run([
-            sys.executable, "test/validation/t2_binary_longterm_autochangeover_report.py",
-            "--report", "test/out/report.t2.binary.json",
-            "--output", "test/out/t2_binary_longterm_autochangeover_summary.html",
-        ], check=False)
-        return 0
-    if args.pipeline == "t3":
-        bin_pet = _select_or_build_petar()
-        sfile = "test/validation/scenarios/t3_binary_hard_switch_longterm.json"
-        _pipeline(sfile, "test/out/report.t3.binary.json", "test/out/validation_t3_binary", "petar_bin_switch", bin_pet)
-        subprocess.run([
-            sys.executable, "test/validation/t3_binary_sdar_grouplink_report.py",
-            "--report", "test/out/report.t3.binary.json",
-            "--output", "test/out/t3_binary_sdar_grouplink_summary.html",
-        ], check=False)
-        return 0
+    # --pipeline: single suite end-to-end (preflight + jobs + HTML)
+    if args.pipeline:
+        results = _run_pipelines([args.pipeline], args.max_cores, dry_run=args.dry_run)
+        return 0 if all(rc == 0 for rc in results.values()) else 1
+
+    # Default (no --scenario): the full campaign — preflight every binary kind
+    # (auto-install stale families), run all suites in parallel under the core
+    # budget, and generate every HTML report.
+    if not args.scenario:
+        results = _run_pipelines(list(PIPELINES), args.max_cores, dry_run=args.dry_run)
+        print("\n=== Campaign summary ===")
+        for suite in PIPELINES:
+            if suite in results:
+                print(f"  {suite}: {'OK' if results[suite] == 0 else f'FAILED (rc={results[suite]})'}")
+        return 0 if results and all(rc == 0 for rc in results.values()) else 1
 
     repo_root = Path(__file__).resolve().parents[2]
     scenario_dir = (repo_root / args.scenario_dir).resolve()
@@ -1074,6 +1265,7 @@ def main() -> int:
                 variables=variables,
                 criteria=criteria,
                 dry_run=args.dry_run,
+                max_workers=args.jobs,
             )
         except (RuntimeError, ValueError) as exc:
             print(f"[ERROR] Scenario '{scenario.get('name', '?')}' failed: {exc}", file=sys.stderr)

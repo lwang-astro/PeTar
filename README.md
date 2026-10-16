@@ -562,7 +562,7 @@ python3 test/validation/run_validation.py --dry-run
 python3 test/validation/run_validation.py
 
 # Single scenario
-python3 test/validation/run_validation.py --scenario test/validation/scenarios/t2_binary_conservation_longterm.json
+python3 test/validation/run_validation.py --scenario test/validation/scenarios/t2_binary_longterm_autochangeover.json
 ```
 
 **Reports**: `test/out/report.json` (merged pass/fail); per-scenario JSON reports and HTML summaries via `t*_report.py` scripts. Detailed scenario definitions, threshold criteria, and pipeline commands: [`test/validation/README.md`](test/validation/README.md).

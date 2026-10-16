@@ -8,36 +8,44 @@ Scriptable validation scenarios for PeTar algorithm changes.
 
 ## Quick Start
 
-**Prerequisites**: Run `make install` or `petar.select <suffix>` so `petar` is in PATH.
+**Default (run everything)**: `python3 test/validation/run_validation.py` with no arguments runs the full
+campaign T1–T6 end-to-end:
+
+1. **Preflight** — every binary kind used by the suites (plain-64b, plain, bse, PERT_KERNEL_DIAG) is
+   selected via `petar.select`; a missing family **or an installed version different from the repository
+   `VERSION`** triggers an automatic `./configure && make install` rebuild (T6's instrumented family is
+   built last without install, since it reconfigures `CXXFLAGS`). Builds run sequentially before any
+   simulation starts.
+2. **Parallel suites** — suites run concurrently under a core budget (`--max-cores`, default
+   `nproc`); each suite occupies the `cores` slots declared in its scenario JSON for its whole
+   duration, so a 1-core suite starts whenever a core is free.
+3. **HTML reports** — each suite finishes by regenerating its summary HTML; exit code 0 only when
+   every suite's checks pass.
+
+```bash
+python3 test/validation/run_validation.py                # all suites, auto-install, parallel, HTML
+python3 test/validation/run_validation.py --max-cores 8  # cap the parallel budget
+python3 test/validation/run_validation.py --pipeline t4  # one suite end-to-end
+python3 test/validation/run_validation.py --dry-run      # print all commands, build nothing
+```
+
+**Per-test core marking**: scenario JSONs carry `cores` (slots the suite occupies; its runs are also
+executed up to `cores`-way in parallel when `parallel_runs` is `true` — all current suites have
+independent single-threaded runs) and `parallel_runs`. Within a suite, jobs run sequentially (T1's
+64b/non64b overlays share a workdir); across suites everything is parallel.
+
+**Single suite**: `--pipeline t1` … `--pipeline t6` (same preflight/jobs/HTML steps for that suite).
+`t5/t6_*_report.py --run` likewise still work standalone.
+
+**Raw scenario mode** (JSON report, no per-suite HTML): pass one or more `--scenario <file>`
+explicitly; `--jobs N` bounds run parallelism inside a scenario. The runner auto-detects `petar` via
+`command -v petar` for this mode.
 
 **Binary selection rule (all tests)**: tests never hardcode binary suffixes or use the default
-`petar` symlink directly. They select by feature via `petar.select --require/--optional`; if the
-selection fails **or the installed binary's version does not match the repository `VERSION`**,
-the configured family is rebuilt and reinstalled automatically
-(`report_common.select_or_install_petar`; the T4 pipeline implements the same rule in shell).
-The only exception is T6, which builds its instrumented binary from source by construction.
-
-Run any full pipeline (binary selection → scenario → HTML report, all auto):
-
-```bash
-python3 test/validation/run_validation.py --pipeline t1   # 64b vs non64b KDKDK4
-python3 test/validation/run_validation.py --pipeline t2   # long-term binary conservation
-python3 test/validation/run_validation.py --pipeline t3   # Hermite-SDAR switching
-```
-
-T4 has its own wrapper (it is not a `--pipeline` choice), taking an optional solver binary argument:
-
-```bash
-bash test/validation/t4_triple_pipeline.sh [path/to/petar]
-```
-
-Run all scenarios only (JSON report, no HTML):
-
-```bash
-python3 test/validation/run_validation.py
-```
-
-The runner auto-detects `petar` via `command -v petar`.
+`petar` symlink directly. They select by feature via `petar.select --require/--optional` and rebuild
+automatically when stale (`report_common.select_or_install_petar`); the pipeline preflight applies
+the same rule to every suite. The only exception is T6, which builds its instrumented binary from
+source by construction.
 
 **Exit codes**: report scripts (`t1`–`t6` `*_report.py`) exit 0 when all recorded checks pass
 and 1 otherwise (also when re-rendering stored JSON reports — a failed check fails the script).
@@ -87,11 +95,11 @@ Output: `test/out/t3_binary_sdar_grouplink_summary.html`
 - Hierarchical triple IC (tidal-tensor 3-body test), evolved for 200 outer periods
 - Five modes compared: pure SDAR reference, hard/tree with and without tidal tensor, and variants
 - Automatic checks (10): reference quality — `m1` final **absolute** cumulative energy error `Error_cum` ≤ 1e-7 (the `Error/Total` ratio is not usable on this IC: |E_tot| ~1.7e-4 turns the BSE wind-accounting residual ~2.4e-10 absolute into ~1.4e-6 in ratio, the shared floor of every hard-channel mode); tidal-tensor census — artificial particles ≥ 1 with `--tt-switch 1`, = 0 with `--tt-switch 0`; runtime-abort regex counts per mode
-- Control scenario `t4_tree_hard_from_triple_outer15.json` repeats the comparison with the original outer semi-major axis `a_out = 1.5`
+- Control group `*_o15` runs are part of the same scenario: the five modes repeated with the original outer semi-major axis `a_out = 1.5`, distinguishing structural from scale-dependent effects (base-vs-control comparison table in the report)
 - Requires a bse-interrupt binary (IC has `petar.init -s bse` columns, runs use `-b 1`); the pipeline selects it via `petar.select --require bse --optional mpi,omp,avx2` and builds it (`./configure --with-interrupt=bse && make install`) if missing
 
 ```bash
-bash test/validation/t4_triple_pipeline.sh [path/to/petar]
+python3 test/validation/run_validation.py --pipeline t4
 ```
 
 Output: `test/out/t4_triple_mode_summary.html`
@@ -103,7 +111,7 @@ Output: `test/out/t4_triple_mode_summary.html`
 - Requires a plain-family binary (no interrupt/external): the IC is plain-format, so galpy- or BSE-enabled builds cannot read it; `t5_massive_binary_tt_report.py --run` selects it automatically via `petar.select --optional mpi,omp,avx2` (this changes the active binary selection)
 
 ```bash
-python3 test/validation/t5_massive_binary_tt_report.py --run
+python3 test/validation/run_validation.py --pipeline t5   # standalone legacy: t5_massive_binary_tt_report.py --run
 ```
 
 Output: `test/out/t5_massive_binary_tt_summary.html` (momentum-drift figure, run summary, checks; JSON report at `test/out/report.t5.massive_binary_tt.json`)
@@ -116,7 +124,7 @@ Output: `test/out/t5_massive_binary_tt_summary.html` (momentum-drift figure, run
 - Requires a plain-family binary built with `-D PERT_KERNEL_DIAG` (portable: `CXXFLAGS='-D PERT_KERNEL_DIAG' ./configure && make -j` — the Makefile adds `-D PROFILE` itself and `make` without a target builds the configured family); `t6_pert_kernel_match_report.py --run` configures and builds it automatically when missing (this changes the configure state)
 
 ```bash
-python3 test/validation/t6_pert_kernel_match_report.py --run
+python3 test/validation/run_validation.py --pipeline t6   # standalone legacy: t6_pert_kernel_match_report.py --run
 ```
 
 Output: `test/out/t6_pert_kernel_match_summary.html` (paper-style sections: background, method with metric definitions, single-step A/B results, checks; JSON report at `test/out/report.t6.pert_kernel_match.json`)
@@ -136,7 +144,7 @@ Output: `test/out/t6_pert_kernel_match_summary.html` (paper-style sections: back
 | `t1_binary_changeover_kdkdk4_report.py` | T1 report generation |
 | `t2_binary_longterm_autochangeover_report.py` | T2 report generation |
 | `t3_binary_sdar_grouplink_report.py` | T3 report generation |
-| `t4_triple_mode_report.py` / `t4_triple_pipeline.sh` | T4 report generation & pipeline |
+| `t4_triple_mode_report.py` | T4 report generation |
 | `t5_massive_binary_tt_report.py` | T5 report generation (`--run` executes the scenario first) |
 | `t6_pert_kernel_match_report.py` | T6 report generation (`--run` executes the scenario first; reuses T5 SVG helpers) |
 | `scenarios/*.json` | Scenario definitions (commands, runs, checks) |
@@ -165,18 +173,12 @@ python3 test/validation/run_validation.py \
   --var petar_bin_switch=/custom/path/to/petar
 ```
 
-> `--pipeline t1/t2/t3` does **not** accept `--var` (and ignores `--dry-run`): it selects or builds the binaries it needs itself, then runs the scenarios and the report generator. To use custom binaries, run the scenario directly with `--scenario` + `--var`.
+> `--pipeline t1…t6` does **not** accept `--var` (and ignores `--dry-run`): it selects or builds the binaries it needs itself, then runs the scenarios and the report generator. To use custom binaries, run the scenario directly with `--scenario` + `--var`.
 
 Continue on scenario failure:
 
 ```bash
 python3 test/validation/run_validation.py \
-  --scenario test/validation/scenarios/t1_high_ecc_changeover.json \
+  --scenario test/validation/scenarios/t1_binary_changeover_kdkdk4.json \
   --continue-on-error
-```
-
-Override the T4 pipeline binary by passing its path as an argument:
-
-```bash
-bash test/validation/t4_triple_pipeline.sh /path/to/petar
 ```

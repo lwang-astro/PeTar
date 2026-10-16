@@ -143,7 +143,7 @@ def main() -> int:
     parser.add_argument("--primary-tag", default="64b")
     parser.add_argument("--compare-report", default="test/out/report.t1.non64b.overlay.json")
     parser.add_argument("--compare-tag", default="non64b")
-    parser.add_argument("--scenario", default="t1_high_ecc_changeover")
+    parser.add_argument("--scenario", default="t1_binary_changeover_kdkdk4")
     parser.add_argument("--scenario-file", default="")
     parser.add_argument("--out-dir-64b", default="test/out/validation_t1_binary_changeover_64b")
     parser.add_argument("--out-dir-non64b", default="test/out/validation_t1_binary_changeover_non64b")
@@ -411,7 +411,7 @@ def main() -> int:
 <style>{PAPER_CSS}</style></head><body>
 
 <h1>T1 &nbsp;Kepler orbit crossing the changeover region:<br>validated against pure-tree and pure-Hermite references</h1>
-<div class="subtitle">validation report &middot; scenario <i>t1_high_ecc_changeover</i> &middot; <span class="verdict {'pass' if all_pass else 'fail'}">{verdict}</span></div>
+<div class="subtitle">validation report &middot; scenario <i>t1_binary_changeover_kdkdk4</i> &middot; <span class="verdict {'pass' if all_pass else 'fail'}">{verdict}</span></div>
 
 <h2>1&nbsp;&nbsp;Background and purpose</h2>
 <p>PeTar splits the pairwise force at the changeover radii r<sub>in</sub>/r<sub>out</sub>: pairs
@@ -650,7 +650,7 @@ and stays between the references at fine dt (ratio &le; 1 against pure tree; the
 bound is the follow-Hermite check for 64b and holds by construction for non64b).</div>
 
 <div class="meta">petar version: {html_escape(log_version)} &middot; scenario:
-<i>t1_high_ecc_changeover</i> &middot; report: {html_escape(args.report)} (+ comparison
+<i>t1_binary_changeover_kdkdk4</i> &middot; report: {html_escape(args.report)} (+ comparison
 {html_escape(args.compare_report)})</div>
 </body></html>
 """

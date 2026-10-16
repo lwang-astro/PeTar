@@ -1,6 +1,8 @@
 {
-  "name": "t3_binary_hard_switch_longterm",
+  "name": "t3_binary_sdar_grouplink",
   "description": "Plain-family binary (no stellar evolution) with the pairwise force pinned in the Hermite hard channel (r_in = 0.02 > r_apo); the mass-weighted AR linking criterion gives three verified regimes (census from whole-run group event dumps): never grouped (r_group=0.002, pure Hermite pair), stable group (r_group=0.018, pure AR, never breaks), and genuine orbit-frequency Hermite-AR switching (r_group=0.013, criterion inside the separation range: ~1 break/re-form per orbit, level between the two channels, stationary).",
+  "cores": 3,
+  "parallel_runs": true,
   "workdir": "{repo_root}",
   "setup_commands": [
     "mkdir -p test/out/work/t3",

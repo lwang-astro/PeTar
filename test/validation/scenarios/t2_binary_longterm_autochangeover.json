@@ -1,6 +1,8 @@
 {
-  "name": "t2_binary_conservation_longterm",
+  "name": "t2_binary_longterm_autochangeover",
   "description": "Long-term (>=100 periods) energy-error behaviour of a pure binary under AUTO changeover radii (no -r): the radii track dt_soft, so the sweep naturally covers pure-tree (dt17: r_out < r_peri), mix (dt12-dt9: changeover active inside the orbit) and pure-Hermite (dt8: r_in > r_apo). Purposes: (1) no secular energy-error drift in any regime; (2) the auto-derived changeover keeps the error level approximately consistent across dt_soft (no dt^4 fixed-radii scaling).",
+  "cores": 10,
+  "parallel_runs": true,
   "workdir": "{repo_root}",
   "setup_commands": [
     "mkdir -p test/out/work/t2",

@@ -139,7 +139,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="T2 long-term binary conservation: run + HTML report")
     parser.add_argument("--run", action="store_true", help="Run the scenario before generating the report")
     parser.add_argument("--report", default="test/out/report.t2.binary.json")
-    parser.add_argument("--scenario", default="t2_binary_conservation_longterm")
+    parser.add_argument("--scenario", default="t2_binary_longterm_autochangeover")
     parser.add_argument("--scenario-file", default="")
     parser.add_argument("--out-dir", default="test/out/validation_t2_binary", help="Output directory for run logs")
     parser.add_argument("--petar", default="", help="Petar binary (auto-detected if empty)")
@@ -292,7 +292,7 @@ def main() -> int:
 <style>{PAPER_CSS}</style></head><body>
 
 <h1>T2 &nbsp;Long-term binary evolution under auto changeover radii:<br>error drift and level consistency across dt<sub>soft</sub></h1>
-<div class="subtitle">validation report &middot; scenario <i>t2_binary_conservation_longterm</i> &middot; <span class="verdict {'pass' if all_pass else 'fail'}">{verdict}</span></div>
+<div class="subtitle">validation report &middot; scenario <i>t2_binary_longterm_autochangeover</i> &middot; <span class="verdict {'pass' if all_pass else 'fail'}">{verdict}</span></div>
 
 <h2>1&nbsp;&nbsp;Background and purpose</h2>
 <p>With auto changeover radii (no <code>-r</code>), PeTar derives r<sub>in</sub> from
@@ -447,7 +447,7 @@ check per regime (&rho; &le; 2; measured &rho; &asymp; 1 for every run, see Tabl
 scaling.</div>
 
 <div class="meta">petar version: {html_escape(log_version)} &middot; scenario:
-<i>t2_binary_conservation_longterm</i> &middot; report: {html_escape(args.report)}</div>
+<i>t2_binary_longterm_autochangeover</i> &middot; report: {html_escape(args.report)}</div>
 </body></html>
 """
 

@@ -1115,3 +1115,13 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 追加路径无查重步骤——多次会话/重试把同一块内容反复 append;文件只增不减时索引 grep 也无法暴露重复;T6 案例还显示同内容可携带不同日期标题,须全标题查重才可见。
 
 **Prevention rule**: ① 追加前 `grep -n '^### ' lessons-learned.md` 查同题条目,同题就地扩展(更新既有条目)而非另起;② 新条目按日期放入正确分类的时间序位置,同步维护顶部 Categories 列表;③ 每次 doc 整理或健康检查跑一次 `grep '^### ' <file> | sort | uniq -d` 全文查重;④ 规则 canonical 固化于 `SDAR/AGENTS.md` 捕获流程第 2 步(两仓库共用,PeTar AGENTS.md 经指针路由)。
+
+### 2026-10-16: 【全绿但图是空的】T4 控制组图自 4 月重设计起静默空白——报告渲染路径也要"存在性守护";改名/合并场景时先查渲染键匹配
+
+**Mistake**: T4 报告 19/19 检查全绿、控制组对比表(Table 6)有数据,但控制组 6 张图一直是空白(HTML 里 0 个 svg)。排查发现:`build_orbit_figure_section` 按 MODE_ORDER 基名(m1_pure_sdar_ref)查 series 标签,而控制组 run id 带 `_o15` 后缀 → 全部曲线查不到被过滤,`svg_curves_plot` 对空曲线列表返回空串——渲染层静默吞掉,检查层无感知。该 bug 自 4 月 paper-style 重设计起就存在,因控制组此后从未重跑而一直潜伏,直到本次合并单 JSON 重跑才暴露。
+
+**Root cause**: ① 报告检查只评估数值检查,不守护"图非空"(渲染路径的存在性守护缺失);② 空曲线早退返回空串而非报错;③ 序列键(run_id 含后缀)与图形键(mode 基名)两套命名未做归一(normalize_mode_id 已存在却只用于表格);④ 控制组长年不跑 = 无执行即无验证。
+
+**Fix**: 控制组 series 构建前将 run_id 临时映射到 mode 基名;外层守护:生成后断言 svg 计数/图题数符合预期(人工验证 12 svg + 6 标题)。
+
+**Prevention rule**: ① 报告脚本对"应渲染 N 张图/表"做存在性断言(计数入验证),防止静默空白;② 空 curves 的绘图函数应报错或至少打印警告,不返回空串;③ 同一实体在数据层(run_id)与展示层(mode)有两套键时,入口处统一归一;④ 场景重命名/合并后必须完整重跑一次含控制组在内的全部路径,再信任全绿。

@@ -444,7 +444,6 @@ def build_orbit_figure_section(title_prefix: str, series: Dict[str, Any], modes:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate T4 triple mode comparison HTML report")
     parser.add_argument("--report", default="test/out/report.t4.triple.json")
-    parser.add_argument("--report-control", default="", help="Optional control-group report (e.g. outer a=1.5)")
     parser.add_argument("--scenario", default="t4_tree_hard_from_triple")
     parser.add_argument("--scenario-file", default="")
     parser.add_argument("--output", default="test/out/t4_triple_mode_summary.html")
@@ -454,7 +453,11 @@ def main() -> int:
     scenario_path = Path(args.scenario_file) if args.scenario_file else scenario_file_from_name(args.scenario)
     scenario_data = load_json(scenario_path) if scenario_path.exists() else {}
 
-    runs = [r for r in report.get("runs", []) if r.get("scenario") == args.scenario]
+    # One scenario, two IC scales: base runs (a_out=0.15) and the control
+    # group (original a_out=1.5) distinguished by the _o15 run-id suffix.
+    all_runs = [r for r in report.get("runs", []) if r.get("scenario") == args.scenario]
+    runs = [r for r in all_runs if not str(r.get("run_id", "")).endswith("_o15")]
+    control_runs_raw = [r for r in all_runs if str(r.get("run_id", "")).endswith("_o15")]
     if not runs:
         raise RuntimeError(f"No runs found for scenario '{args.scenario}' in report: {args.report}")
     checks = [c for c in report.get("checks", []) if c.get("scenario") == args.scenario]
@@ -524,82 +527,86 @@ def main() -> int:
 
     control_compare_html = ""
     control_figures_html = ""
-    if args.report_control:
-        control_report = load_json(Path(args.report_control))
-        control_runs = control_report.get("runs", [])
-        if isinstance(control_runs, list) and control_runs:
-            control_rows = []
-            for rr in control_runs:
-                rmet = rr.get("metrics", {})
-                status_path = resolve_status_path(rr)
-                log_text = Path(rr["output"]).read_text(encoding="utf-8", errors="replace")
-                runtime_steps = parse_runtime_steps(log_text)
-                dt_soft = float(rmet.get("dt_soft", math.nan))
-                if not math.isfinite(dt_soft):
-                    dt_soft = runtime_steps["tree_dt"]
-                tree_dt = runtime_steps["tree_dt"]
-                dt_le_tree = (dt_soft <= tree_dt + 1e-15) if (math.isfinite(dt_soft) and math.isfinite(tree_dt)) else False
-                control_rows.append(
-                    {
-                        "run_id": rr.get("run_id", ""),
-                        "mode_id": normalize_mode_id(str(rr.get("run_id", ""))),
-                        "tt_switch": int(float(rmet.get("tt_switch", 0.0))),
-                        "tt_nstep": int(float(rmet.get("tt_nstep", 0.0))) if "tt_nstep" in rmet else 0,
-                        "r_group": float(rmet.get("r_group", math.nan)),
-                        "r_search_group": float(rmet.get("r_search_group", math.nan)),
-                        "rout": float(rmet.get("rout", math.nan)),
-                        "dt_soft": dt_soft,
-                        "tree_dt": tree_dt,
-                        "dt_le_tree": dt_le_tree,
-                        "err_tot": float(rmet.get("max_abs_error_over_total", math.nan)),
-                        "err_pp": float(rmet.get("max_abs_error_pp", math.nan)),
-                        "da": float(rmet.get("max_abs_a_frac_drift", rmet.get("max_rel_drift_semi", rmet.get("da_rel_max", math.nan)))),
-                        "de": float(rmet.get("max_abs_e_abs_drift", rmet.get("max_abs_drift_ecc", rmet.get("de_abs_max", math.nan)))),
-                        "max_art": float(rmet.get("max_artificial_particles_glb", math.nan)),
-                        "max_abs_error_over_total": float(rmet.get("max_abs_error_over_total", math.nan)),
-                        "max_abs_error_pp": float(rmet.get("max_abs_error_pp", math.nan)),
-                        "max_artificial_particles_glb": int(float(rmet.get("max_artificial_particles_glb", 0.0))),
-                        "max_n_real_glb": int(float(rmet.get("max_n_real_glb", 0.0))),
-                        "max_n_all_glb": int(float(rmet.get("max_n_all_glb", 0.0))),
-                        "command": rr["command"],
-                        "log_path": rr["output"],
-                        "status_path": str(status_path),
-                    }
-                )
+    if control_runs_raw:
+        control_rows = []
+        for rr in control_runs_raw:
+            rmet = rr.get("metrics", {})
+            status_path = resolve_status_path(rr)
+            log_text = Path(rr["output"]).read_text(encoding="utf-8", errors="replace")
+            runtime_steps = parse_runtime_steps(log_text)
+            dt_soft = float(rmet.get("dt_soft", math.nan))
+            if not math.isfinite(dt_soft):
+                dt_soft = runtime_steps["tree_dt"]
+            tree_dt = runtime_steps["tree_dt"]
+            dt_le_tree = (dt_soft <= tree_dt + 1e-15) if (math.isfinite(dt_soft) and math.isfinite(tree_dt)) else False
+            control_rows.append(
+                {
+                    "run_id": rr.get("run_id", ""),
+                    "mode_id": normalize_mode_id(str(rr.get("run_id", ""))),
+                    "tt_switch": int(float(rmet.get("tt_switch", 0.0))),
+                    "tt_nstep": int(float(rmet.get("tt_nstep", 0.0))) if "tt_nstep" in rmet else 0,
+                    "r_group": float(rmet.get("r_group", math.nan)),
+                    "r_search_group": float(rmet.get("r_search_group", math.nan)),
+                    "rout": float(rmet.get("rout", math.nan)),
+                    "dt_soft": dt_soft,
+                    "tree_dt": tree_dt,
+                    "dt_le_tree": dt_le_tree,
+                    "err_tot": float(rmet.get("max_abs_error_over_total", math.nan)),
+                    "err_pp": float(rmet.get("max_abs_error_pp", math.nan)),
+                    "da": float(rmet.get("max_abs_a_frac_drift", rmet.get("max_rel_drift_semi", rmet.get("da_rel_max", math.nan)))),
+                    "de": float(rmet.get("max_abs_e_abs_drift", rmet.get("max_abs_drift_ecc", rmet.get("de_abs_max", math.nan)))),
+                    "max_art": float(rmet.get("max_artificial_particles_glb", math.nan)),
+                    "max_abs_error_over_total": float(rmet.get("max_abs_error_over_total", math.nan)),
+                    "max_abs_error_pp": float(rmet.get("max_abs_error_pp", math.nan)),
+                    "max_artificial_particles_glb": int(float(rmet.get("max_artificial_particles_glb", 0.0))),
+                    "max_n_real_glb": int(float(rmet.get("max_n_real_glb", 0.0))),
+                    "max_n_all_glb": int(float(rmet.get("max_n_all_glb", 0.0))),
+                    "command": rr["command"],
+                    "log_path": rr["output"],
+                    "status_path": str(status_path),
+                }
+            )
 
-            control_rows = sorted(control_rows, key=lambda x: MODE_ORDER.index(x["mode_id"]) if x["mode_id"] in MODE_ORDER else 999)
-            control_series = collect_plot_series(control_rows)
-            control_figures_html = build_orbit_figure_section("Control group", control_series, MODE_ORDER)
+        control_rows = sorted(control_rows, key=lambda x: MODE_ORDER.index(x["mode_id"]) if x["mode_id"] in MODE_ORDER else 999)
+        # figure lookups key series labels by MODE_ORDER ids: map the _o15
+        # run ids onto their base mode ids for the series pass only
+        for r in control_rows:
+            r["run_id_full"] = r["run_id"]
+            r["run_id"] = r["mode_id"]
+        control_series = collect_plot_series(control_rows)
+        for r in control_rows:
+            r["run_id"] = r.pop("run_id_full")
+        control_figures_html = build_orbit_figure_section("Control group", control_series, MODE_ORDER)
 
-            base_by_mode = {
-                normalize_mode_id(str(r["run_id"])): r
-                for r in rows
-            }
-            ctrl_by_mode = {r["mode_id"]: r for r in control_rows}
+        base_by_mode = {
+            normalize_mode_id(str(r["run_id"])): r
+            for r in rows
+        }
+        ctrl_by_mode = {r["mode_id"]: r for r in control_rows}
 
-            lines = []
-            for mode in MODE_ORDER:
-                if mode not in base_by_mode or mode not in ctrl_by_mode:
-                    continue
-                b = base_by_mode[mode]
-                c = ctrl_by_mode[mode]
-                lines.append(
-                    "<tr>"
-                    f"<td>{html_escape(MODE_LABELS.get(mode, mode))}</td>"
-                    f"<td>{b['max_abs_error_over_total']:.3e}</td>"
-                    f"<td>{c['err_tot']:.3e}</td>"
-                    f"<td>{b['max_abs_error_pp']:.3e}</td>"
-                    f"<td>{c['err_pp']:.3e}</td>"
-                    f"<td>{b['da_rel_max']:.3e}</td>"
-                    f"<td>{c['da']:.3e}</td>"
-                    f"<td>{b['de_abs_max']:.3e}</td>"
-                    f"<td>{c['de']:.3e}</td>"
-                    f"<td>{b['max_artificial_particles_glb']}</td>"
-                    f"<td>{c['max_art']:.0f}</td>"
-                    "</tr>"
-                )
-            if lines:
-                control_compare_html = "".join(lines)
+        lines = []
+        for mode in MODE_ORDER:
+            if mode not in base_by_mode or mode not in ctrl_by_mode:
+                continue
+            b = base_by_mode[mode]
+            c = ctrl_by_mode[mode]
+            lines.append(
+                "<tr>"
+                f"<td>{html_escape(MODE_LABELS.get(mode, mode))}</td>"
+                f"<td>{b['max_abs_error_over_total']:.3e}</td>"
+                f"<td>{c['err_tot']:.3e}</td>"
+                f"<td>{b['max_abs_error_pp']:.3e}</td>"
+                f"<td>{c['err_pp']:.3e}</td>"
+                f"<td>{b['da_rel_max']:.3e}</td>"
+                f"<td>{c['da']:.3e}</td>"
+                f"<td>{b['de_abs_max']:.3e}</td>"
+                f"<td>{c['de']:.3e}</td>"
+                f"<td>{b['max_artificial_particles_glb']}</td>"
+                f"<td>{c['max_art']:.0f}</td>"
+                "</tr>"
+            )
+        if lines:
+            control_compare_html = "".join(lines)
 
     run_rows_html = "".join(
         f"<tr><td>{html_escape(str(MODE_LABELS.get(r['run_id'], r['run_id'])))}</td>"

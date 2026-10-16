@@ -212,7 +212,7 @@ make skill-check
 		- `--case t3`: 层级 3 体（稳定/压力）
 		- `--case t4`: 层级 3 体 + 背景粒子（tree+hard）
 - 场景定义
-	- `test/validation/scenarios/t1_high_ecc_changeover.json`
+	- `test/validation/scenarios/t1_binary_changeover_kdkdk4.json`
 	- `test/validation/scenarios/t2_hermite_sdar_switch.json`
 	- `test/validation/scenarios/t3_hierarchical_triple.json`
 	- `test/validation/scenarios/t4_tree_hard_from_triple.json`
@@ -315,7 +315,7 @@ python3 test/validation/run_validation.py \
 请先执行 ./configure -h 并确认 --with-step-mode（kdk/kdkdk/kdkdk4）;
 优先确认这台机器上的 kdk 与 kdkdk4 二进制名（若缺失请明确报错并给替代建议），再执行：
 python3 test/validation/run_validation.py \
-	--scenario test/validation/scenarios/t1_high_ecc_changeover.json \
+	--scenario test/validation/scenarios/t1_binary_changeover_kdkdk4.json \
 	--var petar_bin_order2=<kdk_binary> \
 	--var petar_bin_order4=<kdkdk4_binary> \
 	--var petar_bin_switch=<switch_test_binary> \
@@ -344,7 +344,7 @@ Please read .github/skills/petar-nbody-simulation/HANDOFF.md and run the forced 
 First run ./configure -h and check --with-step-mode (kdk/kdkdk/kdkdk4), then verify whether kdk and kdkdk4 binaries are available on this machine.
 After that, run:
 python3 test/validation/run_validation.py \
-	--scenario test/validation/scenarios/t1_high_ecc_changeover.json \
+	--scenario test/validation/scenarios/t1_binary_changeover_kdkdk4.json \
 	--var petar_bin_order2=<kdk_binary> \
 	--var petar_bin_order4=<kdkdk4_binary> \
 	--var petar_bin_switch=<switch_test_binary> \

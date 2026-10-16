@@ -1,6 +1,8 @@
 {
-  "name": "t1_high_ecc_changeover",
+  "name": "t1_binary_changeover_kdkdk4",
   "description": "Kepler-orbit changeover validation using semi=0.1 pc, e=0.9, m1=1, m2=10, dt=2^[-13,-6]. Three families: the full-crossing core target (peri < r_in < r_out < apo, r_out=0.15) validated against the pure particle-tree reference (r_peri > r_out, r_out=0.005; KDKDK4 4th order above the build-dependent round-off floor) and the pure-Hermite reference (r_apo < r_in, r_out=2.0; 4th order below the block-step dt threshold, weak-dt plateau above it).",
+  "cores": 8,
+  "parallel_runs": true,
   "workdir": "{repo_root}",
   "setup_commands": [
     "mkdir -p test/out/work/t1",

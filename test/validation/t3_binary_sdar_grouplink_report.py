@@ -123,7 +123,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="T3 binary AR group-linking regimes: run + HTML report")
     parser.add_argument("--run", action="store_true", help="Run the scenario before generating the report")
     parser.add_argument("--report", default="test/out/report.t3.binary.json")
-    parser.add_argument("--scenario", default="t3_binary_hard_switch_longterm")
+    parser.add_argument("--scenario", default="t3_binary_sdar_grouplink")
     parser.add_argument("--scenario-file", default="")
     parser.add_argument("--out-dir", default="test/out/validation_t3_binary", help="Output directory for run logs")
     parser.add_argument("--petar", default="", help="Petar binary (auto-detected if empty)")
@@ -263,7 +263,7 @@ def main() -> int:
 <style>{PAPER_CSS}</style></head><body>
 
 <h1>T3 &nbsp;Binary in the hard channel under AR group linking:<br>census verification, mass-weighted threshold and error levels</h1>
-<div class="subtitle">validation report &middot; scenario <i>t3_binary_hard_switch_longterm</i> &middot; <span class="verdict {'pass' if all_pass else 'fail'}">{verdict}</span></div>
+<div class="subtitle">validation report &middot; scenario <i>t3_binary_sdar_grouplink</i> &middot; <span class="verdict {'pass' if all_pass else 'fail'}">{verdict}</span></div>
 
 <h2>1&nbsp;&nbsp;Background and purpose</h2>
 <p>With the changeover inner radius enclosing the whole binary orbit (r<sub>in</sub> = 0.02 pc
@@ -419,7 +419,7 @@ the switching run at or below the Hermite-pair level (grouping pays off). <b>Sta
 &rho; &le; 2 per run (no secular drift from any channel or from the switching itself).</div>
 
 <div class="meta">petar version: {html_escape(log_version)} &middot; scenario:
-<i>t3_binary_hard_switch_longterm</i> &middot; report: {html_escape(args.report)}</div>
+<i>t3_binary_sdar_grouplink</i> &middot; report: {html_escape(args.report)}</div>
 </body></html>
 """
 
