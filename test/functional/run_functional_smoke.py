@@ -1725,11 +1725,14 @@ def main() -> int:
         for case in selected:
             case_result = run_case(repo_root, case, matrix, out_root)
             report["cases"].append(case_result)
+            # Per-case pages show only this case's family preflight entry.
+            case_tag = infer_build_tag_from_require(case.get("require", ""))
+            case_preflight = {t: e for t, e in report["preflight"].items() if t == case_tag}
             render_html_report(
                 {
                     "phase": args.phase,
                     "started_at": report["started_at"],
-                    "preflight": report["preflight"],
+                    "preflight": case_preflight,
                     "build": None,
                     "cases": [case_result],
                 },
