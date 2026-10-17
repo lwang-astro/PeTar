@@ -763,14 +763,27 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
             ok = True
             error = ""
             details: Dict[str, Any] = {}
+            loaded = None
             try:
                 loader_result = loader(path)
                 if isinstance(loader_result, dict):
                     details = loader_result.get("details", {}) or {}
                     command = loader_result.get("command", command)
+                    loaded = loader_result.get("_object")
+                else:
+                    loaded = loader_result
             except Exception as exc:
                 ok = False
                 error = str(exc)
+
+        # Record count of the loaded data (DictNpArrayMix .size = number of rows).
+        if loaded is not None and "records" not in details:
+            size = getattr(loaded, "size", None)
+            if size is not None:
+                try:
+                    details["records"] = int(size)
+                except (TypeError, ValueError):
+                    pass
 
         warn_msgs = [str(item.message) for item in rec]
         mismatch_warns = [
@@ -852,41 +865,17 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
                     np.loadtxt(str(path), skiprows=1, usecols=tuple(range(min_cols)))
                 return {
                     "command": f"petar.Profile({', '.join(f'{k}={v!r}' for k, v in kwargs.items())}).loadtxt(path, skiprows=1)" if kwargs else "petar.Profile().loadtxt(path, skiprows=1)",
-                    "details": {"profile_kwargs": kwargs, "matched_ncols": ncols},
+                    "details": {"profile_kwargs": kwargs, "matched_ncols": ncols, "records": int(prof.size)},
                 }
 
         # Fallback for legacy FDPS-profile layouts.
         fallback_kwargs = {"FDPS_version": 7.0}
-        petar.Profile(**fallback_kwargs).loadtxt(str(path), skiprows=1)
+        prof_fb = petar.Profile(**fallback_kwargs)
+        prof_fb.loadtxt(str(path), skiprows=1)
         return {
             "command": "petar.Profile(FDPS_version=7.0).loadtxt(path, skiprows=1)",
-            "details": {"profile_kwargs": fallback_kwargs, "matched_ncols": ncols, "fallback": True},
+            "details": {"profile_kwargs": fallback_kwargs, "matched_ncols": ncols, "fallback": True, "records": int(prof_fb.size)},
         }
-
-    add_check(
-        f"{output_prefix}.lagr",
-        case_dir / prefixed_name(output_prefix, "lagr"),
-        lambda p, em=external_mode: petar.LagrangianMultiple(external_mode=em).fromfile(str(p)),
-        f"petar.LagrangianMultiple(external_mode={external_mode}).fromfile(path)",
-    )
-    add_check(f"{output_prefix}.core", case_dir / prefixed_name(output_prefix, "core"), lambda p: petar.Core().fromfile(str(p)), "petar.Core().fromfile(path)")
-    add_check(f"{output_prefix}.status", case_dir / prefixed_name(output_prefix, "status"), lambda p: petar.Status().fromfile(str(p)), "petar.Status().fromfile(path)")
-    add_check(
-        f"{output_prefix}.esc_single",
-        case_dir / prefixed_name(output_prefix, "esc_single"),
-        lambda p, im=interrupt_mode, em=external_mode: petar.SingleEscaper(
-            interrupt_mode=im, external_mode=em
-        ).fromfile(str(p)),
-        f"petar.SingleEscaper(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
-    )
-    add_check(
-        f"{output_prefix}.esc_binary",
-        case_dir / prefixed_name(output_prefix, "esc_binary"),
-        lambda p, im=interrupt_mode, em=external_mode: petar.BinaryEscaper(
-            interrupt_mode=im, external_mode=em
-        ).fromfile(str(p)),
-        f"petar.BinaryEscaper(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
-    )
 
     # Stellar-event record loaders switch dtype (SEVN columns) via interrupt_mode.
     def se_aware(cls, im: str):
@@ -897,7 +886,37 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
 
         return load
 
-    add_check(f"{output_prefix}.sse", case_dir / prefixed_name(output_prefix, "sse"), lambda p: petar.SSEType().loadtxt(str(p)), "petar.SSEType().loadtxt(path)")
+    # Load and return the object so add_check can report its record count.
+    def obj_loader(ctor, method: str = "fromfile", **kwargs):
+        def load(path: Path):
+            obj = ctor(**kwargs)
+            getattr(obj, method)(str(path))
+            return obj
+
+        return load
+
+    add_check(
+        f"{output_prefix}.lagr",
+        case_dir / prefixed_name(output_prefix, "lagr"),
+        obj_loader(petar.LagrangianMultiple, external_mode=external_mode),
+        f"petar.LagrangianMultiple(external_mode={external_mode}).fromfile(path)",
+    )
+    add_check(f"{output_prefix}.core", case_dir / prefixed_name(output_prefix, "core"), obj_loader(petar.Core), "petar.Core().fromfile(path)")
+    add_check(f"{output_prefix}.status", case_dir / prefixed_name(output_prefix, "status"), obj_loader(petar.Status), "petar.Status().fromfile(path)")
+    add_check(
+        f"{output_prefix}.esc_single",
+        case_dir / prefixed_name(output_prefix, "esc_single"),
+        obj_loader(petar.SingleEscaper, interrupt_mode=interrupt_mode, external_mode=external_mode),
+        f"petar.SingleEscaper(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
+    )
+    add_check(
+        f"{output_prefix}.esc_binary",
+        case_dir / prefixed_name(output_prefix, "esc_binary"),
+        obj_loader(petar.BinaryEscaper, interrupt_mode=interrupt_mode, external_mode=external_mode),
+        f"petar.BinaryEscaper(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
+    )
+
+    add_check(f"{output_prefix}.sse", case_dir / prefixed_name(output_prefix, "sse"), obj_loader(petar.SSEType, "loadtxt"), "petar.SSEType().loadtxt(path)")
 
     add_check(
         f"{output_prefix}.sse.type_change",
@@ -912,8 +931,8 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         f"petar.SSESNKick(interrupt_mode={interrupt_mode}).loadtxt(path)",
     )
 
-    add_check(f"{output_prefix}.bse", case_dir / prefixed_name(output_prefix, "bse"), lambda p: petar.BSEType().loadtxt(str(p)), "petar.BSEType().loadtxt(path)")
-    add_check(f"{output_prefix}.bse_status", case_dir / prefixed_name(output_prefix, "bse_status"), lambda p: petar.BSEStatus().fromfile(str(p)), "petar.BSEStatus().fromfile(path)")
+    add_check(f"{output_prefix}.bse", case_dir / prefixed_name(output_prefix, "bse"), obj_loader(petar.BSEType, "loadtxt"), "petar.BSEType().loadtxt(path)")
+    add_check(f"{output_prefix}.bse_status", case_dir / prefixed_name(output_prefix, "bse_status"), obj_loader(petar.BSEStatus), "petar.BSEStatus().fromfile(path)")
     add_check(
         f"{output_prefix}.bse.type_change",
         case_dir / prefixed_name(output_prefix, "bse.type_change"),
@@ -953,44 +972,51 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
             snap_name = snap_names[-1]
             snap_path = case_dir / snap_name
             offset = petar.HEADER_OFFSET_WITH_CM if external_mode != "none" else petar.HEADER_OFFSET
+
+            def snap_particle(path: Path, off=offset, im=interrupt_mode, em=external_mode):
+                obj = petar.Particle(interrupt_mode=im, external_mode=em)
+                obj.fromfile(str(path), offset=off)
+                return obj
+
             add_check(
                 f"snapshot:{snap_name}",
                 snap_path,
-                lambda p, im=interrupt_mode, em=external_mode, off=offset: petar.Particle(
-                    interrupt_mode=im, external_mode=em
-                ).fromfile(str(p), offset=off),
+                snap_particle,
                 f"petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path, offset={offset})",
             )
             add_check(
                 f"snapshot.single:{snap_name}.single",
                 case_dir / f"{snap_name}.single",
-                lambda p, im=interrupt_mode, em=external_mode: petar.Particle(
-                    interrupt_mode=im, external_mode=em
-                ).fromfile(str(p)),
+                obj_loader(petar.Particle, interrupt_mode=interrupt_mode, external_mode=external_mode),
                 f"petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
             )
             add_check(
                 f"snapshot.binary:{snap_name}.binary",
                 case_dir / f"{snap_name}.binary",
-                lambda p, im=interrupt_mode, em=external_mode: petar.Binary(
+                obj_loader(
+                    petar.Binary,
                     member_particle_type=petar.Particle,
-                    interrupt_mode=im,
-                    external_mode=em,
+                    interrupt_mode=interrupt_mode,
+                    external_mode=external_mode,
                     G=petar.G_MSUN_PC_MYR,
-                ).fromfile(str(p)),
+                ),
                 f"petar.Binary(member_particle_type=petar.Particle, interrupt_mode={interrupt_mode}, external_mode={external_mode}, G=petar.G_MSUN_PC_MYR).fromfile(path)",
             )
 
     # Validate object snapshots produced by petar.get.object.snap
     # (naming: [prefix].[object_typename].[origin|single|binary]).
     object_file = case_dir / "object.1.origin"
+
+    def object_particle(path: Path, im=interrupt_mode, em=external_mode):
+        obj = petar.Particle(interrupt_mode=im, external_mode=em)
+        obj.addNewMember("time", np.array([], dtype=float))
+        obj.fromfile(str(path))
+        return obj
+
     add_check(
         "object:object.1.origin",
         object_file,
-        lambda p, im=interrupt_mode, em=external_mode: (
-            lambda obj: (obj.addNewMember("time", np.array([], dtype=float)), obj.fromfile(str(p))))(
-                petar.Particle(interrupt_mode=im, external_mode=em)
-            ),
+        object_particle,
         f"obj=petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}); obj.addNewMember('time', np.array([], dtype=float)); obj.fromfile(path)",
     )
 
@@ -1027,11 +1053,7 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         add_check(
             f"group:{group_path.name}",
             group_path,
-            lambda p, n=n_member, im=interrupt_mode, em=external_mode: petar.GroupInfo(
-                N=n,
-                interrupt_mode=im,
-                external_mode=em,
-            ).fromfile(str(p)),
+            obj_loader(petar.GroupInfo, N=n_member, interrupt_mode=interrupt_mode, external_mode=external_mode),
             f"petar.GroupInfo(N={n_member}, interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
         )
 
