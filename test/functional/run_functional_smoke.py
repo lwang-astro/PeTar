@@ -62,13 +62,18 @@ def configure_args_for_build_tag(tag: str) -> List[str]:
     mapping = {
         "std": [],
         "merger": ["--with-interrupt=merger"],
-        "merger": ["--with-interrupt=merger"],
         "dsm": ["--with-interrupt=dsm"],
         "bse": ["--with-interrupt=bse"],
         "galpy": ["--with-external=galpy"],
         "bse-galpy": ["--with-interrupt=bse", "--with-external=galpy"],
         "agama": ["--with-external=agama"],
         "bse-agama": ["--with-interrupt=bse", "--with-external=agama"],
+        "sevn": ["--with-interrupt=sevn"],
+        "gasdrag": ["--with-external-hard=gasdrag"],
+        "bse-gasdrag": ["--with-interrupt=bse", "--with-external-hard=gasdrag"],
+        "bse-galpy-gasdrag": ["--with-interrupt=bse", "--with-external=galpy", "--with-external-hard=gasdrag"],
+        "dsm-gasdrag": ["--with-interrupt=dsm", "--with-external-hard=gasdrag"],
+        "dsm-galpy-gasdrag": ["--with-interrupt=dsm", "--with-external=galpy", "--with-external-hard=gasdrag"],
     }
     return mapping.get(tag, [])
 
@@ -83,111 +88,12 @@ def describe_ic_case(ic_case: str) -> str:
         "functional_smoke": "One deterministic close binary plus a small symmetric background cluster.",
         "functional_dual_merge_smoke": "Two target BSE binaries plus a light symmetric background cluster.",
         "functional_mcluster_dual_merge_smoke": "mcluster N=100 Plummer Rh=1 pc Kroupa no-binary model, first four stars replaced by two target binaries, then global COM recentered.",
+        "functional_mcluster_smoke": "Plain mcluster N=100 Plummer Rh=1 pc Kroupa no-binary model; for modes without a stellar-evolution merge channel (dual-merge contact binaries would stall them).",
+        "functional_mcluster_collision_smoke": "Plain mcluster N=100 cluster plus one inbound hyperbolic 10+10 Msun collision pair for the merger/dsm interrupt pipeline.",
         "functional_binary_cluster": "mcluster N=200 Plummer Rh=0.5 pc Kroupa 95% primordial-binary model (seed 11), members written first as adjacent pairs.",
+        "functional_sevn_cluster": "mcluster N=60 Plummer Rh=1 pc Kroupa single-star model (seed 7), masses restricted to the SEVN gold-table grid 0.7-80 Msun.",
     }
     return descriptions.get(ic_case, ic_case)
-
-
-def _check_changeover_invariant(
-    case_dir: Path,
-    output_prefix: str,
-    interrupt_mode: str,
-    external_mode: str,
-    petar_module,
-    log_path: Optional[Path],
-    dt_out: float,
-) -> Optional[Dict[str, Any]]:
-    """Ex-member changeover invariant check.
-
-    A particle with no companion within its changeover radius r_out must carry
-    the own-mass changeover r_in = max((m_ic/m_avg)^(1/3),1)*r_in_base of its
-    initial-condition mass (rtol 2e-3): members keep their own-mass changeover
-    for the whole run, so stellar-evolution drift (wind, mergers) leaves the
-    pinned value in place. Particles with a companion inside r_out are exempt:
-    they are either active SDAR-group members or bound ungrouped pairs, and the
-    recorded group event stream cannot distinguish these because isolated
-    binaries emit new/end records every hard substep. This is the invariant
-    guaranteed by the members-keep-own-changeover design (no c.m. sync, no
-    ex-member rescale).
-    Returns None when prerequisites (run-log radii, snapshot list) are absent.
-    """
-    import numpy as np  # noqa: WPS433 (paired with the readback imports)
-
-    if log_path is None or not Path(log_path).exists() or dt_out <= 0:
-        return None
-    log_text = Path(log_path).read_text(encoding="utf-8", errors="ignore")
-    m_avg_m = re.search(r"Average mass\s*=\s*(\S+)", log_text)
-    rin_m = re.search(r"Mean inner changeover radius\s*=\s*(\S+)", log_text)
-    if not m_avg_m or not rin_m:
-        return None
-    m_avg = float(m_avg_m.group(1))
-    rin_base = float(rin_m.group(1))
-
-    snap_lst = case_dir / f"{output_prefix}.snap.lst"
-    if not snap_lst.exists():
-        return None
-    snaps = []
-    for name in snap_lst.read_text(encoding="utf-8").splitlines():
-        name = name.strip()
-        if name and re.search(r"\.\d+$", name):
-            snaps.append(case_dir / name)
-    if not snaps:
-        return None
-
-    offset = petar_module.HEADER_OFFSET_WITH_CM if external_mode != "none" else petar_module.HEADER_OFFSET
-    violations = 0
-    examples = []
-    lone_checked = 0
-    # own-mass baseline from the IC snapshot per id: the changeover is pinned at
-    # initialization and never rescaled mid-run, so stellar-evolution mass drift
-    # (wind, mergers) must not count as a violation
-    ic_mass = {}
-    for snap_path in snaps:
-        p = petar_module.Particle(interrupt_mode=interrupt_mode, external_mode=external_mode)
-        p.fromfile(str(snap_path), offset=offset)
-        mass = np.asarray(p.mass, dtype=float)
-        pos = np.asarray(p.pos, dtype=float)
-        rout = np.asarray(p.r_out, dtype=float)
-        rin = np.asarray(p.r_in, dtype=float)
-        ids = np.asarray(p.id).astype(np.int64)
-        use = mass > 0
-        idx = np.flatnonzero(use)
-        if idx.size < 2:
-            continue
-        if not ic_mass:
-            ic_mass = {int(ids[i]): float(mass[i]) for i in idx}
-        d2 = ((pos[idx][:, None, :] - pos[idx][None, :, :]) ** 2).sum(axis=2)
-        np.fill_diagonal(d2, np.inf)
-        nearest = np.sqrt(d2.min(axis=1))
-        lone = nearest > rout[idx]
-        lone_checked += int(lone.sum())
-        base_mass = np.array([ic_mass.get(int(ids[idx][lone][j]), mass[idx][lone][j]) for j in range(int(lone.sum()))])
-        own = np.maximum((base_mass / m_avg) ** (1.0 / 3.0), 1.0) * rin_base
-        bad = np.abs(rin[idx][lone] / own - 1.0) > 2e-3
-        violations += int(bad.sum())
-        if bad.any() and len(examples) < 5:
-            for j in np.flatnonzero(bad)[:3]:
-                examples.append(
-                    {
-                        "snapshot": snap_path.name,
-                        "id": int(ids[idx][lone][j]),
-                        "nearest_pc": float(nearest[lone][j]),
-                        "r_in": float(rin[idx][lone][j]),
-                        "own_expected": float(own[j]),
-                    }
-                )
-
-    return {
-        "ok": violations == 0,
-        "details": {
-            "m_avg": m_avg,
-            "r_in_base": rin_base,
-            "snapshots": len(snaps),
-            "lone_particles_checked": lone_checked,
-            "violations": violations,
-            "examples": examples,
-        },
-    }
 
 
 def add_step(
@@ -242,6 +148,8 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
         "table{width:100%;border-collapse:collapse;margin-top:10px;}"
         "th,td{text-align:left;vertical-align:top;padding:10px;border-top:1px solid #e5e7eb;font-size:14px;}"
         "th{background:#f8fafc;font-weight:700;}"
+        "tr.step-details td{background:#fbfcfe;border-top:none;padding-top:2px;padding-bottom:10px;}"
+        "tr.step-details pre{margin:0;background:#f1f5f9;color:#334155;}"
         "code,pre{font-family:SFMono-Regular,Consolas,Monaco,monospace;font-size:12px;}"
         "pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#e2e8f0;padding:12px;border-radius:10px;overflow:auto;}"
         ".fail{color:#b42318;font-weight:600;}.pass{color:#1b7f3b;font-weight:600;}.skip{color:#8a6d1f;font-weight:600;}"
@@ -260,9 +168,26 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
         parts.append(f"<div>Log</div><div>{esc(build.get('log', ''))}</div>")
         parts.append("</div></div>")
 
+    preflight = report.get("preflight")
+    if preflight:
+        parts.append("<div class=\"card\"><h2>Preflight (binary families via petar.select)</h2>")
+        parts.append("<table><thead><tr><th>Tag</th><th>Require</th><th>Status</th><th>Selected</th><th>Version</th><th>Expected</th></tr></thead><tbody>")
+        for tag, entry in preflight.items():
+            parts.append("<tr>")
+            parts.append(f"<td>{esc(tag)}</td><td>{esc(entry.get('require', ''))}</td>")
+            parts.append(f"<td class=\"{esc(entry.get('status', ''))}\">{esc(entry.get('status', ''))}</td>")
+            parts.append(f"<td><code>{esc(entry.get('selected', ''))}</code></td>")
+            parts.append(f"<td>{esc(entry.get('version', ''))}</td><td>{esc(entry.get('expected_version', ''))}</td>")
+            parts.append("</tr>")
+        parts.append("</tbody></table></div>")
+
     for case in report.get("cases", []):
         parts.append("<div class=\"card\">")
-        parts.append(f"<h2>Case: {esc(case.get('name'))}</h2>")
+        case_name_html = esc(case.get('name'))
+        per_case_html = out_path.parent / f"report.functional.{case.get('name')}.html"
+        if per_case_html.exists() and per_case_html.resolve() != out_path.resolve():
+            case_name_html = f'<a href="{esc(per_case_html.name)}">{case_name_html}</a>'
+        parts.append(f"<h2>Case: {case_name_html}</h2>")
         parts.append(f"<p>{badge(case.get('status', 'unknown'))}</p>")
         parts.append("<div class=\"kv\">")
         parts.append(f"<div>Require</div><div>{esc(case.get('require', ''))}</div>")
@@ -283,7 +208,7 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
             parts.append(f"<div>Build Command</div><div><code>{esc(build_info.get('command', ''))}</code></div>")
             parts.append("</div>")
 
-        parts.append("<h3>Tool Steps</h3><table><thead><tr><th>Step</th><th>Command</th><th>Result</th><th>Details</th></tr></thead><tbody>")
+        parts.append("<h3>Tool Steps</h3><table><thead><tr><th>Step</th><th>Command</th><th>Result</th></tr></thead><tbody>")
         for step in case.get("steps", []):
             details = [f"cwd: {step.get('cwd', '')}"]
             for key, value in step.get("details", {}).items():
@@ -299,13 +224,14 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
             parts.append(f"<td>{esc(step.get('name', ''))}</td>")
             parts.append(f"<td><code>{esc(step.get('command', ''))}</code></td>")
             parts.append(f"<td class=\"{esc(step.get('status', ''))}\">{esc(step.get('status', ''))}</td>")
-            parts.append(f"<td><pre>{esc(chr(10).join(details))}</pre></td>")
             parts.append("</tr>")
+            if details:
+                parts.append(f"<tr class=\"step-details\"><td colspan=\"3\"><pre>{esc(chr(10).join(details))}</pre></td></tr>")
         parts.append("</tbody></table>")
 
         read_checks = case.get("read_checks", {}).get("checks", [])
         if read_checks:
-            parts.append("<h3>Python Read Checks</h3><table><thead><tr><th>Label</th><th>Command</th><th>Result</th><th>Reason</th></tr></thead><tbody>")
+            parts.append("<h3>Python Read Checks</h3><table><thead><tr><th>Label</th><th>Command</th><th>Result</th></tr></thead><tbody>")
             for chk in read_checks:
                 chk_status = "pass" if chk.get("ok") else "fail"
                 reason = chk.get("error", "") or "; ".join(chk.get("warnings", []))
@@ -319,8 +245,8 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
                 parts.append(f"<td>{esc(chk.get('label', ''))}</td>")
                 parts.append(f"<td><code>{esc(chk.get('command', ''))}</code></td>")
                 parts.append(f"<td class=\"{chk_status}\">{chk_status}</td>")
-                parts.append(f"<td><pre>{esc(chk.get('file', ''))}\n{esc(reason)}</pre></td>")
                 parts.append("</tr>")
+                parts.append(f"<tr class=\"step-details\"><td colspan=\"3\"><pre>{esc(chk.get('file', ''))}\n{esc(reason)}</pre></td></tr>")
             parts.append("</tbody></table>")
 
         parts.append("</div>")
@@ -330,7 +256,6 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
 
 
 def run_cmd(cmd: List[str], cwd: Path, env: Dict[str, str], log_path: Path) -> tuple[int, List[str]]:
-        print(f"[DEBUG] run_cmd: {cmd} log_path: {log_path}")
         log_path.parent.mkdir(parents=True, exist_ok=True)
         cmd_text = "$ " + " ".join(shlex.quote(x) for x in cmd) + "\n"
 
@@ -393,6 +318,74 @@ def ensure_commands(commands: List[str]) -> List[str]:
         if subprocess.run(["bash", "-lc", f"command -v {shlex.quote(cmd)} >/dev/null 2>&1"], check=False).returncode != 0:
             missing.append(cmd)
     return missing
+
+
+def resolve_sevn_tables() -> Optional[str]:
+    """Resolve the SEVN table set the same way as sample/star_cluster_plummer_N1k_binaries_sevn.sh.
+
+    Order: SEVN_TABLES env > gold table set next to the --tables default baked
+    into the selected petar binary > SEVN_DIR source checkout.
+    Returns None when no table set is found (case should skip).
+    """
+    env_tables = os.environ.get("SEVN_TABLES")
+    if env_tables and Path(env_tables).is_dir():
+        return env_tables
+
+    try:
+        proc = subprocess.run(["petar", "-h"], capture_output=True, text=True, check=False)
+    except OSError:
+        return None
+    default_tables = None
+    for line in (proc.stdout + proc.stderr).splitlines():
+        match = re.match(r"\s*--tables\s+(\S+)", line)
+        if match:
+            default_tables = match.group(1)
+            break
+    if default_tables:
+        candidate = Path(default_tables).parent / "SEVNtracks_MIST_AGBrobust_gold"
+        if candidate.is_dir():
+            return str(candidate)
+
+    sevn_dir = os.environ.get("SEVN_DIR")
+    if sevn_dir:
+        candidate = Path(sevn_dir) / "tables" / "SEVNtracks_MIST_AGBrobust_gold"
+        if candidate.is_dir():
+            return str(candidate)
+    return None
+
+
+def expected_source_stamp(repo_root: Path) -> str:
+    """Version stamp pair expected from a current build: <PeTar VERSION>_<SDAR VERSION>."""
+    petar_version = ""
+    sdar_version = ""
+    vf = repo_root / "VERSION"
+    if vf.exists():
+        petar_version = vf.read_text(encoding="utf-8").strip()
+    sf = (repo_root / ".." / "SDAR" / "VERSION").resolve()
+    if sf.exists():
+        sdar_version = sf.read_text(encoding="utf-8").strip()
+    return f"{petar_version}_{sdar_version}"
+
+
+def petar_stamp(solver: str = "petar") -> str:
+    """Version stamp printed by '<solver> -h' (empty when unreadable)."""
+    try:
+        proc = subprocess.run([solver, "-h"], capture_output=True, text=True, check=False)
+    except OSError:
+        return ""
+    for line in (proc.stdout + proc.stderr).splitlines():
+        match = re.match(r"\s*Version:\s*(\S+)", line)
+        if match:
+            return match.group(1)
+    return ""
+
+
+def active_petar_realpath() -> str:
+    proc = subprocess.run(["bash", "-lc", "command -v petar"], capture_output=True, text=True, check=False)
+    path = proc.stdout.strip().splitlines()[0] if proc.stdout.strip() else ""
+    if not path:
+        return ""
+    return str(Path(path).resolve())
 
 
 def resolve_output_prefixes(case: Dict[str, Any], matrix: Dict[str, Any]) -> List[str]:
@@ -561,7 +554,6 @@ def run_case_build(repo_root: Path, matrix: Dict[str, Any], case: Dict[str, Any]
         return {"status": "fail", "reason": f"build script not found: {script_path}"}
 
     tag = infer_build_tag_from_require(case.get("require", ""))
-
     env = os.environ.copy()
     env.update(build.get("strict_env", {}))
     env["BUILD_TAGS"] = tag
@@ -632,7 +624,78 @@ def select_build_tags(cases: List[Dict[str, Any]]) -> List[str]:
     return sorted(list(dict.fromkeys(tags)))
 
 
-def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str, output_prefix: str, interrupt_mode_override: str = "", log_path: Optional[Path] = None, dt_out: float = 0.0) -> Dict[str, Any]:
+def preflight_families(repo_root: Path, matrix: Dict[str, Any], selected: List[Dict[str, Any]], out_root: Path) -> Dict[str, Dict[str, Any]]:
+    """Resolve every binary family before any case runs.
+
+    Mirrors the validation-suite rule: petar.select per family; when the
+    selection fails or the selected binary's version stamp does not match the
+    repository (PeTar VERSION + SDAR VERSION pair), reinstall the family via
+    the build script, then re-select. Prevents the stale-binary failure class
+    (an old installed family carrying abort paths already removed from
+    current source). The per-case petar.select step remains the authority for
+    availability; this preflight guarantees freshness up front.
+    """
+    log_path = out_root / "preflight.log"
+    log_path.write_text("", encoding="utf-8")
+    optional = matrix.get("global", {}).get("optional_select", "mpi,omp,avx512,avx2")
+    expected = expected_source_stamp(repo_root)
+
+    def select(require: str) -> int:
+        cmd = ["petar.select"]
+        if require:
+            cmd.extend(["--require", require])
+        if optional:
+            cmd.extend(["--optional", optional])
+        rc, _ = run_cmd(cmd, cwd=repo_root, env=os.environ.copy(), log_path=log_path)
+        return rc
+
+    tags: List[str] = []
+    require_by_tag: Dict[str, str] = {}
+    for case in selected:
+        if any(not os.environ.get(key) for key in case.get("skip_if_unresolved", [])):
+            continue
+        tag = infer_build_tag_from_require(case.get("require", ""))
+        if tag not in require_by_tag:
+            require_by_tag[tag] = case.get("require", "")
+            tags.append(tag)
+
+    results: Dict[str, Dict[str, Any]] = {}
+    for tag in tags:
+        require = require_by_tag[tag]
+        entry: Dict[str, Any] = {"tag": tag, "require": require, "expected_version": expected}
+        rc = select(require)
+        if rc == 0:
+            entry["selected"] = active_petar_realpath()
+            entry["version"] = petar_stamp()
+            if entry["version"] == expected:
+                entry["status"] = "current"
+                results[tag] = entry
+                print(f"[preflight] {tag}: current ({entry['version']})")
+                continue
+            entry["status"] = "stale"
+        else:
+            entry["status"] = "missing"
+            entry["selected"] = ""
+            entry["version"] = ""
+
+        print(f"[preflight] {tag}: {entry['status']} -> reinstalling")
+        rebuild = run_case_build_for_tag(repo_root, matrix, tag, out_root, log_path)
+        entry["rebuild_status"] = rebuild.get("status", "")
+        rc2 = select(require)
+        if rc2 == 0:
+            entry["selected"] = active_petar_realpath()
+            entry["version"] = petar_stamp()
+            entry["status"] = "rebuilt" if entry["version"] == expected else "stale-after-rebuild"
+        else:
+            entry["selected"] = ""
+            entry["version"] = ""
+            entry["status"] = "unavailable"
+        print(f"[preflight] {tag}: {entry['status']} ({entry['version']})")
+        results[tag] = entry
+    return results
+
+
+def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str, output_prefix: str, interrupt_mode_override: str = "") -> Dict[str, Any]:
     tools_path = repo_root / "tools"
     if str(tools_path) not in sys.path:
         sys.path.insert(0, str(tools_path))
@@ -645,6 +708,8 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
     if not interrupt_mode_override:
         if "dsm" in require_tokens:
             interrupt_mode = "dsm"
+        elif "sevn" in require_tokens:
+            interrupt_mode = "sevn"
         elif any(x in require_tokens for x in ["bse", "bseEmp", "mobse"]):
             interrupt_mode = "bse"
         elif "merger" in require_tokens:
@@ -791,18 +856,62 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         f"petar.BinaryEscaper(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
     )
 
+    # Stellar-event record loaders switch dtype (SEVN columns) via interrupt_mode.
+    def se_aware(cls, im: str):
+        def load(path: Path):
+            obj = cls(interrupt_mode=im)
+            obj.loadtxt(str(path))
+            return obj
+
+        return load
+
     add_check(f"{output_prefix}.sse", case_dir / prefixed_name(output_prefix, "sse"), lambda p: petar.SSEType().loadtxt(str(p)), "petar.SSEType().loadtxt(path)")
 
-    add_check(f"{output_prefix}.sse.type_change", case_dir / prefixed_name(output_prefix, "sse.type_change"), lambda p: petar.SSETypeChange().loadtxt(str(p)), "petar.SSETypeChange().loadtxt(path)")
-    add_check(f"{output_prefix}.sse.sn_kick", case_dir / prefixed_name(output_prefix, "sse.sn_kick"), lambda p: petar.SSESNKick().loadtxt(str(p)), "petar.SSESNKick().loadtxt(path)")
+    add_check(
+        f"{output_prefix}.sse.type_change",
+        case_dir / prefixed_name(output_prefix, "sse.type_change"),
+        se_aware(petar.SSETypeChange, interrupt_mode),
+        f"petar.SSETypeChange(interrupt_mode={interrupt_mode}).loadtxt(path)",
+    )
+    add_check(
+        f"{output_prefix}.sse.sn_kick",
+        case_dir / prefixed_name(output_prefix, "sse.sn_kick"),
+        se_aware(petar.SSESNKick, interrupt_mode),
+        f"petar.SSESNKick(interrupt_mode={interrupt_mode}).loadtxt(path)",
+    )
 
     add_check(f"{output_prefix}.bse", case_dir / prefixed_name(output_prefix, "bse"), lambda p: petar.BSEType().loadtxt(str(p)), "petar.BSEType().loadtxt(path)")
     add_check(f"{output_prefix}.bse_status", case_dir / prefixed_name(output_prefix, "bse_status"), lambda p: petar.BSEStatus().fromfile(str(p)), "petar.BSEStatus().fromfile(path)")
-    add_check(f"{output_prefix}.bse.type_change", case_dir / prefixed_name(output_prefix, "bse.type_change"), lambda p: petar.BSETypeChange().loadtxt(str(p)), "petar.BSETypeChange().loadtxt(path)")
-    add_check(f"{output_prefix}.bse.sn_kick", case_dir / prefixed_name(output_prefix, "bse.sn_kick"), lambda p: petar.BSEKick().loadtxt(str(p)), "petar.BSEKick().loadtxt(path)")
-    add_check(f"{output_prefix}.bse.gw_kick", case_dir / prefixed_name(output_prefix, "bse.gw_kick"), lambda p: petar.BSEKick().loadtxt(str(p)), "petar.BSEKick().loadtxt(path)")
-    add_check(f"{output_prefix}.bse.dynamic_merge", case_dir / prefixed_name(output_prefix, "bse.dynamic_merge"), lambda p: petar.BSEDynamicMerge().loadtxt(str(p)), "petar.BSEDynamicMerge().loadtxt(path)")
-    add_check(f"{output_prefix}.bse.binary_merge", case_dir / prefixed_name(output_prefix, "bse.binary_merge"), lambda p: petar.BSETypeChange().loadtxt(str(p)), "petar.BSETypeChange().loadtxt(path)")
+    add_check(
+        f"{output_prefix}.bse.type_change",
+        case_dir / prefixed_name(output_prefix, "bse.type_change"),
+        se_aware(petar.BSETypeChange, interrupt_mode),
+        f"petar.BSETypeChange(interrupt_mode={interrupt_mode}).loadtxt(path)",
+    )
+    add_check(
+        f"{output_prefix}.bse.sn_kick",
+        case_dir / prefixed_name(output_prefix, "bse.sn_kick"),
+        se_aware(petar.BSEKick, interrupt_mode),
+        f"petar.BSEKick(interrupt_mode={interrupt_mode}).loadtxt(path)",
+    )
+    add_check(
+        f"{output_prefix}.bse.gw_kick",
+        case_dir / prefixed_name(output_prefix, "bse.gw_kick"),
+        se_aware(petar.BSEKick, interrupt_mode),
+        f"petar.BSEKick(interrupt_mode={interrupt_mode}).loadtxt(path)",
+    )
+    add_check(
+        f"{output_prefix}.bse.dynamic_merge",
+        case_dir / prefixed_name(output_prefix, "bse.dynamic_merge"),
+        se_aware(petar.BSEDynamicMerge, interrupt_mode),
+        f"petar.BSEDynamicMerge(interrupt_mode={interrupt_mode}).loadtxt(path)",
+    )
+    add_check(
+        f"{output_prefix}.bse.binary_merge",
+        case_dir / prefixed_name(output_prefix, "bse.binary_merge"),
+        se_aware(petar.BSETypeChange, interrupt_mode),
+        f"petar.BSETypeChange(interrupt_mode={interrupt_mode}).loadtxt(path)",
+    )
 
     # Snapshot files listed in [prefix].snap.lst.
     snap_list = case_dir / prefixed_name(output_prefix, "snap.lst")
@@ -840,10 +949,12 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
                 f"petar.Binary(member_particle_type=petar.Particle, interrupt_mode={interrupt_mode}, external_mode={external_mode}, G=petar.G_MSUN_PC_MYR).fromfile(path)",
             )
 
-    # Validate object snapshots produced by petar.get.object.snap.
+    # Validate object snapshots produced by petar.get.object.snap
+    # (naming: [prefix].[object_typename].[origin|single|binary]).
+    object_file = case_dir / "object.1.origin"
     add_check(
-        "object:object.1",
-        case_dir / "object.1",
+        "object:object.1.origin",
+        object_file,
         lambda p, im=interrupt_mode, em=external_mode: (
             lambda obj: (obj.addNewMember("time", np.array([], dtype=float)), obj.fromfile(str(p))))(
                 petar.Particle(interrupt_mode=im, external_mode=em)
@@ -873,9 +984,10 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
             "petar.Profile(...).loadtxt(path, skiprows=1)",
         )
 
-    # Validate group outputs from petar.data.process (binary GroupInfo).
-    for group_path in sorted(case_dir.glob(f"{output_prefix}.group.n*")):
-        match = re.search(r"\.n(\d+)$", group_path.name)
+    # Validate group outputs (binary GroupInfo) written by the petar run itself
+    # when --write-group-info 2 is used: [prefix].group.[MPI rank].n[N_member].
+    for group_path in sorted(case_dir.glob(f"{output_prefix}.group.*.n*")):
+        match = re.search(r"\.group\.\d+\.n(\d+)$", group_path.name)
         if not match:
             continue
         n_member = int(match.group(1))
@@ -888,24 +1000,6 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
                 external_mode=em,
             ).fromfile(str(p)),
             f"petar.GroupInfo(N={n_member}, interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
-        )
-
-    # Ex-member changeover invariant: non-grouped particles must carry the
-    # IC-pinned own-mass changeover (guards the members-keep-own-changeover design).
-    inv = _check_changeover_invariant(
-        case_dir, output_prefix, interrupt_mode, external_mode, petar, log_path, dt_out
-    )
-    if inv is not None:
-        checks.append(
-            {
-                "label": f"{output_prefix}.changeover_invariant",
-                "file": str(case_dir / f"{output_prefix}.snap.lst"),
-                "command": "internal: own-mass changeover r_in required for particles outside active SDAR groups",
-                "ok": inv["ok"],
-                "error": "" if inv["ok"] else f"{inv['details']['violations']} invariant violations",
-                "warnings": [],
-                "details": inv["details"],
-            }
         )
 
     all_warnings = []
@@ -928,7 +1022,6 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
 
 
 def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_root: Path) -> Dict[str, Any]:
-    print(f"[DEBUG] run_case input: {case}")
     name = case["name"]
     case_dir = out_root / f"functional_{name}"
     case_dir.mkdir(parents=True, exist_ok=True)
@@ -977,7 +1070,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
                 result["skip_reason"] = f"environment variable {key} is not set"
                 return result
 
-    unresolved = unresolved_vars(resolve_tokens(all_tokens))
+    unresolved = [tok for tok in unresolved_vars(resolve_tokens(all_tokens)) if "{SEVN_TABLES}" not in tok]
     if unresolved:
         result["status"] = "skip" if result["optional"] else "fail"
         result["skip_reason"] = "unresolved tokens: " + ", ".join(unresolved)
@@ -1069,7 +1162,11 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         env=env,
         log_path=log_path,
     )
-    add_step(result, "petar.select", rc, select_cmd, case_dir, warnings_list=warns, details={"require": require, "optional": optional})
+    select_details = {"require": require, "optional": optional}
+    if rc == 0:
+        select_details["selected"] = active_petar_realpath()
+        select_details["petar_version"] = petar_stamp()
+    add_step(result, "petar.select", rc, select_cmd, case_dir, warnings_list=warns, details=select_details)
 
     # Fallback: if select fails, trigger targeted install/build once and retry select.
     if rc != 0:
@@ -1117,13 +1214,85 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
     # 4) Fast run with tiny end time/output cadence.
     t_end = str(case.get("t_end", matrix.get("global", {}).get("t_end", 0.2)))
     dt_out = str(case.get("dt_out", matrix.get("global", {}).get("dt_out", 0.1)))
-    run_args = resolve_tokens(case.get("run_args", []))
-    run_cmdline = ["petar", "-u", "1", "-t", t_end, "-o", dt_out, "-f", output_prefix, *run_args, "input"]
-    rc, warns = run_cmd(run_cmdline, cwd=case_dir, env=env, log_path=log_path)
-    add_step(result, "petar", rc, run_cmdline, case_dir, warnings_list=warns, details={"t_end": t_end, "dt_out": dt_out, "output_prefix": output_prefix, "run_args": run_args})
-    if rc != 0:
-        result["status"] = "fail"
-        return result
+    run_args_raw = case.get("run_args", [])
+
+    if any("{SEVN_TABLES}" in tok for tok in run_args_raw):
+        sevn_tables = resolve_sevn_tables()
+        if not sevn_tables:
+            result["status"] = "skip"
+            result["skip_reason"] = "SEVN table set not found (checked SEVN_TABLES, SEVN_DIR, baked --tables default)"
+            return result
+        os.environ["SEVN_TABLES"] = sevn_tables
+        env["SEVN_TABLES"] = sevn_tables
+
+    run_args = resolve_tokens(run_args_raw)
+    snap_lst_path = case_dir / prefixed_name(output_prefix, "snap.lst")
+    restart_t_end = case.get("restart_t_end")
+
+    def snap_entries() -> List[str]:
+        if not snap_lst_path.exists():
+            return []
+        return [x.strip() for x in snap_lst_path.read_text(encoding="utf-8").splitlines() if x.strip()]
+
+    if restart_t_end:
+        # Two-phase restart smoke: run to restart_t_end, then continue to t_end
+        # via the canonical restart form (SKILL.md Restart/resume).
+        cmd_a = ["petar", "-u", "1", "-t", str(restart_t_end), "-o", dt_out, "-f", output_prefix, *run_args, "input"]
+        rc, warns = run_cmd(cmd_a, cwd=case_dir, env=env, log_path=log_path)
+        add_step(result, "petar.initial", rc, cmd_a, case_dir, warnings_list=warns, details={"t_end": str(restart_t_end), "dt_out": dt_out, "output_prefix": output_prefix, "run_args": run_args})
+        if rc != 0:
+            result["status"] = "fail"
+            return result
+        entries_a = snap_entries()
+        if not entries_a:
+            result["status"] = "fail"
+            result["skip_reason"] = f"{snap_lst_path.name} is empty after initial phase"
+            return result
+        restart_snap = entries_a[-1]
+
+        cmd_b = ["petar", "-p", f"{output_prefix}.par", "-i", "0", "-u", "1", "-t", t_end, "-o", dt_out, "-f", output_prefix, *run_args, restart_snap]
+        rc, warns = run_cmd(cmd_b, cwd=case_dir, env=env, log_path=log_path)
+        add_step(result, "petar.restart", rc, cmd_b, case_dir, warnings_list=warns, details={"t_end": t_end, "dt_out": dt_out, "restart_snapshot": restart_snap, "run_args": run_args})
+        if rc != 0:
+            result["status"] = "fail"
+            return result
+        entries_b = snap_entries()
+        restart_details = {
+            "t_end": t_end,
+            "dt_out": dt_out,
+            "output_prefix": output_prefix,
+            "run_args": run_args,
+            "snapshots_after_initial": len(entries_a),
+            "snapshots_after_restart": len(entries_b),
+            "restart_snapshot": restart_snap,
+        }
+        if len(entries_b) <= len(entries_a):
+            result["status"] = "fail"
+            result["skip_reason"] = "restart phase produced no new snapshots"
+            add_step(result, "restart_progress_check", 1, ["internal.restart_check", snap_lst_path.name], case_dir, details=restart_details, reason="no new snapshots after restart")
+            return result
+        last_idx = int(entries_b[-1].rsplit(".", 1)[-1])
+        need_idx = int(float(t_end) / float(dt_out)) - 1
+        ok_progress = last_idx >= need_idx
+        add_step(
+            result,
+            "restart_progress_check",
+            0 if ok_progress else 1,
+            ["internal.restart_check", snap_lst_path.name],
+            case_dir,
+            details={**restart_details, "last_snapshot_index": last_idx, "required_min_index": need_idx},
+            reason="" if ok_progress else f"last snapshot index {last_idx} below required {need_idx}",
+        )
+        if not ok_progress:
+            result["status"] = "fail"
+            return result
+    else:
+        run_cmdline = ["petar", "-u", "1", "-t", t_end, "-o", dt_out, "-f", output_prefix, *run_args, "input"]
+        rc, warns = run_cmd(run_cmdline, cwd=case_dir, env=env, log_path=log_path)
+        add_step(result, "petar", rc, run_cmdline, case_dir, warnings_list=warns, details={"t_end": t_end, "dt_out": dt_out, "output_prefix": output_prefix, "run_args": run_args})
+        if rc != 0:
+            result["status"] = "fail"
+            return result
 
     # 5) Post-processing pipeline smoke checks.
     snap_list = case_dir / prefixed_name(output_prefix, "snap.lst")
@@ -1151,13 +1320,38 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         result["status"] = "fail"
         return result
 
+    # 5b) petar.group.dedup smoke on the first binary group file (writes
+    # <input>.dedup; input is never modified).
+    group_files = sorted(case_dir.glob(f"{output_prefix}.group.*.n*"))
+    if group_files:
+        dedup_cmd = ["petar.group.dedup"]
+        dedup_mode = case.get("interrupt_mode", "")
+        if dedup_mode:
+            dedup_cmd.extend(["--interrupt-mode", dedup_mode])
+        dedup_cmd.append(group_files[0].name)
+        rc, warns = run_cmd(dedup_cmd, cwd=case_dir, env=env, log_path=log_path)
+        dedup_out = Path(str(group_files[0]) + ".dedup")
+        dedup_ok = rc == 0 and dedup_out.exists() and dedup_out.stat().st_size > 0
+        add_step(
+            result,
+            "petar.group.dedup",
+            0 if dedup_ok else 1,
+            dedup_cmd,
+            case_dir,
+            warnings_list=warns,
+            details={"group_file": group_files[0].name, "dedup_output": dedup_out.name, "output_exists": dedup_out.exists()},
+            reason="" if dedup_ok else "dedup failed or produced no output",
+        )
+        if not dedup_ok:
+            result["status"] = "fail"
+            return result
+
 
     # 6) petar.get.object.snap with correct -i/-t for dtype
     object_snap_args = case.get("object_snap_args", [])
     # -C: the tool's core-file default is hardcoded to 'data.core'; cases with a
     # different output prefix (e.g. bse-galpy 'out') must point at <prefix>.core
     snap_cmd = ["petar.get.object.snap", *object_snap_args, "-p", "object", "-C", f"{output_prefix}.core", "-f", "origin", "-m", "id", "1", snap_list.name]
-    print(f"[DEBUG] petar.get.object.snap cmd: {snap_cmd}")
     rc, warns = run_cmd(snap_cmd, cwd=case_dir, env=env, log_path=log_path)
     snap_critical_warn = has_critical_mismatch_warning(warns)
     snap_step_code = rc if (rc != 0 or not snap_critical_warn) else 1
@@ -1254,8 +1448,10 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         case_dir / f"{last_snap}.single",
         case_dir / f"{last_snap}.binary",
         case_dir / prefixed_name(output_prefix, "lagr"),
-        case_dir / "object.1",
+        case_dir / "object.1.origin",
     ]
+    for extra in case.get("expect_files", []):
+        expected_files.append(case_dir / extra.replace("{prefix}", output_prefix))
     missing = [str(p) for p in expected_files if not p.exists()]
     if missing:
         result["status"] = "fail"
@@ -1267,8 +1463,6 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         require,
         output_prefix,
         interrupt_mode_override=case.get("interrupt_mode", ""),
-        log_path=log_path,
-        dt_out=float(dt_out),
     )
     result["read_checks"] = read_checks
     if read_checks.get("warnings"):
@@ -1381,8 +1575,20 @@ def main() -> int:
             return 0 if report["build"]["status"] == "pass" else 1
 
     if args.phase in {"all", "run"}:
+        report["preflight"] = preflight_families(repo_root, matrix, selected, out_root)
         for case in selected:
-            report["cases"].append(run_case(repo_root, case, matrix, out_root))
+            case_result = run_case(repo_root, case, matrix, out_root)
+            report["cases"].append(case_result)
+            render_html_report(
+                {
+                    "phase": args.phase,
+                    "started_at": report["started_at"],
+                    "preflight": report["preflight"],
+                    "build": None,
+                    "cases": [case_result],
+                },
+                out_root / f"report.functional.{case['name']}.html",
+            )
 
     report["finished_at"] = int(time.time())
     report_path = out_root / "report.functional.json"

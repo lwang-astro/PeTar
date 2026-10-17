@@ -31,8 +31,18 @@ if command -v nvcc >/dev/null 2>&1; then
 	HAS_NVCC=1
 fi
 
+# SEVN installation prefix (must contain include/sevn/sevn.h and lib*/sevn/libsevn_lib_static.a);
+# mirrors the configure check for --with-interrupt=sevn.
+SEVN_PREFIX="${SEVN_PREFIX:-$ROOT_DIR/bse-interface/sevn}"
+HAS_SEVN=0
+if [[ -f "$SEVN_PREFIX/include/sevn/sevn.h" ]] \
+	&& { [[ -f "$SEVN_PREFIX/lib64/sevn/libsevn_lib_static.a" ]] || [[ -f "$SEVN_PREFIX/lib/sevn/libsevn_lib_static.a" ]]; }; then
+	HAS_SEVN=1
+fi
+
 echo "[INFO] has mpfr: $HAS_MPFR"
 echo "[INFO] has nvcc: $HAS_NVCC"
+echo "[INFO] has sevn: $HAS_SEVN (prefix: $SEVN_PREFIX)"
 
 FAILED_TAGS=()
 SKIPPED_TAGS=()
@@ -227,6 +237,14 @@ if want_tag galpy; then build_install galpy --with-external=galpy; fi
 if want_tag bse-galpy; then build_install bse-galpy --with-interrupt=bse --with-external=galpy; fi
 if want_tag agama; then build_install agama --with-external=agama; fi
 if want_tag bse-agama; then build_install bse-agama --with-interrupt=bse --with-external=agama; fi
+if want_tag sevn; then
+	if [[ "$HAS_SEVN" == "1" ]]; then
+		build_install sevn --with-interrupt=sevn --with-sevn-prefix="$SEVN_PREFIX"
+	else
+		echo "[WARN] skip requested sevn variants: SEVN installation not found at $SEVN_PREFIX"
+		SKIPPED_TAGS+=("sevn-family:no-sevn")
+	fi
+fi
 if want_tag mpfrc-galpy; then
 	if [[ "$HAS_MPFR" == "1" ]]; then
 		build_install mpfrc-galpy --with-external=galpy --enable-mpfrc

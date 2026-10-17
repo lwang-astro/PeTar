@@ -333,6 +333,40 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: ① 归因"最近合并"前先两步:blame 失败行与触发判据的引入日期;对涉事头文件用 cpp -E(带目标构建完整 -D、目标宏未定义一侧)做前后对比,不要肉眼扫 diff 或手写宏剥离脚本;② BSE 家族运行对照必须重复多次比较"崩溃集合"是否一致,`--rand-seed` 固定不构成可复现性保证(结论自包含:两条断言行均 2021/2024 引入,cpp -E 全 -D 对比 merge 前后 BSE 可见代码无数值路径变化,pre-SEVN worktree 二进制同输入复现 Case-B 断言);③ 对称性检查:一侧修了某判据缺陷(如 1a12bab 只给 SEVN 分支加了 dt>0 guard)后,必须检查其他 interrupt 分支(BSE/mobse/bseEmp)是否需要等价 guard。
 
+### 2026-10-16: 【IC 必须匹配模式的并合通道】dual-merge IC 的接触双星(周期~1e-8 Myr)只在 BSE 首次 interrupt 时并合;无恒星演化的模式(std/merger/dsm/gasdrag/纯外部场)里它们永久存续,AR slowdown 在大 group 高扰动下失效 → 百万步循环。functional IC 现按并合通道分流:纯 Plummer(默认)/ +碰撞对(merger/dsm)/ dual-merge(仅 bse 系)
+
+**Mistake**: functional 全部 mode 共用 `functional_mcluster_dual_merge_smoke` IC。该 IC 注入的三条 BSE 目标双星(44+59、121+124、19+24 Msun,周期 1e-8 Myr 量级,semi≈1e-6 pc≈恒星接触尺度)在 bse 模式下按设计于首次 interrupt 并合;但 std/gasdrag 等模式无并合通道,AR 只能靠 slowdown 硬啃——早期版本侥幸通过,当前代码下(n81 群组高扰动,`pert_in`~1e19)slowdown 无法介入,t≈8.8 起进入 Step_count=1e6 的死循环;过期二进制时代则表现为 t=0 的 negative-dt abort。同一 IC 在不同模式下从"冒烟"变成"酷刑测试"。
+
+**Root cause**: IC 为 BSE interrupt 测试设计(双并合+SN kick 覆盖),被当作全局默认复用到所有 mode;接触双星没有恒星演化并合出口时是永久数值病态源,能否通过取决于 slowdown 的偶然介入而非确定性保障。分层判定:并合通道 = {BSE 系→interrupt 并合;merger/dsm→碰撞半径判定;std/外部场→无}。
+
+**Prevention rule**: ① 功能冒烟 IC 按模式的并合通道分流,接触/超紧凑注入只给有并合出口的模式;② 需要触发 interrupt 记录的无演化模式用双曲碰撞对(pericenter ≪ 碰撞半径,立即触发立即并合),不留存续病态源;③ 新 mode 入矩阵时先问"该 IC 的每个注入体在本模式下最终去向是什么"。
+
+### 2026-10-16: 【功能层停跑一周即漂移三处】hard 链变更后不跑 functional:过期二进制带着已删除的 abort 消息吓人(1823e 溯源戳揭示真相)、工具改名(object.1→object.1.origin)让产物断言+读回双重静默失效、group 读回 glob 漏 rank 段一直是死代码
+
+**Mistake**: functional 层 10-10 后未随 hard 链变更(5765150/8df337b/3848bc8)运行,10-16 重跑时暴露三个漂移:① std 系家族停留在 1823e_466e(含 09-28 已改为 ds 缩减的 negative-dt abort),全用例 t=0 崩溃,abort 消息在当前源码 grep 不到——先别当源码 bug,查 Build 横幅/溯源戳;② `petar.get.object.snap` 输出自 7fd1e88 起带快照类型后缀(`object.1.origin`),期望产物 `object.1` 失配 → 用例 fail,且旧读回路径 `object.1` 不存在时 `add_check` 静默跳过 = 双重失效;③ group 文件读回 glob `{prefix}.group.n*` 漏了实际的 rank 段(`[prefix].group.[rank].n[N]`),该检查自加入起从未执行过。
+
+**Root cause**: 测试层与代码/工具层没有同步节奏;产物名断言与"文件存在才检查"的读回设计让改名退化为静默跳过而非显式失败;glob 模式没对照真实文件名验证过。
+
+**Prevention rule**: ① hard 链/工具命名类提交后必须跑一次 functional 层(它是漂移探测器);② 关键产物断言用精确名(现在含后缀),读回检查对"应存在"的文件用显式存在性断言而非 glob-then-skip;③ glob 模式引入时用一次真实产物 `ls` 验证;④ 遇到源码中 grep 不到的报错消息,先比对二进制溯源戳(Build 横幅)再定位代码。
+
+### 2026-10-16: 【IC 缺陷伪装成源码回归】r2>0 断言实为碰撞 IC 把对锚在幸存星位置——对质心与锚星精确共位;归因代码前先验证 IC 本身(生成器加零距守卫);"固定种子对照"先确认该家族支持该选项(merger/dsm 无 --rand-seed,启动即 abort 极易误读)
+
+**Mistake**: 为 merger/dsm 触发 interrupt 写的 collision IC 把双曲对放在 rows[0]/rows[1] 但锚定在 rows[3] 的位置——锚星未被替换,与对质心共位,首步即触发 SDAR `calcOneGroupMemberAccJerkNB` 的 `(r2>0.0)` 断言。错误归因链:断言在 SDAR/Hermite 源码 → 判为"当前代码回归" → 圈定 f14606f→5765150 回归窗口 → 写转交 plan。后续"固定种子对照实验"14/14 全部 abort,又引出"非确定性触发"的错误方向——实际是 `Error: option rand-seed is not defined!`(merger/dsm 家族未编译随机管理器,启动即退出),日志尾部一行就能看清;无 --rand-seed 的时间种子运行 3/3 通过,与修复后状态一致。
+
+**Root cause**: 断言行为本身正确(共位粒子本就非法);错在 IC 生成器。两个放大器:① 归因时只查代码谱系没查输入——注入体与背景星的空间关系从未验证;② 对照实验按预设 grep 信号('Assertion')分类失败,没读日志尾部原文,把"选项未定义 abort"当成了同一种失败。
+
+**Fix**(另一 session):对替换锚星行自身(rows[2]/rows[3],等质量对的 c.m. 恰落在锚星上),并在生成器加全表零距 RuntimeError 守卫;修复后 merger/dsm 用例全绿。
+
+**Prevention rule**: ① 断言/崩溃归因代码前先验证输入 IC:生成器内建零距守卫(任意两粒子距离==0 即 raise),把非法 IC 在生成层挡死;② 每次对照实验先读 abort 日志尾部原文再归类失败,不按预设信号分类;③ 家族专属选项(--rand-seed 等仅恒星演化家族编译)做跨家族实验前先确认该二进制支持;④ "回归窗口"论断需要交叉证据(旧代码+新 IC 失败,或新代码+旧 IC 通过)才能成立,单侧复现不够。
+
+### 2026-10-16: 【r2==0 断言先查 IC 重合再疑中断簿记】merger/dsm t≈0 abort 被交接 note 归因为 interrupt 回归,重放显示碰撞中断从未触发——锚星留在双曲对质心是 IC 生成器缺陷;未提交的新用例不构成回归窗口
+
+**Mistake**: merger/dsm 功能用例死于 t≈0 的 `hermite_integrator.h:1170 (r2>0.0)`,交接 note 据此立了 interrupt 簿记假设与回归窗口(f14606f→5765150)。hard.debug 重放定案:失败簇仅 3 粒子(碰撞对+锚星),t=0 对刚成组、锚星保持 single,组 c.m. 预测子与锚星**逐位重合**→ 邻居扫描 r2==0 中止;碰撞中断从未执行。真因是 make_ic.py 新增(未提交)的 `functional_mcluster_collision_smoke`:双曲对锚定在 `rows[3]` 位置但没删该星,等质量对称偏移使对 c.m. 恰为锚星位置(dist2==0.0 实测)。
+
+**Root cause**: ① IC 注入体锚定在存活恒星上(仅覆盖 rows[0]/[1],锚星留在场内),等质量+对称偏移 → c.m. 与锚星逐位相同;② 交接 note 的症状归因("发生在碰撞中断触发时刻")是从 abort 时刻反推的假设,未经 dump 重放验证;③ 全新未提交用例的失败被当成既有路径回归,回归窗口与 bse 对照的推理全部建立在错误前提上(bse 过是因为用不同 IC,不是中断路径更健壮)。
+
+**Prevention rule**: ① `r2>0` 断言类 t≈0 abort,先 hard.debug 重放 + 检查 IC 是否存在 dist2==0 的重合粒子,再疑积分器/中断簿记;② 症状描述中的"发生在 X 时刻"是假设不是证据,立案前先重放确认真实触发点;③ 用例失败先 `git status` 测试资产——未提交的新用例没有绿色基线,不构成回归,禁止据此开 bisect 窗口;④ IC 注入体(碰撞对/多体)生成后断言 min pairwise dist2>0,重合在 IC 期暴露。
+
 ---
 
 ## Post-Processing

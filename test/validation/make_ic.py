@@ -697,6 +697,99 @@ def build_functional_mcluster_dual_merge_smoke(output: Path) -> None:
     write_rows(output, rows_out)
 
 
+def _generate_mcluster_plain_rows(n_star: int, seed: int) -> List[Tuple[float, List[float], List[float]]]:
+    """mcluster Plummer Rh=1 pc Kroupa no-binary rows in Msun / pc / km/s."""
+    with tempfile.TemporaryDirectory(prefix="petar_make_ic_") as tmpdir:
+        tmp_prefix_name = "plainclu"
+        cmd = [
+            "mcluster",
+            "-N", str(n_star),
+            "-P", "0",
+            "-R", "1",
+            "-f", "1",
+            "-b", "0",
+            "-u", "1",
+            "-C", "3",
+            "-s", str(seed),
+            "-o", tmp_prefix_name,
+        ]
+        subprocess.run(
+            cmd,
+            cwd=tmpdir,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+        table_path = Path(tmpdir) / f"{tmp_prefix_name}.txt"
+        rows: List[Tuple[float, List[float], List[float]]] = []
+        with table_path.open("r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split()
+                if len(parts) < 7:
+                    continue
+                rows.append((float(parts[0]), [float(parts[1]), float(parts[2]), float(parts[3])], [float(parts[4]), float(parts[5]), float(parts[6])]))
+    if len(rows) != n_star:
+        raise RuntimeError(f"mcluster returned {len(rows)} stars, expected {n_star}")
+    return rows
+
+
+def build_functional_mcluster_smoke(output: Path) -> None:
+    """Plain Plummer cluster for modes without a stellar-evolution merge channel.
+
+    functional_mcluster_dual_merge_smoke injects ultra-compact massive binaries
+    (periods ~1e-8 Myr, contact separations) that BSE merges at the first
+    interrupt; without stellar evolution (std/merger/dsm/gasdrag and the
+    external-only families) they persist as contact binaries and stall the AR
+    integrator in million-step loops. This plain IC keeps those modes physical.
+
+    Output convention (same as functional_mcluster_dual_merge_smoke):
+    position pc, velocity km/s -> petar.init -v KM_S_TO_PC_MYR under -u 1.
+    """
+    write_rows(output, _generate_mcluster_plain_rows(100, MCLUSTER_SEED))
+
+
+def build_functional_mcluster_collision_smoke(output: Path) -> None:
+    """Plain cluster plus one inbound hyperbolic collision pair for collision-interrupt modes.
+
+    The pair (10+10 Msun, a=-1e-8 pc, e=1.001; pericenter far below the merger/
+    DSM collision radii) triggers an immediate interrupt and merges, exercising
+    the interrupt record pipeline without leaving persistent contact binaries.
+    """
+    rows = _generate_mcluster_plain_rows(100, MCLUSTER_SEED)
+    rows.sort(key=lambda item: math.sqrt(sum(coord * coord for coord in item[1])), reverse=True)
+
+    h_m1 = 10.0
+    h_m2 = 10.0
+    h_semi = -1.0e-8
+    h_ecc = 1.001
+    h_r1, h_v1, h_r2, h_v2 = two_body_hyperbolic_inbound_state(h_m1, h_m2, h_semi, h_ecc, -3.0955, G_MSUN_PC_MYR)
+    if MCLUSTER_OUTPUT_VELOCITY_UNIT == "km/s":
+        h_v1 = [v * PC_MYR_TO_KM_S for v in h_v1]
+        h_v2 = [v * PC_MYR_TO_KM_S for v in h_v2]
+
+    # Anchor the pair to the fourth-outermost star so it starts in the weak outskirts.
+    # The anchor row must itself be replaced: with equal pair masses the pair c.m.
+    # sits exactly on the anchor star, and a co-located single trips SDAR's r2>0
+    # neighbor assert at t=0.
+    pcom, vcom = list(rows[3][1]), list(rows[3][2])
+    rows[2] = (h_m1, [pcom[k] + h_r1[k] for k in range(3)], [vcom[k] + h_v1[k] for k in range(3)])
+    rows[3] = (h_m2, [pcom[k] + h_r2[k] for k in range(3)], [vcom[k] + h_v2[k] for k in range(3)])
+
+    for i in range(len(rows)):
+        for j in range(i + 1, len(rows)):
+            if sum((a - b) ** 2 for a, b in zip(rows[i][1], rows[j][1])) == 0.0:
+                raise RuntimeError(
+                    f"functional_mcluster_collision_smoke: rows {i} and {j} have identical positions"
+                )
+
+    write_rows(output, rows)
+
+
 def build_t6(output: Path) -> None:
     """Plummer cluster with an engineered central massive triple for the T6
     perturber-kernel-match check.
@@ -830,6 +923,73 @@ def build_functional_binary_cluster(output: Path) -> None:
     write_rows(output, rows)
 
 
+def build_functional_sevn_cluster(output: Path) -> None:
+    """Single-star Plummer cluster for the functional SEVN case.
+
+    Constraints from the SEVN stellar-evolution interface (see
+    sample/star_cluster_plummer_N1k_binaries_sevn.sh):
+     - stellar masses must stay inside the SEVNtracks_MIST_AGBrobust_gold grid
+       (0.7-80 Msun); masses outside abort stellar initialisation;
+     - no primordial binaries: binary-rich SEVN ICs can trigger a
+       dump_large_step_h4 abort at t=0.
+
+    mcluster N=60, Plummer Rh=1 pc, Kroupa IMF 0.7-80 Msun, no binaries,
+    fixed seed 7.
+
+    Output convention (same as functional_mcluster_dual_merge_smoke):
+    position pc, velocity km/s -> petar.init -v KM_S_TO_PC_MYR under -u 1.
+    """
+    n_star = 60
+
+    with tempfile.TemporaryDirectory(prefix="petar_make_ic_") as tmpdir:
+        tmp_prefix_name = "sevnclu"
+        cmd = [
+            "mcluster",
+            "-N", str(n_star),
+            "-P", "0",
+            "-R", "1",
+            "-f", "1",
+            "-b", "0",
+            "-m", "0.7",
+            "-m", "80",
+            "-u", "1",
+            "-C", "3",
+            "-s", "7",
+            "-o", tmp_prefix_name,
+        ]
+        subprocess.run(
+            cmd,
+            cwd=tmpdir,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+        table_path = Path(tmpdir) / f"{tmp_prefix_name}.txt"
+        rows: List[Tuple[float, List[float], List[float]]] = []
+        with table_path.open("r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split()
+                if len(parts) < 7:
+                    continue
+                mass = float(parts[0])
+                pos = [float(parts[1]), float(parts[2]), float(parts[3])]
+                vel = [float(parts[4]), float(parts[5]), float(parts[6])]
+                rows.append((mass, pos, vel))
+
+    if len(rows) != n_star:
+        raise RuntimeError(f"mcluster returned {len(rows)} stars, expected {n_star}")
+    bad = [m for m, _, _ in rows if m < 0.7 or m > 80.0]
+    if bad:
+        raise RuntimeError(f"{len(bad)} star masses outside the SEVN gold-table grid 0.7-80 Msun (e.g. {bad[0]:.3f})")
+
+    write_rows(output, rows)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate deterministic initial conditions for PeTar validation scenarios")
     parser.add_argument(
@@ -845,7 +1005,10 @@ def main() -> int:
             "functional_smoke",
             "functional_dual_merge_smoke",
             "functional_mcluster_dual_merge_smoke",
+            "functional_mcluster_smoke",
+            "functional_mcluster_collision_smoke",
             "functional_binary_cluster",
+            "functional_sevn_cluster",
         ],
         required=True,
     )
@@ -873,8 +1036,14 @@ def main() -> int:
         build_functional_dual_merge_smoke(out)
     elif args.case == "functional_mcluster_dual_merge_smoke":
         build_functional_mcluster_dual_merge_smoke(out)
+    elif args.case == "functional_mcluster_smoke":
+        build_functional_mcluster_smoke(out)
+    elif args.case == "functional_mcluster_collision_smoke":
+        build_functional_mcluster_collision_smoke(out)
     elif args.case == "functional_binary_cluster":
         build_functional_binary_cluster(out)
+    elif args.case == "functional_sevn_cluster":
+        build_functional_sevn_cluster(out)
     return 0
 
 
