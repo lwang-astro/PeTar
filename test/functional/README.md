@@ -145,7 +145,7 @@ To make warning exposure deterministic, functional movie checks are run with `--
 ## Outputs
 
 - Global report (index, links to per-case pages): [test/out/report.functional.json](test/out/report.functional.json) / `test/out/report.functional.html`
-- Per-case HTML: `test/out/report.functional.<case>.html` (one per case, written as each case finishes)
+- Per-case HTML: `test/out/report.functional.<case>.html` (one per case, written as each case finishes; reports for cases no longer in the matrix are pruned at run start, so renamed/removed cases leave no stale pages)
 - Preflight log (binary-family select/reinstall): `test/out/preflight.log`
 - Build log: [test/out/build.log](test/out/build.log)
 - Per-case log: [test/out/functional\_\<case\>/run.log](test/out/)

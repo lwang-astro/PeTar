@@ -624,6 +624,17 @@ def select_build_tags(cases: List[Dict[str, Any]]) -> List[str]:
     return sorted(list(dict.fromkeys(tags)))
 
 
+def prune_stale_case_reports(out_root: Path, case_names: List[str]) -> List[str]:
+    """Remove per-case report HTMLs for cases no longer in the matrix."""
+    keep = {"report.functional.html"} | {f"report.functional.{n}.html" for n in case_names}
+    removed = []
+    for path in out_root.glob("report.functional.*.html"):
+        if path.name not in keep:
+            path.unlink()
+            removed.append(path.name)
+    return removed
+
+
 def preflight_families(repo_root: Path, matrix: Dict[str, Any], selected: List[Dict[str, Any]], out_root: Path) -> Dict[str, Dict[str, Any]]:
     """Resolve every binary family before any case runs.
 
@@ -1575,6 +1586,11 @@ def main() -> int:
             return 0 if report["build"]["status"] == "pass" else 1
 
     if args.phase in {"all", "run"}:
+        # Prune by the full matrix case list, not the selection: running a case
+        # subset must not delete the other cases' reports.
+        stale = prune_stale_case_reports(out_root, [c["name"] for c in matrix.get("cases", [])])
+        if stale:
+            print(f"[cleanup] removed {len(stale)} stale per-case report(s): {', '.join(stale)}")
         report["preflight"] = preflight_families(repo_root, matrix, selected, out_root)
         for case in selected:
             case_result = run_case(repo_root, case, matrix, out_root)
