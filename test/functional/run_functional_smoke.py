@@ -1002,6 +1002,23 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
                 ),
                 f"petar.Binary(member_particle_type=petar.Particle, interrupt_mode={interrupt_mode}, external_mode={external_mode}, G=petar.G_MSUN_PC_MYR).fromfile(path)",
             )
+            # Early-interval binary readback: the last snapshot can be binary-free
+            # by design (injected compact binaries merge via BSE; std/merger ICs
+            # carry none), which would make the binary reader check trivial.
+            if len(snap_names) >= 2:
+                early_name = snap_names[1]
+                add_check(
+                    f"snapshot.binary.early:{early_name}.binary",
+                    case_dir / f"{early_name}.binary",
+                    obj_loader(
+                        petar.Binary,
+                        member_particle_type=petar.Particle,
+                        interrupt_mode=interrupt_mode,
+                        external_mode=external_mode,
+                        G=petar.G_MSUN_PC_MYR,
+                    ),
+                    f"petar.Binary(member_particle_type=petar.Particle, interrupt_mode={interrupt_mode}, external_mode={external_mode}, G=petar.G_MSUN_PC_MYR).fromfile(path)",
+                )
 
     # Validate object snapshots produced by petar.get.object.snap
     # (naming: [prefix].[object_typename].[origin|single|binary]).
