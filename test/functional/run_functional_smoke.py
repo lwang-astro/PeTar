@@ -388,6 +388,27 @@ def active_petar_realpath() -> str:
     return str(Path(path).resolve())
 
 
+def estimate_group_records(repo_root: Path, group_path: Path) -> Optional[int]:
+    """Estimate the record count of a binary group file via the petar package (None when unavailable)."""
+    match = re.search(r"\.n(\d+)$", group_path.name)
+    if not match:
+        return None
+    n_member = int(match.group(1))
+    try:
+        tools_path = repo_root / "tools"
+        if str(tools_path) not in sys.path:
+            sys.path.insert(0, str(tools_path))
+        import numpy as _np  # noqa: WPS433
+        import analysis as _petar  # noqa: WPS433
+
+        dt = _np.dtype(_petar.GroupInfo(N=n_member).collectDtype())
+    except Exception:
+        return None
+    if dt.itemsize <= 0:
+        return None
+    return group_path.stat().st_size // dt.itemsize
+
+
 def resolve_output_prefixes(case: Dict[str, Any], matrix: Dict[str, Any]) -> List[str]:
     raw = case.get("filename_prefix", matrix.get("global", {}).get("filename_prefix", "data"))
     if isinstance(raw, str):
@@ -996,9 +1017,10 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         )
 
     # Validate group outputs (binary GroupInfo) written by the petar run itself
-    # when --write-group-info 2 is used: [prefix].group.[MPI rank].n[N_member].
-    for group_path in sorted(case_dir.glob(f"{output_prefix}.group.*.n*")):
-        match = re.search(r"\.group\.\d+\.n(\d+)$", group_path.name)
+    # when --write-group-info 2 is used: [prefix].group[.MPI rank].n[N_member]
+    # (the rank segment is omitted for single-rank runs).
+    for group_path in sorted(case_dir.glob(f"{output_prefix}.group*.n*")):
+        match = re.search(r"\.group(?:\.\d+)?\.n(\d+)$", group_path.name)
         if not match:
             continue
         n_member = int(match.group(1))
@@ -1030,6 +1052,98 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         "warnings": all_warnings,
         "mismatch_warnings": mismatch_warnings,
     }
+
+
+def run_tool_smokes(result: Dict[str, Any], case: Dict[str, Any], case_dir: Path, output_prefix: str, log_path: Path, env: Dict[str, str], t_end: str, run_args: List[str]) -> None:
+    """Extra per-case tool coverage (matrix key 'tool_smokes').
+
+    Each listed tool runs against this case's outputs so every tool a case's
+    workflow involves gets exercised. Tools that mutate inputs (update.par,
+    data.clear, data.gether, format.transfer, find.dt, standalone bse) run in
+    a scratch copy; readers run in place. A failed smoke fails the case.
+    """
+    names = case.get("tool_smokes", [])
+    if not names:
+        return
+
+    scratch = case_dir / "tool_smoke_scratch"
+    if scratch.exists():
+        shutil.rmtree(scratch)
+    scratch.mkdir(parents=True)
+
+    def copy_to_scratch(pattern: str) -> int:
+        n = 0
+        for src in case_dir.glob(pattern):
+            if src.is_file():
+                shutil.copy2(src, scratch / src.name)
+                n += 1
+        return n
+
+    for tool in names:
+        if tool == "read.par":
+            for par in [f"{output_prefix}.par", f"{output_prefix}.par.hard"]:
+                if (case_dir / par).exists():
+                    cmd = ["petar.read.par", par]
+                    rc, warns = run_cmd(cmd, cwd=case_dir, env=env, log_path=log_path)
+                    add_step(result, f"petar.read.par:{par}", rc, cmd, case_dir, warnings_list=warns)
+        elif tool == "update.par":
+            copy_to_scratch(f"{output_prefix}.par")
+            cmd = ["petar.update.par", "-p", f"{output_prefix}.par"]
+            rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path)
+            add_step(result, "petar.update.par", rc, cmd, scratch, warnings_list=warns)
+        elif tool == "data.clear":
+            copied = copy_to_scratch(f"{output_prefix}.group*.n*") + copy_to_scratch(f"{output_prefix}.status")
+            clear_t = str(float(t_end) / 2.0)
+            cmd = ["petar.data.clear", "-t", clear_t, output_prefix]
+            rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path)
+            add_step(result, "petar.data.clear", rc, cmd, scratch, warnings_list=warns, details={"files_copied": copied, "t": clear_t})
+        elif tool == "data.gether":
+            copy_to_scratch(f"{output_prefix}.status")
+            copy_to_scratch(f"{output_prefix}.snap.lst")
+            copy_to_scratch(f"{output_prefix}.group*.n*")
+            cmd = ["petar.data.gether", output_prefix]
+            rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path)
+            add_step(result, "petar.data.gether", rc, cmd, scratch, warnings_list=warns)
+        elif tool == "format.transfer":
+            ft_binary = Path(active_petar_realpath())
+            ft_tool = ft_binary.parent / (ft_binary.name + ".format.transfer")
+            if not ft_tool.exists():
+                add_step(result, "petar.format.transfer", 1, ["petar.format.transfer"], case_dir, reason=f"family tool not found: {ft_tool.name}")
+            else:
+                copy_to_scratch(f"{output_prefix}.snap.lst")
+                for line in (case_dir / f"{output_prefix}.snap.lst").read_text(encoding="utf-8").splitlines():
+                    if line.strip():
+                        copy_to_scratch(line.strip())
+                cmd = [str(ft_tool), "-b", f"{output_prefix}.snap.lst"]
+                rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path)
+                add_step(result, "petar.format.transfer", rc, cmd, scratch, warnings_list=warns)
+        elif tool == "find.dt":
+            copy_to_scratch("input")
+            core_args = []
+            skip_next = False
+            for tok in run_args:
+                if skip_next:
+                    skip_next = False
+                    continue
+                if tok == "--write-group-info":
+                    skip_next = True
+                    continue
+                core_args.append(tok)
+            a_args = "-u 1" + ("".join(f" {t}" for t in core_args))
+            cmd = ["petar.find.dt", "-a", a_args, "-i", "1", "input"]
+            rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path)
+            add_step(result, "petar.find.dt", rc, cmd, scratch, warnings_list=warns, details={"a_args": a_args})
+        elif tool == "bse":
+            cmd = ["petar.bse", "-n", "5", "--mmin", "0.8", "--mmax", "20", "-t", "100"]
+            rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path)
+            add_step(result, "petar.bse", rc, cmd, scratch, warnings_list=warns)
+        else:
+            add_step(result, f"tool_smoke:{tool}", 1, ["internal.tool_smoke", tool], case_dir, reason="unknown tool smoke name")
+
+    failed = [s for s in result["steps"] if s["name"].startswith(("petar.read.par", "petar.update.par", "petar.data.clear", "petar.data.gether", "petar.format.transfer", "petar.find.dt", "petar.bse")) and s["status"] != "pass"]
+    if failed:
+        result["status"] = "fail"
+        result["skip_reason"] = "tool smoke failed: " + ", ".join(s["name"] for s in failed)
 
 
 def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_root: Path) -> Dict[str, Any]:
@@ -1332,30 +1446,40 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         return result
 
     # 5b) petar.group.dedup smoke on the first binary group file (writes
-    # <input>.dedup; input is never modified).
-    group_files = sorted(case_dir.glob(f"{output_prefix}.group.*.n*"))
+    # <input>.dedup; input is never modified). The tool's layout validation
+    # needs >=50 records, so tiny files are recorded as skipped, not failed.
+    group_files = sorted(case_dir.glob(f"{output_prefix}.group*.n*"))
     if group_files:
-        dedup_cmd = ["petar.group.dedup"]
-        dedup_mode = case.get("interrupt_mode", "")
-        if dedup_mode:
-            dedup_cmd.extend(["--interrupt-mode", dedup_mode])
-        dedup_cmd.append(group_files[0].name)
-        rc, warns = run_cmd(dedup_cmd, cwd=case_dir, env=env, log_path=log_path)
-        dedup_out = Path(str(group_files[0]) + ".dedup")
-        dedup_ok = rc == 0 and dedup_out.exists() and dedup_out.stat().st_size > 0
-        add_step(
-            result,
-            "petar.group.dedup",
-            0 if dedup_ok else 1,
-            dedup_cmd,
-            case_dir,
-            warnings_list=warns,
-            details={"group_file": group_files[0].name, "dedup_output": dedup_out.name, "output_exists": dedup_out.exists()},
-            reason="" if dedup_ok else "dedup failed or produced no output",
-        )
-        if not dedup_ok:
-            result["status"] = "fail"
-            return result
+        target = group_files[0]
+        records_est = estimate_group_records(repo_root, target)
+        dedup_cmd = ["petar.group.dedup", target.name]
+        if records_est is not None and records_est < 50:
+            add_step(
+                result,
+                "petar.group.dedup",
+                0,
+                dedup_cmd,
+                case_dir,
+                details={"skipped": True, "group_file": target.name, "records_estimate": records_est, "reason": "fewer than 50 records; dedup layout validation requires >=50"},
+                reason="group file too small for dedup layout validation",
+            )
+        else:
+            rc, warns = run_cmd(dedup_cmd, cwd=case_dir, env=env, log_path=log_path)
+            dedup_out = Path(str(target) + ".dedup")
+            dedup_ok = rc == 0 and dedup_out.exists() and dedup_out.stat().st_size > 0
+            add_step(
+                result,
+                "petar.group.dedup",
+                0 if dedup_ok else 1,
+                dedup_cmd,
+                case_dir,
+                warnings_list=warns,
+                details={"group_file": target.name, "dedup_output": dedup_out.name, "output_exists": dedup_out.exists(), "records_estimate": records_est},
+                reason="" if dedup_ok else "dedup failed or produced no output",
+            )
+            if not dedup_ok:
+                result["status"] = "fail"
+                return result
 
 
     # 6) petar.get.object.snap with correct -i/-t for dtype
@@ -1452,6 +1576,12 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
     if rc != 0:
         result["status"] = "fail"
         result["skip_reason"] = "petar.movie command failed"
+        return result
+
+    # 9) Extra per-case tool coverage (read.par / update.par / data.clear /
+    # data.gether / format.transfer / find.dt / standalone bse).
+    run_tool_smokes(result, case, case_dir, output_prefix, log_path, env, t_end, run_args)
+    if result["status"] == "fail":
         return result
 
     expected_files = [

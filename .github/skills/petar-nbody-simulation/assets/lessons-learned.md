@@ -347,7 +347,7 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Root cause**: 测试层与代码/工具层没有同步节奏;产物名断言与"文件存在才检查"的读回设计让改名退化为静默跳过而非显式失败;glob 模式没对照真实文件名验证过。
 
-**Prevention rule**: ① hard 链/工具命名类提交后必须跑一次 functional 层(它是漂移探测器);② 关键产物断言用精确名(现在含后缀),读回检查对"应存在"的文件用显式存在性断言而非 glob-then-skip;③ glob 模式引入时用一次真实产物 `ls` 验证;④ 遇到源码中 grep 不到的报错消息,先比对二进制溯源戳(Build 横幅)再定位代码。
+**Prevention rule**: ① hard 链/工具命名类提交后必须跑一次 functional 层(它是漂移探测器);② 关键产物断言用精确名(现在含后缀),读回检查对"应存在"的文件用显式存在性断言而非 glob-then-skip;③ glob 模式引入时用一次真实产物 `ls` 验证;④ 遇到源码中 grep 不到的报错消息,先比对二进制溯源戳(Build 横幅)再定位代码;⑤ 同日二次教训:group 文件 glob 按帮助文本写了 rank 段(`.group.*.n*`),实际单 rank 运行省略该段(`data.group.n2`),兼容形式为 `[prefix].group[.rank].n[N]`——帮助文本与代码注释都可能是过时快照,glob/正则以 `ls` 实测为准;⑥ 工具行为事实:`petar.group.dedup` 的布局校验需 ≥50 条记录(冒烟按记录数门控跳过小文件),`petar.<family>.format.transfer` 默认按 ASCII→BINARY 读,二进制快照必须传 `-b`。
 
 ### 2026-10-16: 【IC 缺陷伪装成源码回归】r2>0 断言实为碰撞 IC 把对锚在幸存星位置——对质心与锚星精确共位;归因代码前先验证 IC 本身(生成器加零距守卫);"固定种子对照"先确认该家族支持该选项(merger/dsm 无 --rand-seed,启动即 abort 极易误读)
 

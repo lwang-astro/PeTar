@@ -51,7 +51,21 @@ ICs are matched to the mode's merge channel (contact binaries without a merge ch
 - `functional_mcluster_dual_merge_smoke`: injects ultra-compact BSE target binaries, a hyperbolic merger pair, and a 27 Msun single; used by `bse`, `bse-galpy`, `bse-agama` (BSE merges the contact binaries at the first interrupt).
 - `functional_sevn_cluster`: single stars inside the SEVN gold-table mass grid; used by `sevn`.
 
-Binary analysis coverage is distributed per mode instead of a dedicated case: the default ICs contain binaries (injected or dynamically formed), and every case runs with `--write-group-info 2`, so binary/group artifacts (`<snap>.binary`, `<prefix>.group.<rank>.n<N>`) and their readers are exercised under each interrupt/external combination. Binary physics contracts belong to `test/validation`, not here.
+Binary analysis coverage is distributed per mode instead of a dedicated case: the default ICs contain binaries (injected or dynamically formed), and every case runs with `--write-group-info 2`, so binary/group artifacts (`<snap>.binary`, `<prefix>.group[.rank].n<N>`; the rank segment is omitted for single-rank runs) and their readers are exercised under each interrupt/external combination. Binary physics contracts belong to `test/validation`, not here.
+
+## Tool Coverage
+
+Core chain, every case: `petar.init` → `petar.select` → `petar` → `petar.data.process` → `petar.group.dedup` (when group files exist) → `petar.get.object.snap` → `petar.format.transfer.post` → `petar.movie`, plus mode-correct Python readback (including `GroupInfo`).
+
+Per-case extra tools (matrix key `tool_smokes`; mutating tools run on scratch copies):
+
+| Case | Extra tools |
+|------|-------------|
+| `std` | `petar.find.dt` (pre-run tuning), `petar.data.gether` (legacy gather), `petar.<family>.format.transfer` (binary↔ASCII snapshot conversion) |
+| `std-restart` | `petar.read.par`, `petar.update.par` (legacy par migration), `petar.data.clear` (legacy event trimming) |
+| `bse` | `petar.bse` (standalone stellar-evolution smoke) |
+
+Not covered here by design: dump-replay tools (`petar.hard.debug`, `petar.dump2test` — healthy runs produce no dumps), dev test binaries (`petar.hard.test`, `petar.pn.test`, `petar.external.test`), external-potential map generation (`petar.external.*`), `petar.galev.process`, `petar.<mode>.get.init.binary`, and the `mobse`/`bseEmp` standalone variants (need track files).
 
 For the current default IC case (`functional_mcluster_smoke` and its variants, all produced by `mcluster -u 1`):
 
@@ -102,6 +116,7 @@ Set `AGAMA_CONF_FILE` explicitly only when you want to override that default.
    - `petar.group.dedup` (when group files exist; output `<file>.dedup`, input untouched)
    - `petar.get.object.snap`
    - `petar.format.transfer.post`
+   - per-case extra tools (`tool_smokes`, see Tool Coverage)
 5. Expected output artifacts exist (snapshot file, `data.lagr`, object extraction file, plus per-case `expect_files` such as gasdrag model-parameter files).
 6. Python readback with mode-correct dtypes: `Particle`/`Binary`/`GroupInfo`/lagrangian/escaper and the stellar-event record classes (`SSETypeChange`, `BSEKick`, ... switch to SEVN columns via `interrupt_mode`).
 

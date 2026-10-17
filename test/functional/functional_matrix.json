@@ -35,7 +35,12 @@
         "-G",
         "0.00449830997959438"
       ],
-      "object_snap_args": []
+      "object_snap_args": [],
+      "tool_smokes": [
+        "find.dt",
+        "data.gether",
+        "format.transfer"
+      ]
     },
     {
       "name": "merger",
@@ -129,7 +134,10 @@
         "-i",
         "bse"
       ],
-      "ic_case": "functional_mcluster_dual_merge_smoke"
+      "ic_case": "functional_mcluster_dual_merge_smoke",
+      "tool_smokes": [
+        "bse"
+      ]
     },
     {
       "name": "gasdrag",
@@ -176,7 +184,12 @@
         "-G",
         "0.00449830997959438"
       ],
-      "object_snap_args": []
+      "object_snap_args": [],
+      "tool_smokes": [
+        "read.par",
+        "update.par",
+        "data.clear"
+      ]
     },
     {
       "name": "sevn",
