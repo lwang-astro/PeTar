@@ -359,6 +359,14 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: ① 断言/崩溃归因代码前先验证输入 IC:生成器内建零距守卫(任意两粒子距离==0 即 raise),把非法 IC 在生成层挡死;② 每次对照实验先读 abort 日志尾部原文再归类失败,不按预设信号分类;③ 家族专属选项(--rand-seed 等仅恒星演化家族编译)做跨家族实验前先确认该二进制支持;④ "回归窗口"论断需要交叉证据(旧代码+新 IC 失败,或新代码+旧 IC 通过)才能成立,单侧复现不够。
 
+### 2026-10-17: 【merger/dsm interrupt 对未标记碰撞对死循环(双重误判纠正)】双曲碰撞对若非预标记成员对(-b)而经动态成组触发 merger/dsm interrupt,进程在 t=0 写 dump_interrupt 后静默无限循环(无断言无输出,CPU 满载、日志行数停滞)。此前"dsm 同 IC 正常"与"merger 时代通过"均为误读:前者读的是被杀运行前一轮的陈旧日志(该轮死在 merger,dsm 未跑),后者靠 `-b 4` 恰好把碰撞对标记为成员对 #2 的副作用。冒烟 IC 须把碰撞对写成文件前两行 + `-b 1`
+
+**Mistake**: 给 no-SE 系 IC 加初生双星后 merger 卡死;回退无双星 + `-b 0` 仍卡死;中途一度结论"dsm(DISK_STAR_MERGER)不受影响"——基于陈旧日志;随后全量运行 dsm 同样卡死 20+ 分钟,双重纠正。触发条件始终是"标记状态"而非"双星存在性"或"interrupt 变体"。
+
+**Root cause**: interrupt 写 dump 后 modify_return=2 触发重试,未标记对经动态成组进入 interrupt 路径后重试永不收敛(零输出循环,只能靠 CPU 时间+日志行数停滞发现);标记成员对路径完整可用。
+
+**Prevention rule**: ① collision-pair 冒烟 IC 把对写成文件前两行(成员对约定)并配 `-b 1`,merger 与 dsm 一致;② 结论"某用例通过"前核对该日志的时间戳/本轮是否真的跑到该用例子集运行被杀时,后续用例的旧日志原样留存,极易当成本轮结果;③ 长跑冒烟必须有外层 timeout 与 per-step wall-clock 上限,零输出死循环靠人肉 20 分钟才发现太迟;④ "以前通过"的配置要弄清通过的机制(-b 标记副作用),否则改参数时会把靠副作用支撑的通过误当默认正确。
+
 ### 2026-10-16: 【r2==0 断言先查 IC 重合再疑中断簿记】merger/dsm t≈0 abort 被交接 note 归因为 interrupt 回归,重放显示碰撞中断从未触发——锚星留在双曲对质心是 IC 生成器缺陷;未提交的新用例不构成回归窗口
 
 **Mistake**: merger/dsm 功能用例死于 t≈0 的 `hermite_integrator.h:1170 (r2>0.0)`,交接 note 据此立了 interrupt 簿记假设与回归窗口(f14606f→5765150)。hard.debug 重放定案:失败簇仅 3 粒子(碰撞对+锚星),t=0 对刚成组、锚星保持 single,组 c.m. 预测子与锚星**逐位重合**→ 邻居扫描 r2==0 中止;碰撞中断从未执行。真因是 make_ic.py 新增(未提交)的 `functional_mcluster_collision_smoke`:双曲对锚定在 `rows[3]` 位置但没删该星,等质量对称偏移使对 c.m. 恰为锚星位置(dist2==0.0 实测)。

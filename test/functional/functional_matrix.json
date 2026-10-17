@@ -27,7 +27,7 @@
       ],
       "run_args": [
         "-b",
-        "4",
+        "10",
         "--write-group-info",
         "2"
       ],
@@ -56,7 +56,7 @@
       ],
       "run_args": [
         "-b",
-        "4",
+        "1",
         "--detect-interrupt",
         "1",
         "--write-group-info",
@@ -72,7 +72,7 @@
         "-i",
         "merger"
       ],
-      "ic_case": "functional_mcluster_collision_smoke"
+      "ic_case": "functional_mcluster_pair_smoke"
     },
     {
       "name": "dsm",
@@ -90,7 +90,7 @@
       ],
       "run_args": [
         "-b",
-        "4",
+        "1",
         "--detect-interrupt",
         "1",
         "--dsm-new-star-mode",
@@ -108,7 +108,7 @@
         "-i",
         "dsm"
       ],
-      "ic_case": "functional_mcluster_collision_smoke"
+      "ic_case": "functional_mcluster_pair_smoke"
     },
     {
       "name": "bse",
@@ -149,7 +149,7 @@
       ],
       "run_args": [
         "-b",
-        "4",
+        "10",
         "--gdf-hard-mode",
         "1",
         "--write-group-info",
@@ -176,7 +176,7 @@
       ],
       "run_args": [
         "-b",
-        "4",
+        "10",
         "--write-group-info",
         "2"
       ],
@@ -241,7 +241,7 @@
       ],
       "run_args": [
         "-b",
-        "4",
+        "10",
         "--galpy-set",
         "MWPotential2014",
         "--write-group-info",

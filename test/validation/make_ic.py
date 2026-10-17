@@ -697,8 +697,24 @@ def build_functional_mcluster_dual_merge_smoke(output: Path) -> None:
     write_rows(output, rows_out)
 
 
-def _generate_mcluster_plain_rows(n_star: int, seed: int) -> List[Tuple[float, List[float], List[float]]]:
-    """mcluster Plummer Rh=1 pc Kroupa no-binary rows in Msun / pc / km/s."""
+def _assert_no_coincident_positions(rows: List[Tuple[float, List[float], List[float]]], name: str) -> None:
+    """Reject ICs with two particles at identical positions (trips SDAR's r2>0 assert)."""
+    for i in range(len(rows)):
+        for j in range(i + 1, len(rows)):
+            if sum((a - b) ** 2 for a, b in zip(rows[i][1], rows[j][1])) == 0.0:
+                raise RuntimeError(f"{name}: rows {i} and {j} have identical positions")
+
+
+def _generate_mcluster_plain_rows(n_star: int, seed: int, binary_fraction: float = 0.0) -> Tuple[List[Tuple[float, List[float], List[float]]], int]:
+    """mcluster Plummer Rh=1 pc Kroupa rows in Msun / pc / km/s.
+
+    With binary_fraction > 0 mcluster generates primordial binaries (ordinary
+    hard binaries, NOT contact pairs — no stellar-evolution merge channel may
+    rely on them) and writes their members first as adjacent (2k, 2k+1) pairs.
+    Returns (rows, n_bin); the parsed binary count is verified against the
+    expected value so the petar '-b' argument stays consistent.
+    """
+    n_bin_expected = int(binary_fraction * n_star // 2)
     with tempfile.TemporaryDirectory(prefix="petar_make_ic_") as tmpdir:
         tmp_prefix_name = "plainclu"
         cmd = [
@@ -707,13 +723,13 @@ def _generate_mcluster_plain_rows(n_star: int, seed: int) -> List[Tuple[float, L
             "-P", "0",
             "-R", "1",
             "-f", "1",
-            "-b", "0",
+            "-b", str(binary_fraction),
             "-u", "1",
             "-C", "3",
             "-s", str(seed),
             "-o", tmp_prefix_name,
         ]
-        subprocess.run(
+        proc = subprocess.run(
             cmd,
             cwd=tmpdir,
             check=True,
@@ -721,6 +737,13 @@ def _generate_mcluster_plain_rows(n_star: int, seed: int) -> List[Tuple[float, L
             stderr=subprocess.PIPE,
             text=True,
         )
+        if binary_fraction > 0:
+            match = re.search(r"Creating (\d+) primordial binary systems", proc.stdout)
+            n_bin_found = int(match.group(1)) if match else -1
+            if n_bin_found != n_bin_expected:
+                raise RuntimeError(
+                    f"mcluster primordial binary count mismatch: expected {n_bin_expected}, got {n_bin_found}"
+                )
 
         table_path = Path(tmpdir) / f"{tmp_prefix_name}.txt"
         rows: List[Tuple[float, List[float], List[float]]] = []
@@ -735,33 +758,45 @@ def _generate_mcluster_plain_rows(n_star: int, seed: int) -> List[Tuple[float, L
                 rows.append((float(parts[0]), [float(parts[1]), float(parts[2]), float(parts[3])], [float(parts[4]), float(parts[5]), float(parts[6])]))
     if len(rows) != n_star:
         raise RuntimeError(f"mcluster returned {len(rows)} stars, expected {n_star}")
-    return rows
+    return rows, n_bin_expected
+
+
+# 10 primordial binaries for N=100: exercises group/binary artifacts in the
+# no-stellar-evolution modes without contact-binary pathologies.
+FUNCTIONAL_SMOKE_BINARY_FRACTION = 0.2
 
 
 def build_functional_mcluster_smoke(output: Path) -> None:
-    """Plain Plummer cluster for modes without a stellar-evolution merge channel.
+    """Plummer cluster with primordial binaries for modes without a stellar-evolution merge channel.
 
-    functional_mcluster_dual_merge_smoke injects ultra-compact massive binaries
-    (periods ~1e-8 Myr, contact separations) that BSE merges at the first
-    interrupt; without stellar evolution (std/merger/dsm/gasdrag and the
-    external-only families) they persist as contact binaries and stall the AR
-    integrator in million-step loops. This plain IC keeps those modes physical.
+    10 ordinary hard binaries (mcluster Kroupa eigenperiod distribution; members
+    written first as adjacent pairs) so `<snap>.binary` and group files carry
+    real records in std/merger/dsm/gasdrag/external-only families.
+    functional_mcluster_dual_merge_smoke instead injects ultra-compact massive
+    binaries that BSE merges at the first interrupt; without stellar evolution
+    those persist as contact binaries and stall the AR integrator in
+    million-step loops.
 
     Output convention (same as functional_mcluster_dual_merge_smoke):
     position pc, velocity km/s -> petar.init -v KM_S_TO_PC_MYR under -u 1.
     """
-    write_rows(output, _generate_mcluster_plain_rows(100, MCLUSTER_SEED))
+    rows, _n_bin = _generate_mcluster_plain_rows(100, MCLUSTER_SEED, binary_fraction=FUNCTIONAL_SMOKE_BINARY_FRACTION)
+    _assert_no_coincident_positions(rows, "functional_mcluster_smoke")
+    write_rows(output, rows)
 
 
-def build_functional_mcluster_collision_smoke(output: Path) -> None:
-    """Plain cluster plus one inbound hyperbolic collision pair for collision-interrupt modes.
+def build_functional_mcluster_pair_smoke(output: Path) -> None:
+    """Binary-free cluster plus one inbound hyperbolic collision pair as the FIRST
+    member pair (merger mode only; petar '-b 1').
 
-    The pair (10+10 Msun, a=-1e-8 pc, e=1.001; pericenter far below the merger/
-    DSM collision radii) triggers an immediate interrupt and merges, exercising
-    the interrupt record pipeline without leaving persistent contact binaries.
+    The simple-merger interrupt path hangs at t=0 when the collision pair is NOT
+    pre-marked as a binary member pair (dynamic grouping + merger interrupt:
+    silent infinite loop, 2026-10-17; dumps preserved in the functional merger
+    case dir). With the pair as marked members (file rows 1-2, '-b 1') the
+    interrupt fires through the member-pair path and completes — the
+    configuration all earlier passing runs used implicitly via '-b 4'.
     """
-    rows = _generate_mcluster_plain_rows(100, MCLUSTER_SEED)
-    rows.sort(key=lambda item: math.sqrt(sum(coord * coord for coord in item[1])), reverse=True)
+    rows, _n_bin = _generate_mcluster_plain_rows(100, MCLUSTER_SEED)
 
     h_m1 = 10.0
     h_m2 = 10.0
@@ -772,22 +807,18 @@ def build_functional_mcluster_collision_smoke(output: Path) -> None:
         h_v1 = [v * PC_MYR_TO_KM_S for v in h_v1]
         h_v2 = [v * PC_MYR_TO_KM_S for v in h_v2]
 
-    # Anchor the pair to the fourth-outermost star so it starts in the weak outskirts.
-    # The anchor row must itself be replaced: with equal pair masses the pair c.m.
-    # sits exactly on the anchor star, and a co-located single trips SDAR's r2>0
-    # neighbor assert at t=0.
-    pcom, vcom = list(rows[3][1]), list(rows[3][2])
-    rows[2] = (h_m1, [pcom[k] + h_r1[k] for k in range(3)], [vcom[k] + h_v1[k] for k in range(3)])
-    rows[3] = (h_m2, [pcom[k] + h_r2[k] for k in range(3)], [vcom[k] + h_v2[k] for k in range(3)])
+    order = sorted(range(len(rows)), key=lambda i: -math.sqrt(sum(c * c for c in rows[i][1])))
+    slot_a, slot_b = order[0], order[1]
+    pcom, vcom = list(rows[slot_b][1]), list(rows[slot_b][2])
+    pair_rows = [
+        (h_m1, [pcom[k] + h_r1[k] for k in range(3)], [vcom[k] + h_v1[k] for k in range(3)]),
+        (h_m2, [pcom[k] + h_r2[k] for k in range(3)], [vcom[k] + h_v2[k] for k in range(3)]),
+    ]
+    rest = [rows[i] for i in range(len(rows)) if i not in (slot_a, slot_b)]
+    final_rows = pair_rows + rest
 
-    for i in range(len(rows)):
-        for j in range(i + 1, len(rows)):
-            if sum((a - b) ** 2 for a, b in zip(rows[i][1], rows[j][1])) == 0.0:
-                raise RuntimeError(
-                    f"functional_mcluster_collision_smoke: rows {i} and {j} have identical positions"
-                )
-
-    write_rows(output, rows)
+    _assert_no_coincident_positions(final_rows, "functional_mcluster_pair_smoke")
+    write_rows(output, final_rows)
 
 
 def build_t6(output: Path) -> None:
@@ -1006,7 +1037,7 @@ def main() -> int:
             "functional_dual_merge_smoke",
             "functional_mcluster_dual_merge_smoke",
             "functional_mcluster_smoke",
-            "functional_mcluster_collision_smoke",
+            "functional_mcluster_pair_smoke",
             "functional_binary_cluster",
             "functional_sevn_cluster",
         ],
@@ -1038,8 +1069,8 @@ def main() -> int:
         build_functional_mcluster_dual_merge_smoke(out)
     elif args.case == "functional_mcluster_smoke":
         build_functional_mcluster_smoke(out)
-    elif args.case == "functional_mcluster_collision_smoke":
-        build_functional_mcluster_collision_smoke(out)
+    elif args.case == "functional_mcluster_pair_smoke":
+        build_functional_mcluster_pair_smoke(out)
     elif args.case == "functional_binary_cluster":
         build_functional_binary_cluster(out)
     elif args.case == "functional_sevn_cluster":

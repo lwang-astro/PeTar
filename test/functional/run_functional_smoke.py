@@ -88,8 +88,8 @@ def describe_ic_case(ic_case: str) -> str:
         "functional_smoke": "One deterministic close binary plus a small symmetric background cluster.",
         "functional_dual_merge_smoke": "Two target BSE binaries plus a light symmetric background cluster.",
         "functional_mcluster_dual_merge_smoke": "mcluster N=100 Plummer Rh=1 pc Kroupa no-binary model, first four stars replaced by two target binaries, then global COM recentered.",
-        "functional_mcluster_smoke": "Plain mcluster N=100 Plummer Rh=1 pc Kroupa no-binary model; for modes without a stellar-evolution merge channel (dual-merge contact binaries would stall them).",
-        "functional_mcluster_collision_smoke": "Plain mcluster N=100 cluster plus one inbound hyperbolic 10+10 Msun collision pair for the merger/dsm interrupt pipeline.",
+        "functional_mcluster_smoke": "mcluster N=100 Plummer Rh=1 pc Kroupa model with 10 primordial hard binaries (members written first as adjacent pairs); for modes without a stellar-evolution merge channel (dual-merge contact binaries would stall them).",
+        "functional_mcluster_pair_smoke": "Binary-free mcluster N=100 cluster plus one inbound hyperbolic 10+10 Msun collision pair written as the FIRST member pair (petar -b 1); used by merger and dsm — the interrupt paths hang at t=0 when the pair is not pre-marked as a member pair.",
         "functional_binary_cluster": "mcluster N=200 Plummer Rh=0.5 pc Kroupa 95% primordial-binary model (seed 11), members written first as adjacent pairs.",
         "functional_sevn_cluster": "mcluster N=60 Plummer Rh=1 pc Kroupa single-star model (seed 7), masses restricted to the SEVN gold-table grid 0.7-80 Msun.",
     }
