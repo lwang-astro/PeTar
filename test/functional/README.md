@@ -125,7 +125,7 @@ Set `AGAMA_CONF_FILE` explicitly only when you want to override that default.
 ### DSM mode
 
 - DSM smoke runs use `--detect-interrupt 1 --dsm-new-star-mode 0` by default for stability.
-- DSM post-run readback includes `data.interrupt` parsing checks.
+- Interrupt readback (merger and dsm): `data.interrupt` is an ASCII stream read strictly via `petar.InterruptBinary(...).loadtxt` — column mismatches fail the case.
 
 ### Movie checks
 

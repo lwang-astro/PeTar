@@ -807,13 +807,17 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         )
 
     def load_interrupt_binary(path: Path) -> Dict[str, Any]:
+        # data.interrupt is an ASCII single-line-per-record stream
+        # (printColumnAscii), NOT binary — fromfile() misparses the text bytes
+        # and the old strict_mismatch=False tolerance turned that into a bogus
+        # pass (2140 B file, 744 B dtype, 652 B "trailing").
         interrupt = petar.InterruptBinary(
             particle_type=petar.HardParticle,
             interrupt_mode=interrupt_mode,
         )
-        interrupt.fromfile(str(path), strict_mismatch=False)
+        interrupt.loadtxt(str(path))
         return {
-            "command": f"petar.InterruptBinary(particle_type=petar.HardParticle, interrupt_mode={interrupt_mode}).fromfile(path, strict_mismatch=False)",
+            "command": f"petar.InterruptBinary(particle_type=petar.HardParticle, interrupt_mode={interrupt_mode}).loadtxt(path)",
             "details": {"records": int(interrupt.size), "ncols": int(interrupt.ncols)},
         }
 
@@ -1037,17 +1041,14 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         f"obj=petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}); obj.addNewMember('time', np.array([], dtype=float)); obj.fromfile(path)",
     )
 
-    # DSM mode produces data.interrupt as a binary stream of interrupted binaries.
-    # The file may include trailing bytes depending on compile-time layout, so this
-    # smoke check validates readability and parsed record count instead of enforcing
-    # strict dtype-alignment warnings.
-    if interrupt_mode == "dsm":
+    # Interrupt modes write data.interrupt as an ASCII stream of interrupted
+    # binaries (merger/dsm); strict column matching — a mismatch fails the case.
+    if interrupt_mode in ("dsm", "merger"):
         add_check(
             f"{output_prefix}.interrupt",
             case_dir / prefixed_name(output_prefix, "interrupt"),
             load_interrupt_binary,
-            f"petar.InterruptBinary(particle_type=petar.HardParticle, interrupt_mode={interrupt_mode}).fromfile(path)",
-            strict_mismatch=False,
+            f"petar.InterruptBinary(particle_type=petar.HardParticle, interrupt_mode={interrupt_mode}).loadtxt(path)",
         )
 
     # Validate profiling outputs (ASCII table).

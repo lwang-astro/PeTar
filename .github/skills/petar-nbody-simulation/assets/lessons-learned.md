@@ -367,6 +367,14 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: ① collision-pair 冒烟 IC 把对写成文件前两行(成员对约定)并配 `-b 1`,merger 与 dsm 一致;② 结论"某用例通过"前核对该日志的时间戳/本轮是否真的跑到该用例子集运行被杀时,后续用例的旧日志原样留存,极易当成本轮结果;③ 长跑冒烟必须有外层 timeout 与 per-step wall-clock 上限,零输出死循环靠人肉 20 分钟才发现太迟;④ "以前通过"的配置要弄清通过的机制(-b 标记副作用),否则改参数时会把靠副作用支撑的通过误当默认正确。
 
+### 2026-10-18: 【宽容标志把错误读法变成绿色】data.interrupt 是 ASCII 流(printColumnAscii 单行记录),却用 fromfile() 二进制读 + strict_mismatch=False 宽容尾字节——2140B 文件按 744B dtype"解析"出 2 条垃圾记录+652B 残余仍判 pass。宽容 rationale("编译布局导致的尾字节")是臆测;正确读法 loadtxt() 严格列匹配,merger/dsm 均通(records=1)
+
+**Mistake**: dsm 的 `data.interrupt` 读回检查显示 pass,人工读取却报 dtype 不对齐。检查从未真正验证过任何内容:读法错了(二进制 vs ASCII),strict_mismatch=False 把错误压成绿色,records=2 是文本字节的乱解。
+
+**Root cause**: ① 写入端 `printColumnAscii(fout_interrupt)` 是 ASCII,读取端想当然用了 fromfile;② 为"可能的尾字节"加的宽容标志没有对照真实文件验证过(file 命令一查便知是 ASCII);③ 宽容标志一旦存在,它屏蔽的就不再是噪声而是读法本身的错误——假绿比红更危险。
+
+**Prevention rule**: ① 读回检查首选严格模式,宽容标志只对"已实测确认的良性现象"使用且注明依据;② 新增读回前先 `file` 确认格式(ASCII/二进制)再选 fromfile/loadtxt;③ 假绿模式自查:details 里的 records 数与文件行数/字节预算对不上(2 条 vs 单行文件)就该起疑。
+
 ### 2026-10-16: 【r2==0 断言先查 IC 重合再疑中断簿记】merger/dsm t≈0 abort 被交接 note 归因为 interrupt 回归,重放显示碰撞中断从未触发——锚星留在双曲对质心是 IC 生成器缺陷;未提交的新用例不构成回归窗口
 
 **Mistake**: merger/dsm 功能用例死于 t≈0 的 `hermite_integrator.h:1170 (r2>0.0)`,交接 note 据此立了 interrupt 簿记假设与回归窗口(f14606f→5765150)。hard.debug 重放定案:失败簇仅 3 粒子(碰撞对+锚星),t=0 对刚成组、锚星保持 single,组 c.m. 预测子与锚星**逐位重合**→ 邻居扫描 r2==0 中止;碰撞中断从未执行。真因是 make_ic.py 新增(未提交)的 `functional_mcluster_collision_smoke`:双曲对锚定在 `rows[3]` 位置但没删该星,等质量对称偏移使对 c.m. 恰为锚星位置(dist2==0.0 实测)。
