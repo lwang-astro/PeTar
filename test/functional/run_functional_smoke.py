@@ -8,6 +8,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import warnings
 from pathlib import Path
@@ -255,11 +256,17 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
     out_path.write_text("".join(parts), encoding="utf-8")
 
 
-def run_cmd(cmd: List[str], cwd: Path, env: Dict[str, str], log_path: Path) -> tuple[int, List[str]]:
+def run_cmd(cmd: List[str], cwd: Path, env: Dict[str, str], log_path: Path, timeout_s: Optional[float] = None) -> tuple[int, List[str]]:
+        """Run a command, streaming output to the log; kill it after timeout_s seconds.
+
+        A killed step returns -9 (SIGKILL); the log carries a '[timeout]' marker
+        line — zero-output silent hangs otherwise take ~20 min to notice by hand.
+        """
         log_path.parent.mkdir(parents=True, exist_ok=True)
         cmd_text = "$ " + " ".join(shlex.quote(x) for x in cmd) + "\n"
 
         warn_lines: List[str] = []
+        timed_out = False
         with log_path.open("a", encoding="utf-8") as log:
             log.write("\n" + cmd_text)
             log.flush()
@@ -274,18 +281,46 @@ def run_cmd(cmd: List[str], cwd: Path, env: Dict[str, str], log_path: Path) -> t
                 bufsize=1,
             )
 
-            if proc.stdout is not None:
-                for line in proc.stdout:
-                    log.write(line)
-                    log.flush()
-                    warn_lines.extend(detect_warnings(line))
+            timer = None
+            if timeout_s is not None and timeout_s > 0:
+                def _kill_on_timeout() -> None:
+                    nonlocal timed_out
+                    timed_out = True
+                    proc.kill()
 
-            return_code = proc.wait()
-            log.write(f"[exit] {return_code}\n")
+                timer = threading.Timer(timeout_s, _kill_on_timeout)
+                timer.daemon = True
+                timer.start()
+
+            try:
+                if proc.stdout is not None:
+                    for line in proc.stdout:
+                        log.write(line)
+                        log.flush()
+                        warn_lines.extend(detect_warnings(line))
+
+                return_code = proc.wait()
+            finally:
+                if timer is not None:
+                    timer.cancel()
+
+            if timed_out:
+                log.write(f"[timeout] killed after {timeout_s}s (exit code -9)\n")
+                return_code = -9
+            else:
+                log.write(f"[exit] {return_code}\n")
             log.flush()
 
         warn_lines = list(dict.fromkeys(warn_lines))
         return return_code, warn_lines
+
+
+def _step_timeout(matrix: Dict[str, Any]) -> float:
+    """Per-step wall-clock limit (matrix global 'step_timeout_s', default 1800)."""
+    try:
+        return float(matrix.get("global", {}).get("step_timeout_s", 1800))
+    except (TypeError, ValueError):
+        return 1800.0
 
 
 def load_json(path: Path) -> Dict[str, Any]:
@@ -580,8 +615,9 @@ def run_case_build(repo_root: Path, matrix: Dict[str, Any], case: Dict[str, Any]
     env["BUILD_TAGS"] = tag
     env["PURGE_OLD_BINARIES"] = "0"
     configure_args = configure_args_for_build_tag(tag)
+    to = _step_timeout(matrix)
 
-    rc, warns = run_cmd(["bash", str(script_path)], cwd=repo_root, env=env, log_path=log_path)
+    rc, warns = run_cmd(["bash", str(script_path)], cwd=repo_root, env=env, log_path=log_path, timeout_s=to)
     return {
         "status": "pass" if rc == 0 else "fail",
         "code": rc,
@@ -610,8 +646,10 @@ def run_case_build_for_tag(repo_root: Path, matrix: Dict[str, Any], build_tag: s
     env["BUILD_TAGS"] = build_tag
     env["PURGE_OLD_BINARIES"] = "0"
     configure_args = configure_args_for_build_tag(build_tag)
+    to = _step_timeout(matrix)
+    to = _step_timeout(matrix)
 
-    rc, warns = run_cmd(["bash", str(script_path)], cwd=repo_root, env=env, log_path=log_path)
+    rc, warns = run_cmd(["bash", str(script_path)], cwd=repo_root, env=env, log_path=log_path, timeout_s=to)
     return {
         "status": "pass" if rc == 0 else "fail",
         "code": rc,
@@ -671,6 +709,7 @@ def preflight_families(repo_root: Path, matrix: Dict[str, Any], selected: List[D
     log_path.write_text("", encoding="utf-8")
     optional = matrix.get("global", {}).get("optional_select", "mpi,omp,avx512,avx2")
     expected = expected_source_stamp(repo_root)
+    to = _step_timeout(matrix)
 
     def select(require: str) -> int:
         cmd = ["petar.select"]
@@ -678,7 +717,7 @@ def preflight_families(repo_root: Path, matrix: Dict[str, Any], selected: List[D
             cmd.extend(["--require", require])
         if optional:
             cmd.extend(["--optional", optional])
-        rc, _ = run_cmd(cmd, cwd=repo_root, env=os.environ.copy(), log_path=log_path)
+        rc, _ = run_cmd(cmd, cwd=repo_root, env=os.environ.copy(), log_path=log_path, timeout_s=to)
         return rc
 
     tags: List[str] = []
@@ -1094,7 +1133,7 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
     }
 
 
-def run_tool_smokes(result: Dict[str, Any], case: Dict[str, Any], case_dir: Path, output_prefix: str, log_path: Path, env: Dict[str, str], t_end: str, run_args: List[str]) -> None:
+def run_tool_smokes(result: Dict[str, Any], case: Dict[str, Any], case_dir: Path, output_prefix: str, log_path: Path, env: Dict[str, str], t_end: str, run_args: List[str], timeout_s: Optional[float] = None) -> None:
     """Extra per-case tool coverage (matrix key 'tool_smokes').
 
     Each listed tool runs against this case's outputs so every tool a case's
@@ -1102,6 +1141,7 @@ def run_tool_smokes(result: Dict[str, Any], case: Dict[str, Any], case_dir: Path
     data.clear, data.gether, format.transfer, find.dt, standalone bse) run in
     a scratch copy; readers run in place. A failed smoke fails the case.
     """
+    to = timeout_s if timeout_s is not None and timeout_s > 0 else _step_timeout({})
     names = case.get("tool_smokes", [])
     if not names:
         return
@@ -1124,25 +1164,25 @@ def run_tool_smokes(result: Dict[str, Any], case: Dict[str, Any], case_dir: Path
             for par in [f"{output_prefix}.par", f"{output_prefix}.par.hard"]:
                 if (case_dir / par).exists():
                     cmd = ["petar.read.par", par]
-                    rc, warns = run_cmd(cmd, cwd=case_dir, env=env, log_path=log_path)
+                    rc, warns = run_cmd(cmd, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
                     add_step(result, f"petar.read.par:{par}", rc, cmd, case_dir, warnings_list=warns)
         elif tool == "update.par":
             copy_to_scratch(f"{output_prefix}.par")
             cmd = ["petar.update.par", "-p", f"{output_prefix}.par"]
-            rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path)
+            rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path, timeout_s=to)
             add_step(result, "petar.update.par", rc, cmd, scratch, warnings_list=warns)
         elif tool == "data.clear":
             copied = copy_to_scratch(f"{output_prefix}.group*.n*") + copy_to_scratch(f"{output_prefix}.status")
             clear_t = str(float(t_end) / 2.0)
             cmd = ["petar.data.clear", "-t", clear_t, output_prefix]
-            rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path)
+            rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path, timeout_s=to)
             add_step(result, "petar.data.clear", rc, cmd, scratch, warnings_list=warns, details={"files_copied": copied, "t": clear_t})
         elif tool == "data.gether":
             copy_to_scratch(f"{output_prefix}.status")
             copy_to_scratch(f"{output_prefix}.snap.lst")
             copy_to_scratch(f"{output_prefix}.group*.n*")
             cmd = ["petar.data.gether", output_prefix]
-            rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path)
+            rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path, timeout_s=to)
             add_step(result, "petar.data.gether", rc, cmd, scratch, warnings_list=warns)
         elif tool == "format.transfer":
             ft_binary = Path(active_petar_realpath())
@@ -1155,7 +1195,7 @@ def run_tool_smokes(result: Dict[str, Any], case: Dict[str, Any], case_dir: Path
                     if line.strip():
                         copy_to_scratch(line.strip())
                 cmd = [str(ft_tool), "-b", f"{output_prefix}.snap.lst"]
-                rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path)
+                rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path, timeout_s=to)
                 add_step(result, "petar.format.transfer", rc, cmd, scratch, warnings_list=warns)
         elif tool == "find.dt":
             copy_to_scratch("input")
@@ -1171,11 +1211,11 @@ def run_tool_smokes(result: Dict[str, Any], case: Dict[str, Any], case_dir: Path
                 core_args.append(tok)
             a_args = "-u 1" + ("".join(f" {t}" for t in core_args))
             cmd = ["petar.find.dt", "-a", a_args, "-i", "1", "input"]
-            rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path)
+            rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path, timeout_s=to)
             add_step(result, "petar.find.dt", rc, cmd, scratch, warnings_list=warns, details={"a_args": a_args})
         elif tool == "bse":
             cmd = ["petar.bse", "-n", "5", "--mmin", "0.8", "--mmax", "20", "-t", "100"]
-            rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path)
+            rc, warns = run_cmd(cmd, cwd=scratch, env=env, log_path=log_path, timeout_s=to)
             add_step(result, "petar.bse", rc, cmd, scratch, warnings_list=warns)
         else:
             add_step(result, f"tool_smoke:{tool}", 1, ["internal.tool_smoke", tool], case_dir, reason="unknown tool smoke name")
@@ -1192,6 +1232,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
     case_dir.mkdir(parents=True, exist_ok=True)
     log_path = case_dir / "run.log"
     log_path.write_text("", encoding="utf-8")
+    to = _step_timeout(matrix)
     result = {
         "name": name,
         "require": case.get("require", ""),
@@ -1403,7 +1444,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         # Two-phase restart smoke: run to restart_t_end, then continue to t_end
         # via the canonical restart form (SKILL.md Restart/resume).
         cmd_a = ["petar", "-u", "1", "-t", str(restart_t_end), "-o", dt_out, "-f", output_prefix, *run_args, "input"]
-        rc, warns = run_cmd(cmd_a, cwd=case_dir, env=env, log_path=log_path)
+        rc, warns = run_cmd(cmd_a, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
         add_step(result, "petar.initial", rc, cmd_a, case_dir, warnings_list=warns, details={"t_end": str(restart_t_end), "dt_out": dt_out, "output_prefix": output_prefix, "run_args": run_args})
         if rc != 0:
             result["status"] = "fail"
@@ -1416,7 +1457,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         restart_snap = entries_a[-1]
 
         cmd_b = ["petar", "-p", f"{output_prefix}.par", "-i", "0", "-u", "1", "-t", t_end, "-o", dt_out, "-f", output_prefix, *run_args, restart_snap]
-        rc, warns = run_cmd(cmd_b, cwd=case_dir, env=env, log_path=log_path)
+        rc, warns = run_cmd(cmd_b, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
         add_step(result, "petar.restart", rc, cmd_b, case_dir, warnings_list=warns, details={"t_end": t_end, "dt_out": dt_out, "restart_snapshot": restart_snap, "run_args": run_args})
         if rc != 0:
             result["status"] = "fail"
@@ -1453,7 +1494,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
             return result
     else:
         run_cmdline = ["petar", "-u", "1", "-t", t_end, "-o", dt_out, "-f", output_prefix, *run_args, "input"]
-        rc, warns = run_cmd(run_cmdline, cwd=case_dir, env=env, log_path=log_path)
+        rc, warns = run_cmd(run_cmdline, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
         add_step(result, "petar", rc, run_cmdline, case_dir, warnings_list=warns, details={"t_end": t_end, "dt_out": dt_out, "output_prefix": output_prefix, "run_args": run_args})
         if rc != 0:
             result["status"] = "fail"
@@ -1479,7 +1520,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
 
     process_args = resolve_tokens(case.get("process_args", []))
     process_cmd = ["petar.data.process", "--no-auto-resume", "-p", output_prefix, *process_args, snap_list.name]
-    rc, warns = run_cmd(process_cmd, cwd=case_dir, env=env, log_path=log_path)
+    rc, warns = run_cmd(process_cmd, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
     add_step(result, "petar.data.process", rc, process_cmd, case_dir, warnings_list=warns, details={"process_args": process_args})
     if rc != 0:
         result["status"] = "fail"
@@ -1504,7 +1545,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
                 reason="group file too small for dedup layout validation",
             )
         else:
-            rc, warns = run_cmd(dedup_cmd, cwd=case_dir, env=env, log_path=log_path)
+            rc, warns = run_cmd(dedup_cmd, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
             dedup_out = Path(str(target) + ".dedup")
             dedup_ok = rc == 0 and dedup_out.exists() and dedup_out.stat().st_size > 0
             add_step(
@@ -1527,7 +1568,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
     # -C: the tool's core-file default is hardcoded to 'data.core'; cases with a
     # different output prefix (e.g. bse-galpy 'out') must point at <prefix>.core
     snap_cmd = ["petar.get.object.snap", *object_snap_args, "-p", "object", "-C", f"{output_prefix}.core", "-f", "origin", "-m", "id", "1", snap_list.name]
-    rc, warns = run_cmd(snap_cmd, cwd=case_dir, env=env, log_path=log_path)
+    rc, warns = run_cmd(snap_cmd, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
     snap_critical_warn = has_critical_mismatch_warning(warns)
     snap_step_code = rc if (rc != 0 or not snap_critical_warn) else 1
     add_step(
@@ -1574,7 +1615,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         format_cmd.extend(["-t", str(process_external_mode)])
 
     format_cmd.append(str(last_snap_list.name))
-    rc, warns = run_cmd(format_cmd, cwd=case_dir, env=env, log_path=log_path)
+    rc, warns = run_cmd(format_cmd, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
     format_critical_warn = has_critical_mismatch_warning(warns)
     format_step_code = rc if (rc != 0 or not format_critical_warn) else 1
     add_step(
@@ -1611,7 +1652,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         movie_args.extend(["--core-file", f"{output_prefix}.core"])
 
     movie_cmd = ["petar.movie", *movie_args, snap_list.name]
-    rc, warns = run_cmd(movie_cmd, cwd=case_dir, env=env, log_path=log_path)
+    rc, warns = run_cmd(movie_cmd, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
     add_step(result, "petar.movie", rc, movie_cmd, case_dir, warnings_list=warns, details={"movie_args": movie_args})
     if rc != 0:
         result["status"] = "fail"
@@ -1620,7 +1661,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
 
     # 9) Extra per-case tool coverage (read.par / update.par / data.clear /
     # data.gether / format.transfer / find.dt / standalone bse).
-    run_tool_smokes(result, case, case_dir, output_prefix, log_path, env, t_end, run_args)
+    run_tool_smokes(result, case, case_dir, output_prefix, log_path, env, t_end, run_args, timeout_s=to)
     if result["status"] == "fail":
         return result
 
@@ -1673,9 +1714,10 @@ def run_build(repo_root: Path, matrix: Dict[str, Any], out_root: Path, selected_
     build_tags = select_build_tags(selected_cases)
     env["BUILD_TAGS"] = ",".join(build_tags)
     env["PURGE_OLD_BINARIES"] = "0"
+    to = _step_timeout(matrix)
 
     log_path = out_root / "build.log"
-    rc, warns = run_cmd(["bash", str(script_path)], cwd=repo_root, env=env, log_path=log_path)
+    rc, warns = run_cmd(["bash", str(script_path)], cwd=repo_root, env=env, log_path=log_path, timeout_s=to)
     return {
         "status": "pass" if rc == 0 else "fail",
         "code": rc,

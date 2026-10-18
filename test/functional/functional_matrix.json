@@ -14,7 +14,8 @@
     },
     "t_end": 10,
     "dt_out": 1,
-    "ic_case": "functional_mcluster_smoke"
+    "ic_case": "functional_mcluster_smoke",
+    "step_timeout_s": 1800
   },
   "cases": [
     {

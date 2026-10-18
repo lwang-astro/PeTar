@@ -122,6 +122,10 @@ Set `AGAMA_CONF_FILE` explicitly only when you want to override that default.
 
 ## Runtime Behavior Notes
 
+### Step timeout
+
+Every step runs under a wall-clock limit (matrix global `step_timeout_s`, default 1800 s; covers solver runs, builds, preflight, and tool smokes). A step that exceeds it is killed and fails the case with exit code -9 and a `[timeout]` marker in the case log — silent zero-output hangs (see lessons 2026-10-17) are then bounded instead of running for tens of minutes.
+
 ### DSM mode
 
 - DSM smoke runs use `--detect-interrupt 1 --dsm-new-star-mode 0` by default for stability.
