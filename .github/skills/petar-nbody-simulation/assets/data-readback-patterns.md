@@ -51,7 +51,7 @@ When any reader warns or errors on column count/shape (`mismatches the number of
 | `npy` | `.npy` | **`.load(path)`** | `.save(f)` |
 | `ascii` | (none) | `.loadtxt(path)` | `.savetxt(f)` |
 
-When reading post-processed files, **check the file extension** to determine the format. If the file ends with `.npy`, use `.load()` instead of `.fromfile()`. Otherwise, use the method matching the table above. Calling `.loadtxt()` on a BINARY file raises a clear `ValueError` (use `fromfile()`).
+When reading post-processed files, **check the file extension** to determine the format. If the file ends with `.npy`, use `.load()` instead of `.fromfile()`. Otherwise, use the method matching the table above. Calling `.loadtxt()` on a BINARY file raises a clear `ValueError` (use `fromfile()`). The reverse is also guarded: `fromfile()` sniffs the first bytes and, on an ASCII text table, dispatches to `loadtxt()` with a `UserWarning` — even under `strict_mismatch=False` — so a wrong-reader call can no longer return garbage records. Passing binary-only kwargs (`offset`, `count`) with ASCII content raises an advisory instead. Use `format='binary'`/`'ascii'` in `fromfile()` to force a physical format and skip the sniffing (no warning); the shared sniff helper is `petar.detectAsciiFile(path)`.
 
 ### Unit conversion (critical for scientific correctness)
 

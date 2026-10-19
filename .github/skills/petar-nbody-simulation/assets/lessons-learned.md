@@ -375,6 +375,8 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: ① 读回检查首选严格模式,宽容标志只对"已实测确认的良性现象"使用且注明依据;② 新增读回前先 `file` 确认格式(ASCII/二进制)再选 fromfile/loadtxt;③ 假绿模式自查:details 里的 records 数与文件行数/字节预算对不上(2 条 vs 单行文件)就该起疑。
 
+**闭环(2026-10-19)**: 该向量已被结构性封堵,不再依赖人工遵守②③——SDAR `tools/base.py` 的 `fromfile()` 先嗅探首字节(printable ASCII 判定 `detectAsciiFile`),ASCII 文件在 alignment/`strict_mismatch` 逻辑**之前**分发到 `loadtxt()`(带 UserWarning;`strict_mismatch=False` 不再能掩盖错读;带 `offset`/`count` 则直接报错指引正确读法);功能冒烟的 `add_check(expect_format=...)` 对每个产物断言物理格式,写入端格式翻转直接红。见 `doc/output-format-contract-plan.md` P1 条目。
+
 ### 2026-10-16: 【r2==0 断言先查 IC 重合再疑中断簿记】merger/dsm t≈0 abort 被交接 note 归因为 interrupt 回归,重放显示碰撞中断从未触发——锚星留在双曲对质心是 IC 生成器缺陷;未提交的新用例不构成回归窗口
 
 **Mistake**: merger/dsm 功能用例死于 t≈0 的 `hermite_integrator.h:1170 (r2>0.0)`,交接 note 据此立了 interrupt 簿记假设与回归窗口(f14606f→5765150)。hard.debug 重放定案:失败簇仅 3 粒子(碰撞对+锚星),t=0 对刚成组、锚星保持 single,组 c.m. 预测子与锚星**逐位重合**→ 邻居扫描 r2==0 中止;碰撞中断从未执行。真因是 make_ic.py 新增(未提交)的 `functional_mcluster_collision_smoke`:双曲对锚定在 `rows[3]` 位置但没删该星,等质量对称偏移使对 c.m. 恰为锚星位置(dist2==0.0 实测)。

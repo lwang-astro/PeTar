@@ -118,7 +118,7 @@ Set `AGAMA_CONF_FILE` explicitly only when you want to override that default.
    - `petar.format.transfer.post`
    - per-case extra tools (`tool_smokes`, see Tool Coverage)
 5. Expected output artifacts exist (snapshot file, `data.lagr`, object extraction file, plus per-case `expect_files` such as gasdrag model-parameter files).
-6. Python readback with mode-correct dtypes: `Particle`/`Binary`/`GroupInfo`/lagrangian/escaper and the stellar-event record classes (`SSETypeChange`, `BSEKick`, ... switch to SEVN columns via `interrupt_mode`).
+6. Python readback with mode-correct dtypes: `Particle`/`Binary`/`GroupInfo`/lagrangian/escaper and the stellar-event record classes (`SSETypeChange`, `BSEKick`, ... switch to SEVN columns via `interrupt_mode`). Each readback also asserts the artifact's physical format (text vs binary sniff via `petar.detectAsciiFile`), so a writer format flip fails the case instead of surfacing as reader confusion. The authoritative file → format → reader mapping is the SKILL "File-Type → Reader-Class Quick Reference" table (`.github/skills/petar-nbody-simulation/SKILL.md`) with worked patterns in `assets/data-readback-patterns.md` — keep all three in sync when a writer format changes.
 
 ## Runtime Behavior Notes
 
