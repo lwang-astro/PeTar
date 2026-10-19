@@ -2,12 +2,16 @@
 
 set -o pipefail
 
-# fallback time-column indices (1-based, include event-label token)
-tindex_sse_type_change=25
-tindex_sse_sn_kick=14
-tindex_bse_type_change=27
-tindex_bse_dyn_merge=44
-tindex_bse_sn_kick=16
+# fallback time-column indices (1-based, include event-label token).
+# Verified against the writers 2026-10-19: sse/sevn rows are id + StarParameter
+# blocks with tphys at col 12; bse rows are type + BinaryEvent blocks with
+# record[0] (=min(p1.tphys,p2.tphys)) at col 2. The old values (25/14/27/16/44)
+# pointed at lum/spin/ecc columns and trimmed by the wrong field.
+tindex_sse_type_change=12
+tindex_sse_sn_kick=12
+tindex_bse_type_change=2
+tindex_bse_dyn_merge=2
+tindex_bse_sn_kick=2
 
 ncol_sse_type_change=26
 ncol_sse_sn_kick=15
@@ -189,6 +193,14 @@ if kind == "status":
 elif kind == "group":
 	common["N"] = n_group
 	data = petar.GroupInfo(**common)
+elif kind == "lagr":
+	data = petar.LagrangianMultiple(external_mode=external_mode)
+elif kind == "core":
+	data = petar.Core()
+elif kind == "esc_single":
+	data = petar.SingleEscaper(interrupt_mode=interrupt_mode, external_mode=external_mode)
+elif kind == "esc_binary":
+	data = petar.BinaryEscaper(interrupt_mode=interrupt_mode, external_mode=external_mode)
 else:
 	raise ValueError(f"Unsupported kind: {kind}")
 
@@ -250,7 +262,7 @@ def time_index_with_label(obj, path):
 		for key, tp in cur.keys:
 			if key == part:
 				if i == len(parts) - 1:
-					return idx + 1
+					return idx
 				cur = getattr(cur, key)
 				found = True
 				break
@@ -335,8 +347,8 @@ do
     esac
 done
 
-suffixes=(esc group sse mosse sseEmp bse mobse sevn sevnB bseEmp interrupt status prof.rank)
-tindices=(1 3 0 0 0 0 0 0 0 0 1 1 2)
+suffixes=(esc esc_single esc_binary group sse mosse sseEmp bse mobse sevn sevnB bseEmp interrupt status prof.rank lagr core)
+tindices=(1 1 1 3 0 0 0 0 0 0 0 0 1 1 2 1 1)
 nsuffixes=${#suffixes[@]}
 
 if [ ! -e $fname ] | [ -z $fname ] ; then
@@ -440,9 +452,8 @@ do
     s=${suffixes[$i]}
     tindex=${tindices[$i]}
     file=$fname.$s
-    echo $file'; time column: '$tindex
-    if [ $s == 'status' ]; then
-	# status output is a single file (no rank splitting)
+    if [ $s == 'status' ] || [ $s == 'lagr' ] || [ $s == 'core' ] || [ $s == 'esc_single' ] || [ $s == 'esc_binary' ]; then
+	# status/lagr/core outputs are single files (no rank splitting)
 	if [ -e "$file" ]; then
 	    lst="$file"
 	else
@@ -468,8 +479,18 @@ do
 		lst="$lst $itf"
 	    done
 	fi
+    elif [ $s == 'esc' ] && [ -z $nmpi ]; then
+	# single-rank final esc stream has no rank segment (data.esc)
+	if [ -e "$file" ]; then
+	    lst="$file"
+	else
+	    lst=''
+	fi
     elif [ $s == 'group' ]; then
-	if [ ! -z $nmpi ]; then
+	if [ -z $nmpi ]; then
+	    # single-rank group files have no rank segment (data.group.nN)
+	    lst=`ls | egrep '^'$file'(\.[0-9]+)?(\.n[0-9]+)?$'`
+	elif [ ! -z $nmpi ]; then
 	    nend=`expr $nmpi - 1`
 	    lst=''
 	    for ir in `seq 0 $nend`
@@ -485,6 +506,11 @@ do
 	else
 	    lst=`ls | egrep '^'$file'.[0-9]+(\.n[0-9]+)?$'`
 	fi
+    elif [[ $s == *'sse'* ]] || [[ $s == *'bse'* ]] || [[ $s == *'sevn'* ]] || [[ $s == *'mosse'* ]]; then
+	# ASCII event streams use sub-suffix names (data.sse.type_change,
+	# data.bse.sn_kick, ...) or rank splits; single-level sub-suffix only,
+	# so data.bse_status (underscore) is not swallowed
+	lst=`ls | egrep '^'$file'(\.[A-Za-z_0-9]+)?$'`
     elif [ ! -z $nmpi ]; then
 	nend=`expr $nmpi - 1`
 	lst=`seq 0 $nend|awk -v f=$file '{printf("$s.$d\n", f,$1)}`
@@ -537,6 +563,12 @@ do
 		    echo 'Error! failed to clear binary status file '$f
 		    exit 1
 		fi
+	    elif [ $s == 'lagr' ] || [ $s == 'core' ] || [ $s == 'esc_single' ] || [ $s == 'esc_binary' ]; then
+		echo 'binary '$s': use Python parser to clear by time criterion'
+		if ! filter_binary_file_by_time $s $f.bk $f $tcrit; then
+		    echo 'Error! failed to clear binary '$s' file '$f
+		    exit 1
+		fi
 	    elif [ $s == 'group' ]; then
 		n_group=0
 		if [[ $f =~ \.n([0-9]+)$ ]]; then
@@ -561,6 +593,66 @@ do
 	fi
     done
 done
+
+# Trim the snapshot list to the time criterion and remove the stale snapshot
+# files: petar truncates status on restart but NOT <prefix>.snap.lst, and this
+# script's suffix list never covered it — restarting from a snapshot older than
+# the last written one would leave stale entries that downstream tools process
+# twice. Entries at/below the criterion are kept; snapshot files beyond it (and
+# their .single/.binary companions) are removed.
+snaplst=$fname.snap.lst
+if [ -e "$snaplst" ]; then
+    echo 'process '$snaplst
+    if ! python3 - "$snaplst" "$tcrit" "$fname" <<'PY'
+import math
+import os
+import re
+import sys
+
+snaplst, tcrit, prefix = sys.argv[1], float(sys.argv[2]), sys.argv[3]
+dt_out = None
+try:
+    with open(prefix + ".par") as fh:
+        for line in fh:
+            parts = line.split()
+            if len(parts) >= 3 and parts[0] == "F" and parts[1] == "o":
+                dt_out = float.fromhex(parts[2])
+                break
+except OSError:
+    pass
+if not dt_out or dt_out <= 0:
+    print(f"Warning! cannot read dt_out from {prefix}.par; skip snap.lst trimming")
+    sys.exit(0)
+
+max_idx = int(math.floor(tcrit / dt_out + 1e-9))
+kept, stale = [], []
+with open(snaplst) as fh:
+    for line in fh:
+        name = line.strip()
+        if not name:
+            continue
+        m = re.match(r"^" + re.escape(prefix) + r"\.(\d+)$", name)
+        if m and int(m.group(1)) > max_idx:
+            stale.append(name)
+        else:
+            kept.append(name)
+with open(snaplst, "w") as fh:
+    for name in kept:
+        fh.write(name + "\n")
+removed = 0
+for name in stale:
+    for cand in (name, name + ".single", name + ".binary"):
+        if os.path.exists(cand):
+            os.remove(cand)
+            removed += 1
+print(f"snap.lst: kept {len(kept)} entries (index <= {max_idx}); "
+      f"removed {len(stale)} stale entries, {removed} snapshot file(s)")
+PY
+    then
+        echo 'Error! failed to trim '$snaplst
+        exit 1
+    fi
+fi
 
 #
 

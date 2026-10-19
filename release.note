@@ -87,6 +87,9 @@
 85. Add `gasdrag`, `std-restart`, and optional `sevn` cases to the functional test matrix.
 86. Match functional-test ICs to each mode's merge channel, fixing million-step AR stalls when contact binaries lack a stellar-evolution merge channel.
 87. Add binary-family preflight, per-case HTML reports, and per-case tool smokes to the functional test runner.
+88. Fix `petar.data.clear` single-rank output discovery: group, esc, and sse/bse-family event files without a rank segment were never found and thus never cleared.
+89. Fix `petar.data.clear` ASCII event time columns: a phantom label-column shift made sse files trim by luminosity and bse files by eccentricity (correct columns, verified against the writers: 12 for sse/sevn rows, 2 for bse-family rows).
+90. `petar.data.clear` now trims `<prefix>.snap.lst` and removes the stale snapshot files beyond the clear time, so restarting from an older snapshot no longer leaves duplicate list entries that downstream tools process twice.
 
 **Some existing issues include**
 

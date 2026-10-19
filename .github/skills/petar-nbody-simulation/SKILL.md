@@ -217,7 +217,7 @@ Input-source branching in more detail (raw table / existing snapshot / restart /
 4. Match the **read** half of `-i` to the snapshot being read: a binary snapshot needs `-i 0` (or `-i 3`) — the default `-i 2` reads ASCII and aborts with `cannot read header`. Details and worked example: `assets/input-source-workflows.md`.
 5. Use `-a 0` only when overwrite requested.
 6. **Duplicate-event prevention is now handled automatically** via the transactional `*.tmp` file mechanism: each output interval is first written to temporary files and only committed on successful completion. This eliminates the need for manual cleanup before restarts in modern PeTar.
-7. For **legacy (old-version) runs only**: if restarting from an intermediate snapshot with older output files that may contain already-committed duplicate records, use `petar.data.clear -t <time> [prefix]` to trim event files back to the snapshot time.
+7. For **legacy (old-version) runs only**: if restarting from an intermediate snapshot with older output files that may contain already-committed duplicate records, use `petar.data.clear -t <time> [prefix]` to trim event files back to the snapshot time. The tool also trims `<prefix>.snap.lst` and deletes the stale snapshot files beyond the trim time (single-rank group files included), so a restart from an older snapshot leaves no duplicate list entries.
 
 ## Post-Processing Tool Policy
 
