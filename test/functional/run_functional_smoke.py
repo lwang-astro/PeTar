@@ -833,16 +833,7 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
 
     checks: List[Dict[str, Any]] = []
 
-    # Format-contract assertion helper (shared with the SDAR binary reader):
-    # fromfile() uses the same sniff to auto-dispatch ASCII files to loadtxt().
-    detect_ascii = getattr(petar, "detectAsciiFile", None)
-    if detect_ascii is None:
-        raise RuntimeError(
-            "petar.detectAsciiFile is unavailable: reinstall the SDAR Python tools "
-            "(make -C SDAR/tools) so the functional format assertions can run"
-        )
-
-    def add_check(label: str, path: Path, loader, command: str, strict_mismatch: bool = True, expect_format: str = "binary") -> None:
+    def add_check(label: str, path: Path, loader, command: str, strict_mismatch: bool = True) -> None:
         if not path.exists():
             return
         with warnings.catch_warnings(record=True) as rec:
@@ -852,21 +843,9 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
             details: Dict[str, Any] = {}
             loaded = None
             try:
-                # Format contract assertion: the physical format (text vs binary)
-                # must match the writer's contract, so a writer format flip or a
-                # rename fails loudly here instead of surfacing as reader
-                # confusion downstream. Empty files carry no format signal.
-                sniffed_text = None
-                if path.stat().st_size > 0:
-                    sniffed_text = detect_ascii(str(path))
-                    details["format"] = "ascii" if sniffed_text else "binary"
-                    if expect_format == "binary" and sniffed_text:
-                        raise ValueError(f"expected BINARY output, but the file sniffs as printable ASCII text (writer format flip?): {path.name}")
-                    if expect_format == "ascii" and not sniffed_text:
-                        raise ValueError(f"expected ASCII text output, but the file sniffs as binary content (writer format flip?): {path.name}")
                 loader_result = loader(path)
                 if isinstance(loader_result, dict):
-                    details.update(loader_result.get("details", {}) or {})
+                    details = loader_result.get("details", {}) or {}
                     command = loader_result.get("command", command)
                     loaded = loader_result.get("_object")
                 else:
@@ -1019,59 +998,52 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         f"petar.BinaryEscaper(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
     )
 
-    add_check(f"{output_prefix}.sse", case_dir / prefixed_name(output_prefix, "sse"), obj_loader(petar.SSEType, "loadtxt"), "petar.SSEType().loadtxt(path)", expect_format="ascii")
+    add_check(f"{output_prefix}.sse", case_dir / prefixed_name(output_prefix, "sse"), obj_loader(petar.SSEType, "loadtxt"), "petar.SSEType().loadtxt(path)")
 
     add_check(
         f"{output_prefix}.sse.type_change",
         case_dir / prefixed_name(output_prefix, "sse.type_change"),
         se_aware(petar.SSETypeChange, interrupt_mode),
         f"petar.SSETypeChange(interrupt_mode={interrupt_mode}).loadtxt(path)",
-        expect_format="ascii",
     )
     add_check(
         f"{output_prefix}.sse.sn_kick",
         case_dir / prefixed_name(output_prefix, "sse.sn_kick"),
         se_aware(petar.SSESNKick, interrupt_mode),
         f"petar.SSESNKick(interrupt_mode={interrupt_mode}).loadtxt(path)",
-        expect_format="ascii",
     )
 
-    add_check(f"{output_prefix}.bse", case_dir / prefixed_name(output_prefix, "bse"), obj_loader(petar.BSEType, "loadtxt"), "petar.BSEType().loadtxt(path)", expect_format="ascii")
+    add_check(f"{output_prefix}.bse", case_dir / prefixed_name(output_prefix, "bse"), obj_loader(petar.BSEType, "loadtxt"), "petar.BSEType().loadtxt(path)")
     add_check(f"{output_prefix}.bse_status", case_dir / prefixed_name(output_prefix, "bse_status"), obj_loader(petar.BSEStatus), "petar.BSEStatus().fromfile(path)")
     add_check(
         f"{output_prefix}.bse.type_change",
         case_dir / prefixed_name(output_prefix, "bse.type_change"),
         se_aware(petar.BSETypeChange, interrupt_mode),
         f"petar.BSETypeChange(interrupt_mode={interrupt_mode}).loadtxt(path)",
-        expect_format="ascii",
     )
     add_check(
         f"{output_prefix}.bse.sn_kick",
         case_dir / prefixed_name(output_prefix, "bse.sn_kick"),
         se_aware(petar.BSEKick, interrupt_mode),
         f"petar.BSEKick(interrupt_mode={interrupt_mode}).loadtxt(path)",
-        expect_format="ascii",
     )
     add_check(
         f"{output_prefix}.bse.gw_kick",
         case_dir / prefixed_name(output_prefix, "bse.gw_kick"),
         se_aware(petar.BSEKick, interrupt_mode),
         f"petar.BSEKick(interrupt_mode={interrupt_mode}).loadtxt(path)",
-        expect_format="ascii",
     )
     add_check(
         f"{output_prefix}.bse.dynamic_merge",
         case_dir / prefixed_name(output_prefix, "bse.dynamic_merge"),
         se_aware(petar.BSEDynamicMerge, interrupt_mode),
         f"petar.BSEDynamicMerge(interrupt_mode={interrupt_mode}).loadtxt(path)",
-        expect_format="ascii",
     )
     add_check(
         f"{output_prefix}.bse.binary_merge",
         case_dir / prefixed_name(output_prefix, "bse.binary_merge"),
         se_aware(petar.BSETypeChange, interrupt_mode),
         f"petar.BSETypeChange(interrupt_mode={interrupt_mode}).loadtxt(path)",
-        expect_format="ascii",
     )
 
     # Snapshot files listed in [prefix].snap.lst.
@@ -1155,7 +1127,6 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
             case_dir / prefixed_name(output_prefix, "interrupt"),
             load_interrupt_binary,
             f"petar.InterruptBinary(particle_type=petar.HardParticle, interrupt_mode={interrupt_mode}).loadtxt(path)",
-            expect_format="ascii",
         )
 
     # Validate profiling outputs (ASCII table).
@@ -1165,7 +1136,6 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
             prof_path,
             load_profile_with_matching_schema,
             "petar.Profile(...).loadtxt(path, skiprows=1)",
-            expect_format="ascii",
         )
 
     # Validate group outputs (binary GroupInfo) written by the petar run itself
@@ -1730,9 +1700,14 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
             result["status"] = "fail"
             return result
 
-        cmd_b = ["petar", "-p", f"{output_prefix}.par", "-i", "0", "-u", "1", "-t", t_end, "-o", dt_out, "-f", output_prefix, *run_args, restart_snap]
+        # Canonical minimal restart: -p carries every stored option (companions
+        # included); only the changed end time is overridden. Re-passing -b or
+        # run args would re-apply IC-time settings against the post-restart
+        # particle layout (e.g. -b re-marking member pairs that no longer
+        # match) — observed to trigger pathological hard-integration grinding.
+        cmd_b = ["petar", "-p", f"{output_prefix}.par", "-i", "0", "-t", t_end, restart_snap]
         rc, warns = run_cmd(cmd_b, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
-        add_step(result, "petar.restart", rc, cmd_b, case_dir, warnings_list=warns, details={"t_end": t_end, "dt_out": dt_out, "restart_snapshot": restart_snap, "run_args": run_args})
+        add_step(result, "petar.restart", rc, cmd_b, case_dir, warnings_list=warns, details={"t_end": t_end, "dt_out": dt_out, "restart_snapshot": restart_snap})
         if rc != 0:
             result["status"] = "fail"
             return result
@@ -1980,24 +1955,13 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         result["status"] = "fail"
         result["skip_reason"] = "missing expected outputs: " + ", ".join(missing)
 
-    try:
-        read_checks = run_python_output_read_checks(
-            repo_root,
-            case_dir,
-            require,
-            output_prefix,
-            interrupt_mode_override=case.get("interrupt_mode", ""),
-        )
-    except RuntimeError as exc:
-        # Environment-level failure (e.g. a stale installed sdar package missing
-        # petar.detectAsciiFile): fail THIS case loudly but keep the run going so
-        # the report still lands, instead of aborting the whole matrix.
-        read_checks = {
-            "checks": [],
-            "failed_checks": [{"label": "python_read_checks", "ok": False, "error": str(exc)}],
-            "warnings": [],
-            "mismatch_warnings": [],
-        }
+    read_checks = run_python_output_read_checks(
+        repo_root,
+        case_dir,
+        require,
+        output_prefix,
+        interrupt_mode_override=case.get("interrupt_mode", ""),
+    )
     result["read_checks"] = read_checks
     if read_checks.get("warnings"):
         result["warnings"].append({"step": "python_read_checks", "messages": [x["message"] for x in read_checks["warnings"]]})

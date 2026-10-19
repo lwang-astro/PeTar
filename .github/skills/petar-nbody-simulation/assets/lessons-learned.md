@@ -399,6 +399,14 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Fix 续(2026-10-19,ASCII 事件流三连修)**:① 发现漏斗——`data.sse.type_change`/`data.bse.sn_kick` 等子后缀名单 rank 运行下从未被 data_clear 发现;② 列号系统错误——自动检测假设前置 label 列(+1)而写入端从不输出 label,时间列系统性偏移一位(sse 读成 lum、bse 读成 ecc);③ 正确列(对照写入端实证):sse/sevn 系=id+StarParameter 块 init.tphys=col12,bse 系=type+BinaryEvent 块 record[0]=col2。修正后 functional 精确切分断言双向成真(bse.type_change pre 6 kept+1 beyond → post 6+0)。
 
+### 2026-10-19: 【重启后 AR slowdown 冷态磨积分——物理相同时间差 240 倍】bse 用例 restart 段(自 t=3)5m38s、20 次 10^6 步上限,而同 IC 全新单跑 0→10 仅 1.4s、零告警;两路径的并合轨迹逐快照一致(121+124 Msun 对 t≈3/t≈6 并合)。元凶不是重启命令冗余参数(最小规范命令同样慢)——是 AR slowdown/Hermite 簇状态未随快照持久化也未在重启时重建,预存紧双星群组被冷态朴素积分。调查计划见 doc/restart-slowdown-cold-state-plan.md
+
+**Mistake**: functional bse 用例 6.3 分钟(全套 7.6 分钟的 83%),最初怀疑 restart 命令重复传参(-b 等)干扰重启语义;最小命令实验排除后,对照实验(全新 vs 重启的并合轨迹+步数告警)才定位为状态重建问题。
+
+**Root cause**: 连续运行中 slowdown 树/时标保持热态,紧双星积分廉价;重启只恢复粒子/组结构,AR 内部状态从默认冷态起步,未并合的紧双星群组反复撞步数上限(与 5765150 修复的 cluster copy-in Hermite 状态重置同区域)。
+
+**Prevention rule**: ① "慢"先量化再归因:计时三段(全新/阶段A/重启段)+ 步数告警计数 + 物理轨迹对照,一步分离"参数干扰"与"状态重建";② 重启性能回归的活体探测器:functional restart 流程天然覆盖此路径,用例时长异常即信号;③ 规范重启命令只覆盖变化参数(-t),IC 期参数(-b 等)对重启后粒子布局无意义甚至有害。
+
 ## Post-Processing
 
 ### 2026-09-14: 读 PeTar 二进制快照漏掉 `offset=HEADER_OFFSET` 且未指定 `interrupt_mode`
