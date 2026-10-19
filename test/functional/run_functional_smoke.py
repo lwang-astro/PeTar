@@ -22,8 +22,11 @@ WARNING_PATTERNS = [
     r"UserWarning:.*Binary file size",
     r"File may be truncated",
     r"not aligned with dtype itemsize",
-    r"column",
-    r"dtype",
+    # mismatch-shaped only — bare "column"/"dtype" matched informational tool
+    # echoes (e.g. petar.init "Add stellar evolution columns: no")
+    r"number of columns",
+    r"column.{0,40}mismatch|mismatch.{0,40}column",
+    r"dtype.{0,40}mismatch|mismatch.{0,40}dtype",
     r"RuntimeWarning",
 ]
 
@@ -31,6 +34,11 @@ WARNING_PATTERNS = [
 def detect_warnings(text: str) -> List[str]:
     found: List[str] = []
     for line in text.splitlines():
+        # petar.data.clear prints one informational banner per suffix
+        # ("<prefix>.<suffix>; time column: N", a configured fallback index,
+        # mostly placeholders) — not a warning.
+        if re.search(r"; time column: \d+$", line):
+            continue
         for pat in WARNING_PATTERNS:
             if re.search(pat, line, flags=re.IGNORECASE):
                 found.append(line.strip())
@@ -442,6 +450,37 @@ def estimate_group_records(repo_root: Path, group_path: Path) -> Optional[int]:
     if dt.itemsize <= 0:
         return None
     return group_path.stat().st_size // dt.itemsize
+
+
+def duplicate_group_records(repo_root: Path, group_path: Path) -> Optional[int]:
+    """Count duplicated group records by (time, id1, id2) — different groups may
+    legitimately share a time, so time alone is not a duplicate signal."""
+    import collections
+
+    match = re.search(r"\.n(\d+)$", group_path.name)
+    if not match:
+        return None
+    n_member = int(match.group(1))
+    try:
+        tools_path = repo_root / "tools"
+        if str(tools_path) not in sys.path:
+            sys.path.insert(0, str(tools_path))
+        import numpy as _np  # noqa: WPS433
+        import analysis as _petar  # noqa: WPS433
+
+        gi = _petar.GroupInfo(N=n_member)
+        gi.fromfile(str(group_path))
+        keys = list(
+            zip(
+                map(float, _np.asarray(gi.time)),
+                map(int, _np.asarray(gi.bin0.p1.id)),
+                map(int, _np.asarray(gi.bin0.p2.id)),
+            )
+        )
+    except Exception:
+        return None
+    counts = collections.Counter(keys)
+    return sum(c - 1 for c in counts.values() if c > 1)
 
 
 def resolve_output_prefixes(case: Dict[str, Any], matrix: Dict[str, Any]) -> List[str]:
@@ -1433,28 +1472,233 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
 
     run_args = resolve_tokens(run_args_raw)
     snap_lst_path = case_dir / prefixed_name(output_prefix, "snap.lst")
-    restart_t_end = case.get("restart_t_end")
+    restart_cfg = case.get("restart") or matrix.get("global", {}).get("restart")
 
     def snap_entries() -> List[str]:
         if not snap_lst_path.exists():
             return []
         return [x.strip() for x in snap_lst_path.read_text(encoding="utf-8").splitlines() if x.strip()]
 
-    if restart_t_end:
-        # Two-phase restart smoke: run to restart_t_end, then continue to t_end
-        # via the canonical restart form (SKILL.md Restart/resume).
-        cmd_a = ["petar", "-u", "1", "-t", str(restart_t_end), "-o", dt_out, "-f", output_prefix, *run_args, "input"]
+    # ASCII event-stream time columns, verified against the writers (2026-10-19):
+    # sse/sevn/mosse rows = id + StarParameter blocks -> tphys of the first
+    #   block = col 12 (bse-interface StarParameter: kw,m0,mt,r,mc,rc,ospin*3,
+    #   epoch,tphys,lum);
+    # bse/mobse/bseEmp/sevnB rows = type + BinaryEvent blocks -> record[0]
+    #   (=min(p1.tphys,p2.tphys)) at col 2;
+    # interrupt rows = col 1; prof.rank rows = output counter at col 2
+    #   (matches petar.data.clear semantics; exact when dt_out=1);
+    # bse.dynamic_merge has a label-led layout -> not parsed (lines kind).
+    # Keep in sync with tools/data_clear.sh tindex_* assignments.
+    def ascii_rule(name: str) -> Optional[str]:
+        if ".sevnB" in name:
+            return "col2"
+        if ".prof.rank" in name:
+            return "col2"
+        if ".interrupt" in name:
+            return "col1"
+        if "dynamic_merge" in name:
+            return None
+        if ".bse" in name or ".mobse" in name or ".bseEmp" in name:
+            return "col2"
+        if ".sse" in name or ".sevn" in name or ".mosse" in name:
+            return "col12"
+        return None
+
+    def ascii_line_time(line: str, rule: str) -> Optional[float]:
+        cols = line.split()
+        idx = {"col1": 1, "col2": 2, "col12": 12}[rule]
+        try:
+            return float(cols[idx - 1])
+        except (IndexError, ValueError):
+            return None
+
+    def stream_stats(t_cut: float) -> Dict[str, Dict[str, Any]]:
+        """Per-stream record stats at a time cut.
+
+        Reader-parseable streams (status, group, esc solver stream, lagr/core)
+        return exact kept/beyond counts by record time; ASCII event streams
+        (sse/bse/mosse/sevn/interrupt/prof) return line totals (their record
+        time column is label-dependent — kept by petar.data.clear itself).
+        """
+        stats: Dict[str, Dict[str, Any]] = {}
+        try:
+            tools_path = repo_root / "tools"
+            if str(tools_path) not in sys.path:
+                sys.path.insert(0, str(tools_path))
+            import numpy as _np  # noqa: WPS433
+            import analysis as _petar  # noqa: WPS433
+
+        except Exception:
+            _petar = None
+            _np = None
+
+        def add_reader(p: Path, ctor, **kw) -> None:
+            if _petar is None:
+                stats[p.name] = {"kind": "unreadable"}
+                return
+            try:
+                obj = ctor(**kw)
+                obj.fromfile(str(p))
+                times = [float(x) for x in _np.asarray(obj.time)]
+                stats[p.name] = {
+                    "kind": "reader",
+                    "kept": sum(1 for x in times if x <= t_cut + 1e-9),
+                    "beyond": sum(1 for x in times if x > t_cut + 1e-9),
+                }
+            except Exception:
+                stats[p.name] = {"kind": "unreadable"}
+
+        mode_i = case.get("interrupt_mode", "")
+        ext_e = "galpy" if "galpy" in {x.strip() for x in require.split(",") if x.strip()} else ("agama" if "agama" in {x.strip() for x in require.split(",") if x.strip()} else "none")
+
+        for pattern in [f"{output_prefix}.sse*", f"{output_prefix}.bse*", f"{output_prefix}.mosse*", f"{output_prefix}.sevn*", f"{output_prefix}.interrupt*", f"{output_prefix}.prof.rank*"]:
+            for p in sorted(case_dir.glob(pattern)):
+                if p.is_file():
+                    rule = ascii_rule(p.name)
+                    if rule is None:
+                        stats[p.name] = {"kind": "lines", "total": sum(1 for _ in p.open("r", encoding="utf-8", errors="ignore"))}
+                        continue
+                    kept = beyond = unknown = 0
+                    with p.open("r", encoding="utf-8", errors="ignore") as fh:
+                        for line in fh:
+                            if not line.strip():
+                                continue
+                            tv = ascii_line_time(line, rule)
+                            if tv is None:
+                                unknown += 1
+                            elif tv <= t_cut + 1e-9:
+                                kept += 1
+                            else:
+                                beyond += 1
+                    stats[p.name] = {"kind": "ascii", "kept": kept, "beyond": beyond, "unknown": unknown}
+        if (case_dir / f"{output_prefix}.status").exists():
+            add_reader(case_dir / f"{output_prefix}.status", _petar.Status)
+        for p in sorted(case_dir.glob(f"{output_prefix}.esc*")):
+            if re.fullmatch(rf"{re.escape(output_prefix)}\.esc(\.\d+)?", p.name) and p.is_file():
+                add_reader(p, _petar.SingleEscaper, interrupt_mode=mode_i or "none", external_mode=ext_e)
+        for p in sorted(case_dir.glob(f"{output_prefix}.group*.n*")):
+            m = re.search(r"\.n(\d+)$", p.name)
+            if m and p.is_file():
+                add_reader(p, _petar.GroupInfo, N=int(m.group(1)), interrupt_mode=mode_i or "none", external_mode=ext_e)
+        for name, ctor in [(f"{output_prefix}.lagr", None), (f"{output_prefix}.core", None)]:
+            p = case_dir / name
+            if not p.exists():
+                continue
+            if name.endswith(".lagr"):
+                add_reader(p, _petar.LagrangianMultiple, external_mode=ext_e)
+            else:
+                add_reader(p, _petar.Core)
+        return stats
+
+    def status_times() -> Optional[List[float]]:
+        try:
+            tools_path = repo_root / "tools"
+            if str(tools_path) not in sys.path:
+                sys.path.insert(0, str(tools_path))
+            import numpy as _np  # noqa: WPS433
+            import analysis as _petar  # noqa: WPS433
+
+            st = _petar.Status()
+            st.fromfile(str(case_dir / prefixed_name(output_prefix, "status")))
+            return [float(x) for x in _np.asarray(st.time)]
+        except Exception:
+            return None
+
+    def duplicate_lines(path: Path) -> int:
+        seen: Dict[str, int] = {}
+        with path.open("r", encoding="utf-8", errors="ignore") as fh:
+            for line in fh:
+                key = line.strip()
+                if key:
+                    seen[key] = seen.get(key, 0) + 1
+        return sum(c - 1 for c in seen.values())
+
+    if restart_cfg:
+        # Universal restart flow: fresh run to t_end_first, trim event streams
+        # with petar.data.clear (tests over-deletion), then the canonical
+        # restart from the cleared-to snapshot (tests duplicate records).
+        t_first = str(restart_cfg.get("t_end_first", 4))
+        clear_t = float(restart_cfg.get("clear_t", 3))
+        restart_snap = f"{output_prefix}.{int(clear_t / float(dt_out))}"
+
+        cmd_a = ["petar", "-u", "1", "-t", t_first, "-o", dt_out, "-f", output_prefix, *run_args, "input"]
         rc, warns = run_cmd(cmd_a, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
-        add_step(result, "petar.initial", rc, cmd_a, case_dir, warnings_list=warns, details={"t_end": str(restart_t_end), "dt_out": dt_out, "output_prefix": output_prefix, "run_args": run_args})
+        add_step(result, "petar.initial", rc, cmd_a, case_dir, warnings_list=warns, details={"t_end": t_first, "dt_out": dt_out, "output_prefix": output_prefix, "run_args": run_args})
         if rc != 0:
             result["status"] = "fail"
             return result
-        entries_a = snap_entries()
-        if not entries_a:
+
+        pre_stats = stream_stats(clear_t)
+
+        clear_cmd = ["petar.data.clear", "-t", str(clear_t), output_prefix]
+        ext_tokens = {x.strip() for x in require.split(",") if x.strip()}
+        if "galpy" in ext_tokens:
+            clear_cmd += ["--external-mode", "galpy"]
+        elif "agama" in ext_tokens:
+            clear_cmd += ["--external-mode", "agama"]
+        mode_i = case.get("interrupt_mode", "")
+        if mode_i and mode_i != "none":
+            clear_cmd += ["--interrupt-mode", mode_i]
+        rc, warns = run_cmd(clear_cmd, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
+        layout = ""
+        with log_path.open("r", encoding="utf-8", errors="ignore") as fh:
+            for line in fh:
+                if line.startswith("ASCII event layout"):
+                    layout = line.strip()
+        add_step(result, "petar.data.clear", rc, clear_cmd, case_dir, warnings_list=warns, details={"clear_t": clear_t, "restart_snapshot": restart_snap, "event_layout": layout})
+        if rc != 0:
             result["status"] = "fail"
-            result["skip_reason"] = f"{snap_lst_path.name} is empty after initial phase"
             return result
-        restart_snap = entries_a[-1]
+
+        # Over-deletion / residue check. Reader-parseable streams: kept records
+        # (time<=t) must be preserved exactly and beyond-t records removed.
+        # ASCII streams: no growth and no fabricated lines versus the .bk
+        # backup the tool leaves behind. snap.lst must hold exactly the
+        # entries up to the trim index and the stale snapshot files must be
+        # gone.
+        post_stats = stream_stats(clear_t)
+        clear_issues = []
+        for name, before in pre_stats.items():
+            after = post_stats.get(name)
+            if after is None:
+                clear_issues.append(f"{name}: file disappeared after clear")
+                continue
+            if before.get("kind") in ("reader", "ascii") and after.get("kind") == before.get("kind"):
+                if after["beyond"] != 0:
+                    clear_issues.append(f"{name}: {after['beyond']} beyond-t records survived")
+                if after["kept"] != before["kept"]:
+                    clear_issues.append(f"{name}: kept {after['kept']} records, expected {before['kept']} (over-deletion)")
+            elif before.get("kind") == "lines":
+                if after.get("total", 0) > before.get("total", 0):
+                    clear_issues.append(f"{name}: grew {before.get('total')}->{after.get('total')}")
+                bk = case_dir / (name + ".bk")
+                if bk.exists():
+                    import collections
+
+                    pre_c = collections.Counter(l.strip() for l in bk.open("r", encoding="utf-8", errors="ignore") if l.strip())
+                    post_c = collections.Counter(l.strip() for l in (case_dir / name).open("r", encoding="utf-8", errors="ignore") if l.strip())
+                    fabricated = sum(v for k, v in post_c.items() if pre_c.get(k, 0) < v)
+                    if fabricated:
+                        clear_issues.append(f"{name}: {fabricated} fabricated line(s) after clear")
+        expect_idx = int(clear_t / float(dt_out))
+        expect_entries = [f"{output_prefix}.{i}" for i in range(expect_idx + 1)]
+        if snap_entries() != expect_entries:
+            clear_issues.append(f"{snap_lst_path.name}: entries != expected 0..{expect_idx} after clear")
+        stale = [n for n in [f"{output_prefix}.{i}" for i in range(expect_idx + 1, expect_idx + 64)] if (case_dir / n).exists()]
+        if stale:
+            clear_issues.append(f"stale snapshot files remain: {stale[:3]}")
+        add_step(
+            result,
+            "restart_clear_check",
+            0 if not clear_issues else 1,
+            ["internal.clear_check", f"t={clear_t}"],
+            case_dir,
+            details={"streams_before": pre_stats, "streams_after": post_stats, "issues": clear_issues[:10]},
+            reason="" if not clear_issues else "; ".join(clear_issues[:3]),
+        )
+        if clear_issues:
+            result["status"] = "fail"
+            return result
 
         cmd_b = ["petar", "-p", f"{output_prefix}.par", "-i", "0", "-u", "1", "-t", t_end, "-o", dt_out, "-f", output_prefix, *run_args, restart_snap]
         rc, warns = run_cmd(cmd_b, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
@@ -1468,16 +1712,10 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
             "dt_out": dt_out,
             "output_prefix": output_prefix,
             "run_args": run_args,
-            "snapshots_after_initial": len(entries_a),
-            "snapshots_after_restart": len(entries_b),
             "restart_snapshot": restart_snap,
+            "snapshots_after_restart": len(entries_b),
         }
-        if len(entries_b) <= len(entries_a):
-            result["status"] = "fail"
-            result["skip_reason"] = "restart phase produced no new snapshots"
-            add_step(result, "restart_progress_check", 1, ["internal.restart_check", snap_lst_path.name], case_dir, details=restart_details, reason="no new snapshots after restart")
-            return result
-        last_idx = int(entries_b[-1].rsplit(".", 1)[-1])
+        last_idx = int(entries_b[-1].rsplit(".", 1)[-1]) if entries_b else -1
         need_idx = int(float(t_end) / float(dt_out)) - 1
         ok_progress = last_idx >= need_idx
         add_step(
@@ -1490,6 +1728,39 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
             reason="" if ok_progress else f"last snapshot index {last_idx} below required {need_idx}",
         )
         if not ok_progress:
+            result["status"] = "fail"
+            return result
+
+        # Duplicate-record check after the restart: no repeated snapshot list
+        # entries, strictly increasing unique status times, no duplicated
+        # event-stream lines, no duplicated group records (time, id1, id2).
+        dup_issues = []
+        names = snap_entries()
+        if len(names) != len(set(names)):
+            dup_issues.append(f"{snap_lst_path.name}: repeated entries")
+        st_times = status_times() or []
+        if len(st_times) != len(set(st_times)) or st_times != sorted(st_times):
+            dup_issues.append("status: duplicated or non-monotonic times")
+        for pattern in [f"{output_prefix}.sse*", f"{output_prefix}.bse*", f"{output_prefix}.mosse*", f"{output_prefix}.sevn*", f"{output_prefix}.esc_*", f"{output_prefix}.esc.[0-9]*", f"{output_prefix}.interrupt*", f"{output_prefix}.prof.rank*"]:
+            for p in sorted(case_dir.glob(pattern)):
+                if p.is_file():
+                    n_dup = duplicate_lines(p)
+                    if n_dup:
+                        dup_issues.append(f"{p.name}: {n_dup} duplicated record line(s)")
+        for p in sorted(case_dir.glob(f"{output_prefix}.group*.n*")):
+            n_dup = duplicate_group_records(repo_root, p)
+            if n_dup:
+                dup_issues.append(f"{p.name}: {n_dup} duplicated group record(s)")
+        add_step(
+            result,
+            "restart_duplicates_check",
+            0 if not dup_issues else 1,
+            ["internal.duplicates_check"],
+            case_dir,
+            details={"issues": dup_issues[:10]},
+            reason="" if not dup_issues else "; ".join(dup_issues[:3]),
+        )
+        if dup_issues:
             result["status"] = "fail"
             return result
     else:

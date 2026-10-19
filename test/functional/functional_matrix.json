@@ -15,7 +15,11 @@
     "t_end": 10,
     "dt_out": 1,
     "ic_case": "functional_mcluster_smoke",
-    "step_timeout_s": 1800
+    "step_timeout_s": 1800,
+    "restart": {
+      "t_end_first": 4,
+      "clear_t": 3
+    }
   },
   "cases": [
     {
@@ -40,7 +44,9 @@
       "tool_smokes": [
         "find.dt",
         "data.gether",
-        "format.transfer"
+        "format.transfer",
+        "read.par",
+        "update.par"
       ]
     },
     {
@@ -167,32 +173,6 @@
       ]
     },
     {
-      "name": "std-restart",
-      "require": "",
-      "interrupt_mode": "none",
-      "restart_t_end": 4,
-      "init_args": [
-        "-v",
-        "1.022712165045695"
-      ],
-      "run_args": [
-        "-b",
-        "10",
-        "--write-group-info",
-        "2"
-      ],
-      "process_args": [
-        "-G",
-        "0.00449830997959438"
-      ],
-      "object_snap_args": [],
-      "tool_smokes": [
-        "read.par",
-        "update.par",
-        "data.clear"
-      ]
-    },
-    {
       "name": "sevn",
       "require": "sevn",
       "interrupt_mode": "sevn",
@@ -298,6 +278,52 @@
         "galpy"
       ],
       "ic_case": "functional_mcluster_dual_merge_smoke"
+    },
+    {
+      "name": "bse-galpy-gasdrag",
+      "require": "bse,galpy,gasdrag",
+      "filename_prefix": "out",
+      "interrupt_mode": "bse",
+      "init_args": [
+        "-s",
+        "bse",
+        "-t",
+        "-c",
+        "8000,0,0,0,220,0",
+        "-v",
+        "1.022712165045695"
+      ],
+      "run_args": [
+        "-b",
+        "4",
+        "--galpy-set",
+        "MWPotential2014",
+        "--gdf-hard-mode",
+        "1",
+        "--gdf-gaspot-index",
+        "0",
+        "--write-group-info",
+        "2"
+      ],
+      "process_args": [
+        "-i",
+        "bse",
+        "-t",
+        "galpy",
+        "--r-escape",
+        "tidal"
+      ],
+      "object_snap_args": [
+        "-i",
+        "bse",
+        "-t",
+        "galpy"
+      ],
+      "ic_case": "functional_mcluster_dual_merge_smoke",
+      "expect_files": [
+        "{prefix}.par.gasdrag",
+        "{prefix}.par.exthard"
+      ]
     },
     {
       "name": "bse-agama",

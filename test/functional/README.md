@@ -153,8 +153,9 @@ To make warning exposure deterministic, functional movie checks are run with `--
 
 ### Restart behavior
 
-- `std-restart` first runs to `restart_t_end` with a fresh IC, then continues with the canonical restart form (`-p <prefix>.par -i 0 ... <last_snapshot>`), and requires the snapshot list to grow to the final cadence index.
-- Post-processing then runs on the merged output, so restart artifacts are validated through the same tool chain.
+- Every case runs the universal restart flow (matrix global `restart`, default `t_end_first=4`, `clear_t=3`): fresh run to `t_end_first` → `petar.data.clear -t <clear_t>` → canonical restart (`-p <prefix>.par -i 0 ... <snapshot at the trim time>`), with three assertions: the clear keeps every record at/below the trim time and drops the rest (over-deletion, across status/group/esc/event streams), the restarted run reaches the final cadence index (progress), and no duplicate records appear afterwards (snapshot list entries, status times, event-stream lines, group records by (time, id1, id2)).
+- `petar.data.clear` now also trims `<prefix>.snap.lst` and deletes the stale snapshot files beyond the trim time (single-rank group files without a rank segment are discovered as well) — before this, restarting from a snapshot older than the last written one left stale list entries that `data.process` would process twice (petar truncates `status` on restart but not the snapshot list; found 2026-10-18, fixed in `tools/data_clear.sh`).
+- Post-processing runs on the merged output, so restart artifacts are validated through the same tool chain.
 
 ### Portability guard
 

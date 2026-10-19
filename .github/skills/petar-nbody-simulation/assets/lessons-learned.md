@@ -385,6 +385,18 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 ---
 
+### 2026-10-18: 【重启自旧快照时 snap.lst 不截断——status 会截断而快照列表不会】从 data.3 重启(事件已 clear 到 t=3)后,snap.lst = data.0..4,4,5..10:data.4 重复;petar 对 status 的时间流正确截断(唯一性检查通过),`petar.data.clear` 只清事件后缀不管 snap.lst。下游 data.process 会把重复快照处理两遍。
+
+**Mistake**: 通用 restart 流程按 SKILL 的 legacy 场景设计(阶段 A 跑到 t=4 → petar.data.clear -t 3 → 从 data.3 规范重启),首次运行即被自建的重复检查命中:data.snap.lst: repeated entries。
+
+**Root cause**: petar 重启时事件/status 流有截断逻辑,tmp-commit 机制防事件重复;但 snap.lst 在重启合并时保留旧列表全部条目并追加新窗口条目,重启点之后的陈旧条目不删除;data_clear.sh 的 suffix 清单也不含 snap.lst。
+
+**Prevention rule**: ① 修复方向二选一:petar 重启时按重启快照重写 snap.lst,或 data_clear.sh 把 snap.lst 纳入清理;② functional 的 restart 流程保留三段检查(clear 无误删/进度/重复);③ 下游工具消费 snap.lst 前可加唯一性断言自我防御。
+
+**Fix(2026-10-18 当日,方案②落地)**:`tools/data_clear.sh` 修剪 snap.lst 并删除修剪时刻之后的快照文件,dt_out 从 par 的 `F o <hex>` 行读取;顺带修掉两个先存发现漏斗——单 rank 的 `data.group.nN`(无 rank 段)匹配不到 egrep,solver 的 esc 流为无 rank 段的 `data.esc`。
+
+**Fix 续(2026-10-19,ASCII 事件流三连修)**:① 发现漏斗——`data.sse.type_change`/`data.bse.sn_kick` 等子后缀名单 rank 运行下从未被 data_clear 发现;② 列号系统错误——自动检测假设前置 label 列(+1)而写入端从不输出 label,时间列系统性偏移一位(sse 读成 lum、bse 读成 ecc);③ 正确列(对照写入端实证):sse/sevn 系=id+StarParameter 块 init.tphys=col12,bse 系=type+BinaryEvent 块 record[0]=col2。修正后 functional 精确切分断言双向成真(bse.type_change pre 6 kept+1 beyond → post 6+0)。
+
 ## Post-Processing
 
 ### 2026-09-14: 读 PeTar 二进制快照漏掉 `offset=HEADER_OFFSET` 且未指定 `interrupt_mode`
