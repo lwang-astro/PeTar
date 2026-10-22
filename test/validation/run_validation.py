@@ -1067,6 +1067,15 @@ PIPELINES: Dict[str, Dict[str, Any]] = {
                  "--report", "test/out/report.t6.pert_kernel_match.json",
                  "--output", "test/out/t6_pert_kernel_match_summary.html"],
     },
+    "t7": {
+        "jobs": [_pipeline_job("test/validation/scenarios/t7_triple_perturber_ar_ds_adjustment.json",
+                               "test/out/report.t7.triple_perturber_ar_ds_adjustment.json",
+                               "test/out/validation_t7_triple_perturber_ar_ds_adjustment",
+                               "petar_bin_switch", "plain")],
+        "html": ["test/validation/t7_triple_perturber_ar_ds_adjustment_report.py",
+                 "--report", "test/out/report.t7.triple_perturber_ar_ds_adjustment.json",
+                 "--output", "test/out/t7_triple_perturber_ar_ds_adjustment_summary.html"],
+    },
 }
 
 

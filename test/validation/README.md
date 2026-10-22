@@ -1,4 +1,4 @@
-# Validation Framework (T1–T6)
+# Validation Framework (T1–T7)
 
 **Design rules**: all validation reports follow [REPORT_DESIGN.md](REPORT_DESIGN.md) (paper-style
 sections, symbol definitions, figure encoding, threshold semantics, test-design principles, shared
@@ -115,6 +115,17 @@ python3 test/validation/run_validation.py --pipeline t5   # standalone legacy: t
 ```
 
 Output: `test/out/t5_massive_binary_tt_summary.html` (momentum-drift figure, run summary, checks; JSON report at `test/out/report.t5.massive_binary_tt.json`)
+
+### T7: AR Adaptive-Step Adjustment for a Perturbed Hierarchical Triple
+- Minimal 4-body plain-format reproducer: an ultra-tight hierarchical trio (42.7 Msun binary, a = 8.34e-7 pc; barely-unbound 0.084 Msun intruder lingering at ~4e4 a_in with v ~ v_esc; exact c.m.-subtracted state at full double precision) plus one static 1.0 Msun perturber. With the scenario radii the intruder's changeover band is [0.082, 0.545]: the k(r)-weighted perturber force injects a continuous per-step energy flow into the internal-only H audit, and the SD reference's full-weight work credit made its residual R = S - etot_sd_ref_ drift at -(1-1/kappa)*W, collapsing ds ~5 orders (10^6-substep caps; pre-fix reference on this IC: AR steps 2.27e7 + warning). Root-fixed in SDAR 2026-10-21 (commit 6a8a357): kappa-weighted work credit at the slowdown system's own velocity gradient, n>=3 `fix_step_option=later` auto-grant removed, physically-gated sd-gauge repairs; the interim 2026-10-19 rate-type EMA separation was removed (current binary: ~1.25e4 steps)
+- Seven runs: r1 perturber at 0.15 and r3 at 0.30 (intruder band — trigger guards: cumulative AR-substep budget `ar_step_sum ≤ 10⁶` calibrated 80× above the current LogH value and 23× below the pre-fix one, zero step-cap warnings / ds-floor aborts / runtime aborts, physical energy-error guard), r2 at 0.05 (deep inside r_in, k = 1 — false-positive guard), r4 = r1 with the BTLogH g-function (`--ar-g-func 1` — gauge comparison; ~1.15e5 steps, ~9× the LogH count on this IC, same budget + zero-warning guards), r5 at 0.60 (beyond r_out — formerly excluded for aborting via the `later` freeze, a gap removed by the same root fix), and r6/r7 at 0.35/0.50 across the former ds-floor-abort band (pre-fix NaN-abort zone; abort-to-complete guards). r5–r7 guard no step-cap warning / ds-floor abort / runtime abort. The T7 trigger itself runs with `Fix: none`, i.e. the adaptive path under guard is active
+- 22 checks; half-tree-step window (`-t 0.0078`): the trigger develops within the first tree step, suite cost ~2 s; verified discriminative (scenario FAILS with the pre-fix binary)
+
+```bash
+python3 test/validation/run_validation.py --pipeline t7
+```
+
+Output: `test/out/t7_triple_perturber_ar_ds_adjustment_summary.html`
 
 ### T6: AR Perturber-List Kernel Match (Members Keep Own-Mass Changeover)
 - Design under test: group artificial particles (c.m./tidal-tensor/pseudo) carry the group c.m. changeover while AR group members keep their own-mass changeover; the tidal tensor is measured at the c.m. band but the direct perturber-list force on members uses the member band, so the two kernels differ in the member-r_out..c.m.-r_out transition annulus

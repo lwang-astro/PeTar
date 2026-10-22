@@ -92,6 +92,7 @@
 90. `petar.data.clear` now trims `<prefix>.snap.lst` and removes the stale snapshot files beyond the clear time, so restarting from an older snapshot no longer leaves duplicate list entries that downstream tools process twice.
 91. Functional test layer: every case now runs a restart flow (fresh run, `petar.data.clear`, canonical restart) with over-deletion and duplicate-record assertions, plus a new `bse-galpy-gasdrag` case.
 92. Python readers: `fromfile()` now sniffs the first bytes and, for ASCII text tables, dispatches to `loadtxt()` with a warning before the byte-alignment checks (so `strict_mismatch=False` can no longer mask a wrong-reader read into garbage records); `format='binary'|'ascii'` forces a physical format.
+93. SDAR AR integrator: the sd-energy reference now absorbs external perturbation work at the slowdown system's own velocity-gradient (kappa-weighted) rate instead of full weight, and the n>=3 `fix_step_option=later` auto-grant is removed, eliminating the sd-gauge residual drift that collapsed the adaptive `ds` through tight-binary trio encounters (~1800x fewer substeps on the deterministic reproducer; degenerate-gauge events are repaired behind a physical energy-error gate).
 
 **Some existing issues include**
 

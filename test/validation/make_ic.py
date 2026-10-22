@@ -397,6 +397,42 @@ def build_t5(output: Path) -> None:
     write_rows(output, recentered)
 
 
+def build_t7(output: Path, rp: float) -> None:
+    # Knife-edge hierarchical trio + one static perturber, reproducing the
+    # 2026-10-19/20 rate-type ds-controller collapse (see
+    # doc/restart-slowdown-cold-state-plan.md). The trio state is the exact
+    # c.m.-subtracted configuration extracted from the functional-bse grind
+    # dump at t=8.171875 (hard-dump records 0, 1, 68): an ultra-tight
+    # 42.7 Msun inner binary (a = 8.34e-7, e ~ 5e-4) plus a 0.084 Msun
+    # intruder barely unbound (e = 1.0012) lingering at ~4e4 a_in with
+    # v ~ v_esc. A single 1.0 Msun perturber placed at distance rp on +x
+    # (v = 0) activates the changeover-modulated perturbation channel when
+    # rp falls inside the members' changeover transition band; with the
+    # solver radii used by the scenario (mean outer ~2.17, intruder band
+    # [0.082, 0.545]) rp = 0.15 sits mid-band of the intruder.
+    trio = [
+        (23.660928497887493,
+         [-5.3337175601186892e-05, 4.6028170444190053e-05, -1.1970474815936605e-05],
+         [31.05023827013645, -211.76010591288758, -0.0021811559681917392]),
+        (19.044431988547881,
+         [-5.2512178304042756e-05, 4.6149125184635764e-05, -1.1970474986910951e-05],
+         [-38.587592282131624, 263.10022998850241, -0.0028319265168438856]),
+        (0.08396199811790174,
+         [0.026941613553335575, -0.023438617110016713, 0.0060885097654825859],
+         [2.3976235834667845, -1.8307267677018166, 1.2570044748639835]),
+    ]
+    rows = list(trio) + [(1.0, [rp, 0.0, 0.0], [0.0, 0.0, 0.0])]
+    # The knife-edge intruder state (barely unbound, lingering at ~4e4 a_in)
+    # is precision-sensitive: a 15-digit rounding shifts the trajectory enough
+    # to move the perturber across the trigger-zone boundary. Write full
+    # double precision instead of the shared write_rows (.14e).
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", encoding="utf-8") as fh:
+        for mass, pos, vel in rows:
+            fh.write("{:.17e} {:.17e} {:.17e} {:.17e} {:.17e} {:.17e} {:.17e}\n".format(
+                mass, pos[0], pos[1], pos[2], vel[0], vel[1], vel[2]))
+
+
 def build_t4_outer15(output: Path) -> None:
     # Original notebook-scale outer orbit.
     build_t4_with_outer_a(output, outer_a=1.5)
@@ -1033,6 +1069,12 @@ def main() -> int:
             "t4_outer15",
             "t5",
             "t6",
+            "t7",
+            "t7_band2",
+            "t7_control_in",
+            "t7_outer",
+            "t7_abortzone",
+            "t7_abortzone2",
             "functional_smoke",
             "functional_dual_merge_smoke",
             "functional_mcluster_dual_merge_smoke",
@@ -1061,6 +1103,18 @@ def main() -> int:
         build_t5(out)
     elif args.case == "t6":
         build_t6(out)
+    elif args.case == "t7":
+        build_t7(out, rp=0.15)
+    elif args.case == "t7_band2":
+        build_t7(out, rp=0.30)
+    elif args.case == "t7_control_in":
+        build_t7(out, rp=0.05)
+    elif args.case == "t7_outer":
+        build_t7(out, rp=0.60)
+    elif args.case == "t7_abortzone":
+        build_t7(out, rp=0.35)
+    elif args.case == "t7_abortzone2":
+        build_t7(out, rp=0.50)
     elif args.case == "functional_smoke":
         build_functional_smoke(out)
     elif args.case == "functional_dual_merge_smoke":

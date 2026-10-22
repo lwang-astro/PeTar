@@ -401,6 +401,8 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 ### 2026-10-19: 【重启后 AR slowdown 冷态磨积分——物理相同时间差 240 倍】bse 用例 restart 段(自 t=3)5m38s、20 次 10^6 步上限,而同 IC 全新单跑 0→10 仅 1.4s、零告警;两路径的并合轨迹逐快照一致(121+124 Msun 对 t≈3/t≈6 并合)。元凶不是重启命令冗余参数(最小规范命令同样慢)——是 AR slowdown/Hermite 簇状态未随快照持久化也未在重启时重建,预存紧双星群组被冷态朴素积分。调查计划见 doc/restart-slowdown-cold-state-plan.md
 
+**【2026-10-22 更正:本条"冷态 slowdown"根因被同日后续调查推翻】** gdb 平衡态采样显示 κ_in≈1.3e6 顶在时标帽上——slowdown 是**热**的,塌的是 AR 的 ds。真实链条(逐层定案,见 `doc/restart-slowdown-cold-state-plan.md` 与下一条播种混淆):墙钟默认播种 → 重启掷出不同混沌骰子 → 刀尖态三体 × 处于 changeover 过渡带的扰动星 → SD 参考以**全权重**吸收扰动功(减速系统只取 κ 加权部分)→ 记账残差 R=S−etot_sd_ref_ 以 −(1−1/κ)·W 漂移 → ds 塌 5 个量级。SDAR 2026-10-22 根治(commit `6a8a357`:κ 加权功记账、移除 n≥3 `later` 自动授予、物理门控规范修复);与重启无关的连续运行同样可触发。重启角度仅剩的真实教训:restart 会换骰子,对照实验必须钉死 seed。
+
 **Mistake**: functional bse 用例 6.3 分钟(全套 7.6 分钟的 83%),最初怀疑 restart 命令重复传参(-b 等)干扰重启语义;最小命令实验排除后,对照实验(全新 vs 重启的并合轨迹+步数告警)才定位为状态重建问题。
 
 **Root cause**: 连续运行中 slowdown 树/时标保持热态,紧双星积分廉价;重启只恢复粒子/组结构,AR 内部状态从默认冷态起步,未并合的紧双星群组反复撞步数上限(与 5765150 修复的 cluster copy-in Hermite 状态重置同区域)。
@@ -514,6 +516,17 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 参数被拆成主文件 `data.par` + 按特性拆分的伴随文件（所有构建都有 `data.par.hard`；BSE 系有 `.par.bse`/`.mobse`/`.bseEmp`；DSM/Galpy/Agama 同）；而快照默认写出二进制，`-i` 默认 2 只读 ASCII。canonical 形式两者都没写，照抄必失败。
 
 **Prevention rule**: 复制 `<prefix>.par` **及全部 `<prefix>.par.*`**；读二进制快照用 `-i 0`（或 `-i 3`）。归属：`assets/input-source-workflows.md` → "Restart / resume"。修正后以“重启区间能量与原始运行逐位一致（ΔE = 0.000e+00）”作为手续齐全的判据。
+
+### 2026-10-19: "restart 特别慢"实为墙钟默认播种+混沌触发的 AR 磨洋工——A/B 对比必须钉死 `--rand-seed`
+
+**Mistake**: functional `bse` restart 段 6.3 min vs fresh 1.4 s，据此立档"restart 后 AR slowdown 冷态回归"（`doc/restart-slowdown-cold-state-plan.md` 原始版）。gdb dump 重放定案机制后复查触发条件才发现对比被 seed 混淆：`--rand-seed` 默认 0=墙钟时间（`parallel-random/rand_io.hpp`），每次执行换一个 BSE 随机实现，grind 与否由轨迹实现（混沌）决定。
+
+**Root cause**: 病灶本体在 SDAR AR ds 控制器（见 SDAR lessons 2026-10-19 条），触发是概率性的；`--rand-seed` 墙钟默认使 fresh/restart 对比（各自重新播种）变成两次独立掷骰。同 seed 实验（functional 的 1792391053081014136）：fresh 0→10=1.41s/0 警告（`f.3` 与 functional `data.3` 逐位一致）；同 seed restart 流水线=1.16s/0 警告；而另一墙钟 seed 的 **fresh**（无 restart）也在 t≈8.9 磨 10 次警告。其它扰动源实证：`--write-group-info 2` 使 `a.1.randseeds`≠`b.1.randseeds`（粒子 t≤3 仍逐位一致，下次 BSE kick 才分岔）；同 seed 下 `-t 4` vs `-t 10` 到 t=3 已差 864 字节。restart 重建只是扰动源之一，不是成因。
+
+**Prevention rule**:
+1. 任何 fresh/restart/选项 A-vs-B 的耗时或轨迹对比必须显式 `--rand-seed` 钉死（并核对 `<prefix>.par.rand` 里记录的 seed）；快照逐位 `cmp` 是"同实现"的金标准。
+2. 判定"X 导致慢"前先做同 seed 同状态对照；单样本"慢 vs 快"在 BSE+混沌系统上不构成证据。
+3. functional `bse` 用例时长是随机变量（1.2s…6+min），应视为病灶探测器而非回归基线——harness 需固定 seed 或改用确定性触发案例（plan 开放项）。
 
 ---
 

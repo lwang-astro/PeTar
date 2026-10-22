@@ -131,7 +131,9 @@
         "-b",
         "4",
         "--write-group-info",
-        "2"
+        "2",
+        "--rand-seed",
+        "1792391053081014136"
       ],
       "process_args": [
         "-i",

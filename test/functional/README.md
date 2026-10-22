@@ -7,6 +7,10 @@ Goals:
 1. Build/compile matrix sanity check across major features.
 2. One very fast simulation run per feature case.
 3. Analysis tools pipeline check without runtime errors.
+4. Determinism where chaos matters: the `bse` case pins `--rand-seed
+   1792391053081014136` (known non-grinding realization; the wall-clock
+   default re-rolled a pathological tight-binary encounter on some draws,
+   1.2 s … 6+ min — see `doc/restart-slowdown-cold-state-plan.md`).
 
 ## Scope And Positioning
 
