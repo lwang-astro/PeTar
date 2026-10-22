@@ -34,7 +34,8 @@ This file is the root entry point for agents working in this repository. Keep it
 - Simulation execution rules (binary selection via `petar.select`, option validation, unit consistency) live in SKILL.md — do not restate or second-guess them here.
 - Do not add undocumented configure or runtime options without checking repository docs and `-h` output.
 - Do not commit or push without user confirmation.
-- Bump `VERSION` in every commit: `(cd tools && bash get_version.sh)`, then append the `e` experiment suffix and stage `VERSION`.
+- Bump `VERSION` in every commit: `(cd tools && bash get_version.sh)` and stage
+  `VERSION` — the script preserves the `e` experiment suffix automatically.
 - User-facing changes update `release.note` in the same commit, **one item per entry**: a single change summarized in one concise sentence; a commit contributes as many entries as its content warrants. List only new features and important bug fixes — minor-fix details and internal work (lessons, agent infra, doc hygiene) stay out. When an existing issue is resolved, strike it and note the resolution. Draft candidates with `bash tools/gen_release_draft.sh <last-release.note-commit>..HEAD`.
 
 ## Custom Agents
