@@ -10,7 +10,7 @@ Goals:
 4. Determinism where chaos matters: the `bse` case pins `--rand-seed
    1792391053081014136` (known non-grinding realization; the wall-clock
    default re-rolled a pathological tight-binary encounter on some draws,
-   1.2 s … 6+ min — see `doc/restart-slowdown-cold-state-plan.md`).
+   1.2 s … 6+ min — record: `SDAR/docs/etot_sd_ref_corruption_fix_notes.md`).
 
 ## Scope And Positioning
 

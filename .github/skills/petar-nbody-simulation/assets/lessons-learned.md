@@ -399,9 +399,9 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Fix 续(2026-10-19,ASCII 事件流三连修)**:① 发现漏斗——`data.sse.type_change`/`data.bse.sn_kick` 等子后缀名单 rank 运行下从未被 data_clear 发现;② 列号系统错误——自动检测假设前置 label 列(+1)而写入端从不输出 label,时间列系统性偏移一位(sse 读成 lum、bse 读成 ecc);③ 正确列(对照写入端实证):sse/sevn 系=id+StarParameter 块 init.tphys=col12,bse 系=type+BinaryEvent 块 record[0]=col2。修正后 functional 精确切分断言双向成真(bse.type_change pre 6 kept+1 beyond → post 6+0)。
 
-### 2026-10-19: 【重启后 AR slowdown 冷态磨积分——物理相同时间差 240 倍】bse 用例 restart 段(自 t=3)5m38s、20 次 10^6 步上限,而同 IC 全新单跑 0→10 仅 1.4s、零告警;两路径的并合轨迹逐快照一致(121+124 Msun 对 t≈3/t≈6 并合)。元凶不是重启命令冗余参数(最小规范命令同样慢)——是 AR slowdown/Hermite 簇状态未随快照持久化也未在重启时重建,预存紧双星群组被冷态朴素积分。调查计划见 doc/restart-slowdown-cold-state-plan.md
+### 2026-10-19: 【重启后 AR slowdown 冷态磨积分——物理相同时间差 240 倍】bse 用例 restart 段(自 t=3)5m38s、20 次 10^6 步上限,而同 IC 全新单跑 0→10 仅 1.4s、零告警;两路径的并合轨迹逐快照一致(121+124 Msun 对 t≈3/t≈6 并合)。元凶不是重启命令冗余参数(最小规范命令同样慢)——是 AR slowdown/Hermite 簇状态未随快照持久化也未在重启时重建,预存紧双星群组被冷态朴素积分。调查记录见 SDAR/docs/etot_sd_ref_corruption_fix_notes.md（原 PeTar plan 已蒸馏归档删除）
 
-**【2026-10-22 更正:本条"冷态 slowdown"根因被同日后续调查推翻】** gdb 平衡态采样显示 κ_in≈1.3e6 顶在时标帽上——slowdown 是**热**的,塌的是 AR 的 ds。真实链条(逐层定案,见 `doc/restart-slowdown-cold-state-plan.md` 与下一条播种混淆):墙钟默认播种 → 重启掷出不同混沌骰子 → 刀尖态三体 × 处于 changeover 过渡带的扰动星 → SD 参考以**全权重**吸收扰动功(减速系统只取 κ 加权部分)→ 记账残差 R=S−etot_sd_ref_ 以 −(1−1/κ)·W 漂移 → ds 塌 5 个量级。SDAR 2026-10-22 根治(commit `6a8a357`:κ 加权功记账、移除 n≥3 `later` 自动授予、物理门控规范修复);与重启无关的连续运行同样可触发。重启角度仅剩的真实教训:restart 会换骰子,对照实验必须钉死 seed。
+**【2026-10-22 更正:本条"冷态 slowdown"根因被同日后续调查推翻】** gdb 平衡态采样显示 κ_in≈1.3e6 顶在时标帽上——slowdown 是**热**的,塌的是 AR 的 ds。真实链条(逐层定案,记录:`SDAR/docs/etot_sd_ref_corruption_fix_notes.md`,与下一条播种混淆):墙钟默认播种 → 重启掷出不同混沌骰子 → 刀尖态三体 × 处于 changeover 过渡带的扰动星 → SD 参考以**全权重**吸收扰动功(减速系统只取 κ 加权部分)→ 记账残差 R=S−etot_sd_ref_ 以 −(1−1/κ)·W 漂移 → ds 塌 5 个量级。SDAR 2026-10-22 根治(commit `6a8a357`:κ 加权功记账、移除 n≥3 `later` 自动授予、物理门控规范修复);与重启无关的连续运行同样可触发。重启角度仅剩的真实教训:restart 会换骰子,对照实验必须钉死 seed。
 
 **Mistake**: functional bse 用例 6.3 分钟(全套 7.6 分钟的 83%),最初怀疑 restart 命令重复传参(-b 等)干扰重启语义;最小命令实验排除后,对照实验(全新 vs 重启的并合轨迹+步数告警)才定位为状态重建问题。
 
@@ -519,14 +519,22 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 ### 2026-10-19: "restart 特别慢"实为墙钟默认播种+混沌触发的 AR 磨洋工——A/B 对比必须钉死 `--rand-seed`
 
-**Mistake**: functional `bse` restart 段 6.3 min vs fresh 1.4 s，据此立档"restart 后 AR slowdown 冷态回归"（`doc/restart-slowdown-cold-state-plan.md` 原始版）。gdb dump 重放定案机制后复查触发条件才发现对比被 seed 混淆：`--rand-seed` 默认 0=墙钟时间（`parallel-random/rand_io.hpp`），每次执行换一个 BSE 随机实现，grind 与否由轨迹实现（混沌）决定。
+**Mistake**: functional `bse` restart 段 6.3 min vs fresh 1.4 s，据此立档"restart 后 AR slowdown 冷态回归"（原 PeTar plan 首版，2026-10-22 蒸馏删除；机制记录：SDAR/docs/etot_sd_ref_corruption_fix_notes.md）。gdb dump 重放定案机制后复查触发条件才发现对比被 seed 混淆：`--rand-seed` 默认 0=墙钟时间（`parallel-random/rand_io.hpp`），每次执行换一个 BSE 随机实现，grind 与否由轨迹实现（混沌）决定。
 
 **Root cause**: 病灶本体在 SDAR AR ds 控制器（见 SDAR lessons 2026-10-19 条），触发是概率性的；`--rand-seed` 墙钟默认使 fresh/restart 对比（各自重新播种）变成两次独立掷骰。同 seed 实验（functional 的 1792391053081014136）：fresh 0→10=1.41s/0 警告（`f.3` 与 functional `data.3` 逐位一致）；同 seed restart 流水线=1.16s/0 警告；而另一墙钟 seed 的 **fresh**（无 restart）也在 t≈8.9 磨 10 次警告。其它扰动源实证：`--write-group-info 2` 使 `a.1.randseeds`≠`b.1.randseeds`（粒子 t≤3 仍逐位一致，下次 BSE kick 才分岔）；同 seed 下 `-t 4` vs `-t 10` 到 t=3 已差 864 字节。restart 重建只是扰动源之一，不是成因。
 
 **Prevention rule**:
 1. 任何 fresh/restart/选项 A-vs-B 的耗时或轨迹对比必须显式 `--rand-seed` 钉死（并核对 `<prefix>.par.rand` 里记录的 seed）；快照逐位 `cmp` 是"同实现"的金标准。
 2. 判定"X 导致慢"前先做同 seed 同状态对照；单样本"慢 vs 快"在 BSE+混沌系统上不构成证据。
-3. functional `bse` 用例时长是随机变量（1.2s…6+min），应视为病灶探测器而非回归基线——harness 需固定 seed 或改用确定性触发案例（plan 开放项）。
+3. functional `bse` 用例时长是随机变量（1.2s…6+min），应视为病灶探测器而非回归基线——harness 已固定 seed（2026-10-22），确定性触发案例见 validation T7。
+
+### 2026-10-22: 【提前拆组缓解被生产证据否决——为"省合法成本"加高风险谓词前先过决策门】
+
+**Mistake**: root-fix（SDAR `6a8a357` 记账 + `96f0d39`/`d14ce63` BTLogH ds 估计）落地后，仍计划实施"n≥3 组内双星 κ 顶时标帽即提前拆组"的状态触发缓解，未先验证生产中是否还有组达到成本阈值。
+
+**Root cause**: 缓解目标从"治病"（ds 塌缩，已根治）悄然漂移为"省合法成本"；而剩余成本是真实相遇解析（T8 量化：cascade 规范比 0.11 等）。决策门数据（N=1000 双星富集基准）：跑完 t=30、零 step-cap 告警、全簇 ~4,960 AR 子步/树步、3.2 ms/步（AR 在墙钟剖面不可见）——没有任何 n≥3 组接近触发阈值，机制将是只带风险的死代码。且"未接近"状态谓词在 v≈v_esc 刀尖轨道上正是 2021 `later` 授予的同款盲区（stab/apo 基判据看不见近心点）；漏检俯冲 = 无 abort 兜底的静默错误物理。
+
+**Prevention rule**: (1) 为性能添加携带正确性风险的谓词前，必须先用生产运行的成本统计证明触发条件真实可达（决策门）；(2) 若未来重开，用成本触发式设计（实测步数超阈 + 近心评估 q_outer 守卫 + 默认关 + 大声日志 + churn 回退），不用状态触发谓词；(3) 剩余真问题不在群组管理射程内（2 体接触磨积分 = SDAR plan 条目 6；双曲根垃圾 ds_init = 条目 4），别用拆组去够它们。
 
 ---
 

@@ -399,8 +399,8 @@ def build_t5(output: Path) -> None:
 
 def build_t7(output: Path, rp: float) -> None:
     # Knife-edge hierarchical trio + one static perturber, reproducing the
-    # 2026-10-19/20 rate-type ds-controller collapse (see
-    # doc/restart-slowdown-cold-state-plan.md). The trio state is the exact
+    # 2026-10-19/20 rate-type ds-controller collapse (record:
+    # SDAR/docs/etot_sd_ref_corruption_fix_notes.md). The trio state is the exact
     # c.m.-subtracted configuration extracted from the functional-bse grind
     # dump at t=8.171875 (hard-dump records 0, 1, 68): an ultra-tight
     # 42.7 Msun inner binary (a = 8.34e-7, e ~ 5e-4) plus a 0.084 Msun
