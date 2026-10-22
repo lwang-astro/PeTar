@@ -1256,11 +1256,10 @@ public:
             // initialization 
             sym_int.initialIntegration(0.0);
             sym_int.info.time_offset = time_origin;
-#ifdef AR_G_FUNC
-            sym_int.info.calcDsAndStepOption(ar_manager.step.getOrder(),  ar_manager.interaction.gravitational_constant, ar_manager.ds_scale, sym_int.g_func_on);
-#else
-            sym_int.info.calcDsAndStepOption(ar_manager.step.getOrder(),  ar_manager.interaction.gravitational_constant, ar_manager.ds_scale); 
-#endif
+            // (plan item 5 fix, 2026-10-22) the ds estimate moved INTO
+            // AR::initialIntegration (restores the documented creation
+            // sequence, single source); the former explicit call here is
+            // removed as a duplicate.
 
             // calculate c.m. changeover
             PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
