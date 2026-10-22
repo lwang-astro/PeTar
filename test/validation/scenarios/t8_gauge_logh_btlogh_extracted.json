@@ -1,0 +1,81 @@
+{
+ "name": "t8_gauge_logh_btlogh_extracted",
+ "description": "LogH vs BTLogH gauge comparison on three extracted multiple-system event classes (subsystems CM-recentered from the 2026-10-22 N=1000 benchmark dump sweep, bench-n1k-arfix/; bystander members dropped). c1 cascade: 105 Msun tight binary (a=6.5e-7 pc, e=0.016) colliding with a 0.3 Msun binary at mutual pericenter (root q~0.0063 pc, e~0.94) -- dump-replay measured LogH 2.2M-11.4M AR steps per hard block vs BTLogH 12k-35k (38-934x cheaper) at comparable energy monitors. c2 chaotic: the step-dominant 6-body group of a dense 31-star pre-fix pathological cluster (same massive binary in a 4+2 exchange complex) -- dump-replay LogH 65,791 steps with 16 hard-energy events vs BTLogH 264,956 steps with 0 (BTLogH pays ~4x steps for a clean monitor). c3 control: two detached binaries at 0.093 pc -- parity guard. Each case runs g0 (LogH) and g1 (BTLogH, --ar-g-func 1); plain family, no stellar evolution, no external potential.",
+ "cores": 2,
+ "parallel_runs": true,
+ "workdir": "{repo_root}",
+ "setup_commands": [
+  "rm -rf test/validation/work/t8 && mkdir -p test/validation/work/t8",
+  "python3 test/validation/make_ic.py --case t8_cascade --output test/validation/work/t8/input.cascade",
+  "python3 test/validation/make_ic.py --case t8_chaotic --output test/validation/work/t8/input.chaotic",
+  "python3 test/validation/make_ic.py --case t8_control --output test/validation/work/t8/input.control",
+  "cd test/validation/work/t8 && petar.init -f input_cascade input.cascade && petar.init -f input_chaotic input.chaotic && petar.init -f input_control input.control"
+ ],
+ "extract": {
+  "regex_counts": {
+   "step_warning": "step count is signficiant",
+   "ds_floor_abort": "below time resolution",
+   "runtime_abort": "Segmentation fault|Assertion|Aborted",
+   "hard_energy_sig": "Hard energy significant"
+  },
+  "regex_floats": {
+   "ar_step_sum": "AR_step_sum[ \\t]*\\n[ \\t0-9.e+-]*?[ \\t]([0-9.eE+-]+)\\s*\\n"
+  }
+ },
+ "runs": [
+  {
+   "id": "r1_cascade_logh",
+   "command": "cd test/validation/work/t8 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -t 0.01 -o 0.01 -b 2 -s 0.0009765625 --r 0.05 --r-ratio 0.15 --r-search-group 0.005 -f t8_r1 input_cascade",
+   "output": "r1_cascade_logh.log"
+  },
+  {
+   "id": "r2_cascade_btlogh",
+   "command": "cd test/validation/work/t8 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -t 0.01 -o 0.01 -b 2 -s 0.0009765625 --r 0.05 --r-ratio 0.15 --r-search-group 0.005 --ar-g-func 1 -f t8_r2 input_cascade",
+   "output": "r2_cascade_btlogh.log"
+  },
+  {
+   "id": "r3_chaotic_logh",
+   "command": "cd test/validation/work/t8 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -t 0.01 -o 0.01 -b 0 -s 0.0009765625 --r 0.05 --r-ratio 0.15 --r-search-group 0.005 -f t8_r3 input_chaotic",
+   "output": "r3_chaotic_logh.log"
+  },
+  {
+   "id": "r4_chaotic_btlogh",
+   "command": "cd test/validation/work/t8 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -t 0.01 -o 0.01 -b 0 -s 0.0009765625 --r 0.05 --r-ratio 0.15 --r-search-group 0.005 --ar-g-func 1 -f t8_r4 input_chaotic",
+   "output": "r4_chaotic_btlogh.log"
+  },
+  {
+   "id": "r5_control_logh",
+   "command": "cd test/validation/work/t8 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -t 0.05 -o 0.05 -b 2 -s 0.0009765625 --r 0.05 --r-ratio 0.15 --r-search-group 0.005 -f t8_r5 input_control",
+   "output": "r5_control_logh.log"
+  },
+  {
+   "id": "r6_control_btlogh",
+   "command": "cd test/validation/work/t8 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -t 0.05 -o 0.05 -b 2 -s 0.0009765625 --r 0.05 --r-ratio 0.15 --r-search-group 0.005 --ar-g-func 1 -f t8_r6 input_control",
+   "output": "r6_control_btlogh.log"
+  }
+ ],
+ "checks": [
+  {"name": "r1_cascade_logh_no_abort", "type": "regex_count_max", "run_id": "r1_cascade_logh", "regex_key": "runtime_abort", "threshold": 0},
+  {"name": "r1_cascade_logh_no_ds_floor", "type": "regex_count_max", "run_id": "r1_cascade_logh", "regex_key": "ds_floor_abort", "threshold": 0},
+  {"name": "r2_cascade_btlogh_no_abort", "type": "regex_count_max", "run_id": "r2_cascade_btlogh", "regex_key": "runtime_abort", "threshold": 0},
+  {"name": "r2_cascade_btlogh_no_ds_floor", "type": "regex_count_max", "run_id": "r2_cascade_btlogh", "regex_key": "ds_floor_abort", "threshold": 0},
+  {"name": "r3_chaotic_logh_no_abort", "type": "regex_count_max", "run_id": "r3_chaotic_logh", "regex_key": "runtime_abort", "threshold": 0},
+  {"name": "r3_chaotic_logh_no_ds_floor", "type": "regex_count_max", "run_id": "r3_chaotic_logh", "regex_key": "ds_floor_abort", "threshold": 0},
+  {"name": "r4_chaotic_btlogh_no_abort", "type": "regex_count_max", "run_id": "r4_chaotic_btlogh", "regex_key": "runtime_abort", "threshold": 0},
+  {"name": "r4_chaotic_btlogh_no_ds_floor", "type": "regex_count_max", "run_id": "r4_chaotic_btlogh", "regex_key": "ds_floor_abort", "threshold": 0},
+  {"name": "r5_control_logh_no_abort", "type": "regex_count_max", "run_id": "r5_control_logh", "regex_key": "runtime_abort", "threshold": 0},
+  {"name": "r6_control_btlogh_no_abort", "type": "regex_count_max", "run_id": "r6_control_btlogh", "regex_key": "runtime_abort", "threshold": 0},
+  {"name": "r1_cascade_logh_step_ceiling", "type": "max_threshold", "run_id": "r1_cascade_logh", "metric": "ar_step_sum", "threshold": 100000},
+  {"name": "r1_cascade_logh_event_floor", "type": "min_threshold", "run_id": "r1_cascade_logh", "metric": "ar_step_sum", "threshold": 3000},
+  {"name": "r2_cascade_btlogh_step_ceiling", "type": "max_threshold", "run_id": "r2_cascade_btlogh", "metric": "ar_step_sum", "threshold": 6000},
+  {"name": "cascade_btlogh_cheaper", "type": "metric_ratio", "numerator_run_id": "r2_cascade_btlogh", "denominator_run_id": "r1_cascade_logh", "metric": "ar_step_sum", "min_ratio": 0.02, "max_ratio": 0.5},
+  {"name": "r3_chaotic_logh_step_ceiling", "type": "max_threshold", "run_id": "r3_chaotic_logh", "metric": "ar_step_sum", "threshold": 100000},
+  {"name": "r4_chaotic_btlogh_step_ceiling", "type": "max_threshold", "run_id": "r4_chaotic_btlogh", "metric": "ar_step_sum", "threshold": 100000},
+  {"name": "r3_chaotic_logh_event_floor", "type": "min_threshold", "run_id": "r3_chaotic_logh", "metric": "ar_step_sum", "threshold": 3000},
+  {"name": "r4_chaotic_btlogh_no_energy_events", "type": "regex_count_max", "run_id": "r4_chaotic_btlogh", "regex_key": "hard_energy_sig", "threshold": 0},
+  {"name": "r5_control_logh_step_ceiling", "type": "max_threshold", "run_id": "r5_control_logh", "metric": "ar_step_sum", "threshold": 5000},
+  {"name": "r6_control_btlogh_step_ceiling", "type": "max_threshold", "run_id": "r6_control_btlogh", "metric": "ar_step_sum", "threshold": 5000},
+  {"name": "r5_control_no_energy_events", "type": "regex_count_max", "run_id": "r5_control_logh", "regex_key": "hard_energy_sig", "threshold": 0},
+  {"name": "r6_control_no_energy_events", "type": "regex_count_max", "run_id": "r6_control_btlogh", "regex_key": "hard_energy_sig", "threshold": 0}
+ ]
+}

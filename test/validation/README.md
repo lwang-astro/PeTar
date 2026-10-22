@@ -1,4 +1,4 @@
-# Validation Framework (T1–T7)
+# Validation Framework (T1–T8)
 
 **Design rules**: all validation reports follow [REPORT_DESIGN.md](REPORT_DESIGN.md) (paper-style
 sections, symbol definitions, figure encoding, threshold semantics, test-design principles, shared
@@ -126,6 +126,37 @@ python3 test/validation/run_validation.py --pipeline t7
 ```
 
 Output: `test/out/t7_triple_perturber_ar_ds_adjustment_summary.html`
+
+### T8: LogH vs BTLogH Gauge Comparison (Extracted Event Classes)
+- Three event classes extracted (CM-recentered, full double precision) from the
+  2026-10-22 N=1000 binary-rich cluster benchmark dump sweep (`bench-n1k-arfix/`),
+  keeping the physically important members: r1/r2 **cascade** — the 105 Msun
+  tight binary (a=6.5e-7 pc, e=0.016) + 0.3 Msun binary at mutual pericenter,
+  PLUS the 7 bystanders carrying 95% of the cluster's tidal field on the group
+  (minimal set by G*m/r^3; without them the slowdown stays engaged and both
+  gauges integrate cheaply — the disengagement was externally driven); dump
+  replay measured LogH 2.2M-11.4M AR steps/block vs BTLogH 12k-35k (38-934x).
+  r3/r4 **chaotic** — the step-dominant 6-body group of a pre-fix pathological
+  31-star cluster; dump replay: LogH 65.8k steps with 16 hard-energy events vs
+  BTLogH 265k with 0. r5/r6 **control** — two detached binaries (parity guard).
+- Six runs (each case in LogH and `--ar-g-func 1`), plain family, solver radii
+  scaled to the IC (`--r 0.05 --r-search-group 0.005`; the hard manager asserts
+  r_search_group <= r_in)
+- 22 checks: zero runtime/ds-floor aborts everywhere; calibrated budgets
+  (cascade LogH floor 3e3 guards the event actually triggers, ceiling 1e5;
+  cascade BTLogH ceiling 6e3; cascade gauge ratio in [0.02, 0.5] — measured 0.11,
+  dump-replay 38-934x — guarding the BTLogH hierarchical advantage; chaotic
+  LogH floor 3e3 + ceilings 1e5; chaotic BTLogH zero hard-energy events; control
+  ceilings 5e3 + zero events both gauges); suite cost ~3 s
+- The N=1000 full-cluster BTLogH run aborts (ds-denormal collapse, t=18.5 Myr) —
+  tracked as SDAR plan open item 5; T8 guards the per-event gauge signatures,
+  not the full-cluster behavior
+
+```bash
+python3 test/validation/run_validation.py --pipeline t8
+```
+
+Output: `test/out/t8_gauge_logh_btlogh_extracted_summary.html`
 
 ### T6: AR Perturber-List Kernel Match (Members Keep Own-Mass Changeover)
 - Design under test: group artificial particles (c.m./tidal-tensor/pseudo) carry the group c.m. changeover while AR group members keep their own-mass changeover; the tidal tensor is measured at the c.m. band but the direct perturber-list force on members uses the member band, so the two kernels differ in the member-r_out..c.m.-r_out transition annulus

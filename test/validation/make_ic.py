@@ -433,6 +433,78 @@ def build_t7(output: Path, rp: float) -> None:
                 mass, pos[0], pos[1], pos[2], vel[0], vel[1], vel[2]))
 
 
+def _write_t8_rows(output: Path, rows) -> None:
+    # Full double precision (mid-encounter states are precision-sensitive,
+    # same rationale as build_t7).
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", encoding="utf-8") as fh:
+        for mass, pos, vel in rows:
+            fh.write("{:.17e} {:.17e} {:.17e} {:.17e} {:.17e} {:.17e} {:.17e}\n".format(
+                mass, pos[0], pos[1], pos[2], vel[0], vel[1], vel[2]))
+
+
+def build_t8_cascade(output: Path) -> None:
+    # T8 hierarchical-cascade case: the 4-body group (members 2,3,6,7) from
+    # the 2026-10-22 N=1000 benchmark dump
+    # current.dump_large_step_h4_n30_g10_t5.929199 (bench-n1k-arfix/) -- a
+    # 105 Msun tight binary (a=6.5e-7 pc, e=0.016, P=4.8e-9 Myr) colliding
+    # with a 0.3 Msun binary at mutual pericenter (root q~0.0063 pc,
+    # e~0.94) -- PLUS the 7 bystanders carrying 95% of the cluster's tidal
+    # field on the group (minimal-set selection by G*m/r^3; the 4-body-only
+    # extract integrates cheaply in BOTH gauges because the slowdown
+    # disengagement in the original event was driven by this external
+    # field). Dump-replay gauge A/B: LogH 2.2M-11.4M AR steps per hard
+    # block vs BTLogH 12k-35k (38-934x cheaper) at comparable energy
+    # monitors -- the flagship hierarchical-multiple win for the product
+    # (BTLogH) gauge.
+    _write_t8_rows(output, [
+        (2.16290647351530012e+01, [2.51456703316543795e-03, -2.06976591139084176e-02, -1.24765142852054228e-02], [5.34463233418060426e+01, 2.00370466881110872e+02, 6.36228792189857245e+02]),
+        (8.37422646967909969e+01, [2.51505813667540767e-03, -2.06980872336284261e-02, -1.24764239685754286e-02], [-1.39708701042149563e+01, -5.15929694683241280e+01, -1.64618485403352736e+02]),
+        (1.98992673330040004e-01, [-3.91263914796458057e-03, -1.86856872708184296e-02, -1.38420936072554263e-02], [-3.45386068613545705e+00, -2.21391618967252501e+00, -1.31479461483637401e+01]),
+        (9.91972549158660066e-02, [-3.92396056996457965e-03, -1.86883438878684416e-02, -1.38191147460754171e-02], [-7.30576172128457269e-01, -5.78096101307962495e+00, -6.61668487769453950e+00]),
+        (1.70233580713849997e+00, [-2.29160220959445660e-02, -7.88579022022842246e-03, 3.73382620227458162e-03], [-2.07882505443205723e+00, 5.81302177774244866e-01, 2.76371456685926020e+00]),
+        (2.38615570113539999e+00, [3.63964259318254046e-02, -5.98916917792184367e-02, -1.55540272379354194e-02], [2.75358403890394277e+00, -8.21854161516582593e+00, 1.07623175087182599e+01]),
+        (2.35168022272280008e-01, [-2.29970252705445910e-02, -8.20403977885841851e-03, 4.05274885988457512e-03], [-2.85936956868995695e+00, 1.15889856014367476e+00, 3.04059771164276027e+00]),
+        (8.13137780849759961e-01, [3.64036620797854038e-02, -5.98930949320784500e-02, -1.55608487146554203e-02], [1.21219591270884286e+00, 1.69395577018388757e+01, -2.30428065234047388e+01]),
+        (1.67223535414359997e-01, [2.88122460499053989e-02, -3.61299796138442320e-04, -1.45111445604654277e-02], [-2.62583949128975691e+00, -2.70095300223775148e-01, -1.33976819446123985e+00]),
+        (1.15714268543820005e+01, [-1.52601078412545887e-02, 1.07215364418017572e-01, 6.10829613892335740e-02], [2.49651036736204279e+00, 1.72284990067220861e+02, 1.54326432434967245e+02]),
+        (1.07534750297469994e+01, [-1.52604837545845806e-02, 1.07215514475368576e-01, 6.10827990160735801e-02], [-1.58794043906265703e+00, -1.86103864618319136e+02, -1.64612150153052738e+02]),
+    ])
+
+
+def build_t8_chaotic(output: Path) -> None:
+    # T8 chaotic case: CM-recentered extract of the step-dominant 6-body
+    # group (members 12,13,10,11,0,1) from the pre-fix pathological cluster
+    # baseline.dump_large_step_h4_n31_g10_t0.359375: the same 105 Msun
+    # binary embedded in a dense 4+2 exchange complex with low-mass
+    # stars. Dump-replay gauge A/B on the parent cluster: LogH 65,791
+    # steps with 16 hard-energy-significant events vs BTLogH 264,956
+    # steps with 0 events (BTLogH pays ~4x steps for a clean monitor) --
+    # the non-hierarchical counterpoint to the cascade case.
+    _write_t8_rows(output, [
+        (1.55182606135500001e-01, [3.62853972415677628e-03, 1.86153494924545804e-03, -1.27761703803046592e-03], [3.83911750441267730e+00, -1.21808834763359783e+01, 5.91010231527986463e+00]),
+        (1.07671330855760000e-01, [3.79843945169677788e-03, 1.91898265402545842e-03, -1.32666923963446759e-03], [4.21031695253597782e+00, -1.37506708736609777e+01, 6.99897222938166497e+00]),
+        (1.32761026988319997e+00, [-6.35014888314322512e-03, 3.55839192234547186e-03, 6.31244862344253199e-03], [8.66770225115347692e+00, 3.35966317437472117e+00, -2.55865346753363543e+00]),
+        (3.52232555331649988e-01, [-6.38193367854322791e-03, 3.53395075165546801e-03, 6.31580711190753152e-03], [3.61388144984747717e+00, 1.05851285368287211e+01, -6.53098219820803561e+00]),
+        (8.37422646967909969e+01, [9.20182112167378108e-05, -6.12672555245219463e-05, -9.74345360444661690e-05], [4.06546146316437795e+00, 6.22445584967110221e+01, 1.68150033174157358e+02]),
+        (2.16290647351530012e+01, [9.24942905368153490e-05, -6.16655741745297803e-05, -9.73046052654691351e-05], [-1.63798253051127247e+01, -2.41217930288848976e+02, -6.50848206974502659e+02]),
+    ])
+
+
+def build_t8_control(output: Path) -> None:
+    # T8 control case: two detached binaries (CM separation 0.093 pc, no
+    # encounter within the window) from
+    # baseline.dump_large_step_h4_n32_g13_t0.336914 members (2,3)+(6,7).
+    # Both gauges must stay cheap and near-equal (parity/false-positive
+    # guard for the cascade and chaotic assertions).
+    _write_t8_rows(output, [
+        (8.37422646967909969e+01, [2.15118834008598547e-04, -7.70364143333202023e-05, 2.89664571128216142e-05], [2.65766536269051379e+01, 4.26192580230517422e+01, 1.71832257060643343e+02]),
+        (2.16290647351530012e+01, [2.15585544198648726e-04, -7.74666156233005943e-05, 2.89930402388206832e-05], [-1.02931874148616856e+02, -1.65006859015856264e+02, -6.65291905658366659e+02]),
+        (1.55182606135500001e-01, [-8.62791762918013738e-02, 3.08621417984666913e-02, -1.15757898937789774e-02], [1.88065702779903843e+00, -4.98562568410358731e-01, 2.54293672240903879e-01]),
+        (1.07671330855760000e-01, [-8.62664603868213975e-02, 3.09967994524367185e-02, -1.16692884659742781e-02], [4.07872020828773874e+00, -1.09434054840058748e-01, -1.86873478169156115e-01]),
+    ])
+
+
 def build_t4_outer15(output: Path) -> None:
     # Original notebook-scale outer orbit.
     build_t4_with_outer_a(output, outer_a=1.5)
@@ -1075,6 +1147,9 @@ def main() -> int:
             "t7_outer",
             "t7_abortzone",
             "t7_abortzone2",
+            "t8_cascade",
+            "t8_chaotic",
+            "t8_control",
             "functional_smoke",
             "functional_dual_merge_smoke",
             "functional_mcluster_dual_merge_smoke",
@@ -1115,6 +1190,12 @@ def main() -> int:
         build_t7(out, rp=0.35)
     elif args.case == "t7_abortzone2":
         build_t7(out, rp=0.50)
+    elif args.case == "t8_cascade":
+        build_t8_cascade(out)
+    elif args.case == "t8_chaotic":
+        build_t8_chaotic(out)
+    elif args.case == "t8_control":
+        build_t8_control(out)
     elif args.case == "functional_smoke":
         build_functional_smoke(out)
     elif args.case == "functional_dual_merge_smoke":
