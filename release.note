@@ -93,6 +93,7 @@
 91. Functional test layer: every case now runs a restart flow (fresh run, `petar.data.clear`, canonical restart) with over-deletion and duplicate-record assertions, plus a new `bse-galpy-gasdrag` case.
 92. Python readers: `fromfile()` now sniffs the first bytes and, for ASCII text tables, dispatches to `loadtxt()` with a warning before the byte-alignment checks (so `strict_mismatch=False` can no longer mask a wrong-reader read into garbage records); `format='binary'|'ascii'` forces a physical format.
 93. Fix the BTLogH (`--ar-g-func 1`) denormal adaptive-ds abort in multiple systems: the SDAR first ds estimate now happens at group initialization (restoring the original creation-time design) instead of a per-block ungated estimate on possibly-unsynced binary trees, with an ASSERT tripwire added for unset slowdown periods (SDAR-side fix).
+94. Fix the LogH adaptive-ds phase-transition failure (NaN Hamiltonian / negative physical time, triggered by near-parabolic hyperbolic fits e.g. in merger cases): the SDAR sum-gauge estimator now uses the semi-major-axis potential gauge for hyperbolic layers, floors the effective period by the crossing time, and caps each hyperbolic layer at S=0.25 of the angular-momentum scale (S-criterion, Wang & Nitadori 2020), making first ds estimates safe by construction; on the N=1000 benchmark this cuts step-count warnings from 168 to 6 and wallclock from 43 to 10 minutes at equal energy accuracy (SDAR-side fix).
 
 **Some existing issues include**
 

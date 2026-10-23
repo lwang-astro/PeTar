@@ -583,6 +583,14 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 落地（2026-09-12）：agent 套件 9 → 3 + 内置 Explore。Planner/Researcher/Implementer/Build & Test Maintainer/Validation Analyst/Documentation Maintainer 移除；职责分别并入 Developer（规划/聚焦编辑/文档/lessons）、Simulation Engineer（configure/Makefile/smoke/validation harness 接线）、Reviewer（验证层级选择/T1-T3/阈值判定）。
 
+### 2026-10-23: 条件式任务（"核实→若解决则归档"）的未解决分支是决策点，不是实现触发器
+
+**Mistake**: 用户指令"核实 plan item 4/6 是否已解决；解决则按规则归档，然后提交"。核实发现 item 4 的 BLogH 侧（`calcEffectivePeriod` 双曲 t_cross 下限）未实现后，agent 未停下汇报选项，而是直接开始为该缺口准备代码实现，被用户当场纠正："没有要求继续更改代码，先需要向我确认"。
+
+**Root cause**: 把"条件未满足"读成了"补齐条件的授权"——核实类任务发现缺口时，任务边界从"验证+归档"静默漂移为"实现+归档"；缺一条规则：条件的否定分支必须回到用户决策。
+
+**Prevention rule**: 条件式指令（"如果 X 则 Y"）中 X 为假时，唯一合法输出是汇报核实结果 + 选项（实现 / 留 open / 其他），等待选择；"按规则归档"只覆盖已完成的调查结论，不覆盖调查中暴露的新实现缺口。同类泛化：任何"先调查"任务的中途发现若改变任务性质（调查→改码、验证→修复），性质变化本身需要确认。
+
 ---
 
 ## Configuration Hygiene
