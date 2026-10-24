@@ -1225,6 +1225,14 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: ① 生成物入库前两问:有消费者吗?机器无关吗?机器耦合快照与无消费者副产物一律不入库;② skill 维护按 `README.md` Health-Check Procedure 执行(死指针扫描:grep 引用→验存在;冗余/矛盾/泛化扫描;读路径预算记录)——本次(2026-10-16)结果:死指针 0、`script-tools` 链条健康(6 天前仍在更新、在读路径、保留)、agents 三件齐全、SKILL.md 预算基线 386 行/35 KB;③ HANDOFF 恢复步骤只保留有承重的刷新项(现为 script-tools 刷新+一致性检查两项)。
 
+### 2026-10-24: 【VERSION 双 e】脚本已自动保留 e 后缀后仍手动追加——版本规程变更后旧肌肉记忆模式失效;只跑脚本,永不手工拼后缀
+
+**Mistake**: `get_version.sh` 2026-10-22 起自动保留 `e` 实验后缀(直接产出 `1850e`),但仍沿用旧模式 `get_version.sh && echo "$(cat VERSION)e" > VERSION`,PeTar 连续两提交(1848ee/1849ee)与 SDAR 一提交(478ee)全部双 e,用户审查发现。
+
+**Root cause**: 脚本行为变更(commit 1843e)未同步清除我记忆中的旧手动模式;AGENTS.md 规则已写明"脚本自动保留 e",但执行时按惯性照抄历史命令而非当前规则;`ee` 后缀无任何校验拦截。
+
+**Prevention rule**: ① bump VERSION 只跑 `(cd tools && bash get_version.sh)` 后直接 stage,**永不手工追加后缀**;② 从历史会话/旧提交里复制命令前,先对照 AGENTS.md 当前规则;③ 提交前 `cat VERSION` 目检一次(应为纯数字+单个 e);④ 规则/脚本行为变更后,相关联的惯用命令模式应在同变更中审计。
+
 ### 2026-10-16: 【全绿但图是空的】T4 控制组图自 4 月重设计起静默空白——报告渲染路径也要"存在性守护";改名/合并场景时先查渲染键匹配
 
 **Mistake**: T4 报告 19/19 检查全绿、控制组对比表(Table 6)有数据,但控制组 6 张图一直是空白(HTML 里 0 个 svg)。排查发现:`build_orbit_figure_section` 按 MODE_ORDER 基名(m1_pure_sdar_ref)查 series 标签,而控制组 run id 带 `_o15` 后缀 → 全部曲线查不到被过滤,`svg_curves_plot` 对空曲线列表返回空串——渲染层静默吞掉,检查层无感知。该 bug 自 4 月 paper-style 重设计起就存在,因控制组此后从未重跑而一直潜伏,直到本次合并单 JSON 重跑才暴露。

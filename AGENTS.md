@@ -33,10 +33,14 @@ This file is the root entry point for agents working in this repository. Keep it
 - Keep restart/resume workflows separate from fresh IC generation.
 - Simulation execution rules (binary selection via `petar.select`, option validation, unit consistency) live in SKILL.md — do not restate or second-guess them here.
 - Do not add undocumented configure or runtime options without checking repository docs and `-h` output.
-- Do not commit or push without user confirmation.
+- Never commit or push autonomously: every commit needs explicit user confirmation for that specific change first — reporting finished work is not authorization.
 - Bump `VERSION` in every commit: `(cd tools && bash get_version.sh)` and stage
   `VERSION` — the script preserves the `e` experiment suffix automatically.
-- User-facing changes update `release.note` in the same commit, **one item per entry**: a single change summarized in one concise sentence; a commit contributes as many entries as its content warrants. List only new features and important bug fixes — minor-fix details and internal work (lessons, agent infra, doc hygiene) stay out. When an existing issue is resolved, strike it and note the resolution. Draft candidates with `bash tools/gen_release_draft.sh <last-release.note-commit>..HEAD`.
+- User-facing changes update `release.note` in the same commit:
+  - one entry = one change = one line <= 150 chars, starting with a standard verb: **Add / Fix / Change / Improve / Remove**;
+  - prefix the introducing version (`66. (1790e) Fix ...`); major entries get a trailing `[major]` tag (never a leading `*` — it breaks `grep -E '^[0-9]+\. '`); carry SDAR requirements over from the commit message (`needs SDAR >= 63e8308`);
+  - what changed and why it matters only — root causes, fix mechanics, and validation numbers go to the commit message / lessons; minor fixes, internal work (lessons, agent infra, doc hygiene), and resolved issues (one-clause strikethrough) stay out;
+  - draft: `bash tools/gen_release_draft.sh <last-release.note-commit>..HEAD`; new entries must not appear in `grep -nE '^[0-9]+\. .{150,}' release.note` (pre-2026-10-24 content grandfathered).
 
 ## Custom Agents
 
