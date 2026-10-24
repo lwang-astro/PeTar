@@ -1,0 +1,916 @@
+{
+  "name": "t9_tde_trigger_criterion",
+  "description": "Micro-TDE trigger criterion (Rastello et al. 2026): BH 20.059 Msun (kw=14) + MS star 2.3934 Msun (Z=0.02, BSE ZAMS R=1.7543 Rsun, r_t=3.563 Rsun) on engineered two-body orbits; a 0.5 Msun bystander at 1 pc keeps the tree/hard channel populated. Bound grid (a=100 AU, marked binary, start at apocentre) and hyperbolic grid (v_inf=5 km/s, start 100 AU inbound) sweep the pericentre through beta=0.3..5; NS (1.4 Msun, kw=13) checks the second compact-object branch; MS-MS control has no CO. Detection boundary must sit at beta=1: exactly one event for beta>=1.1, none for beta<=0.9; events route by orbit sign to data .bse.hyperbolic_tde / .binary_tde; the disrupted star becomes a kw=15 massless remnant and the CO accretes ftzacc=0.1 of the stellar mass (mix.f).",
+  "cores": 8,
+  "parallel_runs": true,
+  "workdir": "{repo_root}",
+  "setup_commands": [
+    "rm -rf test/validation/work/t9 && mkdir -p test/validation/work/t9",
+    "mkdir -p test/validation/work/t9/bound_beta0.3",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind bound --beta 0.3 --output test/validation/work/t9/bound_beta0.3/input.base",
+    "cd test/validation/work/t9/bound_beta0.3 && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/bound_beta0.6",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind bound --beta 0.6 --output test/validation/work/t9/bound_beta0.6/input.base",
+    "cd test/validation/work/t9/bound_beta0.6 && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/bound_beta0.9",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind bound --beta 0.9 --output test/validation/work/t9/bound_beta0.9/input.base",
+    "cd test/validation/work/t9/bound_beta0.9 && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/hyp_beta0.5",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind hyperbolic --beta 0.5 --output test/validation/work/t9/hyp_beta0.5/input.base",
+    "cd test/validation/work/t9/hyp_beta0.5 && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/hyp_beta0.9",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind hyperbolic --beta 0.9 --output test/validation/work/t9/hyp_beta0.9/input.base",
+    "cd test/validation/work/t9/hyp_beta0.9 && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/msms_control",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind msms --beta 1.0 --output test/validation/work/t9/msms_control/input.base",
+    "cd test/validation/work/t9/msms_control && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/bound_beta1.1",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind bound --beta 1.1 --output test/validation/work/t9/bound_beta1.1/input.base",
+    "cd test/validation/work/t9/bound_beta1.1 && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/bound_beta1.5",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind bound --beta 1.5 --output test/validation/work/t9/bound_beta1.5/input.base",
+    "cd test/validation/work/t9/bound_beta1.5 && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/bound_beta3.0",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind bound --beta 3.0 --output test/validation/work/t9/bound_beta3.0/input.base",
+    "cd test/validation/work/t9/bound_beta3.0 && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/bound_beta5.0",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind bound --beta 5.0 --output test/validation/work/t9/bound_beta5.0/input.base",
+    "cd test/validation/work/t9/bound_beta5.0 && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/hyp_beta1.1",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind hyperbolic --beta 1.1 --output test/validation/work/t9/hyp_beta1.1/input.base",
+    "cd test/validation/work/t9/hyp_beta1.1 && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/hyp_beta2.93",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind hyperbolic --beta 2.93 --output test/validation/work/t9/hyp_beta2.93/input.base",
+    "cd test/validation/work/t9/hyp_beta2.93 && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/hyp_beta5.0",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind hyperbolic --beta 5.0 --output test/validation/work/t9/hyp_beta5.0/input.base",
+    "cd test/validation/work/t9/hyp_beta5.0 && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/ns_beta2.0",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind ns --beta 2.0 --output test/validation/work/t9/ns_beta2.0/input.base",
+    "cd test/validation/work/t9/ns_beta2.0 && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/pc_control",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind pc_control --beta 1.5 --output test/validation/work/t9/pc_control/input.base",
+    "cd test/validation/work/t9/pc_control && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/pc_perturbed",
+    "python3 test/validation/make_ic.py --case t9_tde_trigger --kind pc_perturbed --beta 1.5 --output test/validation/work/t9/pc_perturbed/input.base",
+    "cd test/validation/work/t9/pc_perturbed && petar.init -s bse --type '$8' -f input input.base",
+    "mkdir -p test/validation/work/t9/replay9",
+    "python3 test/validation/make_ic.py --case t9_replay --event 9 --output test/validation/work/t9/replay9/input.base",
+    "cd test/validation/work/t9/replay9 && petar.init -s bse --type '$8' --time '$9' -f input input.base",
+    "python3 test/validation/make_ic.py --case t9_replay_fix --input-file test/validation/work/t9/replay9/input --time 380.0",
+    "mkdir -p test/validation/work/t9/replay10",
+    "python3 test/validation/make_ic.py --case t9_replay --event 10 --output test/validation/work/t9/replay10/input.base",
+    "cd test/validation/work/t9/replay10 && petar.init -s bse --type '$8' --time '$9' -f input input.base",
+    "python3 test/validation/make_ic.py --case t9_replay_fix --input-file test/validation/work/t9/replay10/input --time 1202.0"
+  ],
+  "extract": {
+    "tde_event": true,
+    "interrupt_mode": "bse",
+    "regex_counts": {
+      "runtime_abort": "Segmentation fault|Assertion|Aborted"
+    }
+  },
+  "runs": [
+    {
+      "id": "bound_beta0.3",
+      "command": "cd test/validation/work/t9/bound_beta0.3 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 5e-4 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_bound_beta0.3 input",
+      "output": "bound_beta0.3.log"
+    },
+    {
+      "id": "bound_beta0.6",
+      "command": "cd test/validation/work/t9/bound_beta0.6 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 5e-4 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_bound_beta0.6 input",
+      "output": "bound_beta0.6.log"
+    },
+    {
+      "id": "bound_beta0.9",
+      "command": "cd test/validation/work/t9/bound_beta0.9 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 5e-4 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_bound_beta0.9 input",
+      "output": "bound_beta0.9.log"
+    },
+    {
+      "id": "hyp_beta0.5",
+      "command": "cd test/validation/work/t9/hyp_beta0.5 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1  --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 5e-4 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_hyp_beta0.5 input",
+      "output": "hyp_beta0.5.log"
+    },
+    {
+      "id": "hyp_beta0.9",
+      "command": "cd test/validation/work/t9/hyp_beta0.9 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1  --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 5e-4 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_hyp_beta0.9 input",
+      "output": "hyp_beta0.9.log"
+    },
+    {
+      "id": "msms_control",
+      "command": "cd test/validation/work/t9/msms_control && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 5e-4 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_msms_control input",
+      "output": "msms_control.log"
+    },
+    {
+      "id": "bound_beta1.1",
+      "command": "cd test/validation/work/t9/bound_beta1.1 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 5e-4 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_bound_beta1.1 input",
+      "output": "bound_beta1.1.log"
+    },
+    {
+      "id": "bound_beta1.5",
+      "command": "cd test/validation/work/t9/bound_beta1.5 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 5e-4 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_bound_beta1.5 input",
+      "output": "bound_beta1.5.log"
+    },
+    {
+      "id": "bound_beta3.0",
+      "command": "cd test/validation/work/t9/bound_beta3.0 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 5e-4 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_bound_beta3.0 input",
+      "output": "bound_beta3.0.log"
+    },
+    {
+      "id": "bound_beta5.0",
+      "command": "cd test/validation/work/t9/bound_beta5.0 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 5e-4 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_bound_beta5.0 input",
+      "output": "bound_beta5.0.log"
+    },
+    {
+      "id": "hyp_beta1.1",
+      "command": "cd test/validation/work/t9/hyp_beta1.1 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1  --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 5e-4 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_hyp_beta1.1 input",
+      "output": "hyp_beta1.1.log"
+    },
+    {
+      "id": "hyp_beta2.93",
+      "command": "cd test/validation/work/t9/hyp_beta2.93 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1  --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 5e-4 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_hyp_beta2.93 input",
+      "output": "hyp_beta2.93.log"
+    },
+    {
+      "id": "hyp_beta5.0",
+      "command": "cd test/validation/work/t9/hyp_beta5.0 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1  --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 5e-4 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_hyp_beta5.0 input",
+      "output": "hyp_beta5.0.log"
+    },
+    {
+      "id": "ns_beta2.0",
+      "command": "cd test/validation/work/t9/ns_beta2.0 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 5e-4 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_ns_beta2.0 input",
+      "output": "ns_beta2.0.log"
+    },
+    {
+      "id": "pc_control",
+      "command": "cd test/validation/work/t9/pc_control && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 1.2e-3 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_pc_control input",
+      "output": "pc_control.log"
+    },
+    {
+      "id": "pc_perturbed",
+      "command": "cd test/validation/work/t9/pc_perturbed && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 -b 1 --tt-switch 0 --r-group 0.18 --r-search-group 0.18 -s 1e-6 -r 2 -t 1.5e-3 -o 1e-4 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_pc_perturbed input",
+      "output": "pc_perturbed.log"
+    },
+    {
+      "id": "replay9",
+      "command": "cd test/validation/work/t9/replay9 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 --tt-switch 0 --r-ratio 0.5 --r-group 1.0 --r-search-group 1.0 -s 1e-4 -r 3 -t 381.5750 -o 0.125 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_replay9 input",
+      "output": "replay9.log"
+    },
+    {
+      "id": "replay10",
+      "command": "cd test/validation/work/t9/replay10 && OMP_NUM_THREADS=1 {petar_bin_switch} -a 0 -u 1 --tt-switch 0 --r-ratio 0.5 --r-group 1.0 --r-search-group 1.0 -s 1e-4 -r 3 -t 1202.5000 -o 0.05 -w 2 --bse-metallicity 0.02 --rand-seed 1792391053081014136 -f t9_replay10 input",
+      "output": "replay10.log"
+    }
+  ],
+  "checks": [
+    {
+      "name": "replay9_one_event_min",
+      "type": "min_threshold",
+      "run_id": "replay9",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: author event re-triggers from its last pre-event snapshot"
+    },
+    {
+      "name": "replay9_one_event_max",
+      "type": "max_threshold",
+      "run_id": "replay9",
+      "metric": "n_tde_events",
+      "threshold": 1
+    },
+    {
+      "name": "replay9_routing",
+      "type": "max_threshold",
+      "run_id": "replay9",
+      "metric": "n_tde_wrong_file",
+      "threshold": 0
+    },
+    {
+      "name": "replay9_star_disrupted",
+      "type": "max_threshold",
+      "run_id": "replay9",
+      "metric": "tde_star_undisrupted",
+      "threshold": 0
+    },
+    {
+      "name": "replay9_author_peri",
+      "type": "max_threshold",
+      "run_id": "replay9",
+      "metric": "author_rp_ratio_dev",
+      "threshold": 0.02,
+      "comment": "accuracy: logged pericentre vs the author trigger pericentre (chaos band calibrated per event)"
+    },
+    {
+      "name": "replay9_author_semi",
+      "type": "max_threshold",
+      "run_id": "replay9",
+      "metric": "author_a_ratio_dev",
+      "threshold": 0.02,
+      "comment": "accuracy: logged semi-major axis vs the author trigger orbit (phase-sensitive; looser for event 10)"
+    },
+    {
+      "name": "replay9_no_abort",
+      "type": "regex_count_max",
+      "run_id": "replay9",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "replay10_one_event_min",
+      "type": "min_threshold",
+      "run_id": "replay10",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: author event re-triggers from its last pre-event snapshot"
+    },
+    {
+      "name": "replay10_one_event_max",
+      "type": "max_threshold",
+      "run_id": "replay10",
+      "metric": "n_tde_events",
+      "threshold": 1
+    },
+    {
+      "name": "replay10_routing",
+      "type": "max_threshold",
+      "run_id": "replay10",
+      "metric": "n_tde_wrong_file",
+      "threshold": 0
+    },
+    {
+      "name": "replay10_star_disrupted",
+      "type": "max_threshold",
+      "run_id": "replay10",
+      "metric": "tde_star_undisrupted",
+      "threshold": 0
+    },
+    {
+      "name": "replay10_author_peri",
+      "type": "max_threshold",
+      "run_id": "replay10",
+      "metric": "author_rp_ratio_dev",
+      "threshold": 0.1,
+      "comment": "accuracy: logged pericentre vs the author trigger pericentre (chaos band calibrated per event)"
+    },
+    {
+      "name": "replay10_author_semi",
+      "type": "max_threshold",
+      "run_id": "replay10",
+      "metric": "author_a_ratio_dev",
+      "threshold": 0.35,
+      "comment": "accuracy: logged semi-major axis vs the author trigger orbit (phase-sensitive; looser for event 10)"
+    },
+    {
+      "name": "replay10_no_abort",
+      "type": "regex_count_max",
+      "run_id": "replay10",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "bound_beta1.1_one_event_min",
+      "type": "min_threshold",
+      "run_id": "bound_beta1.1",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (>=1)"
+    },
+    {
+      "name": "bound_beta1.1_one_event_max",
+      "type": "max_threshold",
+      "run_id": "bound_beta1.1",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (<=1)"
+    },
+    {
+      "name": "bound_beta1.1_routing",
+      "type": "max_threshold",
+      "run_id": "bound_beta1.1",
+      "metric": "n_tde_wrong_file",
+      "threshold": 0,
+      "comment": "structural: orbit-sign routing (semi<0 -> hyperbolic_tde, semi>0 -> binary_tde)"
+    },
+    {
+      "name": "bound_beta1.1_beta_consistent",
+      "type": "max_threshold",
+      "run_id": "bound_beta1.1",
+      "metric": "beta_ratio_dev",
+      "threshold": 0.02,
+      "comment": "accuracy: logged beta (r_t from logged pre-merger radius / logged pericentre) within 2% of design"
+    },
+    {
+      "name": "bound_beta1.1_star_disrupted",
+      "type": "max_threshold",
+      "run_id": "bound_beta1.1",
+      "metric": "tde_star_undisrupted",
+      "threshold": 0,
+      "comment": "structural: disrupted star becomes kw=15 massless remnant"
+    },
+    {
+      "name": "bound_beta1.1_accreted_min",
+      "type": "min_threshold",
+      "run_id": "bound_beta1.1",
+      "metric": "bh_accreted_frac",
+      "threshold": 0.099,
+      "comment": "accuracy: BH accretes ftzacc (0.1) of the stellar mass, -1% band"
+    },
+    {
+      "name": "bound_beta1.1_accreted_max",
+      "type": "max_threshold",
+      "run_id": "bound_beta1.1",
+      "metric": "bh_accreted_frac",
+      "threshold": 0.101,
+      "comment": "accuracy: BH accretes ftzacc (0.1) of the stellar mass, +1% band"
+    },
+    {
+      "name": "bound_beta1.1_no_abort",
+      "type": "regex_count_max",
+      "run_id": "bound_beta1.1",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "bound_beta1.5_one_event_min",
+      "type": "min_threshold",
+      "run_id": "bound_beta1.5",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (>=1)"
+    },
+    {
+      "name": "bound_beta1.5_one_event_max",
+      "type": "max_threshold",
+      "run_id": "bound_beta1.5",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (<=1)"
+    },
+    {
+      "name": "bound_beta1.5_routing",
+      "type": "max_threshold",
+      "run_id": "bound_beta1.5",
+      "metric": "n_tde_wrong_file",
+      "threshold": 0,
+      "comment": "structural: orbit-sign routing (semi<0 -> hyperbolic_tde, semi>0 -> binary_tde)"
+    },
+    {
+      "name": "bound_beta1.5_beta_consistent",
+      "type": "max_threshold",
+      "run_id": "bound_beta1.5",
+      "metric": "beta_ratio_dev",
+      "threshold": 0.02,
+      "comment": "accuracy: logged beta (r_t from logged pre-merger radius / logged pericentre) within 2% of design"
+    },
+    {
+      "name": "bound_beta1.5_star_disrupted",
+      "type": "max_threshold",
+      "run_id": "bound_beta1.5",
+      "metric": "tde_star_undisrupted",
+      "threshold": 0,
+      "comment": "structural: disrupted star becomes kw=15 massless remnant"
+    },
+    {
+      "name": "bound_beta1.5_accreted_min",
+      "type": "min_threshold",
+      "run_id": "bound_beta1.5",
+      "metric": "bh_accreted_frac",
+      "threshold": 0.099,
+      "comment": "accuracy: BH accretes ftzacc (0.1) of the stellar mass, -1% band"
+    },
+    {
+      "name": "bound_beta1.5_accreted_max",
+      "type": "max_threshold",
+      "run_id": "bound_beta1.5",
+      "metric": "bh_accreted_frac",
+      "threshold": 0.101,
+      "comment": "accuracy: BH accretes ftzacc (0.1) of the stellar mass, +1% band"
+    },
+    {
+      "name": "bound_beta1.5_no_abort",
+      "type": "regex_count_max",
+      "run_id": "bound_beta1.5",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "bound_beta3.0_one_event_min",
+      "type": "min_threshold",
+      "run_id": "bound_beta3.0",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (>=1)"
+    },
+    {
+      "name": "bound_beta3.0_one_event_max",
+      "type": "max_threshold",
+      "run_id": "bound_beta3.0",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (<=1)"
+    },
+    {
+      "name": "bound_beta3.0_routing",
+      "type": "max_threshold",
+      "run_id": "bound_beta3.0",
+      "metric": "n_tde_wrong_file",
+      "threshold": 0,
+      "comment": "structural: orbit-sign routing (semi<0 -> hyperbolic_tde, semi>0 -> binary_tde)"
+    },
+    {
+      "name": "bound_beta3.0_beta_consistent",
+      "type": "max_threshold",
+      "run_id": "bound_beta3.0",
+      "metric": "beta_ratio_dev",
+      "threshold": 0.02,
+      "comment": "accuracy: logged beta (r_t from logged pre-merger radius / logged pericentre) within 2% of design"
+    },
+    {
+      "name": "bound_beta3.0_star_disrupted",
+      "type": "max_threshold",
+      "run_id": "bound_beta3.0",
+      "metric": "tde_star_undisrupted",
+      "threshold": 0,
+      "comment": "structural: disrupted star becomes kw=15 massless remnant"
+    },
+    {
+      "name": "bound_beta3.0_accreted_min",
+      "type": "min_threshold",
+      "run_id": "bound_beta3.0",
+      "metric": "bh_accreted_frac",
+      "threshold": 0.099,
+      "comment": "accuracy: BH accretes ftzacc (0.1) of the stellar mass, -1% band"
+    },
+    {
+      "name": "bound_beta3.0_accreted_max",
+      "type": "max_threshold",
+      "run_id": "bound_beta3.0",
+      "metric": "bh_accreted_frac",
+      "threshold": 0.101,
+      "comment": "accuracy: BH accretes ftzacc (0.1) of the stellar mass, +1% band"
+    },
+    {
+      "name": "bound_beta3.0_no_abort",
+      "type": "regex_count_max",
+      "run_id": "bound_beta3.0",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "bound_beta5.0_one_event_min",
+      "type": "min_threshold",
+      "run_id": "bound_beta5.0",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (>=1)"
+    },
+    {
+      "name": "bound_beta5.0_one_event_max",
+      "type": "max_threshold",
+      "run_id": "bound_beta5.0",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (<=1)"
+    },
+    {
+      "name": "bound_beta5.0_routing",
+      "type": "max_threshold",
+      "run_id": "bound_beta5.0",
+      "metric": "n_tde_wrong_file",
+      "threshold": 0,
+      "comment": "structural: orbit-sign routing (semi<0 -> hyperbolic_tde, semi>0 -> binary_tde)"
+    },
+    {
+      "name": "bound_beta5.0_beta_consistent",
+      "type": "max_threshold",
+      "run_id": "bound_beta5.0",
+      "metric": "beta_ratio_dev",
+      "threshold": 0.02,
+      "comment": "accuracy: logged beta (r_t from logged pre-merger radius / logged pericentre) within 2% of design"
+    },
+    {
+      "name": "bound_beta5.0_star_disrupted",
+      "type": "max_threshold",
+      "run_id": "bound_beta5.0",
+      "metric": "tde_star_undisrupted",
+      "threshold": 0,
+      "comment": "structural: disrupted star becomes kw=15 massless remnant"
+    },
+    {
+      "name": "bound_beta5.0_accreted_min",
+      "type": "min_threshold",
+      "run_id": "bound_beta5.0",
+      "metric": "bh_accreted_frac",
+      "threshold": 0.099,
+      "comment": "accuracy: BH accretes ftzacc (0.1) of the stellar mass, -1% band"
+    },
+    {
+      "name": "bound_beta5.0_accreted_max",
+      "type": "max_threshold",
+      "run_id": "bound_beta5.0",
+      "metric": "bh_accreted_frac",
+      "threshold": 0.101,
+      "comment": "accuracy: BH accretes ftzacc (0.1) of the stellar mass, +1% band"
+    },
+    {
+      "name": "bound_beta5.0_no_abort",
+      "type": "regex_count_max",
+      "run_id": "bound_beta5.0",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "hyp_beta1.1_one_event_min",
+      "type": "min_threshold",
+      "run_id": "hyp_beta1.1",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (>=1)"
+    },
+    {
+      "name": "hyp_beta1.1_one_event_max",
+      "type": "max_threshold",
+      "run_id": "hyp_beta1.1",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (<=1)"
+    },
+    {
+      "name": "hyp_beta1.1_routing",
+      "type": "max_threshold",
+      "run_id": "hyp_beta1.1",
+      "metric": "n_tde_wrong_file",
+      "threshold": 0,
+      "comment": "structural: orbit-sign routing (semi<0 -> hyperbolic_tde, semi>0 -> binary_tde)"
+    },
+    {
+      "name": "hyp_beta1.1_beta_consistent",
+      "type": "max_threshold",
+      "run_id": "hyp_beta1.1",
+      "metric": "beta_ratio_dev",
+      "threshold": 0.02,
+      "comment": "accuracy: logged beta (r_t from logged pre-merger radius / logged pericentre) within 2% of design"
+    },
+    {
+      "name": "hyp_beta1.1_star_disrupted",
+      "type": "max_threshold",
+      "run_id": "hyp_beta1.1",
+      "metric": "tde_star_undisrupted",
+      "threshold": 0,
+      "comment": "structural: disrupted star becomes kw=15 massless remnant"
+    },
+    {
+      "name": "hyp_beta1.1_accreted_min",
+      "type": "min_threshold",
+      "run_id": "hyp_beta1.1",
+      "metric": "bh_accreted_frac",
+      "threshold": 0.099,
+      "comment": "accuracy: BH accretes ftzacc (0.1) of the stellar mass, -1% band"
+    },
+    {
+      "name": "hyp_beta1.1_accreted_max",
+      "type": "max_threshold",
+      "run_id": "hyp_beta1.1",
+      "metric": "bh_accreted_frac",
+      "threshold": 0.101,
+      "comment": "accuracy: BH accretes ftzacc (0.1) of the stellar mass, +1% band"
+    },
+    {
+      "name": "hyp_beta1.1_no_abort",
+      "type": "regex_count_max",
+      "run_id": "hyp_beta1.1",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "hyp_beta2.93_one_event_min",
+      "type": "min_threshold",
+      "run_id": "hyp_beta2.93",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (>=1)"
+    },
+    {
+      "name": "hyp_beta2.93_one_event_max",
+      "type": "max_threshold",
+      "run_id": "hyp_beta2.93",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (<=1)"
+    },
+    {
+      "name": "hyp_beta2.93_routing",
+      "type": "max_threshold",
+      "run_id": "hyp_beta2.93",
+      "metric": "n_tde_wrong_file",
+      "threshold": 0,
+      "comment": "structural: orbit-sign routing (semi<0 -> hyperbolic_tde, semi>0 -> binary_tde)"
+    },
+    {
+      "name": "hyp_beta2.93_beta_consistent",
+      "type": "max_threshold",
+      "run_id": "hyp_beta2.93",
+      "metric": "beta_ratio_dev",
+      "threshold": 0.02,
+      "comment": "accuracy: logged beta (r_t from logged pre-merger radius / logged pericentre) within 2% of design"
+    },
+    {
+      "name": "hyp_beta2.93_star_disrupted",
+      "type": "max_threshold",
+      "run_id": "hyp_beta2.93",
+      "metric": "tde_star_undisrupted",
+      "threshold": 0,
+      "comment": "structural: disrupted star becomes kw=15 massless remnant"
+    },
+    {
+      "name": "hyp_beta2.93_accreted_min",
+      "type": "min_threshold",
+      "run_id": "hyp_beta2.93",
+      "metric": "bh_accreted_frac",
+      "threshold": 0.099,
+      "comment": "accuracy: BH accretes ftzacc (0.1) of the stellar mass, -1% band"
+    },
+    {
+      "name": "hyp_beta2.93_accreted_max",
+      "type": "max_threshold",
+      "run_id": "hyp_beta2.93",
+      "metric": "bh_accreted_frac",
+      "threshold": 0.101,
+      "comment": "accuracy: BH accretes ftzacc (0.1) of the stellar mass, +1% band"
+    },
+    {
+      "name": "hyp_beta2.93_no_abort",
+      "type": "regex_count_max",
+      "run_id": "hyp_beta2.93",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "hyp_beta5.0_one_event_min",
+      "type": "min_threshold",
+      "run_id": "hyp_beta5.0",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (>=1)"
+    },
+    {
+      "name": "hyp_beta5.0_one_event_max",
+      "type": "max_threshold",
+      "run_id": "hyp_beta5.0",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (<=1)"
+    },
+    {
+      "name": "hyp_beta5.0_routing",
+      "type": "max_threshold",
+      "run_id": "hyp_beta5.0",
+      "metric": "n_tde_wrong_file",
+      "threshold": 0,
+      "comment": "structural: orbit-sign routing (semi<0 -> hyperbolic_tde, semi>0 -> binary_tde)"
+    },
+    {
+      "name": "hyp_beta5.0_beta_consistent",
+      "type": "max_threshold",
+      "run_id": "hyp_beta5.0",
+      "metric": "beta_ratio_dev",
+      "threshold": 0.02,
+      "comment": "accuracy: logged beta (r_t from logged pre-merger radius / logged pericentre) within 2% of design"
+    },
+    {
+      "name": "hyp_beta5.0_star_disrupted",
+      "type": "max_threshold",
+      "run_id": "hyp_beta5.0",
+      "metric": "tde_star_undisrupted",
+      "threshold": 0,
+      "comment": "structural: disrupted star becomes kw=15 massless remnant"
+    },
+    {
+      "name": "hyp_beta5.0_accreted_min",
+      "type": "min_threshold",
+      "run_id": "hyp_beta5.0",
+      "metric": "bh_accreted_frac",
+      "threshold": 0.099,
+      "comment": "accuracy: BH accretes ftzacc (0.1) of the stellar mass, -1% band"
+    },
+    {
+      "name": "hyp_beta5.0_accreted_max",
+      "type": "max_threshold",
+      "run_id": "hyp_beta5.0",
+      "metric": "bh_accreted_frac",
+      "threshold": 0.101,
+      "comment": "accuracy: BH accretes ftzacc (0.1) of the stellar mass, +1% band"
+    },
+    {
+      "name": "hyp_beta5.0_no_abort",
+      "type": "regex_count_max",
+      "run_id": "hyp_beta5.0",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "ns_beta2.0_one_event_min",
+      "type": "min_threshold",
+      "run_id": "ns_beta2.0",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (>=1)"
+    },
+    {
+      "name": "ns_beta2.0_one_event_max",
+      "type": "max_threshold",
+      "run_id": "ns_beta2.0",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: exactly one TDE event per trigger run (<=1)"
+    },
+    {
+      "name": "ns_beta2.0_routing",
+      "type": "max_threshold",
+      "run_id": "ns_beta2.0",
+      "metric": "n_tde_wrong_file",
+      "threshold": 0,
+      "comment": "structural: orbit-sign routing (semi<0 -> hyperbolic_tde, semi>0 -> binary_tde)"
+    },
+    {
+      "name": "ns_beta2.0_beta_consistent",
+      "type": "max_threshold",
+      "run_id": "ns_beta2.0",
+      "metric": "beta_ratio_dev",
+      "threshold": 0.02,
+      "comment": "accuracy: logged beta (r_t from logged pre-merger radius / logged pericentre) within 2% of design"
+    },
+    {
+      "name": "ns_beta2.0_star_disrupted",
+      "type": "max_threshold",
+      "run_id": "ns_beta2.0",
+      "metric": "tde_star_undisrupted",
+      "threshold": 0,
+      "comment": "structural: disrupted star becomes kw=15 massless remnant"
+    },
+    {
+      "name": "ns_beta2.0_accreted_zero",
+      "type": "max_threshold",
+      "run_id": "ns_beta2.0",
+      "metric": "bh_accreted_frac",
+      "threshold": 1e-12,
+      "comment": "documented behavior: NS branch accretes nothing (mix.f mod covers BH+MS only)"
+    },
+    {
+      "name": "ns_beta2.0_no_abort",
+      "type": "regex_count_max",
+      "run_id": "ns_beta2.0",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "bound_beta0.3_no_tde",
+      "type": "max_threshold",
+      "run_id": "bound_beta0.3",
+      "metric": "n_tde_events",
+      "threshold": 0,
+      "comment": "structural: no TDE below the detection boundary (beta<1) or without a CO (MS-MS)"
+    },
+    {
+      "name": "bound_beta0.3_no_abort",
+      "type": "regex_count_max",
+      "run_id": "bound_beta0.3",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "bound_beta0.6_no_tde",
+      "type": "max_threshold",
+      "run_id": "bound_beta0.6",
+      "metric": "n_tde_events",
+      "threshold": 0,
+      "comment": "structural: no TDE below the detection boundary (beta<1) or without a CO (MS-MS)"
+    },
+    {
+      "name": "bound_beta0.6_no_abort",
+      "type": "regex_count_max",
+      "run_id": "bound_beta0.6",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "bound_beta0.9_no_tde",
+      "type": "max_threshold",
+      "run_id": "bound_beta0.9",
+      "metric": "n_tde_events",
+      "threshold": 0,
+      "comment": "structural: no TDE below the detection boundary (beta<1) or without a CO (MS-MS)"
+    },
+    {
+      "name": "bound_beta0.9_no_abort",
+      "type": "regex_count_max",
+      "run_id": "bound_beta0.9",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "hyp_beta0.5_no_tde",
+      "type": "max_threshold",
+      "run_id": "hyp_beta0.5",
+      "metric": "n_tde_events",
+      "threshold": 0,
+      "comment": "structural: no TDE below the detection boundary (beta<1) or without a CO (MS-MS)"
+    },
+    {
+      "name": "hyp_beta0.5_no_abort",
+      "type": "regex_count_max",
+      "run_id": "hyp_beta0.5",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "hyp_beta0.9_no_tde",
+      "type": "max_threshold",
+      "run_id": "hyp_beta0.9",
+      "metric": "n_tde_events",
+      "threshold": 0,
+      "comment": "structural: no TDE below the detection boundary (beta<1) or without a CO (MS-MS)"
+    },
+    {
+      "name": "hyp_beta0.9_no_abort",
+      "type": "regex_count_max",
+      "run_id": "hyp_beta0.9",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "msms_control_no_tde",
+      "type": "max_threshold",
+      "run_id": "msms_control",
+      "metric": "n_tde_events",
+      "threshold": 0,
+      "comment": "structural: no TDE below the detection boundary (beta<1) or without a CO (MS-MS)"
+    },
+    {
+      "name": "msms_control_no_abort",
+      "type": "regex_count_max",
+      "run_id": "msms_control",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "pc_control_one_event_min",
+      "type": "min_threshold",
+      "run_id": "pc_control",
+      "metric": "n_tde_events",
+      "threshold": 1,
+      "comment": "structural: unperturbed wide-binary candidate does fire"
+    },
+    {
+      "name": "pc_control_one_event_max",
+      "type": "max_threshold",
+      "run_id": "pc_control",
+      "metric": "n_tde_events",
+      "threshold": 1
+    },
+    {
+      "name": "pc_control_routing",
+      "type": "max_threshold",
+      "run_id": "pc_control",
+      "metric": "n_tde_wrong_file",
+      "threshold": 0
+    },
+    {
+      "name": "pc_control_star_disrupted",
+      "type": "max_threshold",
+      "run_id": "pc_control",
+      "metric": "tde_star_undisrupted",
+      "threshold": 0
+    },
+    {
+      "name": "pc_control_fire_epoch",
+      "type": "max_threshold",
+      "run_id": "pc_control",
+      "metric": "tde_timing_dev_yr",
+      "threshold": 1.0,
+      "comment": "accuracy: trigger + logged t-to-pericentre within 1 yr of the analytic pericentre (premature firing at candidate detection deviates ~780 yr)"
+    },
+    {
+      "name": "pc_control_no_abort",
+      "type": "regex_count_max",
+      "run_id": "pc_control",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    },
+    {
+      "name": "pc_perturbed_no_tde",
+      "type": "max_threshold",
+      "run_id": "pc_perturbed",
+      "metric": "n_tde_events",
+      "threshold": 0,
+      "comment": "structural: flyby lifts r_p above r_t during the approach -> no TDE (premature-trigger regression, old versions failed here)"
+    },
+    {
+      "name": "pc_perturbed_no_abort",
+      "type": "regex_count_max",
+      "run_id": "pc_perturbed",
+      "regex_key": "runtime_abort",
+      "threshold": 0
+    }
+  ]
+}

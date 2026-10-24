@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import math
 import os
 import re
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 
 
 def load_astro_units_constants() -> Tuple[float, float]:
@@ -35,6 +36,9 @@ except Exception:
     KM_S_TO_PC_MYR = 1.022712165045695
 
 PC_MYR_TO_KM_S = 1.0 / KM_S_TO_PC_MYR
+# length conversions used by the T9 builder
+AU_PC = 4.8481e-6
+RSUN_PC = AU_PC / 215.032
 MCLUSTER_SEED = 42
 MCLUSTER_OUTPUT_VELOCITY_UNIT = "km/s"
 FUNCTIONAL_RECENTER_AFTER_INJECTION = os.environ.get("FUNCTIONAL_RECENTER_AFTER_INJECTION", "0").strip().lower() in {"1", "true", "yes", "on"}
@@ -508,6 +512,311 @@ def build_t8_control(output: Path) -> None:
 def build_t4_outer15(output: Path) -> None:
     # Original notebook-scale outer orbit.
     build_t4_with_outer_a(output, outer_a=1.5)
+
+
+# ----- T9: micro-TDE trigger criterion (BH/NS + star pair) -----
+# Template masses follow Rastello et al. (2026) event 1 (BH 20.059 Msun,
+# MS star 2.3934 Msun, Z = 0.02). All runs use --bse-metallicity 0.02, so the
+# BSE ZAMS radius of the star is deterministic; T9_R_STAR_ZAMS is the measured
+# value and only fixes the beta grid (the report re-derives r_t from the
+# logged pre-merger star radius, so a BSE radius drift shifts design and
+# logged beta together and is caught by the beta_ratio_dev check).
+T9_M_BH = 20.059
+T9_M_NS = 1.4
+T9_M_STAR = 2.3934
+T9_R_STAR_ZAMS = 1.7543175952
+T9_SEMI_AU = 100.0          # bound grid semi-major axis
+T9_V_INF_KMS = 5.0          # hyperbolic grid v_inf
+T9_R0_AU = 100.0            # hyperbolic grid start separation
+T9_MSMS_RPERI_RSUN = 10.0   # MS-MS control pericentre (no CO -> no TDE, no contact)
+T9_BETA_GRID_BOUND = [0.3, 0.6, 0.9, 1.1, 1.5, 3.0, 5.0]
+T9_BETA_GRID_HYPERBOLIC = [0.5, 0.9, 1.1, 2.93, 5.0]
+T9_BETA_NS = 2.0
+# perturbed-candidate scenario (Rastello comm.): wide high-e binary that is a
+# TDE candidate by osculating r_p < r_t, perturbed by a stellar flyby during
+# the approach so the pericentre is lifted above r_t before the plunge; the
+# run must NOT trigger (old versions fired prematurely). The control (no
+# perturber) must fire exactly at the analytic pericentre epoch.
+T9_PC_BETA = 1.5
+T9_PC_SEMI_AU = 380.0
+T9_PC_PERT_M = 1.0
+T9_PC_PERT_PERI_AU = 250.0
+T9_PC_PERT_A_ABS_AU = 1500.0
+T9_PC_PERT_TPERI_MYR = 4.0e-4  # flyby pericentre ~400 yr after start
+
+
+def tde_tidal_radius_rsun(m_co: float, m_star: float, r_star_rsun: float) -> float:
+    """Rees (1988) tidal radius r_t = R_* (M_CO/M_*)^(1/3) [Rsun]."""
+    return r_star_rsun * (m_co / m_star) ** (1.0 / 3.0)
+
+
+def write_rows_typed(output: Path, rows: List[Tuple[float, List[float], List[float], int]]) -> None:
+    """Write mass/pos/vel (pc, pc/Myr) + BSE stellar type column (8th)."""
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", encoding="utf-8") as fh:
+        for mass, pos, vel, kw in rows:
+            fh.write(
+                "{:.14e} {:.14e} {:.14e} {:.14e} {:.14e} {:.14e} {:.14e} {}\n".format(
+                    mass, pos[0], pos[1], pos[2], vel[0], vel[1], vel[2], kw
+                )
+            )
+
+
+def _build_t9_perturbed_candidate(output: Path, kind: str) -> Dict[str, float]:
+    """Perturbed-candidate scenario: BH-star wide binary (a=380 AU) with
+    osculating r_p < r_t (beta=1.5), first pericentre at P/2 ~ 781.7 yr.
+
+    pc_control   : binary + bystander only -> TDE must fire at the pericentre
+    pc_perturbed : + 1 Msun flyby (pericentre 250 AU from the pair CM at
+                   ~400 yr, tilted plane) lifting r_p above r_t before the
+                   plunge -> NO TDE may fire (premature-trigger regression)
+    """
+    m_co, m_star = T9_M_BH, T9_M_STAR
+    r_t = tde_tidal_radius_rsun(m_co, m_star, T9_R_STAR_ZAMS)
+    r_peri_rsun = r_t / T9_PC_BETA
+    semi_pc = T9_PC_SEMI_AU * AU_PC
+    ecc = 1.0 - (r_peri_rsun * RSUN_PC) / semi_pc
+    # first pericentre epoch from the apocentre start (exact two-body)
+    t_peri_myr = math.pi * math.sqrt(semi_pc ** 3 / (G_MSUN_PC_MYR * (m_co + m_star)))
+
+    r1, v1, r2, v2 = two_body_apo_state(m_co, m_star, semi_pc, ecc, G_MSUN_PC_MYR)
+    rows = [(m_co, r1, v1, 14), (m_star, r2, v2, 1)]
+
+    if kind == "pc_perturbed":
+        # perturber flyby around the pair CM (at origin): solve the inbound
+        # true anomaly so its pericentre epoch is T9_PC_PERT_TPERI_MYR
+        mt = m_co + m_star
+        q_pc = T9_PC_PERT_PERI_AU * AU_PC
+        a_abs = T9_PC_PERT_A_ABS_AU * AU_PC
+        ecc_p = 1.0 + q_pc / a_abs
+        mu = G_MSUN_PC_MYR * (mt + T9_PC_PERT_M)
+
+        def _tp(nu: float) -> float:
+            p = a_abs * (ecc_p * ecc_p - 1.0)
+            r = p / (1.0 + ecc_p * math.cos(nu))
+            # cosh H = (1 - r/semi)/e with semi = -a_abs (positive magnitude here)
+            h_anom = math.acosh(max(1.0, (1.0 + r / a_abs) / ecc_p))
+            m_anom = ecc_p * math.sinh(h_anom) - h_anom
+            return m_anom / math.sqrt(mu / a_abs ** 3)
+
+        lo, hi = -math.acos(-1.0 / ecc_p) + 1.0e-6, -1.0e-4
+        for _ in range(80):
+            mid = 0.5 * (lo + hi)
+            if _tp(mid) > T9_PC_PERT_TPERI_MYR:
+                lo = mid
+            else:
+                hi = mid
+        nu_p = 0.5 * (lo + hi)
+        _r1, _v1, pr, pv = two_body_hyperbolic_inbound_state(mt, T9_PC_PERT_M, -a_abs, ecc_p, nu_p, G_MSUN_PC_MYR)
+        # tilt the flyby plane 90 deg (binary lives in x-y; flyby in x-z)
+        pr, pv = [pr[0], -pr[2], pr[1]], [pv[0], -pv[2], pv[1]]
+        rows.append((T9_PC_PERT_M, pr, pv, 1))
+
+    rows.append((0.5, [1.0, 0.0, 0.0], [0.0, 0.0, 0.0], 1))
+    _assert_no_coincident_positions([(m, p, v) for m, p, v, _ in rows], f"t9_tde_trigger({kind})")
+    write_rows_typed(output, rows)
+
+    design = {
+        "kind": kind,
+        "beta_design": float(T9_PC_BETA),
+        "m_co": m_co,
+        "m_star": m_star,
+        "r_star_ref_rsun": T9_R_STAR_ZAMS,
+        "r_tidal_design_rsun": r_t,
+        "r_peri_design_rsun": r_peri_rsun,
+        "r_init_au": semi_pc / AU_PC * (1.0 + ecc),
+        "t_pericentre_myr": t_peri_myr,
+        "expect_tde": kind == "pc_control",
+        "metallicity": 0.02,
+    }
+    design_path = output.with_suffix("").with_name(output.name + ".design.json")
+    design_path.write_text(json.dumps(design, indent=1), encoding="utf-8")
+    return design
+
+
+# events from the author reference sample replayed from their last pre-event
+# snapshot (see test/validation/data/micro_TDE/README.md). Only events whose
+# snapshot state quantitatively reproduces the author trigger are encoded:
+# event 9 (E_2+2, r_p to 0.2%) and event 10 (E_2+2, r_p to 0.6%, a
+# phase-affected). Events 1/3/4/5/7 do not reproduce from the stripped
+# few-body state (missing cluster field; event 1 additionally has an internal
+# velocity/position inconsistency in the reference CSV), events 2/8 exceed the
+# suite runtime budget, event 6 produces instant-merger artifacts.
+T9_REPLAY_EVENTS = [9, 10]
+T9_REPLAY_DIR = Path(__file__).resolve().parent / "data" / "micro_TDE"
+
+
+def _t9_replay_reference(event_id: int) -> Tuple[Dict[str, str], List[Dict[str, str]], float, float]:
+    """Author reference row + last pre-event snapshot rows for an event."""
+    import csv
+
+    ev_row = None
+    with (T9_REPLAY_DIR / "micro_TDE_events.csv").open(encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            if int(row["event"]) == event_id:
+                ev_row = row
+                break
+    if ev_row is None:
+        raise ValueError(f"micro_TDE event {event_id} not found")
+
+    snaps: Dict[int, List[Dict[str, str]]] = {}
+    with (T9_REPLAY_DIR / "micro_TDE_snapshots.csv").open(encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            if int(row["event"]) == event_id:
+                snaps.setdefault(int(row["snap"]), []).append(row)
+    last = max(snaps)
+    rows = snaps[last]
+    t_snap = float(rows[0]["t_snap_Myr"])
+    dt_before = float(rows[0]["dt_before_TDE_Myr"])
+    return ev_row, rows, t_snap, dt_before
+
+
+def build_t9_tde_event_replay(output: Path, event_id: int) -> Dict[str, Any]:
+    """Replay IC for one author micro-TDE event from its last pre-event snapshot.
+
+    Writes the 9-column base IC (mass/pos/vel [Msun, pc, pc/Myr] + BSE type +
+    stellar age t_snap) plus a design.json carrying the author trigger
+    reference (a, e, r_peri, beta). The converted `input` still needs the
+    clock alignment patch (see fix_t9_replay_input).
+    """
+    ev_row, rows, t_snap, dt_before = _t9_replay_reference(event_id)
+    ic_rows = []
+    for r in rows:
+        ic_rows.append((
+            float(r["mass"]),
+            [float(r[c]) for c in "xyz"],
+            [float(r["v" + c]) for c in "xyz"],
+            int(r["type"]),
+        ))
+    _assert_no_coincident_positions(ic_rows, f"t9_tde_trigger(replay{event_id})")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", encoding="utf-8") as fh:
+        for mass, pos, vel, kw in ic_rows:
+            fh.write(
+                "{:.14e} {:.14e} {:.14e} {:.14e} {:.14e} {:.14e} {:.14e} {} {}\n".format(
+                    mass, pos[0], pos[1], pos[2], vel[0], vel[1], vel[2], kw, t_snap
+                )
+            )
+
+    design = {
+        "kind": f"replay{event_id}",
+        "beta_design": float(ev_row["beta"]),
+        "m_co": float(ev_row["M_BH_Msun"]),
+        "m_star": float(ev_row["M_star_Msun"]),
+        "r_star_ref_rsun": float(ev_row["R_star_Rsun"]),
+        "r_tidal_design_rsun": float(ev_row["r_tidal_Rsun"]),
+        "r_peri_design_rsun": float(ev_row["r_peri_Rsun"]),
+        "r_init_au": float("nan"),  # set after conversion (needs pair state)
+        "t_pericentre_myr": float("nan"),
+        "expect_tde": True,
+        "author_a_rsun": float(ev_row["a_Rsun"]),
+        "author_ecc": float(ev_row["ecc"]),
+        "author_t_snap_myr": t_snap,
+        "author_dt_before_myr": dt_before,
+        "metallicity": 0.02,
+    }
+    design_path = output.with_suffix("").with_name(output.name + ".design.json")
+    design_path.write_text(json.dumps(design, indent=1), encoding="utf-8")
+    return design
+
+
+def fix_t9_replay_input(input_path: Path, t_snap: float) -> None:
+    """Align a converted replay IC with the snapshot epoch.
+
+    petar.init --time sets the stellar ages (tphys = t_snap), but the header
+    time and the per-particle t_record / t_interrupt (columns 11/12) stay 0;
+    the hard integrator then asserts star.tphys <= time_origin + window and
+    the first SSE catch-up overshoots. Patch: header time = t_snap and
+    t_record = t_interrupt = t_snap for every row.
+    """
+    path = Path(input_path)
+    lines = path.read_text(encoding="utf-8").splitlines()
+    n = len(lines) - 1
+    lines[0] = f"0 {n} {t_snap:.10f}"
+    for i in range(1, len(lines)):
+        c = lines[i].split()
+        if len(c) >= 12:
+            c[10] = f"{t_snap:.10f}"
+            c[11] = f"{t_snap:.10f}"
+            lines[i] = " ".join(c)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def build_t9_tde_trigger(output: Path, kind: str, beta: float) -> Dict[str, float]:
+    """Generate one T9 micro-TDE trigger-criterion IC (3 particles).
+
+    Rows: (CO, star, bystander 0.5 Msun at 1 pc). Bound kinds mark the first
+    two rows as the primordial binary (petar -b 1); the hyperbolic kind uses
+    two singles (group detection links them). The 8th column is the BSE type
+    (petar.init --type '$8'): 14 BH, 13 NS, 1 MS.
+
+    Also writes <output>.design.json with the design parameters for the
+    validation extract/report.
+    """
+    if kind not in {"bound", "hyperbolic", "ns", "msms", "pc_control", "pc_perturbed"}:
+        raise ValueError(f"Unknown T9 kind: {kind}")
+
+    if kind in ("pc_control", "pc_perturbed"):
+        return _build_t9_perturbed_candidate(output, kind)
+
+    m_co = T9_M_NS if kind == "ns" else T9_M_BH
+    kw_co = 13 if kind == "ns" else 14
+    m_star, kw_star = T9_M_STAR, 1
+    r_t = tde_tidal_radius_rsun(m_co, m_star, T9_R_STAR_ZAMS)
+
+    if kind == "msms":
+        # no CO -> getTDERadius returns 0; use a pericentre far from contact
+        r_peri_rsun = T9_MSMS_RPERI_RSUN
+        beta_design = float("nan")
+        m_co, kw_co = T9_M_STAR, 1  # second star in place of the CO
+    else:
+        r_peri_rsun = r_t / beta
+        beta_design = float(beta)
+
+    semi_pc = T9_SEMI_AU * AU_PC
+    if kind == "hyperbolic":
+        # unbound orbit from (v_inf, r0): a = -GM/v_inf^2, e = 1 + r_p/|a|,
+        # inbound true anomaly solved for r(nu) = r0 (the near-parabolic
+        # pericentre-scale orbit makes r0 = O(100 AU) already "far")
+        mt = m_co + m_star
+        v_inf = T9_V_INF_KMS * KM_S_TO_PC_MYR
+        a_abs = G_MSUN_PC_MYR * mt / (v_inf * v_inf)
+        ecc = 1.0 + (r_peri_rsun * RSUN_PC) / a_abs
+        p = a_abs * (ecc * ecc - 1.0)
+        r0_pc = T9_R0_AU * AU_PC
+        cosnu = max(-1.0, min(1.0, (p / r0_pc - 1.0) / ecc))
+        nu = -math.acos(cosnu)
+        r1, v1, r2, v2 = two_body_hyperbolic_inbound_state(
+            m_co, m_star, -a_abs, ecc, nu, G_MSUN_PC_MYR
+        )
+    else:
+        ecc = 1.0 - (r_peri_rsun * RSUN_PC) / semi_pc
+        r1, v1, r2, v2 = two_body_apo_state(m_co, m_star, semi_pc, ecc, G_MSUN_PC_MYR)
+
+    rows = [
+        (m_co, r1, v1, kw_co),
+        (m_star, r2, v2, kw_star),
+        (0.5, [1.0, 0.0, 0.0], [0.0, 0.0, 0.0], 1),
+    ]
+    _assert_no_coincident_positions([(m, p, v) for m, p, v, _ in rows], f"t9_tde_trigger({kind},{beta})")
+    write_rows_typed(output, rows)
+
+    design = {
+        "kind": kind,
+        "beta_design": beta_design,
+        "m_co": m_co,
+        "m_star": m_star,
+        "r_star_ref_rsun": T9_R_STAR_ZAMS,
+        "r_tidal_design_rsun": float("nan") if kind == "msms" else r_t,
+        "r_peri_design_rsun": r_peri_rsun,
+        "r_init_au": (T9_R0_AU if kind == "hyperbolic" else semi_pc / AU_PC * (1.0 + ecc)),
+        "t_pericentre_myr": math.pi * math.sqrt(semi_pc ** 3 / (G_MSUN_PC_MYR * (m_co + m_star))) if kind in ("bound", "msms", "ns") else float("nan"),
+        "expect_tde": kind != "msms" and beta_design > 1.0,
+        "metallicity": 0.02,
+    }
+    design_path = output.with_suffix("").with_name(output.name + ".design.json")
+    design_path.write_text(json.dumps(design, indent=1), encoding="utf-8")
+    return design
 
 
 def build_functional_smoke(output: Path) -> None:
@@ -1150,6 +1459,9 @@ def main() -> int:
             "t8_cascade",
             "t8_chaotic",
             "t8_control",
+            "t9_tde_trigger",
+            "t9_replay",
+            "t9_replay_fix",
             "functional_smoke",
             "functional_dual_merge_smoke",
             "functional_mcluster_dual_merge_smoke",
@@ -1160,8 +1472,21 @@ def main() -> int:
         ],
         required=True,
     )
-    parser.add_argument("--output", required=True)
+    parser.add_argument("--output", default="", help="output IC path (not needed for t9_replay_fix)")
+    parser.add_argument(
+        "--kind",
+        choices=["bound", "hyperbolic", "ns", "msms", "pc_control", "pc_perturbed"],
+        default="bound",
+        help="T9 tde_trigger IC variant",
+    )
+    parser.add_argument("--beta", type=float, default=2.93, help="T9 tde_trigger design beta")
+    parser.add_argument("--event", type=int, default=9, help="T9 replay event id (micro_TDE reference)")
+    parser.add_argument("--input-file", default="", help="T9 replay_fix: converted petar input file to patch")
+    parser.add_argument("--time", type=float, default=0.0, help="T9 replay_fix: snapshot epoch [Myr]")
     args = parser.parse_args()
+
+    if args.case != "t9_replay_fix" and not args.output:
+        parser.error(f"--output is required for case {args.case}")
 
     out = Path(args.output)
     if args.case == "t1":
@@ -1196,6 +1521,14 @@ def main() -> int:
         build_t8_chaotic(out)
     elif args.case == "t8_control":
         build_t8_control(out)
+    elif args.case == "t9_tde_trigger":
+        build_t9_tde_trigger(out, kind=args.kind, beta=args.beta)
+    elif args.case == "t9_replay":
+        build_t9_tde_event_replay(out, event_id=args.event)
+    elif args.case == "t9_replay_fix":
+        if not args.input_file:
+            raise ValueError("t9_replay_fix requires --input-file and --time")
+        fix_t9_replay_input(Path(args.input_file), t_snap=args.time)
     elif args.case == "functional_smoke":
         build_functional_smoke(out)
     elif args.case == "functional_dual_merge_smoke":

@@ -111,6 +111,8 @@
 110. (1845e) Fix the BTLogH denormal adaptive-ds abort in multiple systems (SDAR-side; needs SDAR >= 96f0d39).
 111. (1847e) Fix the LogH adaptive-ds phase-transition failure (NaN H / negative time): hyperbolic ds capped by the S-criterion (SDAR 460bdb7).
 112. (1849e) Fix BSE evolv2 never recording Coalescence when a common envelope ends in merger, aborting production runs on a mass assertion. [major]
+113. (1851e) Fix delayed micro-TDE interrupt time: precedence bug dropped the time offset, firing immediately instead of at pericentre.
+114. (1851e) Add validation suite T9 for the micro-TDE trigger criterion (beta boundary, orbit routing, fire epoch, perturbed-candidate regression, author-event replays). [major]
 
 **Existing issues (consolidated, live list — historical sections below no longer repeat their issues)**
 

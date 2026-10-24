@@ -425,6 +425,38 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: 修复在源头（label 135 条件 `com.and..not.coel`，else 补 `com=.false.` 复位防 label 140 的 -1 结束标记被跳过；CE 存活与直接并合路径行为不变）。① 消费 BSE/SSE 事件流分类时逐条核对所有 comenv/coel 路径的记录行为，不假定"成员质量归零 ⇒ 必有 10/12/13 终结事件"；② 相邻边缘未修待观察：CE 双成员俱灭（com=true 且双 kw=15）仍跳过 label 140 的 type-12 记录；③ 这类问题应在事件产生方（evolv2）修复而不是消费方补丁——下游只做分类，不重写记录。
 
+### 2026-10-24: TDE 延迟中断的 `time_now + drdv<0 ? ...` 优先级 bug——外部贡献模块先对照姐妹实现
+
+**Mistake**: Rastello TDE 模块（a9978e1）的延迟 TDE 分支写 `std::min(time_now + drdv<0 ? t_peri : (period - t_peri), time_interrupt_max)`，实际解析为 `((time_now+drdv)<0 ? t_peri : period-t_peri)` 再取 min——`time_now` 偏移丢失、条件变成时间与 r·v 点积的无意义比较，延迟 TDE 会在下一次检查立即触发而非近心点。作者参考数据 10 事件仅 1 个 slowdown>1，此路径从未被生产暴露。
+
+**Root cause**: `+` 优先级高于 `<`、`?:` 低于比较，编译器对 `std::min(a+b<0?x:y,c)` 无警告；同函数非 BSE delaycollision 路径（~1700 行）的正确写法带括号，合并外部分支时未对照。
+
+**Prevention rule**: ① 合并外部贡献代码先 diff 同文件内的姐妹实现——同模式已有正确写法时，写法差异即疑点；② 表达式混用 `?:`+算术+比较时无条件加括号；③ 新模块必须有分支覆盖测试（T9 已覆盖直接触发/边界/路由/吸积；延迟+slowdown 路径的 IC 级测试归 S2——用 event 4/9 类宽双星 IC）。
+
+### 2026-10-24: runner `--dry-run` 会重写 petar 符号链接；`--scenario` 模式必须显式 `--var petar_bin_switch`
+
+**Mistake**: T9 首跑在 `--scenario` 模式下 auto-detect 到 `petar.mpi.omp.avx512.64b.kdkdk4`（非 bse 家族），读 BSE 列即失败；此前一次 `--dry-run` 已把符号链接重指到 kdkdk4。
+
+**Root cause**: `_detect_petar_binary()` 设计上"优先 KDKDK4 变体"，经 `petar.select --require kdkdk4` 探测——而 petar.select 有重写符号链接的副作用；dry-run 并非无副作用，`--scenario` 的默认变量按 `command -v petar` 解析，可能拿到错误家族。
+
+**Prevention rule**: ① 特定家族场景一律显式 `--var petar_bin_switch=<binary>`（选好之后）或直接用报告脚本 `--run` 入口（内部 `select_or_install_petar` 按家族解析并传 var）；② dry-run 之后要真跑，先 `petar.select` 回目标家族；③ dry-run 重指链接是运行器已知副作用，报告命令前检查 `(binary ...)` 行打印的家族。
+
+### 2026-10-24: 近抛物线 TDE 测试 IC——ν 按目标 r0 反解；R_ref 用 BSE 实际 ZAMS 半径而非文献中途值
+
+**Mistake**: 双曲 TDE IC 初版按 `(|a|=0.05pc, ν=-0.75·f_inf)` 参数化，实际 r0 只有 0.04 AU（≈6.8 r_p），初速 ~200 km/s，成组前轨道已破坏（logged semi 偏 9 倍、事件提前）；β 设计初用作者 CSV 的 R_star=1.9965 Rsun（t=183 Myr 中途 MS 值），而 BSE Z=0.02 的 ZAMS 是 1.7543 Rsun，β 全网格整体偏移 12%。
+
+**Root cause**: 近抛物线轨道 p≈2 r_p 极小，r(ν) 从 r_p 到渐近线跨度无界，固定 ν 分数 ≠ 固定 r0；恒星半径随龄演化，ZAMS 值与文献中途值不可混用。
+
+**Prevention rule**: ① 双曲 TDE IC 按 (v_inf, r0) 参数化、ν 从 r(ν)=r0 反解（r0~100 AU 即"远"，v~20 km/s 可被 dt_soft 分辨，触发时刻可解析预测）；② β 网格的 R_ref 取所用金属度下 BSE 的 ZAMS 半径（一次短跑的事件记录即可反读），报告侧再用 logged 半径重算 β 自洽；③ 触发时刻/t_peri 核对用 Barker 方程，小心 G 的单位（AU³/yr²=39.48，不是 day² 的 2.96e-4——本会话因此误判实现有 bug）。
+
+### 2026-10-24: 中途时刻 IC 三重对齐——petar.init --time 只改恒星年龄，时钟/t_record 仍为 0
+
+**Mistake**: 用作者快照（t=380 Myr）重建 micro-TDE 事件 IC：`petar.init --time '$9'` 设了 tphys=380，但首跑直接 abort 于 `hard.hpp:2148 (star.tphys<=time_origin+_time_end)`；把头部时间改为 380 后仍 abort——IC 第 11/12 列 t_record/t_interrupt 还是 0，首次 SSE 补齐演化把 tphys 推过窗口。另外 `-o` 误当绝对时刻传入（t_snap+interval），触发事件写在 `.0.tmp` 永不提交（输出网格上只有一个提交点）。
+
+**Root cause**: 起始时刻非零的 IC 需要**三处一致**：头部 Time、每粒子 t_record/t_interrupt、恒星 tphys（--time 只管第三处）；事件流的事务提交发生在输出步，输出间隔必须保证事件后有提交点。
+
+**Prevention rule**: ① 重建中途时刻 IC：`petar.init --time '$N'` 之后必须补头部时间与 t_record/t_interrupt（make_ic.py `t9_replay_fix` 已固化）；② `-o` 是间隔不是绝对时刻，重放类运行的间隔取 dt_before/5 且保证 t_snap 在输出网格上；③ 事件文件读回时若为空，先查同名 `.0.tmp` 是否残留未提交事件。
+
 ## Post-Processing
 
 ### 2026-09-14: 读 PeTar 二进制快照漏掉 `offset=HEADER_OFFSET` 且未指定 `interrupt_mode`

@@ -1778,7 +1778,10 @@ public:
                                     p2->setBinaryPairID(p1->id);
                                     p1->setBinaryInterruptState(BinaryInterruptState::tde);
                                     p2->setBinaryInterruptState(BinaryInterruptState::tde);
-                                    p1->time_interrupt = std::min(_bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri), time_interrupt_max);
+                                    // parentheses required: without them "time_now + drdv<0 ? ..."
+                                    // parses as ((time_now + drdv) < 0) ? ... and drops the time_now
+                                    // offset, firing the delayed TDE immediately instead of at pericentre
+                                    p1->time_interrupt = std::min(_bin_interrupt.time_now + (drdv<0 ? t_peri : (_bin.period - t_peri)), time_interrupt_max);
                                     p2->time_interrupt = p1->time_interrupt;
                                 }
                                 //D: In the most realistic we shoud check the time needed to reach the position r=r_tde, not r=rp

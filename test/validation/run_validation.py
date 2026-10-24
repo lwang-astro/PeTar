@@ -370,6 +370,146 @@ def extract_momentum_from_status(status_path: Path, repo_root: Path, n_particle:
     }
 
 
+TDE_STAR_COLS = 12  # StarParameter BSE columns (non-SEVN): kw m0 mt r mc rc ospin[3] epoch tphys lum
+
+
+def _parse_tde_event_row(line: str) -> Dict[str, float]:
+    """Parse one data.bse.{binary,hyperbolic}_tde row (ASCII, WRITE_PRECISION).
+
+    Layout (merge() in src/ar_interaction.hpp): id1 id2 period[day] semi[Rsun]
+    ecc dr[Rsun] t_peri[day] sd_factor, then four StarParameter blocks
+    (star1/2 before, star1/2 after the BSE merge).
+    """
+    vals = line.split()
+    if len(vals) != 8 + 4 * TDE_STAR_COLS:
+        raise ValueError(f"TDE event row has {len(vals)} columns, expected {8 + 4 * TDE_STAR_COLS}")
+    nums = [float(v) for v in vals]
+    rec: Dict[str, float] = dict(
+        zip(
+            ["id1", "id2", "period_day", "semi_rsun", "ecc", "dr_rsun", "t_peri_day", "sd_factor"],
+            nums[:8],
+        )
+    )
+    names = ["star1_bk", "star2_bk", "star1_after", "star2_after"]
+    fields = ["kw", "m0", "mt", "r", "mc", "rc", "ospin0", "ospin1", "ospin2", "epoch", "tphys", "lum"]
+    for k, name in enumerate(names):
+        block = nums[8 + k * TDE_STAR_COLS : 8 + (k + 1) * TDE_STAR_COLS]
+        for fname, fval in zip(fields, block):
+            rec[f"{name}_{fname}"] = fval
+    return rec
+
+
+def extract_tde_event_metrics(command: str, workdir: Path) -> Dict[str, Any]:
+    """Micro-TDE trigger-criterion metrics from <prefix>.bse.*_tde event files.
+
+    Per run: event counts per file, orbit-sign routing correctness, and for
+    the first event the logged orbit vs the design grid (beta_ratio_dev),
+    the disrupted-star condition and the compact-object accreted fraction.
+    Design parameters come from input.base.design.json written by make_ic.py.
+    """
+    status_path = resolve_status_path_from_command(command, workdir)
+    metrics: Dict[str, Any] = {
+        "n_tde_events": 0.0,
+        "n_tde_wrong_file": 0.0,
+        "tde_star_undisrupted": 0.0,
+        "beta_design": float("nan"),
+        "beta_logged": float("nan"),
+        "beta_ratio_dev": float("nan"),
+        "r_peri_logged_rsun": float("nan"),
+        "r_tidal_logged_rsun": float("nan"),
+        "tde_star_radius_rsun": float("nan"),
+        "bh_accreted_frac": float("nan"),
+        "tde_trigger_time_yr": float("nan"),
+        "tde_trigger_dr_rsun": float("nan"),
+        "r_init_design_au": float("nan"),
+        "tde_timing_dev_yr": float("nan"),
+        "author_a_ratio_dev": float("nan"),
+        "author_rp_ratio_dev": float("nan"),
+        "author_r_peri_rsun": float("nan"),
+        "author_a_rsun": float("nan"),
+        "t_pericentre_design_myr": float("nan"),
+        "tde_events": [],
+    }
+    if status_path is None:
+        return metrics
+    run_dir = status_path.parent
+    prefix = status_path.stem
+
+    design_path = run_dir / "input.base.design.json"
+    design: Dict[str, Any] = {}
+    if design_path.exists():
+        try:
+            design = json.loads(design_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            design = {}
+    metrics["beta_design"] = float(design.get("beta_design", float("nan")))
+    metrics["t_pericentre_design_myr"] = float(design.get("t_pericentre_myr", float("nan")))
+    metrics["r_init_design_au"] = float(design.get("r_init_au", float("nan")))
+    metrics["author_r_peri_rsun"] = float(design.get("r_peri_design_rsun", float("nan")))
+    metrics["author_a_rsun"] = float(design.get("author_a_rsun", float("nan")))
+
+    events: List[Dict[str, Any]] = []
+    for file_key, sign in (("binary_tde", 1.0), ("hyperbolic_tde", -1.0)):
+        fpath = run_dir / f"{prefix}.bse.{file_key}"
+        if not fpath.exists():
+            continue
+        for line in fpath.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            rec = _parse_tde_event_row(line)
+            rec["file"] = file_key
+            # routing: semi sign must match the file (semi==0 is treated as a
+            # routing error as well; a TDE pair always has semi != 0)
+            if rec["semi_rsun"] * sign <= 0.0:
+                metrics["n_tde_wrong_file"] += 1.0
+            events.append(rec)
+    metrics["n_tde_events"] = float(len(events))
+    metrics["tde_events"] = events
+
+    if not events:
+        return metrics
+    ev = events[0]
+
+    # identify the compact object (kw 13/14) and the star (kw <= 12) pre-merge
+    kw1, kw2 = ev["star1_bk_kw"], ev["star2_bk_kw"]
+    co, star = ("star1", "star2") if (kw1 in (13.0, 14.0) and kw2 <= 12.0) else (("star2", "star1") if (kw2 in (13.0, 14.0) and kw1 <= 12.0) else (None, None))
+    if co is not None:
+        r_peri = abs(ev["semi_rsun"]) * abs(1.0 - ev["ecc"])
+        m_co = ev[f"{co}_bk_mt"]
+        m_star = ev[f"{star}_bk_mt"]
+        r_star = ev[f"{star}_bk_r"]
+        r_t = r_star * (m_co / m_star) ** (1.0 / 3.0)
+        metrics["r_peri_logged_rsun"] = r_peri
+        metrics["r_tidal_logged_rsun"] = r_t
+        metrics["tde_star_radius_rsun"] = r_star
+        metrics["beta_logged"] = r_t / r_peri if r_peri > 0.0 else float("nan")
+        beta_design = metrics["beta_design"]
+        if beta_design == beta_design and metrics["beta_logged"] == metrics["beta_logged"]:
+            metrics["beta_ratio_dev"] = abs(metrics["beta_logged"] / beta_design - 1.0)
+        # star fully disrupted: massless remnant (kw 15, mt == 0)
+        metrics["tde_star_undisrupted"] = 0.0 if (ev[f"{star}_after_kw"] == 15.0 and ev[f"{star}_after_mt"] == 0.0) else 1.0
+        if m_star > 0.0:
+            metrics["bh_accreted_frac"] = (ev[f"{co}_after_mt"] - m_co) / m_star
+        metrics["tde_trigger_time_yr"] = ev[f"{star}_bk_tphys"] * 1.0e6
+        metrics["tde_trigger_dr_rsun"] = ev["dr_rsun"]
+        # author-reference comparison (replay runs only: author_a present):
+        # logged orbit vs the Rastello et al. trigger state in design.json
+        a_author = metrics["author_a_rsun"]
+        rp_author = metrics["author_r_peri_rsun"]
+        if a_author == a_author and a_author != 0.0 and ev["semi_rsun"] * a_author > 0.0:
+            metrics["author_a_ratio_dev"] = abs(ev["semi_rsun"] / a_author - 1.0)
+            if rp_author == rp_author and rp_author > 0.0:
+                metrics["author_rp_ratio_dev"] = abs(metrics["r_peri_logged_rsun"] / rp_author - 1.0)
+        # fire-epoch accuracy: trigger time + logged time-to-pericentre vs the
+        # analytic pericentre epoch of the design orbit (bound kinds only)
+        t_peri_design = metrics["t_pericentre_design_myr"]
+        if t_peri_design == t_peri_design:
+            t_fire_yr = ev[f"{star}_bk_tphys"] * 1.0e6 + ev["t_peri_day"] / 365.25
+            metrics["tde_timing_dev_yr"] = abs(t_fire_yr - t_peri_design * 1.0e6)
+    return metrics
+
+
 def extract_regex_counts(log_text: str, patterns: Dict[str, str]) -> Dict[str, int]:
     counts = {}
     for key, pattern in patterns.items():
@@ -443,6 +583,10 @@ def extract_metrics(output_path: Path, extract_cfg: Dict[str, Any], command: str
                         interrupt_mode=str(extract_cfg.get("interrupt_mode", "none")),
                     )
                 )
+
+    # micro-TDE event metrics from <prefix>.bse.{binary,hyperbolic}_tde
+    if extract_cfg.get("tde_event", False):
+        orbital_metrics.update(extract_tde_event_metrics(command, workdir))
 
     # AR group census from the final statistics block (cumulative counters):
     # header " AR_tsyn_sum Stab_Ngroup Iso_Ngroup Form_Ngroup End_Ngroup ..."
@@ -1084,6 +1228,15 @@ PIPELINES: Dict[str, Dict[str, Any]] = {
         "html": ["test/validation/t8_gauge_logh_btlogh_extracted_report.py",
                  "--report", "test/out/report.t8.gauge_logh_btlogh_extracted.json",
                  "--output", "test/out/t8_gauge_logh_btlogh_extracted_summary.html"],
+    },
+    "t9": {
+        "jobs": [_pipeline_job("test/validation/scenarios/t9_tde_trigger_criterion.json",
+                               "test/out/report.t9.tde_trigger.json",
+                               "test/out/validation_t9_tde_trigger_criterion",
+                               "petar_bin_switch", "bse")],
+        "html": ["test/validation/t9_tde_trigger_criterion_report.py",
+                 "--report", "test/out/report.t9.tde_trigger.json",
+                 "--output", "test/out/t9_tde_trigger_criterion_summary.html"],
     },
 }
 
