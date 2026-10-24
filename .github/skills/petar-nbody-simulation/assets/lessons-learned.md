@@ -118,6 +118,14 @@ Periodically reviewed → verified entries are elevated to `SKILL.md` as hard ru
 
 **Prevention rule**: 重 configure 后对比新旧 `TARGET` 差异,先 `git log --oneline -- Makefile.in configure.ac` 查命名约定演进;读 `./config.status --config` 输出不要用 `head` 截断。
 
+### 2026-10-24: 参数文件整数 tag 绑定精确 C++ 类型——FDPS 8 的 `PS::S64` 换 typedef 后整数选项跨构建静默丢弃（修复在 SDAR）
+
+**Mistake**: 用本机最新构建 replay 旧生产版本的 hard dump（bse+galpy），17 个整数参数（`id-offset`、`ar-g-func`、`stellar-evolution`…）全部 `parameter name key not found`，`id_offset` 默认 -1 使 `ArtificialParticleManager::checkParams` 断言崩溃；最初误疑 dump 版本不兼容或 PeTar 代码回归，而同事环境（SDAR 472e）同版本代码 replay 正常。
+
+**Root cause / 修复**: 见 SDAR lessons 2026-10-24 条（`SDAR/.github/skills/sdar-fewbody-integration/assets/lessons-learned.md`，修复于 `SDAR/src/Common/io.h`）：FDPS 8.0 把 `PS::S64` 从 `long long int` 改为 `std::int64_t`（LP64 上 = `long int`），`IOParams<PS::S64>` 的 tag 从 `L` 变 `I`，跨 FDPS 7↔8 构建的 par 文件互读时整数选项全部静默落默认值。**不止 hard.debug：主程序 restart 读旧 `data.par*` 同样中招（`n`/`b`/`u`/`i` 等无断言保护，静默损坏）**。修复后本地重建 replay 通过参数层并复现 `ar_interaction.hpp:1472` 物理断言（与同事结果一致）。
+
+**Prevention rule**: 升级 FDPS 等上游依赖后，restart/replay 旧参数文件必须 grep `Warning: parameter name key`——出现即整数 tag 断层、参数已静默落默认；跨机器交换 dump/par 时两端 FDPS 主版本不一致即触发。
+
 ---
 
 ## Binary Selection
@@ -408,6 +416,14 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 连续运行中 slowdown 树/时标保持热态,紧双星积分廉价;重启只恢复粒子/组结构,AR 内部状态从默认冷态起步,未并合的紧双星群组反复撞步数上限(与 5765150 修复的 cluster copy-in Hermite 状态重置同区域)。
 
 **Prevention rule**: ① "慢"先量化再归因:计时三段(全新/阶段A/重启段)+ 步数告警计数 + 物理轨迹对照,一步分离"参数干扰"与"状态重建";② 重启性能回归的活体探测器:functional restart 流程天然覆盖此路径,用例时长异常即信号;③ 规范重启命令只覆盖变化参数(-t),IC 期参数(-b 等)对重启后粒子布局无意义甚至有害。
+
+### 2026-10-24: BSE CE 并合不记 Coalescence 事件——消费事件流不能假定"成员消失 ⇒ 已有终结事件"
+
+**Mistake**: 生产运行（grid7_binaries s11）97.75 Myr abort 于 ar_interaction 的 `getMass>0` 断言（旧版 1369 行/当前 1472 行）；0.86 M☉ WD + 5.46 M☉ HG 星在 ~44 R☉ 近心点进入 CE 并合。本地排查先被 FDPS S64 参数断层误导（见 Build & Configure 同日条目），修复 IO 后才到达物理层。
+
+**Root cause**: evolv2（bse/bseEmp/mobse 三副本同病，继承经典 Hurley BSE）CE 以并合收场时只记 Common_envelope(8)：comenv 后 `com=.true.` 跳到 label 135，`if(com)` 分支跳过记录，Coalescence(10) 永不写出。PeTar 的 `isMerger`=10/14 把该终态（一员 kstar=15、质量 0）归为质量转移（event_flag≤2）→ 断言崩溃。gdb 断在断言行直接读 `bin_event.record` 数组即还原完整事件链（m₁ 0.86→0、kw 11→15、mc₂ 0.96+0.86=1.82 证实 WD 溶入核心）。
+
+**Prevention rule**: 修复在源头（label 135 条件 `com.and..not.coel`，else 补 `com=.false.` 复位防 label 140 的 -1 结束标记被跳过；CE 存活与直接并合路径行为不变）。① 消费 BSE/SSE 事件流分类时逐条核对所有 comenv/coel 路径的记录行为，不假定"成员质量归零 ⇒ 必有 10/12/13 终结事件"；② 相邻边缘未修待观察：CE 双成员俱灭（com=true 且双 kw=15）仍跳过 label 140 的 type-12 记录；③ 这类问题应在事件产生方（evolv2）修复而不是消费方补丁——下游只做分类，不重写记录。
 
 ## Post-Processing
 
