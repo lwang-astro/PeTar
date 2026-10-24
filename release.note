@@ -110,6 +110,7 @@
 109. (1839e) Improve Python readers: `fromfile()` auto-detects ASCII input; `format='binary'|'ascii'` forces a format.
 110. (1845e) Fix the BTLogH denormal adaptive-ds abort in multiple systems (SDAR-side; needs SDAR >= 96f0d39).
 111. (1847e) Fix the LogH adaptive-ds phase-transition failure (NaN H / negative time): hyperbolic ds capped by the S-criterion (SDAR 460bdb7).
+112. (1849e) Fix BSE evolv2 never recording Coalescence when a common envelope ends in merger, aborting production runs on a mass assertion. [major]
 
 **Existing issues (consolidated, live list — historical sections below no longer repeat their issues)**
 

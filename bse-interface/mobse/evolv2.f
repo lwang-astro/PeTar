@@ -2598,9 +2598,15 @@ c            helper(2) = j2
 *
       sgl = .true.
       if(kstar(1).ne.15.or.kstar(2).ne.15)then
-         if(com)then
+* A common envelope that ended in coalescence (com=.true., coel=.true.)
+* must still record the Coalescence event; the com branch used to skip it,
+* so a CE merger never reported type 10 (Coalescence) and callers
+* misclassified the merged pair (one member kstar=15, mass=0) as a
+* mass-transfer-only case.
+         if(com.and..not.coel)then
             com = .false.
          else
+            com = .false.
             jp = MIN(jpmax,jp + 1)
             bpp(jp,1) = tphys
             bpp(jp,2) = mass(1)
