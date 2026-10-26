@@ -20,6 +20,10 @@ This file is the root entry point for agents working in this repository. Keep it
 - `test/validation/`: numerical and physics validation coverage.
 - `doc/`: longer-form documentation.
 
+## Documentation
+
+- [doc/output-format-contract_notes.md](doc/output-format-contract_notes.md) — reference note: output-format contract (bulk BINARY vs event-stream ASCII), its reader/test enforcement (2026-10-19), and the shelved P2-lite/P3 decisions with revival preconditions.
+
 ## Scope Split
 
 - **Running simulations / analysing output** → SKILL.md is authoritative and complete on its own.
