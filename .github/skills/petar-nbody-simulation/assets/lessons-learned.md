@@ -323,7 +323,7 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 1. 诊断 hard_large_energy:dE 首子步恒定 + dE_change≈0 → 先查组事件(每步 form/end 组计数),不是积分器发散也不是恒星演化;
 2. **不要把算法性切换注入折入 `de_change_cum`**——该列保留给物理变化(星风/并合中断);折入会混淆物理与数值并掩盖真实误差,警告压力本身是正确信号(2026-10-03 撤回决策);
 3. `*.hard.debug` 重放**不能**测试判据半径类参数:判据半径烧录在 dump 的逐粒子 changeover 态,par 文件修改无效(实测 0.1–10× 因子下 r_crit 逐位相同),须用生产重启段;
-4. SDAR 侧切换层统一调查已关闭(2026-10-03 按其停止规则,零代码改动:审计的非对称性早被 2026-09 整合移除,分组路径反而比不分组好 32×,剩余注入为混合切换固有截断),结论在 SDAR lessons 2026-10-03 条目(完整实验记录:git d474412);PeTar 侧剩余行动(生产 switch-radius 测试段、dm-tracking 缺口、警告判据语义)保留在 `doc/hard-large-energy-plan.md`。
+4. SDAR 侧切换层统一调查已关闭(2026-10-03 按其停止规则,零代码改动:审计的非对称性早被 2026-09 整合移除,分组路径反而比不分组好 32×,剩余注入为混合切换固有截断),结论在 SDAR lessons 2026-10-03 条目(完整实验记录:git d474412);PeTar 侧三项剩余行动均已处置,2026-10-26 计划归档删除(`doc/hard-large-energy-plan.md`):生产 switch-radius 测试段从未执行——问题已在运维层收口(2026-10-02 起清理管线 md5 验证+修剪,首清 ~11.8k dump、峰值 ~40/时,稳态每 pass 数十个,全部本地留档;事件重放判定良性 WARNING,见 Tidal_stream_Pal5_IMF_NOTES.md),且生产网格中途改 r-group 会混淆 IMF 对比科学目标,该优化决策 moot——若未来网格再遇 dump 压力,按当时构建重测;dm-tracking 缺口 2026-10-26 核实关闭(见同日条);警告判据改用 dE_change 一项 2026-10-25 经用户决策废弃(de_change* 列是恒星演化物理账目,非数值误差度量)。
 
 ### 2026-10-05: 破组 changeover 残留的验证必须用 data.process 成员判定——status 列与 Kepler 双星判据都会假阳性;修复量化必须有 A/B 基线
 
@@ -456,6 +456,16 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 起始时刻非零的 IC 需要**三处一致**：头部 Time、每粒子 t_record/t_interrupt、恒星 tphys（--time 只管第三处）；事件流的事务提交发生在输出步，输出间隔必须保证事件后有提交点。
 
 **Prevention rule**: ① 重建中途时刻 IC：`petar.init --time '$N'` 之后必须补头部时间与 t_record/t_interrupt（make_ic.py `t9_replay_fix` 已固化）；② `-o` 是间隔不是绝对时刻，重放类运行的间隔取 dt_before/5 且保证 t_snap 在输出网格上；③ 事件文件读回时若为空，先查同名 `.0.tmp` 是否残留未提交事件。
+
+### 2026-10-26: 【dm-tracking"缺口"三轮核查归零】指控能量记账缺口前先枚举每本账的评估内容——账本不含的项无从泄漏;退役函数先查继任者
+
+**Mistake**: plan 条目"dm-tracking 缺口"连续两轮过度指控而未验证账本内容:第一轮称"硬域册只拿到动能项"(漏查 SDAR `modifySingleParticles()` 的势能入账 `de_pot = force_[k].pot*dm`,hermite_integrator.h ~2969,含多粒子同时修改的 pairwise 过修正);第二轮改口"外势 dm×pot_soft 漏进 per-system de_sd"(漏查 per-system 能量根本不含 singles 的外场项)。两轮均被用户以行号纠正。
+
+**Root cause**: 只枚举了"谁在入账"(消费者),没枚举"每本账评估值里有什么"(账本内容)。"缺口"论证需两个条件同时成立:ΔE 出现在该账本的评估值里、且未被该账本的参考/变化列入账。实测:per-system 硬域能量(`HermiteInteraction::calcEnergy`,hermite_interaction.hpp:555)只含 changeover 加权簇内 epot + ekin + AR 组的潮汐 epert(`calcEnergyPertOneGroup`,singles 无外场项)——故 singles 风质量损失的外势部分在 per-system 无从泄漏;其唯一消费者全局册已被 `correctSoftPotMassChange`(petar.hpp:2575,每树步扫写回记录的 dm×pot_soft,四参考全更新)覆盖。退役的 `correctSoftPotMassChangeOneParticle`(cbe4cee 加/7f91849 删,注释调用残留在 hard.hpp:2702/4300/4436)是 2575 扫账的逐粒子前身,2020 合并为全局单记,并非留洞。
+
+**残余与关闭**: 唯一真实残渣——组成员 wind dm 使 per-system epert(每次现算 Σm·evalPot−epert_record)跳 dm×φ_tidal,interrupt 入账只含簇内项(`force_[cm].pot*dm`),须待破组 `accumDESlowDownChangeBreakGroup` 折入 de_cum,中间为瞬态窗口;量级可忽略(每步 dm 极小、潮汐势平滑;2026-10-04 事件 dm=0)。plan 条目 2 据此关闭(2026-10-26 用户决策);同日条目 1(switch-radius 测试段,从未执行)以"运维已收口 + 中途改径会混淆科学网格"为由一并关闭,整个 plan 归档删除(完整关闭记录:2026-10-04 条目第 4 点)。
+
+**Prevention rule**: (1) 指控"记账缺口/泄漏"前,列出该账本评估值的全部分量与全部入账路径,双向核实——账本不含的项无从泄漏;(2) 注释/退役的函数先查继任者(本例:逐粒子修正→全局扫账),不默认"删了就是洞";(3) 用户以行号质疑时,先读该行号所在完整函数再决定是否修正表述。
 
 ## Post-Processing
 
