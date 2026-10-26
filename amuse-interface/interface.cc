@@ -23,12 +23,14 @@ extern "C" {
 
     // flags
     static bool particle_list_change_flag=true;
+    static PS::S64 id_last=0; // largest id given out by new_particle; never decreases, so ids are not reused after a removal
 
     // common
 
     int initialize_code() {
         PeTar::initial_fdps_flag = true;
         ptr = new PeTar;
+        id_last = 0;
 
         int argc = 0;
         char **argv=NULL;
@@ -145,8 +147,9 @@ extern "C" {
             p.radius = radius;
 
             if (ptr->initial_parameters_flag) p.calcRSearch(ptr->input_parameters.dt_soft.value);
-            p.id = n_glb+1;
+            p.id = std::max(id_last, n_glb)+1;
             if (p.id>=id_offset) return -1;
+            id_last = p.id;
             p.group_data.artificial.setParticleTypeToSingle();
 
             p.rank_org = ptr->my_rank;
