@@ -175,7 +175,7 @@ Usage: petar [option] filename
   --hermite-dt-min-index   [I] Power index n for the smallest timestep (0.5^n) allowed in the Hermite integrator: 40
   --hermite-eta            [F] Hermite timestep coefficient eta: 0.1
   --hermite-eta-init       [F] Hermite timestep coefficient eta for initial step in 2nd order: 0.001
-  --hermite-n-neighbor-max [I] Maximum number of group neighbors to be stored: 300
+  --hermite-n-neighbor-max [I] Initial capacity of the group neighbor address lists (auto-grown on demand, not a limit): 300
   --hermite-r-acc0         [F] radius for computing acceleration offset in time step calculation to avoid too small step when weak acceleration exist: 0
                                  = 0: use r_out
                                  > 0: custom offset value

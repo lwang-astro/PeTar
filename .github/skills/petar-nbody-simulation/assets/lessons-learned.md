@@ -313,7 +313,7 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: 归因 "整簇进硬积分" 类故障,第一步读 `data.par`/`data.par.hard` 的解析半径(r、r-ratio、r-search-min、r-search-group)与日志的 "Mean inner/outer changeover radius / Average mass / Velocity dispersion",用 r_virial≈G·M/(3σ²) 对照 r_out;检查 -s 是否被显式放大到自动值之上。HARD_DEBUG 版的 "Maximum rsearch particle" 打印直接给出肇事粒子及其半径。
 
-**【关闭 2026-10-26】复现工单 `doc/ic-hard-failures-plan.md` 归档删除**:Issue1 三问已闭环——本条=Q1/Q3 根因(手动放大 `-s` 致 r_out_base 超维里半径,叠加质量放大与双星 |v|·dt 项),2026-10-16 条=Q2(大 group 高扰动下 slowdown 结构性失效,接触双星靠 BSE interrupt 并合,t=0 的 10⁶ 步为 interrupt 前瞬态);Issue2 workaround(`--hermite-n-neighbor-max 2000`)已文档化并应用于 sevn 与 bse 两个 N1k-binaries sample;两项设计改进(默认自动缩放/r_search 封顶)经 2026-10-22 决策门评估不 pursuing——生产自动 `-s` 配置不触发,无已证需求。复现配方(seed 42 mcluster 命令)留在 git 历史(该文件最后版本)。
+**【关闭 2026-10-26】复现工单 `doc/ic-hard-failures-plan.md` 归档删除**:Issue1 三问已闭环——本条=Q1/Q3 根因(手动放大 `-s` 致 r_out_base 超维里半径,叠加质量放大与双星 |v|·dt 项),2026-10-16 条=Q2(大 group 高扰动下 slowdown 结构性失效,接触双星靠 BSE interrupt 并合,t=0 的 10⁶ 步为 interrupt 前瞬态);Issue2 workaround(`--hermite-n-neighbor-max 2000`)已文档化并应用于 sevn 与 bse 两个 N1k-binaries sample;两项设计改进(默认自动缩放/r_search 封顶)经 2026-10-22 决策门评估不 pursuing——生产自动 `-s` 配置不触发,无已证需求。复现配方(seed 42 mcluster 命令)留在 git 历史(该文件最后版本)。**2026-10-26 追记**:Issue2 workaround 已随 1855e 移除——SDAR 481e 起 group 邻居地址表按需增长,该选项仅为兼容提示,sample 脚本中的 `--hermite-n-neighbor-max 2000` 已删除。
 
 ### 2026-10-04: hard_large_energy 洪泛根因是组 form/break 切换注入,非 SE 质量损失——dE 首子步即钉死+dm=0 双证据;切换位置是主导杠杆,生产被半径钳制
 
@@ -468,6 +468,16 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **残余与关闭**: 唯一真实残渣——组成员 wind dm 使 per-system epert(每次现算 Σm·evalPot−epert_record)跳 dm×φ_tidal,interrupt 入账只含簇内项(`force_[cm].pot*dm`),须待破组 `accumDESlowDownChangeBreakGroup` 折入 de_cum,中间为瞬态窗口;量级可忽略(每步 dm 极小、潮汐势平滑;2026-10-04 事件 dm=0)。plan 条目 2 据此关闭(2026-10-26 用户决策);同日条目 1(switch-radius 测试段,从未执行)以"运维已收口 + 中途改径会混淆科学网格"为由一并关闭,整个 plan 归档删除(完整关闭记录:2026-10-04 条目第 4 点)。
 
 **Prevention rule**: (1) 指控"记账缺口/泄漏"前,列出该账本评估值的全部分量与全部入账路径,双向核实——账本不含的项无从泄漏;(2) 注释/退役的函数先查继任者(本例:逐粒子修正→全局扫账),不默认"删了就是洞";(3) 用户以行号质疑时,先读该行号所在完整函数再决定是否修正表述。
+
+### 2026-10-26: 【writeback 断言 `mass_bk!=0` 紧跟 merger dump≠merger 所致】真凶是 one-cluster 单星 SSE 演化到 kw=15(mt=0);幽灵粒子的 unused 位在 removeParticles 之前被 kickOne/resetParticleGroupData 的 cm 视图清零——归因先查 data.sse.type_change 的 kw→15 事件,gdb 断点法可从已安装二进制直接取证
+
+**Mistake**: 重启复现 `hard.hpp:3224 writeBackPtclForOneClusterOMP` 断言 `mass_bk!=0.0`,崩溃前恰有两份 `data.dump_binary_merger_*` dump,用户与首轮分析均归因于"并合产物零质量粒子被写回"。三点证伪:(1) BSE merger/no_remain 路径(ar_interaction.hpp postProcess mass-zero 分支)走 InterruptStatus::merge→强制破组→写回 unused 位→下一步 removeParticles 正常移除; (2) 崩溃步最近的 hard_large_energy dump(n4_g2 簇,粒子 957/958/1991/1992)全为正质量——崩溃粒子不在其中; (3) `data.bse.binary_merge` 里的并合对(1921+1922、139+140、2971+2972、2645+2646)不含崩溃粒子 id 3306。
+
+**Root cause**: 单星(one-cluster singles)在 `driveForOneClusterOMP→modifyOneParticle` 中 SSE 演化到 kw=15 且 mt=0(本例 id 3306:kw 7→8@102.67、8→9@103.33、9→15@103.48,氦星完全消散):ptcl 标记 unused、质量置 0、modify_flag=3,但 one-cluster 路径只做能量记账——不入 remove_list、不强制 tree_mklist(petar.hpp:2584-2586 的挂载点被注释掉,而 removeParticles 只认 `mass==0 && isUnused()`)。写回把 unused 位复制进 system_soft 后,下一个 mklist 步的 `calcRsearchAndGetMassBackupAndsetGroupDataToCM→system_hard_one_cluster.resetParticleGroupData`(hard.hpp:4135,cm 视图 16 字节清零)或每步的 `kickOne setParticleTypeToSingle` 都会在下一次 removeParticles **之前**把 unused 位清成 (0,0)=single——幽灵粒子(质量 0、single 位)从此永不移除;下一树步 modifyOneParticle 再次把 ptcl 标记 unused(mt=0 恒成立),写回时 mass_bk=sys.mass=0 → 断言崩。NDEBUG 构建下不崩,但质量 0 幽灵粒子永久留在 N、树力和快照里。(MPI 路径 cluster_list.hpp:1299 早已注释掉同一断言并注明 "Unused particle has mass 0"。)用户报告的 halved-step 崩溃(101.5)为另一颗星同机制,与并合 dump 时间相邻纯属活跃区域巧合。
+
+**取证方法(免重编译)**: ① 事件日志先于代码归因:data.sse.type_change.0.tmp 末行 kw→15、mt=0 即锁定崩溃星; ② gdb batch 对已安装二进制(仅 symtab 无 DWARF):先跑到 SIGABRT 拿 `__assert_fail` 调用点,`x/i` 反汇编定出各断言的 setup 地址(行号在 `mov $0xNNN,%edx`),再以该地址设断点重跑,从循环体反汇编解出寄存器含义(本例 rax=&sys[adr]、rdi=ptcl.id、0x150=sizeof(FPSoft)、0xfc=adr_org 偏移),按偏移手工解码 FPSoft(group_data@+208/+216、id@+200、star.kw@+96)即得双方位数证据; ③ dump2test 必须用同变体二进制(petar.mpi.omp.avx512.bse.galpy.dump2test),默认符号链接指向 merger 变体时布局不匹配报 "Group number<0" 假错。
+
+**Prevention rule**: (1) 写回/移除类断言崩溃,归因先查两类事件流:data.bse.binary_merge(并合,no_remain 也在其中)与 data.sse.type_change(单星 kw→15 mt=0),崩溃时间对齐 tphys 列;merger dump 时间相邻不构成因果; (2) 任何"标记 unused 待移除"的位,必须审计从置位到 removeParticles 之间所有会写 group_data 的路径(kickOne、resetParticleGroupData、calcRsearch 的 cm 写回)——one-cluster 与 isolated 两条链对 unused 位的保全行为不同; (3) 修复方向(未实施):vanish 时入 remove_list(removeParticles 对 list 内粒子强制重标 unused,位被清也不影响)+ writeback 断言放行 ptcl-unused&&sys.mass==0 的待移除态(与 MPI 路径一致)。
 
 ## Post-Processing
 

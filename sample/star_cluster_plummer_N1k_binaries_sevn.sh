@@ -39,9 +39,9 @@ fi
 # NOTE: SEVN random processes (e.g. SN kicks) are not yet seeded by PeTar, so
 # runs are not bit-wise reproducible (see README, "Random numbers in stellar
 # evolution").
-# NOTE: '--hermite-n-neighbor-max 2000' raises the hard-integrator group
-# neighbor list (default 300): with this IMF the most massive stars reach
-# r_out ~ 10 pc and exceed 300 neighbors, aborting the run otherwise.
+# NOTE: the former '--hermite-n-neighbor-max 2000' workaround (raising the
+# hard-integrator group neighbor list cap when the most massive stars exceed
+# 300 neighbors) is no longer needed: neighbor lists now grow on demand.
 # NOTE (2026-10-04, experiment branch): primordial-binary ICs like this one can
 # trigger a 'dump_large_step_h4' hard-integrator dump at t=0; this reproduces
 # identically with the bse build (pre-existing branch issue, see
@@ -84,7 +84,7 @@ echo "SEVN tables: $SEVN_TABLES"
 # NOTE: petar.find.dt only tests the first 6 steps, so the recommended dt
 # may degrade later. Always halve it for the production run.
 # See SKILL.md "Performance Optimisation" for details.
-dt_rec=$(petar.find.dt -a "-u 1 -b 500 -z 0.00142857 --tables $SEVN_TABLES --tabuse_rhe false --tabuse_rco false --tabuse_envconv false --hermite-n-neighbor-max 2000" -i 1 input 2>/dev/null | \
+dt_rec=$(petar.find.dt -a "-u 1 -b 500 -z 0.00142857 --tables $SEVN_TABLES --tabuse_rhe false --tabuse_rco false --tabuse_envconv false" -i 1 input 2>/dev/null | \
     grep "Best performance choice" | sed 's/.*tree step: //' | sed 's/,.*//')
 dt_use=$(python3 -c "print(float('$dt_rec') / 2.0)")
 echo "--- Production tree time step (half of recommended): $dt_use ---"
@@ -96,7 +96,7 @@ echo "--- Production tree time step (half of recommended): $dt_use ---"
 # Use '-b 500' to specify the number of primordial binaries as 500.
 # Use '-z 0.00142857' to set the metallicity (must match a Z directory of the table set).
 # Use '-s $dt_use' to use the optimised tree time step from petar.find.dt.
-SEVN_ARGS="-z 0.00142857 --tables $SEVN_TABLES --tabuse_rhe false --tabuse_rco false --tabuse_envconv false --hermite-n-neighbor-max 2000"
+SEVN_ARGS="-z 0.00142857 --tables $SEVN_TABLES --tabuse_rhe false --tabuse_rco false --tabuse_envconv false"
 OMP_STACKSIZE=128M petar -u 1 -b 500 $SEVN_ARGS -t 100.0 -o 5.0 -s "$dt_use" input &>output
 
 # after mode finished, gether the output data and do post-data process to detect binaries, obtain Lagrangian and core radii and corresponding properties.

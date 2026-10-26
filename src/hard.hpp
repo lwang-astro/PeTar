@@ -157,7 +157,7 @@ public:
 #endif
                     reinit_dt_dm_crit(input_par_store, 1e-4, "hermite-dm-crit", "Mass change rate criterion for reinitializing hermite time step"),
                     reinit_dt_de_crit(input_par_store, 1e-4, "hermite-de-crit", "Ekin change rate criterion for reinitializing hermite time step"),
-                    n_neighbor_max(input_par_store, 300,     "hermite-n-neighbor-max", "Maximum number of group neighbors to be stored"),
+                    n_neighbor_max(input_par_store, 300,     "hermite-n-neighbor-max", "Initial capacity of the group neighbor address lists (auto-grown on demand, not a limit)"),
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
                     interrupt_detection_option(input_par_store, 1, "detect-interrupt", "Stellar evolution of binaries in SDAR integration; 0: switch off; 1: using BSE based code (if '--stellar-evolution != 0)"),

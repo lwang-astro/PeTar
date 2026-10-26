@@ -3,8 +3,10 @@
 #include <cstdlib>
 #include <cmath>
 #include <cctype>
+#include <algorithm>
 #include <sstream>
 #include "Common/Float.h"
+#include "Common/list.h"
 #include "Common/binary_tree.h"
 #include "changeover.hpp"
 #include "AR/force.h"
@@ -412,9 +414,22 @@ public:
 
             auto* pert_adr = _perturber.neighbor_address.getDataAddress();
 
-            Float xp[n_pert][3], xcm[3], m[n_pert];
-            ChangeOver* changeover[n_pert_single+1];
-            H4::NBAdr<PtclHard>::Group* ptclgroup[n_pert_group+1];
+            // thread-local scratch arrays: grown on demand and reused across calls
+            // (COMM::List::ensureSize, amortized O(1)). Formerly stack VLAs sized
+            // by n_pert (bounded by the old fixed neighbor-list cap); large
+            // perturber lists would overflow the (small) OpenMP thread stack.
+            static thread_local COMM::List<Float> xp_storage, m_storage;
+            static thread_local COMM::List<ChangeOver*> changeover_storage;
+            static thread_local COMM::List<H4::NBAdr<PtclHard>::Group*> ptclgroup_storage;
+            xp_storage.ensureSize(3*n_pert);
+            m_storage.ensureSize(n_pert);
+            changeover_storage.ensureSize(n_pert_single+1);
+            ptclgroup_storage.ensureSize(n_pert_group+1);
+            Float (*xp)[3] = reinterpret_cast<Float (*)[3]>(xp_storage.getDataAddress());
+            Float* m = m_storage.getDataAddress();
+            ChangeOver** changeover = changeover_storage.getDataAddress();
+            H4::NBAdr<PtclHard>::Group** ptclgroup = ptclgroup_storage.getDataAddress();
+            Float xcm[3];
 
             int n_single_count=0;
             int n_group_count=0;

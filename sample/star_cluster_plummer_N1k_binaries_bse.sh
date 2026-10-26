@@ -39,17 +39,17 @@ petar.select --require bse --optional mpi,omp,avx512,avx2
 # NOTE: petar.find.dt only tests the first 6 steps, so the recommended dt
 # may degrade later. Always halve it for the production run.
 # See SKILL.md "Performance Optimisation" for details.
-# NOTE: '--hermite-n-neighbor-max 2000' raises the hard-integrator group
-# neighbor list (default 300): with this IMF the most massive stars reach
-# r_out ~ 10 pc and exceed 300 neighbors, aborting the run otherwise.
-dt_rec=$(petar.find.dt -a "-u 1 -b 500 --bse-metallicity 0.02 --hermite-n-neighbor-max 2000" -i 1 input 2>/dev/null | \
+# NOTE: the former '--hermite-n-neighbor-max 2000' workaround (raising the
+# hard-integrator group neighbor list cap when the most massive stars exceed
+# 300 neighbors) is no longer needed: neighbor lists now grow on demand.
+dt_rec=$(petar.find.dt -a "-u 1 -b 500 --bse-metallicity 0.02" -i 1 input 2>/dev/null | \
     grep "Best performance choice" | sed 's/.*tree step: //' | sed 's/,.*//')
 dt_use=$(python3 -c "print(float('$dt_rec') / 2.0)")
 echo "--- Production tree time step (half of recommended): $dt_use ---"
 
 # Use PeTar to execute the simulation with stellar evolution.
 # '-s $dt_use' uses the optimised tree time step from petar.find.dt.
-OMP_STACKSIZE=128M petar -u 1 -b 500 --bse-metallicity 0.02 --hermite-n-neighbor-max 2000 -t 100.0 -o 5.0 -s "$dt_use" input &>output
+OMP_STACKSIZE=128M petar -u 1 -b 500 --bse-metallicity 0.02 -t 100.0 -o 5.0 -s "$dt_use" input &>output
 
 # after mode finished, gether the output data and do post-data process to detect binaries, obtain Lagrangian and core radii and corresponding properties.
 petar.data.gether data

@@ -244,8 +244,8 @@ Use `petar.select` to list installed binary families and `<binary> -h` for exact
 
 - **Type**: `PS::S64`
 - **Default**: `300`
-- **Description**: Maximum number of group neighbors to be stored
-- **Source**: `src/hard.hpp`:159
+- **Description**: Initial capacity of the group neighbor address lists (auto-grown on demand, not a limit)
+- **Source**: `src/hard.hpp`:160
 
 ### `--i`
 
