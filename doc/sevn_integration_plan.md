@@ -1,9 +1,13 @@
 # SEVN Integration: Status, Defects, and Development Plan
 
-Status: 2026-10-04 — SEVN runs work end to end for no-primordial-binary
+Status: 2026-10-26 — SEVN runs work end to end for no-primordial-binary
 clusters (N=1k, 12 Myr: 38 type-change + 9 sn_kick events recorded);
-binary-rich scenarios are blocked by a pre-existing, family-independent IC
-hard failure (`doc/ic-hard-failures-plan.md`). Resolved items and false
+binary-rich scenarios were blocked by a pre-existing, family-independent IC
+hard failure — root-caused (manual dt_soft over-enlargement + massive-star
+r_search growth; lessons-learned, Simulation Execution, 2026-10-04 entry)
+and mitigated at parameter/sample level (auto dt via petar.find.dt plus
+'--hermite-n-neighbor-max 2000', documented in the N1k-binaries samples;
+ticket archived 2026-10-26). Resolved items and false
 alarms are recorded in
 `.github/skills/petar-nbody-simulation/assets/lessons-learned.md`, not here —
 this document lists only open defects and questions.
@@ -58,8 +62,10 @@ this document lists only open defects and questions.
   9 `sn_kick` events on `data.sevn.*`); all 9 `.sevnB` streams were opened but
   stayed empty — no primordial binaries, and dynamically formed binaries
   produced no logged BSE-binary events within 12 Myr.
-- Plan: verify `.sevnB` streams with a binary-rich run (blocked until the IC
-  hard failure in `doc/ic-hard-failures-plan.md` is resolved); then mark each
+- Plan: verify `.sevnB` streams with a binary-rich run (unblocked 2026-10-26:
+  use the sample workaround config — auto dt via petar.find.dt plus
+  '--hermite-n-neighbor-max 2000', see
+  `sample/star_cluster_plummer_N1k_binaries_sevn.sh`); then mark each
   BSE event type's SEVN behaviour (native / missing / equivalent). Note the
   gw_kick/binary_merge/tide write points sit on non-SEVN paths (D2) — expected
   empty under SEVN regardless.
@@ -99,13 +105,14 @@ this document lists only open defects and questions.
    from the version the upstream PR author developed against is unevaluated —
    if `evolve_sevn.cpp`'s use of the SEVN API has version-sensitive spots,
    check them against the SEVN changelog (low priority until a SEVN upgrade).
-2. Binary-rich verification (D4) is blocked by the pre-existing
-   primordial-binary IC hard failure — not a SEVN defect; deterministic
-   reproduction ticket: `doc/ic-hard-failures-plan.md`.
+2. Binary-rich verification (D4) was blocked by the pre-existing
+   primordial-binary IC hard failure — not a SEVN defect; root-caused and
+   mitigated 2026-10-26 (lessons-learned, Simulation Execution, 2026-10-04
+   entry; workaround documented in the N1k-binaries samples).
 
 ## 4. Recommended Implementation Order
 1. D1 seed wiring (reproducibility is a prerequisite for scientific output);
 2. D2 GW recoil wiring (the core physics gap);
-3. D4+D5 event-stream and TDE verification (D4 needs the binary scenario
-   unblocked, `doc/ic-hard-failures-plan.md`);
+3. D4+D5 event-stream and TDE verification (D4 binary scenario unblocked
+   2026-10-26, see D4);
 4. D3 spin semantics, §2 tooling leftovers.

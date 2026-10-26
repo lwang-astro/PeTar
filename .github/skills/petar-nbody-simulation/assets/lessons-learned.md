@@ -313,6 +313,8 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: 归因 "整簇进硬积分" 类故障,第一步读 `data.par`/`data.par.hard` 的解析半径(r、r-ratio、r-search-min、r-search-group)与日志的 "Mean inner/outer changeover radius / Average mass / Velocity dispersion",用 r_virial≈G·M/(3σ²) 对照 r_out;检查 -s 是否被显式放大到自动值之上。HARD_DEBUG 版的 "Maximum rsearch particle" 打印直接给出肇事粒子及其半径。
 
+**【关闭 2026-10-26】复现工单 `doc/ic-hard-failures-plan.md` 归档删除**:Issue1 三问已闭环——本条=Q1/Q3 根因(手动放大 `-s` 致 r_out_base 超维里半径,叠加质量放大与双星 |v|·dt 项),2026-10-16 条=Q2(大 group 高扰动下 slowdown 结构性失效,接触双星靠 BSE interrupt 并合,t=0 的 10⁶ 步为 interrupt 前瞬态);Issue2 workaround(`--hermite-n-neighbor-max 2000`)已文档化并应用于 sevn 与 bse 两个 N1k-binaries sample;两项设计改进(默认自动缩放/r_search 封顶)经 2026-10-22 决策门评估不 pursuing——生产自动 `-s` 配置不触发,无已证需求。复现配方(seed 42 mcluster 命令)留在 git 历史(该文件最后版本)。
+
 ### 2026-10-04: hard_large_energy 洪泛根因是组 form/break 切换注入,非 SE 质量损失——dE 首子步即钉死+dm=0 双证据;切换位置是主导杠杆,生产被半径钳制
 
 **Mistake**: Pal5-IMF 生产网格(7 run,密集星团)以 ~40 dumps/hour 积累 `data.hard_large_energy_h4_*` 警告;t≈369/1199 Myr 恰处 AGB/WD 形成期,初判 "紧密 few-body 内 SE 质量损失削弱势场"——方向错误。曾实施的修复(组事件步后重置能量参考、把注入折入 `dE_change` 列)也被撤回。
