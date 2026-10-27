@@ -44,7 +44,7 @@ This file is the root entry point for agents working in this repository. Keep it
   - one entry = one change = one line <= 150 chars, starting with a standard verb: **Add / Fix / Change / Improve / Remove**;
   - prefix the introducing version (`66. (1790e) Fix ...`); major entries get a trailing `[major]` tag (never a leading `*` — it breaks `grep -E '^[0-9]+\. '`); carry SDAR requirements over from the commit message (`needs SDAR >= 63e8308`);
   - what changed and why it matters only — root causes, fix mechanics, and validation numbers go to the commit message / lessons; minor fixes, internal work (lessons, agent infra, doc hygiene), and resolved issues (one-clause strikethrough) stay out;
-  - draft: `bash tools/gen_release_draft.sh <last-release.note-commit>..HEAD`; new entries must not appear in `grep -nE '^[0-9]+\. .{150,}' release.note` (pre-2026-10-24 content grandfathered).
+  - draft: `bash tools/gen_release_draft.sh <last-release.note-commit>..HEAD`; insert and verify with `python3 tools/release_note_tool.py insert|sort|check` (hardened sort key for bare `(V)` prefixes; `check` enforces numbering, sort order, verbs, version prefixes, and the length cap for entries >= 1848e).
 
 ## Custom Agents
 

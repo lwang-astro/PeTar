@@ -65,56 +65,59 @@
 64. (1624e) Change the default method to KDKDK 4th order. [major]
 65. (1625e) Add Skills for AI agent (GitHub). [major]
 66. (1632e) Add petar.select tool to relink current petar to one of the installed petar versions. [major]
-67. (1701e) Add functional test script to check a star cluster simulations with binaries for different cases, including reading test. [major]
-68. (1706e) Add tmp mode for output data to avoid repeating after restart simulations, no need to use petar.data.gether. All simulation output files, including input parameter files, have a consistent prefix defined by -f option ('data.' in default). [major]
-69. (1715e) Change interrupt mode 'base' to 'merger' to avoid naming confusion. [major]
-70. (1736e) Add new petar.dump2test tool; allow to convert dump file to init snapshot of petar.hard.test [major]
-71. (1750e) Add the BTLogH g-function AR integrator (`--with-sdar-g-func=btlogh`, runtime `--ar-g-func`). [major]
-72. (1785e) Add SEVN stellar evolution support (`--with-interrupt=sevn`, MIST gold tables; open items in `doc/sevn_integration_plan.md`). [major]
-73. (1790e) Fix the BSE `dt>0` interrupt assertion on freshly formed groups with mixed member time records.
-74. (1790e) Fix the BSE zero-mass-star assertion when a member vanishes without a remnant (kw=15 events now recorded).
-75. (1790e) Change `isCallBSENeeded` to a single-dt interface; drop the dead SEVN `getTimeStepBinary` re-query. [major]
-76. (1791e) Add a static dump readback mode (`-m 2`) to `petar.hard.debug`.
-77. (1792e) Fix the SEVN build broken by an unbalanced brace in `isCallBSENeeded`.
-78. (1793e) Fix configure-time MPI include detection when only `mpicxx` exists.
-79. (1794e) Remove the structurally invalid STELLAR_EVOLUTION mass-backup assertion in `checkConsistence`.
-80. (1795e) Fix the AR tidal-tensor even-order mean momentum leak (c.m. drift of binaries). [major]
-81. (1795e) Fix a 1-ULP `r_search` assertion in the tidal-tensor path.
-82. (1795e) Add the T5 tidal-tensor validation scenario and T4 pipeline auto-select.
-83. (1798e) Fix orbit-sampling NaN for hyperbolic group roots (elliptic contract asserted in the writeback).
-84. (1799e) Change changeover to own-mass member radii; c.m. sync and ex-member rescale removed. [major]
-85. (1799e) Fix the `data.group.n2` record explosion (SDAR kappa NaN corner).
-86. (1799e) Add NEON (TSV110/Kunpeng-920) tree force and neighbor search kernels (RESBI PR #83).
-87. (1800e) Change the functional changeover-invariant check to the IC-pinned contract.
-88. (1801e) Change pseudo particles to take the group c.m. changeover.
-89. (1801e) Add the T6 kernel-match validation scenario.
-90. (1804e) Add `petar.group.dedup` to repair and deduplicate group output files.
-91. (1808e) Add changeover-crossing dt limits via the SDAR per-slot limit radius (needs SDAR >= 63e8308). [major]
-92. (1808e) Fix uninitialized Hermite state (acc/jerk/pot/time/dt) flow by resetting it on cluster copy-in (SDAR >= 63e8308).
-93. (1810e) Improve the validation suite: T1-T3 redesign with group-census verification; T4-T6 harness hygiene.
-94. (1812e) Add build provenance: a Build banner (configure flags + SDAR version) in `-h`; validation-runner binary-freshness preflight.
-95. (1814e) Improve repo doc organization: closed notes distilled into lessons; taxonomy rules in `AGENTS.md`.
-96. (1815e) Change Doxygen publishing: output no longer tracked; built from `master` by CI with README homepage.
-97. (1819e) Fix single/binary escaper deduplication in post-processing (`removeDuplicate` never took effect; GitHub issue #82). [major]
-98. (1819e) Fix mass-range Lagrangian groups excluding all single stars; component selection now unions. [major]
-99. (1819e) Fix the inert `-B/--full-binary` option in `petar.data.process`.
-100. (1819e) Fix aggregated `-o npy` outputs missing the `.npy` suffix, which broke the npy readback chain.
-101. (1822e) Fix a gas-drag array-index bug with a Galpy gas potential (gas-frame relative velocity corrupted the drag force).
-102. (1824e) Add binary-family preflight, per-case HTML reports, and per-case tool smokes to the functional test runner.
-103. (1826e) Add `gasdrag`, `std-restart`, and optional `sevn` cases to the functional test matrix.
-104. (1826e) Fix million-step AR stalls by matching functional-test ICs to each mode's merge channel.
-105. (1837e) Fix `petar.data.clear` single-rank output discovery: rank-less group, esc, and event files were never cleared.
-106. (1837e) Fix `petar.data.clear` ASCII event time columns: a label-column shift made sse/bse files trim by the wrong field.
-107. (1837e) Fix restart duplicates: `petar.data.clear` now trims `<prefix>.snap.lst` and stale snapshots.
-108. (1838e) Add a restart flow with over-deletion and duplicate-record checks to every functional case, plus a `bse-galpy-gasdrag` case.
-109. (1839e) Improve Python readers: `fromfile()` auto-detects ASCII input; `format='binary'|'ascii'` forces a format.
-110. (1845e) Fix the BTLogH denormal adaptive-ds abort in multiple systems (SDAR-side; needs SDAR >= 96f0d39).
-111. (1847e) Fix the LogH adaptive-ds phase-transition failure (NaN H / negative time): hyperbolic ds capped by the S-criterion (SDAR 460bdb7).
-112. (1849e) Fix BSE evolv2 never recording Coalescence when a common envelope ends in merger, aborting production runs on a mass assertion. [major]
-113. (1851e) Fix delayed micro-TDE interrupt time: precedence bug dropped the time offset, firing immediately instead of at pericentre.
-114. (1851e) Add validation suite T9 for the micro-TDE trigger criterion (beta boundary, orbit routing, fire epoch, perturbed-candidate regression, author-event replays). [major]
-115. (1855e) Change group perturber neighbor lists to grow-on-demand (no aborts in large clusters). needs SDAR >= 481e. [major]
-116. (1856e) Fix mass-0 ghost after star vanish (SSE kw=15): preserve 'unused' marker against cm/single overwrites; assert skips pending removal.
+67. (1685e) Add GR precession to AR binary orbits via precession-rate orbital-element evolution (compile-time `GR_PRECESSION`). [major]
+68. (1685e) Change the PN activation criterion to the binary total mass.
+69. (1701e) Add functional test script to check a star cluster simulations with binaries for different cases, including reading test. [major]
+70. (1706e) Add tmp mode for output data to avoid repeating after restart simulations, no need to use petar.data.gether. All simulation output files, including input parameter files, have a consistent prefix defined by -f option ('data.' in default). [major]
+71. (1715e) Change interrupt mode 'base' to 'merger' to avoid naming confusion. [major]
+72. (1736e) Add new petar.dump2test tool; allow to convert dump file to init snapshot of petar.hard.test [major]
+73. (1750e) Add the BTLogH g-function AR integrator (`--with-sdar-g-func=btlogh`, runtime `--ar-g-func`). [major]
+74. (1782e) Fix mass-change energy corrections to count the moving-frame kinetic energy term (PR #81).
+75. (1785e) Add SEVN stellar evolution support (`--with-interrupt=sevn`, MIST gold tables; open items in `doc/sevn_integration_plan.md`). [major]
+76. (1790e) Fix the BSE `dt>0` interrupt assertion on freshly formed groups with mixed member time records.
+77. (1790e) Fix the BSE zero-mass-star assertion when a member vanishes without a remnant (kw=15 events now recorded).
+78. (1790e) Change `isCallBSENeeded` to a single-dt interface; drop the dead SEVN `getTimeStepBinary` re-query. [major]
+79. (1791e) Add a static dump readback mode (`-m 2`) to `petar.hard.debug`.
+80. (1792e) Fix the SEVN build broken by an unbalanced brace in `isCallBSENeeded`.
+81. (1793e) Fix configure-time MPI include detection when only `mpicxx` exists.
+82. (1794e) Remove the structurally invalid STELLAR_EVOLUTION mass-backup assertion in `checkConsistence`.
+83. (1795e) Fix the AR tidal-tensor even-order mean momentum leak (c.m. drift of binaries). [major]
+84. (1795e) Fix a 1-ULP `r_search` assertion in the tidal-tensor path.
+85. (1795e) Add the T5 tidal-tensor validation scenario and T4 pipeline auto-select.
+86. (1798e) Fix orbit-sampling NaN for hyperbolic group roots (elliptic contract asserted in the writeback).
+87. (1799e) Change changeover to own-mass member radii; c.m. sync and ex-member rescale removed. [major]
+88. (1799e) Fix the `data.group.n2` record explosion (SDAR kappa NaN corner).
+89. (1799e) Add NEON (TSV110/Kunpeng-920) tree force and neighbor search kernels (RESBI PR #83).
+90. (1800e) Change the functional changeover-invariant check to the IC-pinned contract.
+91. (1801e) Change pseudo particles to take the group c.m. changeover.
+92. (1801e) Add the T6 kernel-match validation scenario.
+93. (1804e) Add `petar.group.dedup` to repair and deduplicate group output files.
+94. (1808e) Add changeover-crossing dt limits via the SDAR per-slot limit radius (needs SDAR >= 63e8308). [major]
+95. (1808e) Fix uninitialized Hermite state (acc/jerk/pot/time/dt) flow by resetting it on cluster copy-in (SDAR >= 63e8308).
+96. (1810e) Improve the validation suite: T1-T3 redesign with group-census verification; T4-T6 harness hygiene.
+97. (1812e) Add build provenance: a Build banner (configure flags + SDAR version) in `-h`; validation-runner binary-freshness preflight.
+98. (1814e) Improve repo doc organization: closed notes distilled into lessons; taxonomy rules in `AGENTS.md`.
+99. (1815e) Change Doxygen publishing: output no longer tracked; built from `master` by CI with README homepage.
+100. (1819e) Fix single/binary escaper deduplication in post-processing (`removeDuplicate` never took effect; GitHub issue #82). [major]
+101. (1819e) Fix mass-range Lagrangian groups excluding all single stars; component selection now unions. [major]
+102. (1819e) Fix the inert `-B/--full-binary` option in `petar.data.process`.
+103. (1819e) Fix aggregated `-o npy` outputs missing the `.npy` suffix, which broke the npy readback chain.
+104. (1822e) Fix a gas-drag array-index bug with a Galpy gas potential (gas-frame relative velocity corrupted the drag force).
+105. (1824e) Add binary-family preflight, per-case HTML reports, and per-case tool smokes to the functional test runner.
+106. (1826e) Add `gasdrag`, `std-restart`, and optional `sevn` cases to the functional test matrix.
+107. (1826e) Fix million-step AR stalls by matching functional-test ICs to each mode's merge channel.
+108. (1837e) Fix `petar.data.clear` single-rank output discovery: rank-less group, esc, and event files were never cleared.
+109. (1837e) Fix `petar.data.clear` ASCII event time columns: a label-column shift made sse/bse files trim by the wrong field.
+110. (1837e) Fix restart duplicates: `petar.data.clear` now trims `<prefix>.snap.lst` and stale snapshots.
+111. (1838e) Add a restart flow with over-deletion and duplicate-record checks to every functional case, plus a `bse-galpy-gasdrag` case.
+112. (1839e) Improve Python readers: `fromfile()` auto-detects ASCII input; `format='binary'|'ascii'` forces a format.
+113. (1845e) Fix the BTLogH denormal adaptive-ds abort in multiple systems (SDAR-side; needs SDAR >= 96f0d39).
+114. (1847e) Fix the LogH adaptive-ds phase-transition failure (NaN H / negative time): hyperbolic ds capped by the S-criterion (SDAR 460bdb7).
+115. (1849e) Fix BSE evolv2 never recording Coalescence when a common envelope ends in merger, aborting production runs on a mass assertion. [major]
+116. (1851e) Fix delayed micro-TDE interrupt time: precedence bug dropped the time offset, firing immediately instead of at pericentre.
+117. (1851e) Add validation suite T9 for the micro-TDE trigger criterion (beta boundary, orbit routing, fire-epoch regressions). [major]
+118. (1855e) Change group perturber neighbor lists to grow-on-demand (no aborts in large clusters). needs SDAR >= 481e. [major]
+119. (1856e) Fix mass-0 ghost after star vanish (SSE kw=15): preserve 'unused' marker against cm/single overwrites; assert skips pending removal.
 
 **Existing issues (consolidated, live list — historical sections below no longer repeat their issues)**
 
@@ -140,6 +143,9 @@ Updates: (version shown in (); pre-VERSION commits dated):
 8. (1245) Improve the printTable function in the Python analysis tool to allow manual setting of column titles. Additionally, introduce pre-defined column_format options for petar.SSETypeChange, petar.BSETypeChange and petar.BSEMerge for user convenience.
 9. (1245) Change `petar.BSEMerge` members `kw1`/`kw2`/`kwf` to `type1`/`type2`/`typef` for consistency with other analysis classes.
 10. (1246) Change the c.m. calculation method: use past 16 records of c.m. positions and velocities and obtain the median values as an average to update c.m. This can avoid significant jump of c.m. position and large roundoff errors when the density is too low, such as tidal streams. Also fix a problem when only one particle exist, the c.m. calculation may not be correct using the potential weighted method, now use no weight method instead.
+11. (2026-06) Fix the delayed-collision interrupt time (PR #76).
+
+
 
 
 **v1.0 Change Note**
