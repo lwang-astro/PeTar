@@ -114,6 +114,7 @@
 113. (1851e) Fix delayed micro-TDE interrupt time: precedence bug dropped the time offset, firing immediately instead of at pericentre.
 114. (1851e) Add validation suite T9 for the micro-TDE trigger criterion (beta boundary, orbit routing, fire epoch, perturbed-candidate regression, author-event replays). [major]
 115. (1855e) Change group perturber neighbor lists to grow-on-demand (no aborts in large clusters). needs SDAR >= 481e. [major]
+116. (1856e) Fix mass-0 ghost after star vanish (SSE kw=15): preserve 'unused' marker against cm/single overwrites; assert skips pending removal.
 
 **Existing issues (consolidated, live list — historical sections below no longer repeat their issues)**
 

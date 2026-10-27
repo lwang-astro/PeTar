@@ -1609,7 +1609,11 @@ public:
 #else
             _sys[k].vel  += _sys[k].acc * _dt;
 #endif
-            _sys[k].group_data.artificial.setParticleTypeToSingle();
+            // do not reset the type of a vanished (pending-removal) particle:
+            // removeParticles() removes it by (mass==0 && isUnused); erasing
+            // the 'unused' marker here would leave a mass-0 ghost
+            if (!_sys[k].group_data.artificial.isUnused())
+                _sys[k].group_data.artificial.setParticleTypeToSingle();
         }
     }
 
@@ -1692,8 +1696,14 @@ public:
             }
 
 #ifdef HARD_DEBUG
-            if(_sys[adr].group_data.artificial.isSingle()) assert(_sys[adr].mass>0);
-            else assert(_sys[adr].group_data.artificial.getMassBackup()>0);
+            // a mass-0 non-member particle is pending removal (vanishing stellar
+            // remnant): the mass/mass_backup checks below do not apply between the
+            // vanish writeback and removeParticles() (same rationale as the writeback
+            // assert fix in hard.hpp)
+            if (!(_sys[adr].mass==0.0 && !_sys[adr].group_data.artificial.isMember())) {
+                if(_sys[adr].group_data.artificial.isSingle()) assert(_sys[adr].mass>0);
+                else assert(_sys[adr].group_data.artificial.getMassBackup()>0);
+            }
 #endif
         }
     }
@@ -2040,6 +2050,9 @@ public:
         system_hard_connected.calcRsearchAndGetMassBackupAndsetGroupDataToCM(system_soft, dt_tree);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), mass_modify_list);
         system_hard_connected.updateTimeWriteBack();
+        // this writeback is a pure data round-trip (dm==0), so clearing without
+        // the correctSoftPotMassChange() energy correction is safe; a future
+        // caller that records real dm here must consume the list instead
         mass_modify_list.resizeNoInitialize(0);
 #endif
 #endif    
@@ -2581,10 +2594,9 @@ public:
             auto& pi = system_soft[i];
 			depot_sum += pi.dm*pi.pot_soft;
             pi.dm = 0.0;
-            // ghost particle case, check in remove_particle instead
-            //if(pi.mass==0.0&&pi.group_data.artificial.isUnused()) {
-            //    remove_list.push_back(i);
-            //}
+            // mass-0 (vanished) particles are removed by removeParticles()
+            // via the (mass==0 && isUnused) criterion; the 'unused' marker is
+            // preserved by kickOne()/resetParticleGroupData()/calcRsearch...()
         }
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
 		PS::F64 global_depot_sum = PS::Comm::getSum(depot_sum);
@@ -3992,7 +4004,11 @@ public:
                     else system_soft[i].calcRSearch(dt_soft);
                 }
 
-                pi_cm.mass = pi_cm.vel.x = pi_cm.vel.y = pi_cm.vel.z = 0.0;
+                // a restart snapshot may contain mass-0 (vanished, pending-removal)
+                // particles: keep their 'unused' marker so that the first
+                // removeParticles() of the new run removes them
+                if (system_soft[i].mass>0.0)
+                    pi_cm.mass = pi_cm.vel.x = pi_cm.vel.y = pi_cm.vel.z = 0.0;
             }
 #ifdef RECORD_CM_IN_HEADER
             stat.calcAndShiftCenterOfMass(&system_soft[0], stat.n_real_loc);

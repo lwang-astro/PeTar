@@ -3176,7 +3176,12 @@ public:
 #endif
 #ifdef STELLAR_EVOLUTION
             PS::F64 mass_bk = sys[adr].group_data.artificial.isMember()? sys[adr].group_data.artificial.getMassBackup(): sys[adr].mass;
-            assert(mass_bk!=0.0);
+            // a ptcl marked unused is pending removal: this writeback is part of the
+            // removal pipeline (sys.mass may already be 0 from the previous writeback,
+            // between the stellar-evolution vanish and removeParticles()); dm is 0 for
+            // such particles, so the energy bookkeeping below is unaffected (same
+            // rationale as the MPI send-back path, SearchCluster::writeAndSendBackPtcl)
+            if (!ptcl_hard_[i].group_data.artificial.isUnused()) assert(mass_bk!=0.0);
 #endif
             sys[adr].DataCopy(ptcl_hard_[i]);
 
@@ -3221,7 +3226,9 @@ public:
 #endif
 #ifdef STELLAR_EVOLUTION
                 PS::F64 mass_bk = sys[adr].group_data.artificial.isMember()? sys[adr].group_data.artificial.getMassBackup(): sys[adr].mass;
-                assert(mass_bk!=0.0);
+                // unused ptcl = pending removal, sys.mass may already be 0 (see the
+                // non-OMP writeBackPtclForOneCluster above for the rationale)
+                if (!ptcl_hard_[i].group_data.artificial.isUnused()) assert(mass_bk!=0.0);
 #endif
                 sys[adr].DataCopy(ptcl_hard_[i]);
 
@@ -3259,7 +3266,6 @@ public:
     /*! 
       @param[in,out] _sys: particle system
       @param[out] _mass_modify_list: address on _sys of particles where mass is modified
-      @param[out] _removelist: address on _sys of particles that are need to be removed are stored.
      */
     template<class Tsys>
     void writeBackPtclForMultiClusterOMP(Tsys & _sys,
@@ -4150,6 +4156,11 @@ public:
         const PS::S32 n = ptcl_hard_.size();
 #pragma omp parallel for 
         for(PS::S32 i=0; i<n; i++){
+            // preserve the artificial bits of vanished (mass-0) particles:
+            // removeParticles() removes them by the (mass==0 && isUnused)
+            // criterion; zeroing the cm view here would erase the 'unused'
+            // marker and leave a mass-0 ghost
+            if (ptcl_hard_[i].mass==0.0) continue;
             // to avoid issue in cluster search with velocity
             auto& pi_cm = ptcl_hard_[i].group_data.cm;
             pi_cm.mass = pi_cm.vel.x = pi_cm.vel.y = pi_cm.vel.z = 0.0;
@@ -4222,8 +4233,12 @@ public:
                     if(adr>=0) {
                         assert(ptcl_local[indices[0]].id==_ptcl_soft[adr].id);
                         _ptcl_soft[adr].binary_state = ptcl_local[indices[0]].binary_state;
-                        _ptcl_soft[adr].group_data.cm.mass  = pj.mass;
-                        _ptcl_soft[adr].group_data.cm.vel   = pj.vel;
+                        // a mass-0 (vanished) particle keeps its 'unused' marker
+                        // for the removeParticles() mass+type criterion (no cm overwrite)
+                        if (pj.mass>0.0) {
+                            _ptcl_soft[adr].group_data.cm.mass  = pj.mass;
+                            _ptcl_soft[adr].group_data.cm.vel   = pj.vel;
+                        }
                         _ptcl_soft[adr].r_search = pj.r_search;
                     }
                     continue;
@@ -4263,13 +4278,17 @@ public:
                     assert(pcm.r_search >= ptcl_local[idx].changeover.getRout());
                     ptcl_local[idx].r_search = pcm.r_search;
                     auto& pj_cm = ptcl_local[idx].group_data.cm;
-                    pj_cm.mass = mass_cm;
-                    pj_cm.vel = vel_cm;
+                    // a mass-0 (vanished) particle keeps its 'unused' marker
+                    // (both ptcl and sys side) for the removeParticles() criterion
+                    if (ptcl_local[idx].mass>0.0) {
+                        pj_cm.mass = mass_cm;
+                        pj_cm.vel = vel_cm;
+                    }
                     PS::S32 adr = ptcl_local[idx].adr_org;
                     if(adr>=0) {
                         assert(ptcl_local[idx].id==_ptcl_soft[adr].id);
                         _ptcl_soft[adr].mass = ptcl_local[idx].mass; // recover mass
-                        _ptcl_soft[adr].group_data.cm = pj_cm;
+                        if (ptcl_local[idx].mass>0.0) _ptcl_soft[adr].group_data.cm = pj_cm;
                         _ptcl_soft[adr].r_search = pcm.r_search;
                     }
                 }
