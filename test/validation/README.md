@@ -94,7 +94,7 @@ Output: `test/out/t3_binary_sdar_grouplink_summary.html`
 ### T4: Hierarchical Triple, Five-Mode Comparison
 - Hierarchical triple IC (tidal-tensor 3-body test), evolved for 200 outer periods
 - Five modes compared: pure SDAR reference, hard/tree with and without tidal tensor, and variants
-- Automatic checks (10): reference quality — `m1` final **absolute** cumulative energy error `Error_cum` ≤ 1e-7 (the `Error/Total` ratio is not usable on this IC: |E_tot| ~1.7e-4 turns the BSE wind-accounting residual ~2.4e-10 absolute into ~1.4e-6 in ratio, the shared floor of every hard-channel mode); tidal-tensor census — artificial particles ≥ 1 with `--tt-switch 1`, = 0 with `--tt-switch 0`; runtime-abort regex counts per mode
+- Automatic checks (33): reference quality — `m1` final **absolute** cumulative energy error `Error_cum` ≤ 1e-7 (the `Error/Total` ratio is not usable on this IC: |E_tot| ~1.7e-4 turns the BSE wind-accounting floor ~2.4e-10 absolute into ~1.4e-6 in ratio, the shared floor of every hard-channel mode); tidal-tensor census — artificial particles ≥ 1 with `--tt-switch 1`, = 0 with `--tt-switch 0`; **orbital-element hardening (2026-10-27, after the TT c.m. double-subtraction fix)** — per-mode inner-eccentricity drift `Δe` ratio vs m1 within [0.5, 2] (base) / [0.2, 5] (control), and inner/outer orbit-tracking Pearson correlation vs m1 ≥ 0.9 (base TT modes: measured r ≥ 0.9997 post-fix; the pre-fix regression pumped Δe 25×/140× while all earlier checks stayed green); no correlation check in the control group — e_out(t) there sits at the truncation-noise level (r ≈ 0.12 for correct runs); runtime-abort regex counts per mode
 - Control group `*_o15` runs are part of the same scenario: the five modes repeated with the original outer semi-major axis `a_out = 1.5`, distinguishing structural from scale-dependent effects (base-vs-control comparison table in the report)
 - Requires a bse-interrupt binary (IC has `petar.init -s bse` columns, runs use `-b 1`); the pipeline selects it via `petar.select --require bse --optional mpi,omp,avx2` and builds it (`./configure --with-interrupt=bse && make install`) if missing
 
@@ -102,7 +102,7 @@ Output: `test/out/t3_binary_sdar_grouplink_summary.html`
 python3 test/validation/run_validation.py --pipeline t4
 ```
 
-Output: `test/out/t4_triple_mode_summary.html`
+Output: `test/out/t4_triple_tidal_tensor_summary.html`
 
 ### T5: Massive Binary + Light Churner, Tidal-Tensor Momentum Conservation
 - IC from the 2026-10-06 momentum-leak event: 77.65 Msun binary (`a=0.0081` pc, `e=0.667`) plus a 0.242 Msun star whose pericenter (0.01 pc) lies inside the group radius and apocenter (0.04 pc) outside it, so AR group membership churns every outer orbit (the T3 ~ r^-4 close-passage regime)
@@ -202,7 +202,7 @@ Output: `test/out/t6_pert_kernel_match_summary.html` (paper-style sections: back
 | `t1_binary_changeover_kdkdk4_report.py` | T1 report generation |
 | `t2_binary_longterm_autochangeover_report.py` | T2 report generation |
 | `t3_binary_sdar_grouplink_report.py` | T3 report generation |
-| `t4_triple_mode_report.py` | T4 report generation |
+| `t4_triple_tidal_tensor_report.py` | T4 report generation |
 | `t5_massive_binary_tt_report.py` | T5 report generation (`--run` executes the scenario first) |
 | `t6_pert_kernel_match_report.py` | T6 report generation (`--run` executes the scenario first; reuses T5 SVG helpers) |
 | `scenarios/*.json` | Scenario definitions (commands, runs, checks) |

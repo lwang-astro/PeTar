@@ -1,5 +1,5 @@
 {
-  "name": "t4_tree_hard_from_triple",
+  "name": "t4_triple_tidal_tensor",
   "description": "Five-mode hierarchical triple comparison based on notebook tidal-tensor 3-body test: pure SDAR reference, hard/tree with and without tidal tensor. Control group (run ids *_o15): the same five modes repeated at the original outer scale a_out = 1.5 pc, distinguishing structural from scale-dependent effects.",
   "cores": 10,
   "parallel_runs": true,
@@ -26,7 +26,8 @@
     "regex_floats": {
       "final_error_cum": "^Physic:\\s+\\S+\\s+\\S+\\s+(\\S+)"
     },
-    "interrupt_mode": "bse"
+    "interrupt_mode": "bse",
+    "orbit_reference": "m1_pure_sdar_ref"
   },
   "runs": [
     {
@@ -214,6 +215,134 @@
       "run_id": "m5_tree_tt_o15",
       "regex_key": "runtime_abort",
       "threshold": 0
+    },
+    {
+      "name": "m2_hard_no_tt_inner_ecc_drift_vs_ref",
+      "type": "metric_ratio",
+      "numerator_run_id": "m2_hard_no_tt",
+      "denominator_run_id": "m1_pure_sdar_ref",
+      "metric": "max_abs_drift_ecc",
+      "min_ratio": 0.5,
+      "max_ratio": 2.0,
+      "comment": "Guards the 2026-10-27 regression class: pre-fix TT pumped inner e by 25x (base) / 44-140x (ctrl) while every existing check stayed green. Ratio in [0.5,2] vs the m1 reference; ctrl band wider (forced signal ~2e-4 near truncation noise) but still far below the observed regressions."
+    },
+    {
+      "name": "m2_hard_no_tt_orbit_tracking_e_in",
+      "type": "min_threshold",
+      "run_id": "m2_hard_no_tt",
+      "metric": "orbit_corr_e_in",
+      "threshold": 0.9,
+      "comment": "Inner e(t) must track the m1 reference (Pearson r>=0.9): low r flags divergence from OR artificial suppression of the forced evolution."
+    },
+    {
+      "name": "m3_hard_tt_inner_ecc_drift_vs_ref",
+      "type": "metric_ratio",
+      "numerator_run_id": "m3_hard_tt",
+      "denominator_run_id": "m1_pure_sdar_ref",
+      "metric": "max_abs_drift_ecc",
+      "min_ratio": 0.5,
+      "max_ratio": 2.0,
+      "comment": "Guards the 2026-10-27 regression class: pre-fix TT pumped inner e by 25x (base) / 44-140x (ctrl) while every existing check stayed green. Ratio in [0.5,2] vs the m1 reference; ctrl band wider (forced signal ~2e-4 near truncation noise) but still far below the observed regressions."
+    },
+    {
+      "name": "m3_hard_tt_orbit_tracking_e_in",
+      "type": "min_threshold",
+      "run_id": "m3_hard_tt",
+      "metric": "orbit_corr_e_in",
+      "threshold": 0.9,
+      "comment": "Inner e(t) must track the m1 reference (Pearson r>=0.9): low r flags divergence from OR artificial suppression of the forced evolution."
+    },
+    {
+      "name": "m4_tree_no_tt_inner_ecc_drift_vs_ref",
+      "type": "metric_ratio",
+      "numerator_run_id": "m4_tree_no_tt",
+      "denominator_run_id": "m1_pure_sdar_ref",
+      "metric": "max_abs_drift_ecc",
+      "min_ratio": 0.5,
+      "max_ratio": 2.0,
+      "comment": "Guards the 2026-10-27 regression class: pre-fix TT pumped inner e by 25x (base) / 44-140x (ctrl) while every existing check stayed green. Ratio in [0.5,2] vs the m1 reference; ctrl band wider (forced signal ~2e-4 near truncation noise) but still far below the observed regressions."
+    },
+    {
+      "name": "m4_tree_no_tt_orbit_tracking_e_in",
+      "type": "min_threshold",
+      "run_id": "m4_tree_no_tt",
+      "metric": "orbit_corr_e_in",
+      "threshold": 0.9,
+      "comment": "Inner e(t) must track the m1 reference (Pearson r>=0.9): low r flags divergence from OR artificial suppression of the forced evolution."
+    },
+    {
+      "name": "m5_tree_tt_inner_ecc_drift_vs_ref",
+      "type": "metric_ratio",
+      "numerator_run_id": "m5_tree_tt",
+      "denominator_run_id": "m1_pure_sdar_ref",
+      "metric": "max_abs_drift_ecc",
+      "min_ratio": 0.5,
+      "max_ratio": 2.0,
+      "comment": "Guards the 2026-10-27 regression class: pre-fix TT pumped inner e by 25x (base) / 44-140x (ctrl) while every existing check stayed green. Ratio in [0.5,2] vs the m1 reference; ctrl band wider (forced signal ~2e-4 near truncation noise) but still far below the observed regressions."
+    },
+    {
+      "name": "m5_tree_tt_orbit_tracking_e_in",
+      "type": "min_threshold",
+      "run_id": "m5_tree_tt",
+      "metric": "orbit_corr_e_in",
+      "threshold": 0.9,
+      "comment": "Inner e(t) must track the m1 reference (Pearson r>=0.9): low r flags divergence from OR artificial suppression of the forced evolution."
+    },
+    {
+      "name": "m3_hard_tt_orbit_tracking_e_out",
+      "type": "min_threshold",
+      "run_id": "m3_hard_tt",
+      "metric": "orbit_corr_e_out",
+      "threshold": 0.9,
+      "comment": "Outer-orbit tracking vs m1 - the discriminator that separated physical signal from suppression in the fix session (measured >=0.987)."
+    },
+    {
+      "name": "m5_tree_tt_orbit_tracking_e_out",
+      "type": "min_threshold",
+      "run_id": "m5_tree_tt",
+      "metric": "orbit_corr_e_out",
+      "threshold": 0.9,
+      "comment": "Outer-orbit tracking vs m1 - the discriminator that separated physical signal from suppression in the fix session (measured >=0.987)."
+    },
+    {
+      "name": "m2_hard_no_tt_o15_inner_ecc_drift_vs_ref",
+      "type": "metric_ratio",
+      "numerator_run_id": "m2_hard_no_tt_o15",
+      "denominator_run_id": "m1_pure_sdar_ref_o15",
+      "metric": "max_abs_drift_ecc",
+      "min_ratio": 0.2,
+      "max_ratio": 5.0,
+      "comment": "Guards the 2026-10-27 regression class: pre-fix TT pumped inner e by 25x (base) / 44-140x (ctrl) while every existing check stayed green. Ratio in [0.5,2] vs the m1 reference; ctrl band wider (forced signal ~2e-4 near truncation noise) but still far below the observed regressions. (control group) (no ctrl corr: e_out(t) signal ~ truncation noise at a_out=1.5, measured r~0.12 for correct post-fix runs)"
+    },
+    {
+      "name": "m3_hard_tt_o15_inner_ecc_drift_vs_ref",
+      "type": "metric_ratio",
+      "numerator_run_id": "m3_hard_tt_o15",
+      "denominator_run_id": "m1_pure_sdar_ref_o15",
+      "metric": "max_abs_drift_ecc",
+      "min_ratio": 0.2,
+      "max_ratio": 5.0,
+      "comment": "Guards the 2026-10-27 regression class: pre-fix TT pumped inner e by 25x (base) / 44-140x (ctrl) while every existing check stayed green. Ratio in [0.5,2] vs the m1 reference; ctrl band wider (forced signal ~2e-4 near truncation noise) but still far below the observed regressions. (control group) (no ctrl corr: e_out(t) signal ~ truncation noise at a_out=1.5, measured r~0.12 for correct post-fix runs)"
+    },
+    {
+      "name": "m4_tree_no_tt_o15_inner_ecc_drift_vs_ref",
+      "type": "metric_ratio",
+      "numerator_run_id": "m4_tree_no_tt_o15",
+      "denominator_run_id": "m1_pure_sdar_ref_o15",
+      "metric": "max_abs_drift_ecc",
+      "min_ratio": 0.2,
+      "max_ratio": 5.0,
+      "comment": "Guards the 2026-10-27 regression class: pre-fix TT pumped inner e by 25x (base) / 44-140x (ctrl) while every existing check stayed green. Ratio in [0.5,2] vs the m1 reference; ctrl band wider (forced signal ~2e-4 near truncation noise) but still far below the observed regressions. (control group) (no ctrl corr: e_out(t) signal ~ truncation noise at a_out=1.5, measured r~0.12 for correct post-fix runs)"
+    },
+    {
+      "name": "m5_tree_tt_o15_inner_ecc_drift_vs_ref",
+      "type": "metric_ratio",
+      "numerator_run_id": "m5_tree_tt_o15",
+      "denominator_run_id": "m1_pure_sdar_ref_o15",
+      "metric": "max_abs_drift_ecc",
+      "min_ratio": 0.2,
+      "max_ratio": 5.0,
+      "comment": "Guards the 2026-10-27 regression class: pre-fix TT pumped inner e by 25x (base) / 44-140x (ctrl) while every existing check stayed green. Ratio in [0.5,2] vs the m1 reference; ctrl band wider (forced signal ~2e-4 near truncation noise) but still far below the observed regressions. (control group) (no ctrl corr: e_out(t) signal ~ truncation noise at a_out=1.5, measured r~0.12 for correct post-fix runs)"
     }
   ]
 }

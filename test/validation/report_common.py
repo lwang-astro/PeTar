@@ -422,6 +422,7 @@ def svg_curves_plot(
     logy: bool = True,
     legend_quantities: Optional[List[Tuple[str, str]]] = None,
     legend_headers: Tuple[str, str] = ("model (color)", "quantity (line)"),
+    height: int = 500,
 ) -> str:
     """Paper-style plot: color encodes the model (run) and dash pattern the
     quantity (current style): curves are (label, points, color, dash) with
@@ -438,7 +439,7 @@ def svg_curves_plot(
 
     See REPORT_DESIGN.md for the figure-encoding rules.
     """
-    width, height = 940, 500
+    width, height = 940, height
     left, right, top, bottom = 88, 24, 44, 70
 
     all_points = [p for _label, points, _c, _d in curves for p in points]
@@ -547,5 +548,146 @@ def svg_curves_plot(
         + " ".join(legends)
         + f'  <text x="{width/2:.1f}" y="{height-18}" text-anchor="middle" font-size="13" font-family="Arial">{html_escape(x_label)}</text>\n'
         + f'  <text x="22" y="{height/2:.1f}" transform="rotate(-90 22,{height/2:.1f})" text-anchor="middle" font-size="13" font-family="Arial">{html_escape(y_label)}</text>\n'
+        + "</svg>\n"
+    )
+
+
+def svg_dual_panel_plot(
+    top_curves: List[Tuple[str, List[Point], str, str]],
+    bottom_curves: List[Tuple[str, List[Point], str, str]],
+    legend_models: List[Tuple[str, ...]],
+    title: str,
+    x_label: str,
+    top_y_label: str,
+    bottom_y_label: str,
+    top_logy: bool = True,
+    bottom_logy: bool = False,
+    top_tag: str = "base",
+    bottom_tag: str = "control - base",
+    hlines_bottom: List[Tuple[float, str]] = [(0.0, "")],
+    max_x_ticks: int = 8,
+    logx: bool = False,
+    width: int = 940,
+    panel_heights: Tuple[int, int] = (280, 230),
+) -> str:
+    """Two vertically stacked plot panels in ONE SVG sharing the x axis. The
+    legend is a single row of model entries ABOVE the plot (no separate
+    quantity column — model labels carry the full encoding), the x axis is
+    labelled once below the bottom panel. Curve and legend-model encodings
+    match svg_curves_plot; each panel carries a small bold tag at its
+    top-left corner instead of its own title.
+    """
+    top_pts = [p for _l, points, _c, _d in top_curves for p in points]
+    bot_pts = [p for _l, points, _c, _d in bottom_curves for p in points]
+    if not top_pts or not bot_pts:
+        return "<p>No data available.</p>"
+
+    left, right = 88, 24
+    gap = 36
+    h_top, h_bot = panel_heights
+    # legend above the plot: one row of model swatches (greedy wrap as safety)
+    legend_rows: List[List[Tuple[str, str, str]]] = [[]]
+    row_w = 0.0
+    avail = width - right - left
+    for model in legend_models:
+        label, color = model[0], model[1]
+        mdash = model[2] if len(model) > 2 else ""
+        entry_w = 31 + 6.6 * len(label) + 26
+        if row_w + entry_w > avail and legend_rows[-1]:
+            legend_rows.append([])
+            row_w = 0.0
+        legend_rows[-1].append((label, color, mdash))
+        row_w += entry_w
+    n_legend_rows = len(legend_rows)
+    top1 = 38 + 17 * n_legend_rows + 12
+    bot1 = top1 + h_top
+    top2, bot2 = bot1 + gap, bot1 + gap + h_bot
+
+    xs = [p[0] for p in top_pts + bot_pts]
+    # shared x scale: same xs into both frames gives identical sx
+    sx_t, sy_t, _, _, _, _ = _svg_frame(width, bot1, left, right, top1, gap, xs, [p[1] for p in top_pts], logx=logx, logy=top_logy)
+    sx_b, sy_b, _, _, _, _ = _svg_frame(width, bot2, left, right, top2, 0, xs, [p[1] for p in bot_pts], logx=logx, logy=bottom_logy)
+    rymin_t, rymax_t = min(p[1] for p in top_pts), max(p[1] for p in top_pts)
+    rymin_b, rymax_b = min(p[1] for p in bot_pts), max(p[1] for p in bot_pts)
+
+    def polylines(curves, sx, sy):
+        out = []
+        for _label, points, color, dash in curves:
+            poly = " ".join(f"{sx(x):.2f},{sy(y):.2f}" for x, y in points)
+            dash_attr = f' stroke-dasharray="{dash}"' if dash else ""
+            out.append(f'<polyline points="{poly}" fill="none" stroke="{color}" stroke-width="2"{dash_attr}/>')
+        return " ".join(out)
+
+    x_unique = sorted(set(xs))
+    if len(x_unique) <= max_x_ticks:
+        x_tick_values = x_unique
+    else:
+        step = (x_unique[-1] - x_unique[0]) / (max_x_ticks - 1)
+        x_tick_values = [x_unique[0] + i * step for i in range(max_x_ticks)]
+
+    def y_ticks(values, logy, rymin, rymax):
+        if logy:
+            floor = _log_floor(values)
+            p0 = math.floor(math.log10(max(min(values), floor)))
+            p1 = math.ceil(math.log10(max(max(values), floor)))
+            return [10.0 ** p for p in range(int(p0), int(p1) + 1)]
+        return [rymin + (rymax - rymin) * i / 5.0 for i in range(6)]
+
+    marks: List[str] = []
+    for value in x_tick_values:
+        px = sx_t(value)
+        marks.append(f'<line x1="{px:.2f}" y1="{top1}" x2="{px:.2f}" y2="{bot2}" stroke="#e0e0e0" stroke-dasharray="3,3"/>')
+        marks.append(f'<line x1="{px:.2f}" y1="{bot2}" x2="{px:.2f}" y2="{bot2+6}" stroke="#333"/>')
+        marks.append(f'<text x="{px:.2f}" y="{bot2+22}" text-anchor="middle" font-size="11" font-family="Arial">{format_tick(value)}</text>')
+
+    for panel_top, panel_bot, sy, values, logy, rymin, rymax in (
+        (top1, bot1, sy_t, [p[1] for p in top_pts], top_logy, rymin_t, rymax_t),
+        (top2, bot2, sy_b, [p[1] for p in bot_pts], bottom_logy, rymin_b, rymax_b),
+    ):
+        for value in y_ticks(values, logy, rymin, rymax):
+            py = sy(value)
+            marks.append(f'<line x1="{left}" y1="{py:.2f}" x2="{width-right}" y2="{py:.2f}" stroke="#e0e0e0" stroke-dasharray="3,3"/>')
+            marks.append(f'<line x1="{left-6}" y1="{py:.2f}" x2="{left}" y2="{py:.2f}" stroke="#333"/>')
+            marks.append(f'<text x="{left-10}" y="{py+4:.2f}" text-anchor="end" font-size="11" font-family="Arial">{format_tick(value)}</text>')
+        marks.append(f'<line x1="{left}" y1="{panel_top}" x2="{left}" y2="{panel_bot}" stroke="#333"/>')
+        marks.append(f'<line x1="{left}" y1="{panel_bot}" x2="{width-right}" y2="{panel_bot}" stroke="#333"/>')
+
+    parts: List[str] = [polylines(top_curves, sx_t, sy_t)]
+    for value, label in hlines_bottom:
+        py = sy_b(value)
+        parts.append(f'<line x1="{left}" y1="{py:.2f}" x2="{width-right}" y2="{py:.2f}" stroke="#333" stroke-width="1.2" stroke-dasharray="2,4"/>')
+        if label:
+            parts.append(f'<text x="{width-right-8}" y="{py-5:.2f}" text-anchor="end" font-size="11" font-family="Arial">{html_escape(label)}</text>')
+    parts.append(polylines(bottom_curves, sx_b, sy_b))
+
+    # single-row legend above the plot: model swatches only (labels already
+    # state the channel and TT state, so no second column)
+    legends: List[str] = []
+    for i, row in enumerate(legend_rows):
+        ly = 38 + 17 * i
+        x = left
+        for label, color, mdash in row:
+            mdash_attr = f' stroke-dasharray="{mdash}"' if mdash else ""
+            legends.append(f'<line x1="{x:.1f}" y1="{ly}" x2="{x+26:.1f}" y2="{ly}" stroke="{color}" stroke-width="3"{mdash_attr}/>')
+            legends.append(f'<text x="{x+31:.1f}" y="{ly+4}" font-size="11" font-family="Arial">{html_escape(label)}</text>')
+            x += 31 + 6.6 * len(label) + 26
+
+    tags = (
+        f'<text x="{left+8}" y="{top1+18}" font-size="12" font-family="Arial" font-weight="bold">{html_escape(top_tag)}</text>'
+        f'<text x="{left+8}" y="{top2+18}" font-size="12" font-family="Arial" font-weight="bold">{html_escape(bottom_tag)}</text>'
+    )
+
+    svg_h = bot2 + 52
+    return (
+        f'<svg width="{width}" height="{svg_h}" viewBox="0 0 {width} {svg_h}" xmlns="http://www.w3.org/2000/svg">\n'
+        f'  <rect x="0" y="0" width="{width}" height="{svg_h}" fill="white"/>\n'
+        f'  <text x="{width/2:.1f}" y="20" text-anchor="middle" font-size="16" font-family="Arial">{html_escape(title)}</text>\n'
+        + " ".join(marks)
+        + " ".join(parts)
+        + tags
+        + " ".join(legends)
+        + f'  <text x="{width/2:.1f}" y="{bot2+38}" text-anchor="middle" font-size="13" font-family="Arial">{html_escape(x_label)}</text>\n'
+        + f'  <text x="22" y="{(top1+bot1)/2:.1f}" transform="rotate(-90 22,{(top1+bot1)/2:.1f})" text-anchor="middle" font-size="13" font-family="Arial">{html_escape(top_y_label)}</text>\n'
+        + f'  <text x="22" y="{(top2+bot2)/2:.1f}" transform="rotate(-90 22,{(top2+bot2)/2:.1f})" text-anchor="middle" font-size="13" font-family="Arial">{html_escape(bottom_y_label)}</text>\n'
         + "</svg>\n"
     )

@@ -3,10 +3,12 @@
 Status: reference note — documents the design rationale, algorithm, and
 paper-vs-code mapping of the artificial-particle tidal-tensor (TT) method
 (Wang et al. 2020, MNRAS 497, 536; `doc/PeTar_code.pdf` §6.4, pp. 543–547) as
-implemented in PeTar `src/`. Compiled 2026-10-27 as background for the open
-investigation `plan-tt-tree-channel-inner-binary-degradation.md` (T4
-inner-binary degradation); records mechanism and design invariants only —
-failure analysis and hypotheses live in that plan.
+implemented in PeTar `src/`. Compiled 2026-10-27 as background for the TT
+inner-binary degradation investigation (now closed; the temporary plan was
+deleted after distillation — its record lives in git history as
+`doc/plan-tt-tree-channel-inner-binary-degradation.md`); records mechanism
+and design invariants only — failure analysis and hypotheses live in git
+history and lessons 2026-10-27.
 
 ## 1. The problem TT solves (Hamiltonian-split context)
 
@@ -94,6 +96,18 @@ Code mapping:
   so any gauge residue is amplified by 1/dc². The guard (`!_acorr_flag` around
   the subtraction call sites in `src/hard.hpp`) enforces exactly-once semantics
   (plan F13/F15, fixed 2026-10-27).
+- **Considered and rejected (2026-10-27): a debug-gated leak-detector assert in
+  `fit()`** — `|T3|·dc² ≤ C·|T2|·dc` (C~10). Principle: T2 fit rows sum to zero
+  (immune to a constant offset in the stencil accs) while T3 rows do not (a
+  common offset leaks in with gain ~1/dc²), so the ratio |T3|dc/|T2| ~ dc/R for
+  physical fields but explodes under any constant-offset pollution — it would
+  have caught F13 at the first fit. Rejected because of false-positive risk in
+  production-relevant regimes: when the physical |T2| is near zero (no nearby
+  perturber, near-uniform external field) the ratio is ill-conditioned and the
+  assert cannot distinguish pollution from a legitimately negligible tensor.
+  If a constant-offset corruption class recurs, re-evaluate with the ratio
+  guarded by a |T2| floor. The input invariant above stays the authoritative
+  statement.
 - Measure particles co-move with the c.m. velocity and carry zero mass, so
   they only ever sample the long-range force.
 
@@ -249,7 +263,9 @@ Q1–Q5).
 
 ## 8. Pointers
 
-- Investigation plan: `plan-tt-tree-channel-inner-binary-degradation.md`
+- Closed investigation (temporary plan, deleted after distillation): see git
+  history `doc/plan-tt-tree-channel-inner-binary-degradation.md` and lessons
+  2026-10-27 entries
 - Paper: `PeTar_code.pdf` §6.4 (pp. 543–547) — §6.4.1 tensor construction,
   Table 1 measure-point coordinates + fit formulae, §6.4.2 counterforce,
   Table 2/Fig. 5 validation, Fig. 6 counterforce momentum; §6.2 SDAR

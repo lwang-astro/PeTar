@@ -272,7 +272,7 @@ def resolve_status_path_from_command(command: str, workdir: Path) -> Path | None
     return run_dir.resolve() / f"{prefix}.status"
 
 
-def extract_orbital_drift_from_status(status_path: Path, repo_root: Path, n_particle: int, interrupt_mode: str = "none") -> Dict[str, float]:
+def extract_orbital_drift_from_status(status_path: Path, repo_root: Path, n_particle: int, interrupt_mode: str = "none") -> Dict[str, Any]:
     if n_particle < 2:
         return {}
 
@@ -301,15 +301,31 @@ def extract_orbital_drift_from_status(status_path: Path, repo_root: Path, n_part
     m2 = float(p1.mass[0])
     mu = G_MSUN_PC_MYR * (m1 + m2)
 
+    def _two_body_orbits(r, v, mu_tot):
+        rnorm = np.linalg.norm(r, axis=1)
+        v2 = np.sum(v * v, axis=1)
+        eps = 0.5 * v2 - mu_tot / rnorm
+        a = -mu_tot / (2.0 * eps)
+        h = np.cross(r, v)
+        h2 = np.sum(h * h, axis=1)
+        e = np.sqrt(np.maximum(0.0, 1.0 + 2.0 * eps * h2 / (mu_tot * mu_tot)))
+        return a, e
+
     r = p1.pos - p0.pos
     v = p1.vel - p0.vel
-    rnorm = np.linalg.norm(r, axis=1)
-    v2 = np.sum(v * v, axis=1)
-    eps = 0.5 * v2 - mu / rnorm
-    a = -mu / (2.0 * eps)
-    h = np.cross(r, v)
-    h2 = np.sum(h * h, axis=1)
-    e = np.sqrt(np.maximum(0.0, 1.0 + 2.0 * eps * h2 / (mu * mu)))
+    a, e = _two_body_orbits(r, v, mu)
+
+    # outer orbit (third body vs inner-binary c.m.) when present; needed for
+    # the orbit-tracking correlation checks (extract.orbit_reference)
+    e_out_series: List[float] = []
+    if n_particle >= 3:
+        p2 = st.particles.p2
+        m3 = float(p2.mass[0])
+        m_cm = m1 + m2
+        cm_pos = (p0.pos * m1 + p1.pos * m2) / m_cm
+        cm_vel = (p0.vel * m1 + p1.vel * m2) / m_cm
+        _, e_out = _two_body_orbits(p2.pos - cm_pos, p2.vel - cm_vel, G_MSUN_PC_MYR * (m_cm + m3))
+        e_out_series = [float(x) for x in e_out]
 
     a0 = float(a[0])
     e0 = float(e[0])
@@ -320,6 +336,11 @@ def extract_orbital_drift_from_status(status_path: Path, repo_root: Path, n_part
         "max_rel_drift_semi": float(np.max(da_rel)),
         "max_abs_drift_ecc": float(np.max(de_abs)),
         "status_sample_count": int(st.size),
+        # transient series (underscore): consumed by the orbit-reference
+        # correlation step in execute_scenario, stripped before reporting
+        "_series_time": [float(t) for t in st.time],
+        "_series_e_in": [float(x) for x in e],
+        "_series_e_out": e_out_series,
     }
 
 
@@ -835,6 +856,41 @@ def execute_scenario(
     else:
         run_results = [_execute_run(run) for run in runs_cfg]
 
+    # Orbit-tracking correlation vs a designated reference run
+    # (extract.orbit_reference): Pearson corr of the inner/outer eccentricity
+    # series on the shared output-time grid. Guards BOTH divergence from the
+    # reference (bad physics) and artificial suppression (frozen binary).
+    orbit_ref = str(scenario.get("extract", {}).get("orbit_reference", "") or "")
+    if orbit_ref and not dry_run:
+        def _corr(xs: List[float], ys: List[float]) -> float:
+            if len(xs) < 3:
+                return float("nan")
+            xa = np.asarray(xs, dtype=float)
+            ya = np.asarray(ys, dtype=float)
+            xm = xa - xa.mean()
+            ym = ya - ya.mean()
+            denom = float(np.sqrt((xm * xm).sum() * (ym * ym).sum()))
+            return float((xm * ym).sum() / denom) if denom > 0.0 else float("nan")
+
+        ref = next((item for item in run_results if item.run_id == orbit_ref), None)
+        if ref is not None and "_series_e_in" in ref.metrics:
+            ref_by_t_ein = {round(t, 12): v for t, v in zip(ref.metrics["_series_time"], ref.metrics["_series_e_in"])}
+            ref_by_t_eout = {round(t, 12): v for t, v in zip(ref.metrics["_series_time"], ref.metrics.get("_series_e_out", []))}
+            for item in run_results:
+                if "_series_e_in" not in item.metrics or item.run_id == ref.run_id:
+                    continue
+                common = [(v, ref_by_t_ein[round(t, 12)]) for t, v in zip(item.metrics["_series_time"], item.metrics["_series_e_in"]) if round(t, 12) in ref_by_t_ein]
+                if common:
+                    item.metrics["orbit_corr_e_in"] = _corr([p[0] for p in common], [p[1] for p in common])
+                if item.metrics.get("_series_e_out") and ref_by_t_eout:
+                    common_o = [(v, ref_by_t_eout[round(t, 12)]) for t, v in zip(item.metrics["_series_time"], item.metrics["_series_e_out"]) if round(t, 12) in ref_by_t_eout]
+                    if common_o:
+                        item.metrics["orbit_corr_e_out"] = _corr([p[0] for p in common_o], [p[1] for p in common_o])
+    if not dry_run:
+        for item in run_results:
+            for key in ("_series_time", "_series_e_in", "_series_e_out"):
+                item.metrics.pop(key, None)
+
     check_results = []
     if not dry_run:
         per_run = {item.run_id: item.metrics for item in run_results}
@@ -1185,13 +1241,13 @@ PIPELINES: Dict[str, Dict[str, Any]] = {
                  "--output", "test/out/t3_binary_sdar_grouplink_summary.html"],
     },
     "t4": {
-        "jobs": [_pipeline_job("test/validation/scenarios/t4_tree_hard_from_triple.json",
-                               "test/out/report.t4.triple.json",
-                               "test/out/validation_t4_tree_hard_from_triple",
+        "jobs": [_pipeline_job("test/validation/scenarios/t4_triple_tidal_tensor.json",
+                               "test/out/report.t4.triple_tidal_tensor.json",
+                               "test/out/validation_t4_triple_tidal_tensor",
                                "petar_bin_switch", "bse")],
-        "html": ["test/validation/t4_triple_mode_report.py",
-                 "--report", "test/out/report.t4.triple.json",
-                 "--output", "test/out/t4_triple_mode_summary.html"],
+        "html": ["test/validation/t4_triple_tidal_tensor_report.py",
+                 "--report", "test/out/report.t4.triple_tidal_tensor.json",
+                 "--output", "test/out/t4_triple_tidal_tensor_summary.html"],
     },
     "t5": {
         "jobs": [_pipeline_job("test/validation/scenarios/t5_massive_binary_tt.json",

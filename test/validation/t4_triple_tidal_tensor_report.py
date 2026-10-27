@@ -6,7 +6,7 @@ import re
 import sys
 import warnings
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -20,6 +20,7 @@ from report_common import (
     parse_command_args,
     parse_log_version,
     svg_curves_plot,
+    svg_dual_panel_plot,
 )
 
 REPO = Path(__file__).resolve().parents[2]
@@ -33,18 +34,21 @@ TREE_DT_RE = re.compile(r"^Tree time step\s*=\s*([0-9eE+\-.]+)$")
 OUTPUT_DT_RE = re.compile(r"^Output time step\s*=\s*([0-9eE+\-.]+)$")
 
 MODE_ORDER = ["m1_pure_sdar_ref", "m2_hard_no_tt", "m3_hard_tt", "m4_tree_no_tt", "m5_tree_tt"]
+# Encoding across ALL figures: color = integration channel (m1 reference blue,
+# hard pair m2/m3 pink, tree pair m4/m5 purple); line style = tidal tensor
+# (solid = TT off, dashed 12,6 = TT on). The TT pairs share one color and are
+# separated by line style only. m2 (TT off) and m3 (TT on) additionally agree
+# to ~1e-12 in every plotted quantity (the tensor and direct perturber
+# treatments of the inner AR group are equivalent at that level), so the two
+# keys of the pair are visually one line there; exact values are in Table 5.
 MODE_COLORS = {
     "m1_pure_sdar_ref": "#0b74de",
     "m2_hard_no_tt": "#d81b60",
-    "m3_hard_tt": "#2e7d32",
+    "m3_hard_tt": "#d81b60",
     "m4_tree_no_tt": "#8e24aa",
-    "m5_tree_tt": "#f4511e",
+    "m5_tree_tt": "#8e24aa",
 }
-# m2 (TT off) and m3 (TT on) agree to ~1e-12 in every plotted quantity (the
-# tensor and direct perturber treatments of the inner AR group are equivalent
-# at that level), so the m3 curve would fully occlude m2. Dashing m3 lets the
-# solid m2 line show through the gaps; the legend swatch repeats the pattern.
-MODE_DASH = {"m3_hard_tt": "12,6"}
+MODE_DASH = {"m3_hard_tt": "12,6", "m5_tree_tt": "12,6"}
 MODE_LABELS = {
     "m1_pure_sdar_ref": "m1 pure SDAR reference",
     "m2_hard_no_tt": "m2 hard, TT off",
@@ -357,96 +361,119 @@ def mode_curves(series_map: Dict[str, List[Point]], modes: List[str]) -> List[Tu
     return [(m, by_mode.get(m, []), MODE_COLORS.get(m, "#555"), MODE_DASH.get(m, "")) for m in modes if by_mode.get(m)]
 
 
-def build_orbit_figure_section(title_prefix: str, series: Dict[str, Any], modes: List[str]) -> str:
-    """Energy + orbital-element figures for one run group."""
-    energy_curves = [
-        (m, series["energy_total_series"].get(f"{m} | tt=0", series["energy_total_series"].get(f"{m} | tt=1", [])), MODE_COLORS.get(m, "#555"), MODE_DASH.get(m, ""))
-        for m in modes
-    ]
-    energy_curves = [(m, pts, c, d) for m, pts, c, d in energy_curves if pts]
-    pp_curves = [
-        (m, series["energy_pp_series"].get(f"{m} | tt=0", series["energy_pp_series"].get(f"{m} | tt=1", [])), MODE_COLORS.get(m, "#555"), MODE_DASH.get(m, ""))
-        for m in modes
-    ]
-    pp_curves = [(m, pts, c, "7,4") for m, pts, c, _ in pp_curves if pts]
+def build_orbit_figure_section(
+    series: Dict[str, Any],
+    modes: List[str],
+    control_series: Optional[Dict[str, Any]] = None,
+) -> str:
+    """One figure per quantity; upper panel = base-group absolute curves, and
+    when a control group exists each figure gains a lower panel with the
+    control - base difference (zero = structurally identical behaviour at both
+    outer scales; systematic deviation = scale-dependent effect). Encoding in
+    both panels: color = integration channel, line style = tidal tensor.
+    """
     legend_models = [(MODE_LABELS.get(m, m), MODE_COLORS.get(m, "#555"), *([MODE_DASH[m]] if m in MODE_DASH else [])) for m in modes]
+    # second legend column carries the TT line-style convention (each figure
+    # shows a single quantity, so the dash channel is free for TT on/off)
+    tt_legend = [("TT off (solid)", ""), ("TT on (dashed)", "12,6")]
+
+    def _log10_abs(v: float) -> float:
+        return math.log10(abs(v)) if abs(v) > 0.0 else math.nan
+
+    def _mode_series(series_map: Dict[str, List[Point]], key: str, m: str) -> List[Point]:
+        s = series_map.get(key, {})
+        return s.get(f"{m} | tt=0", s.get(f"{m} | tt=1", []))
+
+    # key, figure title, top y-label, log-y(top), diff kind, diff y-label
+    quantities = [
+        ("energy_total_series", "|Error/Total|", "relative energy error", True, "dlog", "control - base [decades]"),
+        ("energy_pp_series", "|Error_PP|", "relative PP energy error", True, "dlog", "control - base [decades]"),
+        ("a_in_series", "inner semi-major axis", "a_in [pc]", False, "rel", "control - base, Delta(a/a0) [1]"),
+        ("e_in_series", "inner eccentricity", "e_in", False, "abs", "Delta e_in [1]"),
+        ("a_out_series", "outer semi-major axis", "a_out [pc]", False, "rel", "Delta(a/a0) [1]"),
+        ("e_out_series", "outer eccentricity", "e_out", False, "abs", "Delta e_out [1]"),
+        ("i_mutual_series", "mutual inclination", "i_mutual [deg]", False, "abs", "Delta i_mut [deg]"),
+    ]
 
     html_parts: List[str] = []
-    html_parts.append(
-        svg_curves_plot(
-            energy_curves + pp_curves,
-            legend_models,
-            f"{title_prefix}: energy error vs time",
-            "time [Myr]",
-            "relative energy error",
-            logy=True,
-            legend_quantities=[("|Error/Total|", ""), ("|Error_PP|", "7,4")],
-        )
-    )
-    html_parts.append(
-        svg_curves_plot(
-            mode_curves(series["a_in_series"], modes),
-            legend_models,
-            f"{title_prefix}: inner semi-major axis vs time",
-            "time [Myr]",
-            "a_in [pc]",
-            logy=False,
-            legend_quantities=[("a_in", "")],
-        )
-    )
-    html_parts.append(
-        svg_curves_plot(
-            mode_curves(series["e_in_series"], modes),
-            legend_models,
-            f"{title_prefix}: inner eccentricity vs time",
-            "time [Myr]",
-            "e_in",
-            logy=False,
-            legend_quantities=[("e_in", "")],
-        )
-    )
-    html_parts.append(
-        svg_curves_plot(
-            mode_curves(series["a_out_series"], modes),
-            legend_models,
-            f"{title_prefix}: outer semi-major axis vs time",
-            "time [Myr]",
-            "a_out [pc]",
-            logy=False,
-            legend_quantities=[("a_out", "")],
-        )
-    )
-    html_parts.append(
-        svg_curves_plot(
-            mode_curves(series["e_out_series"], modes),
-            legend_models,
-            f"{title_prefix}: outer eccentricity vs time",
-            "time [Myr]",
-            "e_out",
-            logy=False,
-            legend_quantities=[("e_out", "")],
-        )
-    )
-    html_parts.append(
-        svg_curves_plot(
-            mode_curves(series["i_mutual_series"], modes),
-            legend_models,
-            f"{title_prefix}: mutual inclination vs time",
-            "time [Myr]",
-            "i_mutual [deg]",
-            logy=False,
-            legend_quantities=[("i_mutual", "")],
-        )
-    )
+    for key, title, y_label, logy, diff_kind, diff_label in quantities:
+        top_curves = mode_curves(series.get(key, {}), modes)
+        if not top_curves:
+            continue
+        diff_curves = []
+        if control_series is not None:
+            for m in modes:
+                b = _mode_series(series, key, m)
+                c = _mode_series(control_series, key, m)
+                if not b or not c:
+                    continue
+                if diff_kind == "dlog":
+                    transform: Any = lambda vb, vc: _log10_abs(vc) - _log10_abs(vb)  # noqa: E731
+                elif diff_kind == "rel":
+                    b0, c0 = b[0][1], c[0][1]
+                    if abs(b0) < 1e-300 or abs(c0) < 1e-300:
+                        continue
+                    transform = lambda vb, vc, b0=b0, c0=c0: vc / c0 - vb / b0  # noqa: E731
+                else:
+                    transform = lambda vb, vc: vc - vb  # noqa: E731
+                pts = _aligned_diff(b, c, transform)
+                if pts:
+                    diff_curves.append((m, pts, MODE_COLORS.get(m, "#555"), MODE_DASH.get(m, "")))
+        if diff_curves:
+            # single SVG: upper panel (base absolute) + lower panel (control -
+            # base) sharing the x axis; one-row model legend above the plot
+            html_parts.append(
+                svg_dual_panel_plot(
+                    top_curves,
+                    diff_curves,
+                    legend_models,
+                    f"{title} vs time",
+                    "time [Myr]",
+                    y_label,
+                    diff_label,
+                    top_logy=logy,
+                )
+            )
+        else:
+            html_parts.append(
+                svg_curves_plot(
+                    top_curves,
+                    legend_models,
+                    f"{title} vs time",
+                    "time [Myr]",
+                    y_label,
+                    logy=logy,
+                    legend_quantities=tt_legend,
+                    legend_headers=("model (color)", "tidal tensor (line)"),
+                )
+            )
     return "".join(html_parts)
+
+
+def _aligned_diff(base_pts: List[Point], ctrl_pts: List[Point], transform) -> List[Point]:
+    """Pointwise transformed difference ctrl-base on the shared output-time grid.
+
+    Both groups use identical -o/-t, so times match exactly; mismatched or
+    non-finite samples are dropped pairwise.
+    """
+    ctrl_by_t = {round(t, 12): v for t, v in ctrl_pts}
+    out: List[Point] = []
+    for t, vb in base_pts:
+        vc = ctrl_by_t.get(round(t, 12))
+        if vc is None:
+            continue
+        d = transform(vb, vc)
+        if d is not None and math.isfinite(d):
+            out.append((t, d))
+    return out
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate T4 triple mode comparison HTML report")
-    parser.add_argument("--report", default="test/out/report.t4.triple.json")
-    parser.add_argument("--scenario", default="t4_tree_hard_from_triple")
+    parser.add_argument("--report", default="test/out/report.t4.triple_tidal_tensor.json")
+    parser.add_argument("--scenario", default="t4_triple_tidal_tensor")
     parser.add_argument("--scenario-file", default="")
-    parser.add_argument("--output", default="test/out/t4_triple_mode_summary.html")
+    parser.add_argument("--output", default="test/out/t4_triple_tidal_tensor_summary.html")
     args = parser.parse_args()
 
     report = load_json(Path(args.report))
@@ -523,10 +550,8 @@ def main() -> int:
     series = collect_plot_series(rows)
     unit_rows = series["unit_rows"]
 
-    base_figures_html = build_orbit_figure_section("Base group", series, MODE_ORDER)
-
     control_compare_html = ""
-    control_figures_html = ""
+    control_series: Optional[Dict[str, Any]] = None
     if control_runs_raw:
         control_rows = []
         for rr in control_runs_raw:
@@ -576,7 +601,6 @@ def main() -> int:
         control_series = collect_plot_series(control_rows)
         for r in control_rows:
             r["run_id"] = r.pop("run_id_full")
-        control_figures_html = build_orbit_figure_section("Control group", control_series, MODE_ORDER)
 
         base_by_mode = {
             normalize_mode_id(str(r["run_id"])): r
@@ -607,6 +631,13 @@ def main() -> int:
             )
         if lines:
             control_compare_html = "".join(lines)
+
+    # merged figures: upper panel = base absolute curves, lower panel =
+    # control - base difference (only when the control group exists)
+    base_figures_html = build_orbit_figure_section(
+        series, MODE_ORDER,
+        control_series=control_series if control_runs_raw else None,
+    )
 
     run_rows_html = "".join(
         f"<tr><td>{html_escape(str(MODE_LABELS.get(r['run_id'], r['run_id'])))}</td>"
@@ -647,7 +678,7 @@ def main() -> int:
 <style>{PAPER_CSS}</style></head><body>
 
 <h1>T4 &nbsp;Hierarchical triple under five integration modes:<br>pure SDAR, Hermite&ndash;SDAR and tree, with and without tidal tensor</h1>
-<div class="subtitle">validation report &middot; scenario <i>t4_tree_hard_from_triple</i> &middot; <span class="verdict {'pass' if all_pass else 'fail'}">{verdict}</span></div>
+<div class="subtitle">validation report &middot; scenario <i>t4_triple_tidal_tensor</i> &middot; <span class="verdict {'pass' if all_pass else 'fail'}">{verdict}</span></div>
 
 <h2>1&nbsp;&nbsp;Background and purpose</h2>
 <p>When a compact subsystem is integrated as an AR (SDAR) group inside a larger system, the rest
@@ -705,22 +736,45 @@ from the *.status particle states (N_particle = 3, bse columns) at every output 
 <h3>2.3&nbsp;&nbsp;Runs</h3>
 <table class="data">
 <tr><th>run</th><th>tt-switch</th><th>configuration</th><th>purpose</th></tr>
-<tr><td>m1_pure_sdar_ref</td><td>0</td><td>r_group = 0.18 pc &gt; outer apo; r_out = 2; dt_soft = 3&times;10<sup>-5</sup></td>
-<td>whole triple always one SDAR group: regularized reference for element conservation</td></tr>
-<tr><td>m2_hard_no_tt</td><td>0</td><td>hard mode (r_out = 2), r_group = 0.01, dt_soft = 0.03125</td>
-<td>AR group in the hard channel without the TT correction</td></tr>
-<tr><td>m3_hard_tt</td><td>1 (nstep 8)</td><td>as m2 + tidal tensor</td>
-<td>the TT design under test in the hard channel</td></tr>
-<tr><td>m4_tree_no_tt</td><td>0</td><td>tree mode (r_out = 0.08, r-ratio 0.3), r_group = 0.01, dt_soft = 0.03125</td>
-<td>soft-tree background without TT</td></tr>
-<tr><td>m5_tree_tt</td><td>1 (nstep 8)</td><td>as m4 + tidal tensor</td>
-<td>production configuration: tree background with TT-corrected AR group</td></tr>
+<tr><td>m1_pure_sdar_ref</td><td>0</td>
+<td>r_out = 2 pc (whole system in the hard region), r_group = 0.18 &gt; outer apo (0.152):
+the triple stays ONE isolated 3-body AR group integrated by SDAR at the AR step
+(3&times;10<sup>-5</sup>) &mdash; no tree, no Hermite cluster, no perturbers</td>
+<td>regularized reference for element conservation (what the production channels should
+not degrade)</td></tr>
+<tr><td>m2_hard_no_tt</td><td>0</td>
+<td>HARD channel: r_out = 2 keeps all three bodies in ONE Hermite block-step cluster
+(dt = 0.03125); the inner binary (apo 1.9&times;10<sup>-3</sup> &lt; r_group = 0.01) is a permanent AR
+group inside it. The third body is a Hermite cluster member and perturbs the AR group
+via the DIRECT perturber list (exact force on members)</td>
+<td>hard-channel baseline: AR group under a directly integrated perturber, TT absent</td></tr>
+<tr><td>m3_hard_tt</td><td>1 (nstep 8)</td>
+<td>as m2, but the third body's perturbation enters the AR integration as the TIDAL
+TENSOR expansion measured at the group c.m. (tt-nstep = 8 substeps), not as a direct
+perturber force</td>
+<td>isolates the TT approximation against m2's direct force in the same channel
+(A/B pair with m2)</td></tr>
+<tr><td>m4_tree_no_tt</td><td>0</td>
+<td>TREE channel: r_out = 0.08 (&rarr; r_in via r-ratio 0.3) puts the outer orbit
+(0.149&ndash;0.152 pc) entirely OUTSIDE the changeover region &mdash; the third body is a
+soft TREE particle (FDPS gravity, dt_soft = 0.03125) while the inner-binary AR group
+stays in the hard channel; their coupling crosses the changeover boundary, no TT</td>
+<td>production layout without TT: tree background + hard AR subsystem coupled through
+the changeover</td></tr>
+<tr><td>m5_tree_tt</td><td>1 (nstep 8)</td>
+<td>as m4 + tidal tensor: the tree-side perturbation of the AR group is applied via the
+tidal tensor</td>
+<td>production configuration of the 2026-10-06 event: TT active in the tree channel
+(A/B pair with m4)</td></tr>
 </table>
 <div class="caption"><b>Table 2.</b> Five modes of one IC, identical apart from the listed
 knobs; all run with -b 1 (block steps), 1 rank &times; 1 thread, to t<sub>end</sub> = 20 Myr
-&asymp; 200 outer periods. The pairs (m2, m3) and (m4, m5) are A/B pairs isolating the TT knob
-in one channel each; m1 anchors the achievable conservation scale; r<sub>search,group</sub> =
-0.02 pc throughout.</div>
+&asymp; 200 outer periods. The essential hard-vs-tree difference is WHICH integrator owns the
+third body: in the hard pair (m2/m3, r_out = 2) it is a Hermite cluster member exerting the
+direct perturber force on the AR group; in the tree pair (m4/m5, r_out = 0.08) it is a soft
+tree particle whose influence reaches the AR group through the changeover coupling. The pairs
+(m2, m3) and (m4, m5) are A/B pairs isolating the TT knob in one channel each; m1 anchors the
+achievable conservation scale; r<sub>search,group</sub> = 0.02 pc throughout.</div>
 
 <h3>2.4&nbsp;&nbsp;Reproducibility: software, build and execution</h3>
 <p><b>Software.</b> PeTar version {html_escape(log_version)}, git commit
@@ -766,20 +820,21 @@ modes must read the IC with the same unit set for the comparison to be meaningfu
 <h2>3&nbsp;&nbsp;Results</h2>
 <h3>3.1&nbsp;&nbsp;Energy conservation by mode</h3>
 {base_figures_html}
-<div class="caption"><b>Figures 1&ndash;6 (base group).</b> Energy and orbital-element evolution
-of the five modes; <b>color = mode</b> (see legend), solid/dashed = quantity where two are
-shown. <b>m3 is drawn dashed</b> so that m2 remains visible: the two hard modes agree to
-~1e-12 in every plotted quantity (the tidal-tensor and direct perturber treatments of the
-inner AR group are equivalent at that level &mdash; the TT-consistency result T5 verifies
-structurally), so their curves coincide within line width everywhere; exact values are in
-Table 5. Figure 1: |Error/Total| (long dash for m3) and |Error_PP| (short dash 7,4) vs time
-(log y) &mdash; the
-check metric is the curve maximum; bounded flat curves mean conservative behaviour, upward
-steps mark discrete events (group re-linking, BSE kicks). Figures 2&ndash;6: inner and outer
-semi-major axes, eccentricities and mutual inclination vs time (linear y) &mdash; conservation
-means a flat curve; systematic drift or growing oscillation in a production mode (m2&ndash;m5)
-relative to the m1 reference flags channel-induced element loss; i<sub>mut</sub> growth
-indicates angular-momentum exchange beyond the reference level.</div>
+<div class="caption"><b>Figures 1&ndash;7.</b> One figure per quantity: two stacked panels sharing one
+x axis and one legend &mdash; <b>upper = base group</b> (a<sub>out</sub> = 0.15 pc) absolute curves; <b>lower = control &minus; base</b>
+(a<sub>out</sub> = 1.5 pc minus base, same modes and encoding). Encoding in both panels:
+<b>color = integration channel</b> (blue: m1 SDAR reference; pink: hard pair m2/m3; purple: tree
+pair m4/m5), <b>line style = tidal tensor</b> (solid: TT off; dashed: TT on). Lower-panel zero
+(hline) = structurally identical behaviour at both outer scales; systematic deviation =
+scale-dependent effect. Energy errors differ in decades (Delta log<sub>10</sub>; &plusmn;1 = one
+decade); semi-major axes as Delta(a/a<sub>0</sub>) with each group normalized by its own initial
+value; eccentricities and inclination as absolute differences. The check metric is the
+upper-panel curve maximum; bounded flat upper curves mean conservative behaviour, upward
+steps mark discrete events (group re-linking, BSE kicks). The m2/m3 pair coincides to ~1e-12
+in every plotted quantity (the tidal-tensor and direct perturber treatments of the inner AR
+group are equivalent at that level &mdash; the TT-consistency result T5 verifies structurally),
+so the same-color pair reads as one line with the solid m2 showing through the dashed m3;
+exact values are in Table 5.</div>
 
 <h3>3.2&nbsp;&nbsp;Run summary</h3>
 <table class="data">
@@ -791,11 +846,8 @@ guard: it must be &ge; 1 in m3/m5 (TT engaged) and 0 in m1/m2/m4. The dt_soft &l
 column guards that no run steps the tree faster than its auto-derived step.</div>
 
 <h3>3.3&nbsp;&nbsp;Control group (outer a<sub>out</sub> = 1.5 pc)</h3>
-{control_figures_html}
-<div class="caption"><b>Figures 7&ndash;12 (control group).</b> Same quantities and encoding as
-Figures 1&ndash;6 for the original outer scale (including the dashed-m3 convention; expect the
-same m2/m3 coincidence); read against the base figures to distinguish
-structural (present at both scales) from scale-dependent effects.</div>
+<p>The control group's per-mode behaviour is shown as the lower (control &minus; base) panels
+of Figures 1&ndash;7; this section keeps the run-maximum comparison.</p>
 {('<table class="data"><tr><th>mode</th><th>base &epsilon;_E</th><th>control &epsilon;_E</th><th>base &epsilon;_PP</th><th>control &epsilon;_PP</th><th>base &Delta;a/a0</th><th>control &Delta;a/a0</th><th>base &Delta;e</th><th>control &Delta;e</th><th>base N_art</th><th>control N_art</th></tr>' + control_compare_html + '</table><div class="caption"><b>Table 6.</b> Base (a_out = 0.15 pc) versus control (a_out = 1.5 pc) maxima per mode; both groups use identical mode configurations apart from the IC outer scale.</div>') if control_compare_html else ''}
 
 <h3>3.4&nbsp;&nbsp;Automatic checks</h3>
@@ -813,7 +865,7 @@ one no_runtime_abort per mode requires zero segmentation faults / assertion fail
 aborts.</div>
 
 <div class="meta">petar version: {html_escape(log_version)} &middot; scenario:
-<i>t4_tree_hard_from_triple</i> &middot; report: {html_escape(args.report)}</div>
+<i>t4_triple_tidal_tensor</i> &middot; report: {html_escape(args.report)}</div>
 </body></html>
 """
 

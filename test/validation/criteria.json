@@ -47,7 +47,7 @@
       "stationarity_band": 2.0
     }
   },
-  "t4_tree_hard_from_triple": {
+  "t4_triple_tidal_tensor": {
     "max_abs_error_over_total": {
       "m1_pure_sdar_ref": 1e-08
     },

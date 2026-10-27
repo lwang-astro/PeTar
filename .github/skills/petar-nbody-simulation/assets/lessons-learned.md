@@ -1329,7 +1329,7 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Root cause**: ① 参数名直觉解读(nstep 听起来像"每步数",未核对 help 文本与代码赋值点);② sweep 出现"治愈"点时未先验证机制路径激活状态就归因;③ 报告里 m4 基线同样 N_all=3(第三体在 r_search_group 外,潮汐根本没到达)——A/B 两臂都偏离设计意图,对比本身失义。
 
-**Fix**: 撤回 staleness 结论;已验证事实、开放问题与判别实验程序沉淀到 doc/plan-tt-tree-channel-inner-binary-degradation.md 转交深入调查。
+**Fix**: 撤回 staleness 结论;已验证事实、开放问题与判别实验程序沉淀到转交 plan（已闭环删除,知识蒸馏至 doc/tidal-tensor-design_notes.md,调查记录见该 plan 文件的 git 历史）。
 
 **Prevention rule**: ① 任何参数的 A/B/sweep 解读前,先 `petar -h` + grep 源码赋值点确认语义,名字不可信;② "参数 X 治愈误差"类结论必须配路径激活证据(人工粒子计数/Form_End_Ngroup/N_all 等 census),未激活即整个结论无效;③ 对照基线也要做 census——两臂机制都按设计运行,A/B 才有意义;④ 诊断结论分级汇报:实锤事实/机制推断/待判别,不混装;⑤ sweep 自变量若进入激活判据公式(如 cap=dt_max_hermite×nstep 而 dt_max_hermite∝dt_soft),必须协变参数保持判据恒定并逐臂 census——2026-10-27 dt_soft 判别实验中 tt-nstep 同步 8→16→32 使 cap≡0.125,三臂 N_all=15 全激活,对比才有效(用户把关指出)。
 
