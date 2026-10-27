@@ -2784,7 +2784,14 @@ private:
             pj = ap_manager.getCMParticles(p_arti_j);
             correctionLoop(0);
             
-            ap_manager.correctArtficialParticleForce(p_arti_j);
+            // The c.m.-force subtraction belongs to the force-evaluation phase only:
+            // the measure-point accs are refreshed once per tree step (kick-phase
+            // correction). The KDKDK_4TH gradient pass (treeSoftGradient, acorr_flag=true)
+            // runs at the half step reusing the tree and must NOT subtract again —
+            // a second subtraction on the not-yet-refreshed accs leaks the c.m.
+            // acceleration into the 3rd-order tensor with gain ~1/dc^2
+            // (plan-tt-tree-channel-inner-binary-degradation F13; 2026-10-27).
+            if (!_acorr_flag) ap_manager.correctArtficialParticleForce(p_arti_j);
         }
     }
 
@@ -2823,7 +2830,9 @@ private:
 #endif
 #pragma omp parallel for schedule(dynamic)
         for (int i=_adr_ptcl_artificial_start; i<n_tot; i+=n_artificial_per_group)
-            ap_manager.correctArtficialParticleForce(&(_sys[i]));
+            // c.m. subtraction only in the force-evaluation phase (see
+            // correctForceWithCutoffArtificialOneClusterImp for the acorr rationale)
+            if (!_acorr_flag) ap_manager.correctArtficialParticleForce(&(_sys[i]));
 
     }
 
@@ -4596,7 +4605,9 @@ public:
 #endif
 #pragma omp parallel for schedule(dynamic)
         for (int i=_adr_ptcl_artificial_start; i<n_tot; i+=n_artificial)
-            _ap_manager.correctArtficialParticleForce(&(_sys[i]));
+            // c.m. subtraction only in the force-evaluation phase (see
+            // correctForceWithCutoffArtificialOneClusterImp for the acorr rationale)
+            if (!_acorr_flag) _ap_manager.correctArtficialParticleForce(&(_sys[i]));
     }
 
 };
