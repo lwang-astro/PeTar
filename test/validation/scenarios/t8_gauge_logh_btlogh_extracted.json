@@ -25,7 +25,7 @@
  "runs": [
   {
    "id": "r1_cascade_logh",
-   "command": "cd test/validation/work/t8 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -t 0.01 -o 0.01 -b 2 -s 0.0009765625 --r 0.05 --r-ratio 0.15 --r-search-group 0.005 -f t8_r1 input_cascade",
+   "command": "cd test/validation/work/t8 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -t 0.01 -o 0.01 -b 2 -s 0.0009765625 --r 0.05 --r-ratio 0.15 --r-search-group 0.005 --ar-g-func 0 -f t8_r1 input_cascade",
    "output": "r1_cascade_logh.log"
   },
   {
@@ -35,7 +35,7 @@
   },
   {
    "id": "r3_chaotic_logh",
-   "command": "cd test/validation/work/t8 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -t 0.01 -o 0.01 -b 0 -s 0.0009765625 --r 0.05 --r-ratio 0.15 --r-search-group 0.005 -f t8_r3 input_chaotic",
+   "command": "cd test/validation/work/t8 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -t 0.01 -o 0.01 -b 0 -s 0.0009765625 --r 0.05 --r-ratio 0.15 --r-search-group 0.005 --ar-g-func 0 -f t8_r3 input_chaotic",
    "output": "r3_chaotic_logh.log"
   },
   {
@@ -45,7 +45,7 @@
   },
   {
    "id": "r5_control_logh",
-   "command": "cd test/validation/work/t8 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -t 0.05 -o 0.05 -b 2 -s 0.0009765625 --r 0.05 --r-ratio 0.15 --r-search-group 0.005 -f t8_r5 input_control",
+   "command": "cd test/validation/work/t8 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 1 -t 0.05 -o 0.05 -b 2 -s 0.0009765625 --r 0.05 --r-ratio 0.15 --r-search-group 0.005 --ar-g-func 0 -f t8_r5 input_control",
    "output": "r5_control_logh.log"
   },
   {

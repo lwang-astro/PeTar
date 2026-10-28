@@ -28,17 +28,17 @@
   "runs": [
     {
       "id": "r1_pert_band_mid",
-      "command": "cd test/validation/work/t7 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 0 -t 0.0078 -o 0.0078 -b 4 -s 0.0156 --r 0.6 --r-ratio 0.15 --r-search-group 0.05 --G 0.00449830997959438 -f t7_r1_band input_band",
+      "command": "cd test/validation/work/t7 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 0 -t 0.0078 -o 0.0078 -b 4 -s 0.0156 --r 0.6 --r-ratio 0.15 --r-search-group 0.05 --G 0.00449830997959438 --ar-g-func 0 -f t7_r1_band input_band",
       "output": "r1_pert_band_mid.log"
     },
     {
       "id": "r2_pert_inside_rin",
-      "command": "cd test/validation/work/t7 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 0 -t 0.0078 -o 0.0078 -b 4 -s 0.0156 --r 0.6 --r-ratio 0.15 --r-search-group 0.05 --G 0.00449830997959438 -f t7_r2_inside input_inside",
+      "command": "cd test/validation/work/t7 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 0 -t 0.0078 -o 0.0078 -b 4 -s 0.0156 --r 0.6 --r-ratio 0.15 --r-search-group 0.05 --G 0.00449830997959438 --ar-g-func 0 -f t7_r2_inside input_inside",
       "output": "r2_pert_inside_rin.log"
     },
     {
       "id": "r3_pert_band_far",
-      "command": "cd test/validation/work/t7 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 0 -t 0.0078 -o 0.0078 -b 4 -s 0.0156 --r 0.6 --r-ratio 0.15 --r-search-group 0.05 --G 0.00449830997959438 -f t7_r3_band2 input_band2",
+      "command": "cd test/validation/work/t7 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 0 -t 0.0078 -o 0.0078 -b 4 -s 0.0156 --r 0.6 --r-ratio 0.15 --r-search-group 0.05 --G 0.00449830997959438 --ar-g-func 0 -f t7_r3_band2 input_band2",
       "output": "r3_pert_band_far.log"
     },
     {
@@ -48,17 +48,17 @@
     },
     {
       "id": "r5_pert_outer",
-      "command": "cd test/validation/work/t7 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 0 -t 0.0078 -o 0.0078 -b 4 -s 0.0156 --r 0.6 --r-ratio 0.15 --r-search-group 0.05 --G 0.00449830997959438 -f t7_r5_outer input_outer",
+      "command": "cd test/validation/work/t7 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 0 -t 0.0078 -o 0.0078 -b 4 -s 0.0156 --r 0.6 --r-ratio 0.15 --r-search-group 0.05 --G 0.00449830997959438 --ar-g-func 0 -f t7_r5_outer input_outer",
       "output": "r5_pert_outer.log"
     },
     {
       "id": "r6_pert_abort_band_near",
-      "command": "cd test/validation/work/t7 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 0 -t 0.0078 -o 0.0078 -b 4 -s 0.0156 --r 0.6 --r-ratio 0.15 --r-search-group 0.05 --G 0.00449830997959438 -f t7_r6_abortzone input_abortzone",
+      "command": "cd test/validation/work/t7 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 0 -t 0.0078 -o 0.0078 -b 4 -s 0.0156 --r 0.6 --r-ratio 0.15 --r-search-group 0.05 --G 0.00449830997959438 --ar-g-func 0 -f t7_r6_abortzone input_abortzone",
       "output": "r6_pert_abort_band_near.log"
     },
     {
       "id": "r7_pert_abort_band_far",
-      "command": "cd test/validation/work/t7 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 0 -t 0.0078 -o 0.0078 -b 4 -s 0.0156 --r 0.6 --r-ratio 0.15 --r-search-group 0.05 --G 0.00449830997959438 -f t7_r7_abortzone2 input_abortzone2",
+      "command": "cd test/validation/work/t7 && OMP_NUM_THREADS=1 {petar_bin_switch} -u 0 -t 0.0078 -o 0.0078 -b 4 -s 0.0156 --r 0.6 --r-ratio 0.15 --r-search-group 0.05 --G 0.00449830997959438 --ar-g-func 0 -f t7_r7_abortzone2 input_abortzone2",
       "output": "r7_pert_abort_band_far.log"
     }
   ],

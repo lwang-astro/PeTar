@@ -118,8 +118,9 @@
 117. (1851e) Add validation suite T9 for the micro-TDE trigger criterion (beta boundary, orbit routing, fire-epoch regressions). [major]
 118. (1855e) Change group perturber neighbor lists to grow-on-demand (no aborts in large clusters). needs SDAR >= 481e. [major]
 119. (1856e) Fix mass-0 ghost after star vanish (SSE kw=15): preserve 'unused' marker against cm/single overwrites; assert skips pending removal.
-(1858e) Fix TT tensor c.m. force double-subtraction in the KDKDK_4TH gradient pass (3rd-order tensor corruption; inner-binary e error up to 140x). [major]
-(1858e) Remove the tidal-tensor member-mean subtraction (1795e): with the fit fixed it suppressed the physical outer-orbit c.m. coupling by ~100x. [major]
+120. (1858e) Fix TT tensor c.m. force double-subtraction in the KDKDK_4TH gradient pass (3rd-order tensor corruption; inner-binary e error up to 140x). [major]
+121. (1858e) Remove the tidal-tensor member-mean subtraction (1795e): with the fit fixed it suppressed the physical outer-orbit c.m. coupling by ~100x. [major]
+122. (1860e) Change the default AR g-function to BTLogH for cheaper multiple integration; LogH via `--ar-g-func 0` (needs SDAR >= 482e). [major]
 
 **Existing issues (consolidated, live list — historical sections below no longer repeat their issues)**
 
