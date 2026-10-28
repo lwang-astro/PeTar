@@ -214,7 +214,29 @@ try:
 			raise RuntimeError(f"Abort clearing {kind}: warning raised while reading {fin}: {' | '.join(messages)}")
 		for message in messages:
 			print(f"Warning! ignore binary warning for {kind} file {fin}: {message}", file=sys.stderr)
-	selected = data[data.time <= tcrit]
+	# Boundary conventions at t == tcrit (2026-10-28):
+	# - GROUP streams: STRICT time < tcrit. Group records are state prints
+	#   from BOTH sides of the boundary — phase A prints the substep-end
+	#   state at t=tcrit and the restart prints the creation record at
+	#   t=restart for every snapshot-present group (hard.hpp printGroupInfo),
+	#   so an inclusive trim leaves the boundary record twice (observed:
+	#   functional std case, (t=3.0, ids 1,2) duplicated).
+	# - SSE/BSE event streams (awk filters below): INCLUSIVE time <= tcrit.
+	#   An event at exactly t=tcrit belongs to the hard step that contains
+	#   it: BSE evolves to t_interrupt, applies the result, and the snapshot
+	#   at tcrit stores the POST-event state — the restart's first BSE
+	#   interval starts from that state and computes the NEXT event, so the
+	#   boundary event is NOT re-emitted. A strict trim would silently lose
+	#   it. (If a boundary duplicate is ever observed in these streams, this
+	#   convention analysis is wrong — flip to strict; the functional
+	#   restart duplicate check is the arbiter.)
+	# - status/lagr/core/esc/prof: inclusive — output-time streams the
+	#   restart does not rewrite at the restart time (verified: status
+	#   times stay unique across the functional restart flow).
+	if kind == "group":
+		selected = data[data.time < tcrit]
+	else:
+		selected = data[data.time <= tcrit]
 	selected.tofile(fout)
 except Warning as warning:
 	if not ignore_binary_warnings:

@@ -121,6 +121,7 @@
 120. (1858e) Fix TT tensor c.m. force double-subtraction in the KDKDK_4TH gradient pass (3rd-order tensor corruption; inner-binary e error up to 140x). [major]
 121. (1858e) Remove the tidal-tensor member-mean subtraction (1795e): with the fit fixed it suppressed the physical outer-orbit c.m. coupling by ~100x. [major]
 122. (1860e) Change the default AR g-function to BTLogH for cheaper multiple integration; LogH via `--ar-g-func 0` (needs SDAR >= 482e). [major]
+123. (1861e) Fix restart-boundary duplicate group records in petar.data.clear (group-stream trim now strict; sse/bse events unaffected).
 
 **Existing issues (consolidated, live list — historical sections below no longer repeat their issues)**
 

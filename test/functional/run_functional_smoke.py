@@ -1518,6 +1518,16 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
     # interrupt rows = col 1; prof.rank rows = output counter at col 2
     #   (matches petar.data.clear semantics; exact when dt_out=1);
     # bse.dynamic_merge has a label-led layout -> not parsed (lines kind).
+    # Boundary conventions at t == cut (2026-10-28): group streams and the
+    # sse/bse-family rules below differ — group records are state prints
+    # from BOTH sides of the boundary (phase-A substep end + restart
+    # creation record at t=restart), so petar.data.clear trims them
+    # STRICTLY; sse/bse events at exactly t==cut belong to the hard step
+    # containing them and are baked into the post-event snapshot state, so
+    # the restart does NOT re-emit them and the trim stays INCLUSIVE (a
+    # strict trim would silently lose such events). If a boundary duplicate
+    # ever fires the restart duplicate check in these streams, flip this
+    # family to strict — the check is the arbiter.
     # Keep in sync with tools/data_clear.sh tindex_* assignments.
     def ascii_rule(name: str) -> Optional[str]:
         if ".sevnB" in name:
@@ -1562,7 +1572,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
             _petar = None
             _np = None
 
-        def add_reader(p: Path, ctor, **kw) -> None:
+        def add_reader(p: Path, ctor, strict_boundary: bool = False, **kw) -> None:
             if _petar is None:
                 stats[p.name] = {"kind": "unreadable"}
                 return
@@ -1570,11 +1580,21 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
                 obj = ctor(**kw)
                 obj.fromfile(str(p))
                 times = [float(x) for x in _np.asarray(obj.time)]
-                stats[p.name] = {
-                    "kind": "reader",
-                    "kept": sum(1 for x in times if x <= t_cut + 1e-9),
-                    "beyond": sum(1 for x in times if x > t_cut + 1e-9),
-                }
+                # group streams: strict < (the restart re-emits the boundary
+                # record for snapshot groups, so petar.data.clear trims it;
+                # see the group branch there)
+                if strict_boundary:
+                    stats[p.name] = {
+                        "kind": "reader",
+                        "kept": sum(1 for x in times if x < t_cut - 1e-9),
+                        "beyond": sum(1 for x in times if x >= t_cut - 1e-9),
+                    }
+                else:
+                    stats[p.name] = {
+                        "kind": "reader",
+                        "kept": sum(1 for x in times if x <= t_cut + 1e-9),
+                        "beyond": sum(1 for x in times if x > t_cut + 1e-9),
+                    }
             except Exception:
                 stats[p.name] = {"kind": "unreadable"}
 
@@ -1609,7 +1629,7 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         for p in sorted(case_dir.glob(f"{output_prefix}.group*.n*")):
             m = re.search(r"\.n(\d+)$", p.name)
             if m and p.is_file():
-                add_reader(p, _petar.GroupInfo, N=int(m.group(1)), interrupt_mode=mode_i or "none", external_mode=ext_e)
+                add_reader(p, _petar.GroupInfo, strict_boundary=True, N=int(m.group(1)), interrupt_mode=mode_i or "none", external_mode=ext_e)
         for name, ctor in [(f"{output_prefix}.lagr", None), (f"{output_prefix}.core", None)]:
             p = case_dir / name
             if not p.exists():

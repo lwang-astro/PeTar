@@ -38,7 +38,10 @@ def parse(path):
     lines = open(path, encoding="utf-8").read().split("\n")
     top_start = lines.index(TOP_HDR) + 1
     iss = next(i for i in range(top_start, len(lines)) if lines[i].startswith(ISS_HDR))
-    top = [l for l in lines[top_start:iss] if re.match(r"^\d+\. ", l)]
+    # collect numbered entries AND bare "(V) ..." entries (hand-edited or from
+    # an older buggy insert) — dropping the latter here made `sort` silently
+    # delete them from the file (data loss, 2026-10-28)
+    top = [l for l in lines[top_start:iss] if re.match(r"^\d+\. ", l) or re.match(r"^\(\d+", l)]
     return lines, top_start, iss, top
 
 
@@ -54,7 +57,14 @@ def sort_key(line):
 
 
 def renumber(entries):
-    return [re.sub(r"^\d+\. ", f"{i+1}. ", l) for i, l in enumerate(entries)]
+    # strip any existing number and prepend the correct one — the old
+    # re.sub only replaced lines that ALREADY had "N. ", so a bare
+    # "(V) ..." entry stayed unnumbered (and then parse/sort dropped it)
+    out = []
+    for i, l in enumerate(entries):
+        stripped = re.sub(r"^\d+\. ", "", l, count=1)
+        out.append(f"{i+1}. {stripped}")
+    return out
 
 
 def check(top):
