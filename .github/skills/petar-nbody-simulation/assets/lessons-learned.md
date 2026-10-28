@@ -1305,6 +1305,14 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: ① bump VERSION 只跑 `(cd tools && bash get_version.sh)` 后直接 stage,**永不手工追加后缀**;② 从历史会话/旧提交里复制命令前,先对照 AGENTS.md 当前规则;③ 提交前 `cat VERSION` 目检一次(应为纯数字+单个 e);④ 规则/脚本行为变更后,相关联的惯用命令模式应在同变更中审计。
 
+### 2026-10-28: 【内容级≠提交级归属】分支并行开发下同内容双线提交——精确主题匹配落空即误判 8 条 master 条目为 experiment 侧
+
+**Mistake**: release.note 分区审计(10-24)用"按主题精确匹配 commit → merge-base 祖先判定"判定 between 区 15 条中 8 条为 experiment 侧并迁入顶层;用户复查发现错误——该 8 条(SSE 零时刻调用、BSEMerge 假并合、输出步长整数倍等,master 1238-1255)确实在 master 中,但 master 侧提交的**措辞与条目不同**(如 "Fix the warning of close file" vs "Fix the warning message of the file closing"),精确 `-F` 匹配落空、宽松匹配又先命中旧 experiment 线的同内容副本,祖先判定测的是副本而非 master 原件。
+
+**Root cause**: 双线并行开发(旧 experiment 线 2022-12 起与 master 各自演进,同改动两条线各有措辞不同的提交);"提交级祖先测试"只能证明"某个 commit 在不在",不能证明"内容在不在";`git cherry` patch-id 也检不出措辞/冲突解算后的改写副本。
+
+**Prevention rule**: ① 判定条目归属时,对**两个分支的日志都做主题模糊检索**(关键词而非整句),任一侧命中即属该侧;匹配不到 ≠ 不存在;② 双线重复开发仓库里,"精确匹配落空"本身就是可疑信号(应升级为 diff/pickaxe 内容比对);③ 用户是历史事实的最终权威——原始作者手写的分区标签((1238)-(1255) 本为 master 版本)在被推翻前需要超出措辞差异的证据。
+
 ### 2026-10-16: 【全绿但图是空的】T4 控制组图自 4 月重设计起静默空白——报告渲染路径也要"存在性守护";改名/合并场景时先查渲染键匹配
 
 **Mistake**: T4 报告 19/19 检查全绿、控制组对比表(Table 6)有数据,但控制组 6 张图一直是空白(HTML 里 0 个 svg)。排查发现:`build_orbit_figure_section` 按 MODE_ORDER 基名(m1_pure_sdar_ref)查 series 标签,而控制组 run id 带 `_o15` 后缀 → 全部曲线查不到被过滤,`svg_curves_plot` 对空曲线列表返回空串——渲染层静默吞掉,检查层无感知。该 bug 自 4 月 paper-style 重设计起就存在,因控制组此后从未重跑而一直潜伏,直到本次合并单 JSON 重跑才暴露。

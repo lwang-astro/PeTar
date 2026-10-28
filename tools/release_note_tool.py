@@ -25,10 +25,10 @@ PATH_DEFAULT = "release.note"
 TOP_HDR = "**experiment update referring to master**"
 ISS_HDR = "**Existing issues"
 
-# versionless entries: distinctive substring -> sort number (era position)
+# versionless entries: distinctive substring -> sort number (era position);
+# empty while all entries carry versions — add a row when an unversioned entry
+# must hold a temporary position, remove it once the version is annotated
 PLACEMENT = {
-    "point sizes": 1270,
-    "nested OMP": 1372,
 }
 
 VERBS = ("Add", "Fix", "Change", "Improve", "Remove")
