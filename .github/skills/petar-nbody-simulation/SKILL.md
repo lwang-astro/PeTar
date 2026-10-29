@@ -65,7 +65,7 @@ This compact version prioritizes execution safety, option correctness, and repro
 
 ### Workflow integrity
 
-- **The input snapshot filename must be the last command-line argument** (`petar [options] <snapshot>`): PeTar takes `argv[argc-1]` as the input filename, so an option placed after it is silently parsed as the filename.
+- **Prefer the input snapshot filename as the last command-line argument** (`petar [options] <snapshot>`). Since 1863e the filename is captured from non-option arguments anywhere on the command line (options with negative values after it, e.g. `--rlo_gamma_angmom -1`, no longer break detection); keeping it last stays compatible with older versions, where it is required (`argv[argc-1]` heuristic).
 - Keep fresh IC generation separate from restart/resume paths. **Never use `petar.init` in a restart workflow.**
 - Modern PeTar (tmp-file mechanism) generates `data.snap.lst` at runtime and commits stream outputs automatically — **no gathering step is needed**. `petar.data.gether` is legacy, required only for old MPI runs lacking `snap.lst`; when it is required, gather before downstream processing.
 - Prefer installed PeTar tools over abstract advice whenever the request maps to one (analysis, conversion, movie generation, restart cleanup, external-potential maps).

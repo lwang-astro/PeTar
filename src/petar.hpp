@@ -28,6 +28,7 @@
 #include<sys/stat.h>
 #include<cstdio>
 //#include<unistd.h>
+#include<cstring>
 #include<getopt.h>
 
 #ifdef MPI_DEBUG
@@ -449,7 +450,26 @@ public:
                     //std::cout<<"        --disable-write-info:  "<<"Do not write information"<<std::endl;
                 }
                 return -1;
+            case 1:
+                // non-option argument (returned one by one because the
+                // optstring starts with '-'): the input data filename.
+                // Capturing it here instead of taking argv[argc-1] keeps the
+                // filename detected when options (in particular their negative
+                // values, e.g. --rlo_gamma_angmom -1) appear after it, and
+                // when the last argument is a negative option value.
+                fname_inp.value = optarg;
+                opt_used++;
+                if(print_flag) std::cout<<"Reading data file name: "<<fname_inp.value<<std::endl;
+                break;
             case '?':
+                // unknown option: when it is a long option given without an
+                // attached '=' value (e.g. --rlo_gamma_angmom), the next argv
+                // element that does not start with '-' is its value; skip it
+                // so that it is not mistaken for the input data filename
+                if (optind>0 && optind<argc
+                    && strncmp(argv[optind-1],"--",2)==0
+                    && strchr(argv[optind-1],'=')==NULL
+                    && argv[optind][0]!='-') optind++;
                 opt_used +=2;
                 break;
             default:
@@ -459,10 +479,13 @@ public:
         // count used options
         opt_used ++;
         //std::cout<<"Opt used:"<<opt_used<<std::endl;
-        // detect the input data filename: only when there are unused arguments
-        // and the last one does not look like an option or a negative number
-        if (opt_used<argc && argv[argc-1][0] != '-') { //Allow for negative parameters
-            fname_inp.value =argv[argc-1];
+
+        // arguments after a '--' terminator are literal (e.g. filenames
+        // starting with '-'); take the first remaining one as the input data
+        // filename if none was captured in the option loop
+        if (fname_inp.value=="__NONE__" && optind<argc) {
+            fname_inp.value = argv[optind];
+            opt_used++;
             if(print_flag) std::cout<<"Reading data file name: "<<fname_inp.value<<std::endl;
         }
 

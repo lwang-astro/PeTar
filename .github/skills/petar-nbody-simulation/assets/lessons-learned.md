@@ -215,13 +215,13 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: 按 N 缩放（≲10³ → 1 线程；~10⁴ → 数条；≳10⁵ → 全部核心），对 `petar.find.dt -o` 与生产 launch 一视同仁；用户坚持小系统多线程时先给实测代价再确认。细节：`assets/script-tools.md` → "Parallel Launch Heuristics"。
 
-### 2026-09-22: 输入快照必须是命令行最后一个参数——PeTar 无条件取 argv[argc-1] 为文件名
+### 2026-09-22: 输入快照必须是命令行最后一个参数——旧版 PeTar 无条件取 argv[argc-1] 为文件名（1863e 起已修复，任意位置均可）
 
 **Mistake**: 把 `input.B` 放在选项中间（`petar -u 1 -i 0 input.B -t 0.125`），文件名被解析为 `0.125`，全体 rank 打不开输入文件 MPI_ABORT；用户 `run.sh` 参照命令同样写错。
 
 **Root cause**: `petar.hpp` 的 `read()` 在有剩余位置参数时执行 `fname_inp.value = argv[argc-1]`——文件名永远取最后一个 token，所有选项必须在其前面。
 
-**Prevention rule**: 组 `petar` 命令时输入快照永远放最后（`petar [options] <snapshot>`）；该 run.sh 已修正。（规则已同步入 SKILL.md。）
+**Prevention rule**: 组 `petar` 命令时输入快照仍建议放最后（`petar [options] <snapshot>`，向后兼容旧版本）；1863e（2026-10-29）起文件名改在 getopt 循环内以非选项返回值捕获，任意位置、含尾部负值选项（如 `--rlo_gamma_angmom -1`）的场景均可正确识别——见 2026-10-29 条目。（规则已同步入 SKILL.md。）
 
 ### 2026-09-22: BSCC-M9 跨节点 MPI 仅经典 Intel MPI 20.4.3 可用——新栈用户态 fabric 与节点驱动失配（rc_mlx5/UD 端点必崩）
 
@@ -480,6 +480,14 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Prevention rule**: (1) 写回/移除类断言崩溃,归因先查两类事件流:data.bse.binary_merge(并合,no_remain 也在其中)与 data.sse.type_change(单星 kw→15 mt=0),崩溃时间对齐 tphys 列;merger dump 时间相邻不构成因果; (2) 任何"标记 unused 待移除"的位,必须审计从置位到 removeParticles 之间所有会写 group_data 的路径(kickOne、resetParticleGroupData、calcRsearch 的 cm 写回)——one-cluster 与 isolated 两条链对 unused 位的保全行为不同; (3) 修复方向:vanish 时入 remove_list(removeParticles 对 list 内粒子强制重标 unused,位被清也不影响)+ writeback 断言放行 ptcl-unused&&sys.mass==0 的待移除态(与 MPI 路径一致)。
 
 **Fix**(2026-10-26 实施,1856e,经用户两轮审查定稿为"保位"方案,不再新增移除链路):根因是 unused 位在 vanish 写回到 removeParticles 之间被四处 cm/single 模式写入清掉——修复即给这四处加守卫,让 removeParticles() 既有的 (mass==0 && isUnused) 判据自然生效:① kickOne 不再对 unused 粒子 setParticleTypeToSingle;② resetParticleGroupData 跳过 mass==0 粒子;③ calcRsearchAndGetMassBackupAndsetGroupDataToCM 两个 bid 分支的 group_data.cm 写回对 mass==0 跳过(ptcl 与 sys 两侧);④ 重启参数初始化的 cm 清零对 mass==0 跳过(快照可含待移除粒子)。另保留:⑤ 写回断言 `mass_bk!=0` 对 ptcl 侧 unused 粒子放行(待移除窗口期内 mass_bk=0 是合法中间态,与 MPI 路径当年删除断言同理);⑥ kickSend 的 HARD_DEBUG 断言同样放行(仅代码审查,无 MPI 实测)。中间两版被否:correctSoftPotMassChange 内扫描注册(能量函数不应担移除职责)、SystemHard 注册表上报(与既有 mass+类型统一判据重复)。开发中遗的真实回归:重构版判据误用 `sys[adr].mass==0`(组成员恒 0,真实质量在 massBackup)致 2344 个有星风质量变化的成员被整批误删——N_remove 监控指标当场抓包;移除判据改动必须与 N_remove/事件流对账。验证:同一重启复现(100→106)零断言、五份 merger dump 与修复前逐位一致、N_remove=6 恰为窗口内 6 次消散/并合事件、t=105 能量误差 -1.2e-3 正常;100→125 全程跑通 EXIT 0、t=125 能量误差 -4.5e-5。残余可选跟进:为"SSE 单星消散→移除"链条加 functional 锁定用例。
+
+### 2026-10-29: 负值选项报"input data filename is not provided"的根因是主 reader 文件名启发式，不是 getopt 不认负数
+
+**Mistake**: SEVN 集成 PR 为"保护负值选项"在 `bse_interface.h` 加了就地 argv 预合并（`--flag -1` → `--flag=-1`）；用户报告 `--rlo_gamma_angmom -1` 仍报 "the input data filename is not provided" 时，若顺着"getopt 不认负数"的直觉继续在 BSE reader 内修补，修不对地方。
+
+**Root cause**: 真正的失败在 `petar.hpp` 主 reader：文件名靠事后取 `argv[argc-1]` 且要求不以 `-` 开头，同时 `opt_used` 把每个未知选项（含其负值 token）各计 +2——主 reader 不认识的选项（BSE/SEVN/硬过程长选项）触发两次 `?` 计数超调，加上尾部负值被 `-` 守卫拒绝，文件名丢失。而实测 GNU getopt 对 `required_argument` 长选项**本就无条件取下一个 argv 元素（含负数）**，BSE reader 的预合并完全多余，且它就地移位共享 argv（尾部残留重复元素污染后续 reader）+ `&storage.back()[0]` 在 vector 重分配后悬垂（SSO 短串）。修复：文件名改在循环内 `case 1`（optstring 以 `-` 开头时非选项参数逐个返回）捕获；`?` 分支跳过未知长选项分离的值；删除 BSE 预合并块。
+
+**Prevention rule**: 参数解析 bug 先用最小 getopt 复现程序实证行为（哪个 reader、哪个 token、计数如何走）再动代码；文件名/位置参数必须在 getopt 循环内捕获而非事后取 `argv[argc-1]`；绝不在一个 reader 内就地移位/重写跨 reader 共享的 argv——需要改写就构造新数组传递。
 
 ## Post-Processing
 

@@ -1231,32 +1231,20 @@ public:
         }
         const struct option* long_options = long_options_vec.data();
 
-        // Pre-process argv in-place to protect negative numbers
-        // by merging "--flag -1.0" into "--flag=-1.0"
-        static std::vector<std::string> storage;
-        std::set<int> merged_indices;
-        for (int i = 1; i < argc - 1; i++) {
-            if (strncmp(argv[i], "--", 2) == 0) {
-                const char* next = argv[i + 1];
-                if (next[0] == '-' && strlen(next) > 1 &&
-                    (std::isdigit((unsigned char)next[1]) || next[1] == '.')) {
-                    storage.push_back(std::string(argv[i]) + "=" + std::string(next));
-                    argv[i] = &storage.back()[0];
-                    for (int j = i + 1; j < argc - 1; j++) argv[j] = argv[j + 1];
-                    argc--;
-                    merged_indices.insert(i);
-                }
-            }
-        }
+        // NOTE on negative option values (e.g. --rlo_gamma_angmom -1):
+        // getopt_long takes the next argv element as the argument of a
+        // required_argument long option even when it starts with '-', so no
+        // argv preprocessing is needed here. A previous in-place merge
+        // ("--flag -1" -> "--flag=-1") was removed: it shifted the caller's
+        // argv and left a duplicated trailing element for the later option
+        // readers, and pointers into the merging storage could dangle after
+        // a vector reallocation.
 
         int opt_used=opt_used_pre;
         int copt;
         int option_index;
 
-        auto opt_increment = [&]() {
-            if (merged_indices.count(optind - 1)) opt_used += 1;
-            else opt_used += 2;
-        };
+        auto opt_increment = [&]() { opt_used += 2; };
 
         optind = 0;
         while ((copt = getopt_long(argc, argv, "-z:p:h", long_options, &option_index)) != -1)
