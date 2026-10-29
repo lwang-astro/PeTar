@@ -138,6 +138,33 @@ Code mapping:
   `pert_out` in the slowdown-`κ` criterion (`evalPertOuterForce` tail). The
   tensor therefore also *measures* the perturbation strength that limits the
   slow-down factor.
+- **Activation structure (corrected twice 2026-10-28 — polarity verified against
+  code + fine-output census)**: TT has TWO entry paths:
+  1. **General path (the default)**: any stable binary subtree reaching the
+     tail loop of `findGroupsAndCreateArtificialParticlesOneCluster`
+     (`src/hard.hpp`, `createArtificialParticles` call) gets TT with NO
+     tide-strength/κ/tt-nstep/cost condition. Gates to reach it: tt-switch
+     on; members in one hard cluster; stability (`findStableTree`,
+     `t_crit = cap` — binaries with `period > cap` are not stable-grouped
+     at all); and not caught by the isolated opt-out below. In multi-particle
+     clusters (≥3 particles) the opt-out CANNOT fire — every stable binary
+     sharing its cluster with any companion gets TT unconditionally.
+  2. **Isolated branch = an OPT-OUT for pair-only clusters** (`_n_ptcl==2`):
+     a trial slowdown (timescale = 2·cap) gives κ_est; if
+     `period·κ_est > dt_tree·tt-nstep` the cap-limited slowdown already
+     resolves the slowed orbit ("it is fine without tidal tensor") → plain
+     slowdown group, NO artificial particles; otherwise fall through to the
+     general path → TT. NOTE the polarity: the printed decision boolean
+     `P·κ > cap` TRUE = plain (no TT), FALSE = TT. `pert_out` uses the c.m.'s
+     OWN r_search (r_out-scaled + velocity cushion; T4-m5: ≈0.11 pc vs the
+     actual perturber at 0.149) — order-unity accurate (T4: hyp 243 vs real
+     ~302 per binary mass).
+  Empirically (audits 2026-10-28) the opt-out NEVER fired (all recorded
+  booleans 0 → TT): the mcluster ultra-hard binary, the T4-m5 binary, and a
+  sparse-cluster population (26 live TT groups, n_all 200→536 measured with
+  fine outputs) all take the general path — TT-on is effectively the default
+  for stable binaries, and the compute-cost question lives on this path
+  (empirical extension in §6: cost 0–30% at CPU N≲1e3 scales).
 - Activation semantics: `--tt-nstep` sets `n_step_per_orbit`;
   `ar_manager.slowdown_timescale_max = dt_max_hermite · n_step_per_orbit`
   caps the isolated-binary slowdown timescale. A binary whose SD factor
@@ -194,6 +221,66 @@ freeze interval are the same interval (see §7.1).
   pseudo-particles reproduce the orbit-averaged traceless quadrupole
   `⟨A'⟩` of the binary (paper eq. 30–38; positions eq. 38);
   `src/pseudoparticle_multipole.hpp`.
+- **Label-swap symmetry property (verified 2026-10-29, fixed same day)**: under
+  a swap of the binary member order, `particleToOrbit` gives incline/rot_horizon
+  invariant (am = r×v with both factors negated) but `rot_self →
+  rot_self + π` exactly — the PM triangle is point-reflected in the orbital
+  plane. The design target (quadrupole, all even moments) is invariant;
+  the SPURIOUS odd multipoles of the 3-point discretization (the difference
+  between 3 points and the continuous ellipse) flip sign. Net effect on a
+  test particle: a discontinuous force jump of relative size ~(a_bin/d)³
+  (equal-mass triangle ⇒ zero dipole; leading spurious odd moment is the
+  octupole; measured 3.4e-8 at d/a=150, 1.4e-5 at d/a=20, 9.2e-4 at d/a=5 —
+  a constant ×(a/d)³ fit to 3%). The
+  member order within a pair comes from the binding-chain reordering in
+  `generateBinaryTree` (not a stable convention), so the mirror can fire at
+  group reformations. **Fix (2026-10-29)**: canonical orientation in
+  `PseudoParticleMultipoleManager::createSampleParticles` — the triangle is
+  point-reflected (equivalent to rot_self += π, quadrupole unchanged) unless
+  member 1 is the heavier, with the member IDs breaking the exact
+  equal-mass tie; the rule is a total canonical ordering on leaf members, so
+  both member orders map to the identical particle set. Residual corner: at
+  group FORMATION the stable-tree nodes carry no node ids (only the
+  AR-info/Hermite refresh trees get them via `checkAndSetBinaryPairID`), so
+  an exactly-equal-AGGREGATE-mass hierarchical pair falls through the tie
+  break (id 0 = 0) and may point-reflect once at the first refresh —
+  measure-zero outside exactly-equal-mass ICs. Unit test
+  `src/pm_multipole_test.cxx` (`make build/petar.pm.test`): 5000 random
+  bound binaries built through the production path
+  (`generateBinaryTree` → `createSampleParticles`), asserting
+  PM(p1,p2) ≡ PM(p2,p1) — max relative position difference 2.8e-16
+  post-fix (roundoff) vs 1.74 pre-fix (the point-reflection itself).
+- **Counterforce method ladder (available escalation, 2026-10-29 audit)**:
+  the counterforce representation of a binary for external particles is
+  selectable at build/run time, in increasing fidelity and cost:
+  (1) c.m.-only — switch SDAR off (`--r-group 0`); (2) PM, 3
+  pseudo-particles — the default (`typedef PseudoParticleMultipoleManager
+  OrbitManager`, `src/artificial_particles.hpp`); (3) orbit sampling, N
+  particles — compile-time `-D ORBIT_SAMPLING` + `--os-nsplit`
+  (`src/orbit_sampling.hpp`, `OrbitalSamplingManager`); paper Fig. 6:
+  OS-8 ≈ PM ≪ OS-4 ≪ c.m.-only for momentum conservation, none affect the
+  orbital evolution. Replacing PM by the **instantaneous member components**
+  ("改回双星本体") was considered and rejected: the external force would
+  carry the phase-random quadrupole fluctuation, relative amplitude
+  ~(a_bin/d)² per kick, aliased at the unsynchronized tree cadence;
+  PM's residual (static spurious odd moments, see above) is one to two
+  multipole orders smaller and frozen with the orbit frame. The correct
+  escalation when PM resolution is insufficient is OS-8 or enlarging the
+  changeover `r_out` (cluster capture), not exposing the members.
+- **Group-radius chain (PM validity region is environment-adaptive)**: the
+  annulus where PM represents the binary (perturber inside `r_search_group`,
+  outside the changeover `r_out`) is not a fixed multiple of `r_in`.
+  Chain (`HardManager::initial`, `src/hard.hpp`): the 1D velocity dispersion
+  σ₁ = √(⟨v²⟩/3) is measured from the ICs (`src/petar.hpp`, passed into
+  `initial`); the hard-soft boundary a_hs = G·⟨m⟩/σ₁² then gives
+  `r_search_group`(auto) = min(r_in, safety·a_hs) (`--r-search-group-safety`,
+  default 1.0) and `r_group`(auto) = 0.8·r_search_group, with assertions
+  enforcing 0 ≤ r_group ≤ r_search_group ≤ r_in. Consequence: in cold
+  (bound, clustered) systems the auto chain shrinks the PM annulus to the
+  physical hard-soft boundary, keeping d/a_bin large where PM is used;
+  the r_in-proportional fallback (no σ₁) is the legacy behavior. Restart
+  caveat: `--r-search-group-safety` or changeover updates re-determine both
+  radii unless they were explicitly given.
 - Paper result (Fig. 6): the counterforce choice does **not** affect the
   orbital evolution (within resolution), only the quality of linear
   momentum conservation — OS-8 ≈ PM (3 pseudo-particles) ≪ OS-4 ≪ c.m.-only.
@@ -227,6 +314,45 @@ Not covered by the published validation: block-stepped tree channels
 (perturber and binary c.m. on different step hierarchies), freeze windows
 spanning many inner periods under a bound slowdown factor, and eccentricity
 conservation metrics at the precision T4 now demands.
+
+**Empirical extension (2026-10-28/29 campaign; raw evidence in
+`test/validation/work/{ttgrid,ttaudit,ttcost}/`, distilled from the closed
+activation-criterion plan)**:
+
+- Accuracy surface (48-run grid, T4 triple geometry, relative tide
+  2.1e-8 … 5.7e-3, dt_soft/P_in ∈ {0.26, 1.05, 4.21}): TT matches the
+  hard-channel reference across the entire range (inner-Δa ratio ≤ 1.14),
+  including dt/P = 4.2 (4 inner orbits per tree kick) and the strongest
+  tide (perturber peri 0.0495 pc). The no-TT error is a tide-INDEPENDENT
+  kick-aliasing floor that dominates weakward (33–957x the physical signal
+  at tide ≤ 2.1e-4, dt/P ≥ 1); at dt/P = 0.26 aliasing is negligible and
+  no-TT ≈ reference. Consequence: "weak tide → TT useless" is refuted on
+  accuracy — weak tide is where no-TT is worst relative to the signal;
+  TT's own floor is 100–1000x lower. TT over-activation exists only as
+  compute waste in the (fine step × weak tide) corner.
+- Strong-tide boundary: clean to relative tide 5.7e-3; tide ~0.21
+  (m1000/a0.15 probe) is a chaotic disruption/exchange regime where
+  grouping churns and drift metrics are meaningless — the practical upper
+  boundary. Retained caveat from the inclined-orbit probe (tide 2.1e-2,
+  incl 60°): secular-angle agreement has a phase-drift gap (ψ 3.9% total,
+  inclination pointwise 21.4° as a phase-shifted oscillation) — consistent
+  with the paper's own "Except ψin" caveat; element-amplitude agreement
+  remains good.
+- Coverage hole (perturber strong but outside r_search with small κ_est)
+  could NOT be produced: raising the mean mass 33–333x still activated TT
+  (census N_all=15) with TT/ref ≤ 1.0 in Δe — the criterion is
+  conservative on this grid.
+- Cost (plain 1860e binary, 3 reps, OMP=4): N=200/Rh=1pc (dense,
+  hard-channel-dominated) TT +~30% wall; N=1000/Rh=2pc statistically
+  indistinguishable. Attribution: Tree_Force +156% with TT — the analytic
+  particle multiplier 1+6.5·f_bin from live TT groups (n_all 1000→2548;
+  12 artificial particles per TT binary in the tree); PP_single (hard)
+  −9% (slowdown pays back part of the tree overhead). Untested
+  extrapolation: tree-dominated regimes (large-N with GPU offload) where
+  the 2.5x Tree_Force particle term's wall share grows — judged
+  low-priority (the activation-criterion research closed 2026-10-29 with
+  no code change; revisit only if a GPU production profile shows tree
+  dominance).
 
 ## 7. Design invariants → code anchors (verification checklist)
 

@@ -415,6 +415,9 @@ build/petar.simd.test: simd_test.cxx soft_force.hpp io.hpp hard_ptcl.hpp static_
 build/petar.tt.test: tidal_tensor_test.cxx |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $< -o $@  $(CXXLIBS)
 
+build/petar.pm.test: pm_multipole_test.cxx |build
+	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $< -o $@  $(CXXLIBS)
+
 build/petar.pn.test: pn_test.cxx pn.hpp |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $< -o $@  $(CXXLIBS)
 

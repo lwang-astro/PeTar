@@ -114,6 +114,7 @@
 113. (1860e) Change the default AR g-function to BTLogH for cheaper multiple integration; LogH via `--ar-g-func 0` (needs SDAR >= 482e). [major]
 114. (1861e) Fix restart-boundary duplicate group records in petar.data.clear (group-stream trim now strict; sse/bse events unaffected).
 115. (1863e) Fix input data filename detection failing when an option with a negative value (e.g. `--rlo_gamma_angmom -1`) is on the command line.
+116. (1864e) Fix PM pseudo-particle mirror flip on binary member-order swap (odd-multipole force jumps ~(a/d)^3 at group reformations). [major]
 
 **Existing issues (consolidated, live list — historical sections below no longer repeat their issues)**
 
