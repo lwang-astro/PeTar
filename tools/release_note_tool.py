@@ -42,7 +42,13 @@ def parse(path):
     # an older buggy insert) — dropping the latter here made `sort` silently
     # delete them from the file (data loss, 2026-10-28)
     top = [l for l in lines[top_start:iss] if re.match(r"^\d+\. ", l) or re.match(r"^\(\d+", l)]
-    return lines, top_start, iss, top
+    # non-entry lines (WARNING blocks, comments) between the header and the
+    # first entry must survive insert/sort — rebuilds used to drop them
+    # (silently deleted the TT WARNING, 2026-10-30)
+    first = next((i for i, l in enumerate(lines[top_start:iss], top_start)
+                  if re.match(r"^\d+\. ", l) or re.match(r"^\(\d+", l)), iss)
+    prefix = [l for l in lines[top_start:first] if l.strip()]
+    return lines, top_start, iss, top, prefix
 
 
 def sort_key(line):
@@ -122,19 +128,19 @@ def main():
     path = rest[0] if rest and (cmd != "insert" or rest[0].endswith(".note")) else PATH_DEFAULT
     if cmd == "insert":
         entries = [a for a in rest if not a.endswith(".note")]
-        lines, ts, iss, top = parse(path)
+        lines, ts, iss, top, prefix = parse(path)
         new = insert(top, entries, dry)
         if dry:
             print("\n".join(new))
         else:
             open(path, "w", encoding="utf-8").write(
-                "\n".join(lines[:ts] + new + [""] + lines[iss:]))
+                "\n".join(lines[:ts] + [""] + prefix + [""] + new + [""] + lines[iss:]))
             print(f"inserted {len(entries)}; total {len(new)}")
     elif cmd == "sort":
-        lines, ts, iss, top = parse(path)
+        lines, ts, iss, top, prefix = parse(path)
         new = renumber(sorted(top, key=sort_key))
         open(path, "w", encoding="utf-8").write(
-            "\n".join(lines[:ts] + new + [""] + lines[iss:]))
+            "\n".join(lines[:ts] + [""] + prefix + [""] + new + [""] + lines[iss:]))
         print(f"sorted {len(new)} entries")
     elif cmd == "check":
         sys.exit(0 if check(parse(path)[3]) else 1)

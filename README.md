@@ -138,7 +138,7 @@ PeTar code is maintained across multiple branches. Users can retrieve the code v
 
 For stability, obtain the released version. The master branch is updated regularly for new features and bug fixes. Other branches may not function correctly — consult the developer before using them.
 
-> **WARNING (affects existing results)**: simulations run with default options and experiment-branch versions **1624e–1857e** carry a tidal-tensor force bug that systematically corrupts binary orbital evolution (fixed in **1858e**). Re-run binary-sensitive results with >= 1858e and do not compare binary statistics across this window. Details: `release.note` (WARNING block, entries 55/111–112).
+> **WARNING (affects existing results)**: simulations run with default options and experiment-branch versions **1624e–1857e** carry a tidal-tensor force bug that systematically corrupts binary orbital evolution (fixed in **1858e**). Re-run binary-sensitive results with >= 1858e and do not compare binary statistics across this window. Details: `release.note` (WARNING block, entries 66/122–123).
 
 ## Installation
 
