@@ -1,4 +1,7 @@
 **experiment update referring to master**
+
+**WARNING (affects existing results)**: default runs with versions 1624e–1857e carry the tidal-tensor c.m.-force double-subtraction bug in the KDKDK4 gradient pass (present since KDKDK4 became the default, entry 55; fixed in 1858e, entries 111–112): binary orbital evolution is systematically corrupted (inner-binary eccentricity errors up to ~140x). Re-run binary-sensitive results with >= 1858e and do not compare binary statistics across this window.
+
 1. (1172) Add external perturbation forces during hard integration via the `--with-external-hard` configure option. [major]
 2. (1173) Add a parallel random number generator library and save the random seeds into a file for each snapshot with a filename suffix `.randseeds`. Use cpu time as the initial seed if not given manually. [major]
 3. (1175) Add copy and mathematical operators for the data analysis classes (e.g., `petar.Particle`) in the Python analysis tool.
