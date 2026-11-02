@@ -31,13 +31,45 @@ Keyword arguments control column layout and must match the producing solver:
 
 These apply to every particle-composing reader (`Particle`, `Status`, `SingleEscaper`/`BinaryEscaper`, `GroupInfo`, `Binary` members). Profile and Lagrangian readers take their own layout kwargs (`use_gpu`, `FDPS_version`, `old_version`, `group_count`; `mass_fraction`, `calc_energy`, `add_star_type`, `add_mass_range`) — see the class docstrings.
 
-Pass these consistently to all readers.
+Pass these consistently to all readers. **Do not guess them by trial and error** — recover them with auto-detection (next section) and pass explicit kwargs only to override.
+
+### Schema auto-detection (`petar.getDataKwargs` / `petar.readSnapshot`)
+
+The layout kwargs are recoverable from the data itself, in this precedence (highest wins): **explicit kwargs → `<prefix>.meta` sidecar → structure sniffing**.
+
+**Concise construction (preferred)**: every public petar reader accepts a file path as its first constructor argument and auto-reads it with the auto-detected layout — `petar.Particle('data.5')`, `petar.Particle('data.5.single')`, `petar.Binary('data.5.binary', G=...)`, `petar.SingleEscaper('data.esc_single')`, `petar.BinaryEscaper('data.esc_binary')`, `petar.GroupInfo('data.group.n2', N=2)`, `petar.LagrangianMultiple('data.lagr')`, `petar.Core('data.core')`, `petar.BSEStatus('data.bse_status')`, and the SSE/BSE event readers (`petar.SSETypeChange('data.sse.type_change')`, `petar.BSEKick('data.bse.gw_kick')`, ...). Explicit kwargs passed alongside win over detection; `.npy` / ASCII / binary (with or without snapshot header) are dispatched automatically. No explicit kwargs are needed for default-build data. Exceptions kept explicit: `Status` (the optional per-particle blocks need `N_particle`), `object.*` (needs the extra `time` member added first), and `Profile` (its own kwargs universe).
+
+**`meta=` injection** (concise constructor and `petar.getDataKwargs`): `meta='<path>'` uses an explicit sidecar — the escape hatch for files copied away from their run directory; `meta={...}` passes ready layout kwargs as a group (no detection, no warnings); `meta=False` disables the sidecar (structure/explicit only). Default `'auto'` locates `<prefix>.meta` by the generic prefix walk (successively shorter stems: `data.5.single` → `data.5.meta`, `data.meta`) — no per-file-type name mapping; works for any run prefix and all stream files.
+
+- **`petar.getDataKwargs(path)`** returns the kwargs dict for any run-family file (`data.5`, `data.5.single`, `data.esc_single`, ...). It reads the solver-written sidecar `<prefix>.meta` (petar-meta/1, written next to `data.par`; absent for older runs) and cross-validates it against the file structure — a disagreement raises `ValueError` (the sidecar was likely copied from another run). Without a sidecar it sniffs the structure: ASCII header item count or binary header size (24/72 B; 32/128 B for float128) pins `external_mode`; the column count (ASCII) or bytes-per-record with N from the header (binary) pins the rest.
+- **`petar.readSnapshot(path)`** returns `(particles, header)` for raw snapshots in one call (the concise `petar.Particle(path)` returns particles only).
+- **CLI tools auto-fill**: `petar.data.process`, `petar.get.object.snap`, `petar.format.transfer.post`, and `petar.movie` detect the schema from the data when `-i`/`-t` (and `--use-mpfrc`/`--spin-1d`) are omitted, print what was detected, and honor explicit flags over detection.
+
+Detection uniqueness (verified over the kwargs space, `external_mode` pinned by the header):
+
+| interrupt | no external | external |
+|---|---|---|
+| none | 20 | 21 |
+| merger | 24 | 25 |
+| dsm | 30 | 31 |
+| bse-family, spin 1d (pre-2024-12) | 34 | 35 |
+| bse-family, spin 3d | 36 | 37 |
+| sevn | 42 | 43 |
+
+Default builds (no MPFR, no `COLLECT_SP_ACC`) are always uniquely determined. Layouts that only differ in rare build flags (`use_mpfrc` vs `collect_sp_acc`, both +3 columns) can collide on column count: detection then resolves to the **lowest plausibility tier** (fewest rare flags) with a `UserWarning` listing the suppressed alternatives, and a same-tier collision raises `AmbiguousSchemaError` listing the candidates — never a silent guess. On that error, pass explicit kwargs or provide/regenerate `data.meta` (`petar.autoFillKwargs(path, kwargs)` is the programmatic/CLI helper). Sidecar cross-validation only checks structure-unique facts (header-pinned `external_mode`/`float_type`, and that the sidecar layout is among the raw candidates), so a correct rare-flag sidecar is never rejected by a tier-0-resolved sniff.
+
+Caveat (binary, contrived N): when two header variants divide the file size exactly (N satisfying `H′−H = 8N·Δncol`, e.g. a float64/float128 pair), aliasing is possible and the tier-0 float64 candidate wins with a warning; the sidecar pins `float_type` authoritatively. ASCII is immune (no precision in text columns).
+
+**When no candidate matches (no-match policy)**: `petar.getDataKwargs(path)` raises `AmbiguousSchemaError` listing the candidates (or reporting a schema gap). In the concise constructor the outcome depends on the file family: for **snapshot-family files** (snapshots, derived `.single/.binary/...`, run streams) a detection failure **raises** unless both `interrupt_mode` and `external_mode` are given explicitly — a default-kwargs fallback could misparse silently when the byte size happens to align (e.g. an isolated `.single` copied away from its run directory: 27360 B divides by both the 288 B bse and the 160 B default records). For **other file types** (e.g. hermite `.log` dumps, which carry no detectable schema) the constructor warns and proceeds; the read then surfaces the precise sdar error if the layout is wrong. Weak evidence gets strict treatment: the headerless divisibility scan requires a **unique** match (no plausibility-tier resolution) precisely because several layouts can divide one file size.
+
+**Maintenance model (where the layout knowledge lives)**: no dedicated schema module exists - the knowledge is distributed to its owning classes. Reader classes declare their layout-affecting constructor arguments in `LAYOUT_PARAMS` (first value = default/most plausible), and the generic engine in `DictNpArrayMix` (sdar `tools/base.py`: `layoutCandidates` / `layoutTier` / `_layoutMatches` / `detectLayoutKwargs`, sidecar `findLayoutMeta`/`readLayoutMeta`/`writeLayoutMeta`, concise constructor `resolvePathInput`/`readAutoFile`/`enablePathInit`, `AmbiguousSchemaError`, `autoFillKwargs`) enumerates the declared combinations and resolves them against structural measurements. Petar adds `ParticleRecordLayoutMixin` (`tools/analysis/data.py`): snapshot structure detection (header knowledge in `PeTarDataHeader.asciiHeaderInfo`/`binaryHeaderVariants`), sibling-snapshot fallback, the strict no-silent-misparse policy, and sidecar-vs-structure cross-validation - mixed into the particle chain, `Binary`, escapers and `GroupInfo`, so every class detects with its OWN record layout. **Per-run (non-enumerable) layout parameters**: readers whose layout depends on data.process-time options declare `LAYOUT_META_PARAMS` (always list-valued: mass-fraction arrays, star-type / mass-range name lists) - carried by the sidecar with comma-encoded tokens, never enumerated as candidates. `petar.data.process` writes the producer sidecar `<prefix>.lagr.meta` next to the Lagrangian table (the prefix walk finds it before the solver's `data.meta`); `LagrangianMultiple('data.lagr')` then auto-reads with the exact mass fractions / energy columns. Old lagr files without the sidecar need explicit kwargs as before.
+The mixin code itself contains NO parameter names; the remaining role knowledge is declared next to `LAYOUT_PARAMS` on the classes: `HEADER_PINNED_PARAMS` (header fact -> parameter, e.g. `'cm': 'external_mode'`), `LABEL_REFINE_PARAMS` (family representatives refined by run-dir probing, e.g. galpy/agama), `PINNING_PARAMS` (explicit values that exempt a detection failure from the strict raise). `petar.Snapshot(path)` bundles header + particles. **Adding or changing a layout parameter to a reader = update its `LAYOUT_PARAMS` (and the keys it builds) - nothing else.** The public per-class entry point `Reader.detectLayoutKwargs(ncols=..., record_size=...)` works for any declared class.
 
 ### Column mismatch: stop rules
 
 When any reader warns or errors on column count/shape (`mismatches the number of columns`, `IndexError` on the column axis, dtype-alignment warnings):
 
-1. Enumerate the kwargs table above against the producing solver, **including the version-dependent rows** (`spin_3d`, `old_version`-style flags).
+1. Enumerate the kwargs table above against the producing solver, **including the version-dependent rows** (`spin_3d`, `old_version`-style flags). Better: call `petar.getDataKwargs(path)` first — if detection succeeds, its kwargs are the combination the file structure supports.
 2. If no kwargs combination matches, **stop the analysis and report to the user** with the file pattern, reader class, kwargs tried, and error text. The file is likely from a PeTar version with a different output schema. Known legacy options: pre-2024-12 BSE-family outputs → `spin_3d=False`; pre-2020-09 BSE merger records (`BSEDynamicMerge`) → `less_output=True`; pre-2020-12 galpy snapshots → `petar.format.transfer -c`; pre-2020 group data → `petar.format.transfer -g`.
 3. **Never write a custom parser or trim/slice columns as a workaround** for snapshot/status/escaper/group files — silent misalignment corrupts physics results. This restates `Snapshot Read-Mismatch Policy` in `SKILL.md`, which owns the full policy.
 
@@ -87,14 +119,22 @@ petar.KMS_TO_PCMYR           # = 1.022712165045695
 ## Pattern 1: Lagrangian Radii (`data.lagr`)
 
 ```python
-lagr = petar.LagrangianMultiple(external_mode="<mode>")
+# current data.process writes the producer sidecar <prefix>.lagr.meta:
+# the path constructor auto-recovers mass_fraction, calc_energy,
+# add_star_type, add_mass_range, external_mode - no kwargs needed
+lagr = petar.LagrangianMultiple("data.lagr")
+
+# older runs (no sidecar): pass the per-run layout kwargs explicitly
+lagr = petar.LagrangianMultiple(external_mode="<mode>",
+                                mass_fraction=np.array([0.1, 0.3, 0.5, 0.7, 0.9]))
 lagr.fromfile("data.lagr")
 ```
 
-- `external_mode` controls whether COM-offset columns are present.
-- Structure: `time` + three `Lagrangian` blocks (`single`, `binary`, `all`; binaries counted once at their c.m.), each holding `r`, `m`, `n`, `vel`, `sigma` (+ `epot`/`vr`/`epot_ext` with `calc_energy`).
-- **Column semantics** (per `tools/analysis/lagrangian.py`): **6 columns** — mass fractions `[10%, 30%, 50%, 70%, 90%]` **plus the core radius as the last column** (Casertano & Hut 1985). The velocity keys (`abs`, `x`, `y`, `z`, `rad`, `tan`, `rot`) likewise carry 6 entries, last = core.
+- `external_mode` gates `epot_ext` (external potential energy), which exists only when `calc_energy=True` — it does **not** add COM-offset columns to the Lagrangian table.
+- Structure: `time` + three `Lagrangian` blocks (`single`, `binary`, `all`; binaries counted once at their c.m.), each holding `r`, `m`, `n`, `vel`, `sigma` (+ `epot`/`vr`/`epot_ext` with `calc_energy`); extra blocks per `add_star_type` / `add_mass_range` entry — star-type entries add a member named **exactly as given** (e.g. `BH__in__MS`), mass-range entries get the `mass_` prefix (`0.1_1` → `mass_0.1_1`; cross ranges → `mass_A__in__mass_B`).
+- **Column semantics** (per `tools/analysis/lagrangian.py`): **6 columns** — mass fractions `[10%, 30%, 50%, 70%, 90%]` **plus the core radius as the last column** (Casertano & Hut 1985). The velocity keys (`abs`, `x`, `y`, `z`, `rad`, `tan`, `rot`) likewise carry 6 entries, last = core. With a custom `--mass-fraction` list the column count changes accordingly.
 - **`all.m` is the *average stellar mass* per particle within each radius, not a cumulative mass** (cumulative mass is divided by the particle count). Multiply by `all.n` to recover the enclosed mass; under `mode="shell"` both refer to the shell.
+- **Mislabel hazard without the sidecar**: a lagr table produced with non-default `--mass-fraction` of the *same length* reads successfully without the sidecar but silently labels the default fractions — keep `<prefix>.lagr.meta` next to the file or pass `mass_fraction=` explicitly (the functional `lagr.variants` step pins this contract).
 
 ## Pattern 2: Core Properties (`data.core`)
 

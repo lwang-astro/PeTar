@@ -190,6 +190,23 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
             parts.append("</tr>")
         parts.append("</tbody></table></div>")
 
+    selftest = report.get("schema_selftest")
+    if selftest:
+        parts.append("<div class=\"card\"><h2>Schema Auto-Detection Selftest (synthetic)</h2>")
+        parts.append(f"<p>{badge(selftest.get('status', 'unknown'))} "
+                     "<span class=\"muted\">same-tier ambiguity raises; correct rare-flag sidecar accepted; "
+                     "wrong sidecar rejected; explicit kwargs win over auto-fill "
+                     "(see doc/output-schema-tagging-plan.md)</span></p>")
+        parts.append("<table><thead><tr><th>Check</th><th>Result</th><th>Detail</th></tr></thead><tbody>")
+        for chk in selftest.get("checks", []):
+            chk_status = "pass" if chk.get("ok") else "fail"
+            parts.append("<tr>")
+            parts.append(f"<td>{esc(chk.get('name', ''))}</td>")
+            parts.append(f"<td class=\"{chk_status}\">{chk_status}</td>")
+            parts.append(f"<td><code>{esc(chk.get('detail', ''))}</code></td>")
+            parts.append("</tr>")
+        parts.append("</tbody></table></div>")
+
     for case in report.get("cases", []):
         parts.append("<div class=\"card\">")
         case_name_html = esc(case.get('name'))
@@ -221,6 +238,9 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
         for step in case.get("steps", []):
             details = [f"cwd: {step.get('cwd', '')}"]
             for key, value in step.get("details", {}).items():
+                # 'variants' gets its own table below (lagr.variants step)
+                if key == "variants":
+                    continue
                 if isinstance(value, list):
                     value = " ".join(str(x) for x in value)
                 details.append(f"{key}: {value}")
@@ -239,9 +259,11 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
         parts.append("</tbody></table>")
 
         read_checks = case.get("read_checks", {}).get("checks", [])
-        if read_checks:
-            parts.append("<h3>Python Read Checks</h3><table><thead><tr><th>Label</th><th>Command</th><th>Result</th></tr></thead><tbody>")
-            for chk in read_checks:
+        schema_checks = [chk for chk in read_checks if str(chk.get("label", "")).startswith("schema:")]
+        other_checks = [chk for chk in read_checks if not str(chk.get("label", "")).startswith("schema:")]
+
+        def render_check_rows(chk_list: List[Dict[str, Any]]) -> None:
+            for chk in chk_list:
                 chk_status = "pass" if chk.get("ok") else "fail"
                 reason = chk.get("error", "") or "; ".join(chk.get("warnings", []))
                 details = chk.get("details", {}) or {}
@@ -256,6 +278,37 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
                 parts.append(f"<td class=\"{chk_status}\">{chk_status}</td>")
                 parts.append("</tr>")
                 parts.append(f"<tr class=\"step-details\"><td colspan=\"3\"><pre>{esc(chk.get('file', ''))}\n{esc(reason)}</pre></td></tr>")
+
+        if schema_checks:
+            parts.append("<h3>Schema Auto-Detection Checks (data.meta sidecar + structure sniff)</h3><table><thead><tr><th>Label</th><th>Command</th><th>Result</th></tr></thead><tbody>")
+            render_check_rows(schema_checks)
+            parts.append("</tbody></table>")
+
+        if other_checks:
+            parts.append("<h3>Python Read Checks</h3><table><thead><tr><th>Label</th><th>Command</th><th>Result</th></tr></thead><tbody>")
+            render_check_rows(other_checks)
+            parts.append("</tbody></table>")
+
+        # Lagrangian variant matrix goes last: it builds on the default
+        # data.process run and the read checks above
+        lagr_variant_checks: List[Dict[str, Any]] = []
+        for step in case.get("steps", []):
+            if step.get("name") == "lagr.variants":
+                lagr_variant_checks.extend((step.get("details") or {}).get("variants", []))
+        if lagr_variant_checks:
+            parts.append(
+                "<h3>Lagrangian Variant Checks (petar.data.process with non-default "
+                "--mass-fraction / --add-star-type / --add-mass-range / --calc-energy / -o ascii)</h3>"
+                "<table><thead><tr><th>Check</th><th>Command</th><th>Result</th><th>Detail</th></tr></thead><tbody>"
+            )
+            for chk in lagr_variant_checks:
+                chk_status = "pass" if chk.get("ok") else "fail"
+                parts.append("<tr>")
+                parts.append(f"<td>{esc(chk.get('name', ''))}</td>")
+                parts.append(f"<td><code>{esc(chk.get('command', ''))}</code></td>")
+                parts.append(f"<td class=\"{chk_status}\">{chk_status}</td>")
+                parts.append(f"<td><code>{esc(chk.get('detail', ''))}</code></td>")
+                parts.append("</tr>")
             parts.append("</tbody></table>")
 
         parts.append("</div>")
@@ -889,6 +942,9 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
             msg
             for msg in warn_msgs
             if re.search(r"column|dtype|aligned|truncated|itemsize|Binary file size", msg, flags=re.IGNORECASE)
+            # the schema tier-resolution notice ("Schema detection of ... resolved
+            # to the default-build layout") is informational, not a misalignment
+            and not msg.startswith("Schema detection of")
         ]
         if strict_mismatch and mismatch_warns and ok:
             ok = False
@@ -998,78 +1054,234 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
 
         return load
 
+    def compare_members(a, b):
+        """Member-wise comparison of two DictNpArrayMix reads (walks sub-members)."""
+        if a.size != b.size:
+            return 'size mismatch: explicit %d vs auto %d' % (a.size, b.size)
+        diffs = []
+
+        def walk(x, y, prefix=""):
+            for key, _par in x.keys:
+                xa = getattr(x, key)
+                ya = getattr(y, key)
+                if isinstance(xa, np.ndarray):
+                    if not np.array_equal(xa, ya):
+                        diffs.append(prefix + key)
+                elif hasattr(xa, "keys"):
+                    walk(xa, ya, prefix + key + ".")
+
+        walk(a, b)
+        if not diffs:
+            return 'identical (all %d columns x %d records)' % (a.ncols, a.size)
+        return 'DIFFER: ' + ','.join(diffs[:6])
+
+    def paired_loader(desc, load_explicit, make_auto, auto_desc):
+        """Read the same file twice and report the side-by-side comparison:
+        the legacy explicit-kwargs read vs the concise auto-detection read
+        (`petar.<Reader>(path)`); the comparison (detected kwargs source +
+        member-wise equality) is carried in the check details, rendered in the
+        HTML report."""
+
+        def load(path: Path):
+            obj_a = load_explicit(str(path))
+            details = {
+                "explicit": desc,
+                "explicit_result": "ok, %d records, %d columns" % (obj_a.size, obj_a.ncols),
+            }
+            try:
+                layout_keys = ("interrupt_mode", "external_mode", "spin_3d", "use_mpfrc", "collect_sp_acc", "float_type")
+                # kwargs come from the READER CLASS's own resolve machinery
+                # (not a fixed model class), so event/group/escaper readers
+                # detect with their own LAYOUT_PARAMS declarations
+                _d, kw, _p = type(obj_a).resolvePathInput(str(path), {})
+                provenance = 'reader machinery (%s)' % type(obj_a).__name__
+                obj_b = make_auto(str(path), kw)
+                details["auto"] = auto_desc
+                details["kwargs_source"] = (
+                    "%s - getDataKwargs(path) locates <prefix>.meta from the data path "
+                    "(here the sidecar of the producing run); when absent it falls back "
+                    "to structure sniffing (header width + column/record layout)" % provenance)
+                details["detected_kwargs"] = ", ".join("%s=%s" % (k, kw[k]) for k in layout_keys if k in kw)
+                details["auto_result"] = "ok, %d records" % obj_b.size
+                details["comparison"] = compare_members(obj_a, obj_b)
+            except Exception as exc:  # noqa: BLE001 - report, do not mask the explicit read
+                details["auto"] = auto_desc
+                details["auto_result"] = "failed: %s" % exc
+                details["comparison"] = "AUTO READ FAILED"
+                raise
+            details["records"] = int(obj_a.size)
+            return {
+                "command": desc + "  |  auto: " + auto_desc,
+                "details": details,
+                "_object": obj_a,
+            }
+
+        return load
+
     add_check(
         f"{output_prefix}.lagr",
         case_dir / prefixed_name(output_prefix, "lagr"),
-        obj_loader(petar.LagrangianMultiple, external_mode=external_mode),
+        paired_loader(
+            f"petar.LagrangianMultiple(external_mode={external_mode}).fromfile(path)",
+            obj_loader(petar.LagrangianMultiple, external_mode=external_mode),
+            lambda p, kw: petar.LagrangianMultiple(p),
+            "petar.LagrangianMultiple(path)",
+        ),
         f"petar.LagrangianMultiple(external_mode={external_mode}).fromfile(path)",
     )
-    add_check(f"{output_prefix}.core", case_dir / prefixed_name(output_prefix, "core"), obj_loader(petar.Core), "petar.Core().fromfile(path)")
+    add_check(
+        f"{output_prefix}.core",
+        case_dir / prefixed_name(output_prefix, "core"),
+        paired_loader(
+            "petar.Core().fromfile(path)",
+            obj_loader(petar.Core),
+            lambda p, kw: petar.Core(p),
+            "petar.Core(path)",
+        ),
+        "petar.Core().fromfile(path)",
+    )
     add_check(f"{output_prefix}.status", case_dir / prefixed_name(output_prefix, "status"), obj_loader(petar.Status), "petar.Status().fromfile(path)")
     add_check(
         f"{output_prefix}.esc_single",
         case_dir / prefixed_name(output_prefix, "esc_single"),
-        obj_loader(petar.SingleEscaper, interrupt_mode=interrupt_mode, external_mode=external_mode),
+        paired_loader(
+            f"petar.SingleEscaper(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
+            obj_loader(petar.SingleEscaper, interrupt_mode=interrupt_mode, external_mode=external_mode),
+            lambda p, kw: petar.SingleEscaper(p),
+            "petar.SingleEscaper(path)",
+        ),
         f"petar.SingleEscaper(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
     )
     add_check(
         f"{output_prefix}.esc_binary",
         case_dir / prefixed_name(output_prefix, "esc_binary"),
-        obj_loader(petar.BinaryEscaper, interrupt_mode=interrupt_mode, external_mode=external_mode),
+        paired_loader(
+            f"petar.BinaryEscaper(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
+            obj_loader(petar.BinaryEscaper, interrupt_mode=interrupt_mode, external_mode=external_mode),
+            lambda p, kw: petar.BinaryEscaper(p),
+            "petar.BinaryEscaper(path)",
+        ),
         f"petar.BinaryEscaper(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
     )
 
-    add_check(f"{output_prefix}.sse", case_dir / prefixed_name(output_prefix, "sse"), obj_loader(petar.SSEType, "loadtxt"), "petar.SSEType().loadtxt(path)", expect_format="ascii")
+    add_check(
+        f"{output_prefix}.sse",
+        case_dir / prefixed_name(output_prefix, "sse"),
+        paired_loader(
+            "petar.SSEType().loadtxt(path)",
+            obj_loader(petar.SSEType, "loadtxt"),
+            lambda p, kw: petar.SSEType(p),
+            "petar.SSEType(path)",
+        ),
+        "petar.SSEType().loadtxt(path)",
+        expect_format="ascii",
+    )
 
     add_check(
         f"{output_prefix}.sse.type_change",
         case_dir / prefixed_name(output_prefix, "sse.type_change"),
-        se_aware(petar.SSETypeChange, interrupt_mode),
+        paired_loader(
+            f"petar.SSETypeChange(interrupt_mode={interrupt_mode}).loadtxt(path)",
+            se_aware(petar.SSETypeChange, interrupt_mode),
+            lambda p, kw: petar.SSETypeChange(p),
+            "petar.SSETypeChange(path)",
+        ),
         f"petar.SSETypeChange(interrupt_mode={interrupt_mode}).loadtxt(path)",
         expect_format="ascii",
     )
     add_check(
         f"{output_prefix}.sse.sn_kick",
         case_dir / prefixed_name(output_prefix, "sse.sn_kick"),
-        se_aware(petar.SSESNKick, interrupt_mode),
+        paired_loader(
+            f"petar.SSESNKick(interrupt_mode={interrupt_mode}).loadtxt(path)",
+            se_aware(petar.SSESNKick, interrupt_mode),
+            lambda p, kw: petar.SSESNKick(p),
+            "petar.SSESNKick(path)",
+        ),
         f"petar.SSESNKick(interrupt_mode={interrupt_mode}).loadtxt(path)",
         expect_format="ascii",
     )
 
-    add_check(f"{output_prefix}.bse", case_dir / prefixed_name(output_prefix, "bse"), obj_loader(petar.BSEType, "loadtxt"), "petar.BSEType().loadtxt(path)", expect_format="ascii")
-    add_check(f"{output_prefix}.bse_status", case_dir / prefixed_name(output_prefix, "bse_status"), obj_loader(petar.BSEStatus), "petar.BSEStatus().fromfile(path)")
+    add_check(
+        f"{output_prefix}.bse",
+        case_dir / prefixed_name(output_prefix, "bse"),
+        paired_loader(
+            "petar.BSEType().loadtxt(path)",
+            obj_loader(petar.BSEType, "loadtxt"),
+            lambda p, kw: petar.BSEType(p),
+            "petar.BSEType(path)",
+        ),
+        "petar.BSEType().loadtxt(path)",
+        expect_format="ascii",
+    )
+    add_check(
+        f"{output_prefix}.bse_status",
+        case_dir / prefixed_name(output_prefix, "bse_status"),
+        paired_loader(
+            "petar.BSEStatus().fromfile(path)",
+            obj_loader(petar.BSEStatus),
+            lambda p, kw: petar.BSEStatus(p),
+            "petar.BSEStatus(path)",
+        ),
+        "petar.BSEStatus().fromfile(path)",
+    )
     add_check(
         f"{output_prefix}.bse.type_change",
         case_dir / prefixed_name(output_prefix, "bse.type_change"),
-        se_aware(petar.BSETypeChange, interrupt_mode),
+        paired_loader(
+            f"petar.BSETypeChange(interrupt_mode={interrupt_mode}).loadtxt(path)",
+            se_aware(petar.BSETypeChange, interrupt_mode),
+            lambda p, kw: petar.BSETypeChange(p),
+            "petar.BSETypeChange(path)",
+        ),
         f"petar.BSETypeChange(interrupt_mode={interrupt_mode}).loadtxt(path)",
         expect_format="ascii",
     )
     add_check(
         f"{output_prefix}.bse.sn_kick",
         case_dir / prefixed_name(output_prefix, "bse.sn_kick"),
-        se_aware(petar.BSEKick, interrupt_mode),
+        paired_loader(
+            f"petar.BSEKick(interrupt_mode={interrupt_mode}).loadtxt(path)",
+            se_aware(petar.BSEKick, interrupt_mode),
+            lambda p, kw: petar.BSEKick(p),
+            "petar.BSEKick(path)",
+        ),
         f"petar.BSEKick(interrupt_mode={interrupt_mode}).loadtxt(path)",
         expect_format="ascii",
     )
     add_check(
         f"{output_prefix}.bse.gw_kick",
         case_dir / prefixed_name(output_prefix, "bse.gw_kick"),
-        se_aware(petar.BSEKick, interrupt_mode),
+        paired_loader(
+            f"petar.BSEKick(interrupt_mode={interrupt_mode}).loadtxt(path)",
+            se_aware(petar.BSEKick, interrupt_mode),
+            lambda p, kw: petar.BSEKick(p),
+            "petar.BSEKick(path)",
+        ),
         f"petar.BSEKick(interrupt_mode={interrupt_mode}).loadtxt(path)",
         expect_format="ascii",
     )
     add_check(
         f"{output_prefix}.bse.dynamic_merge",
         case_dir / prefixed_name(output_prefix, "bse.dynamic_merge"),
-        se_aware(petar.BSEDynamicMerge, interrupt_mode),
+        paired_loader(
+            f"petar.BSEDynamicMerge(interrupt_mode={interrupt_mode}).loadtxt(path)",
+            se_aware(petar.BSEDynamicMerge, interrupt_mode),
+            lambda p, kw: petar.BSEDynamicMerge(p),
+            "petar.BSEDynamicMerge(path)",
+        ),
         f"petar.BSEDynamicMerge(interrupt_mode={interrupt_mode}).loadtxt(path)",
         expect_format="ascii",
     )
     add_check(
         f"{output_prefix}.bse.binary_merge",
         case_dir / prefixed_name(output_prefix, "bse.binary_merge"),
-        se_aware(petar.BSETypeChange, interrupt_mode),
+        paired_loader(
+            f"petar.BSETypeChange(interrupt_mode={interrupt_mode}).loadtxt(path)",
+            se_aware(petar.BSETypeChange, interrupt_mode),
+            lambda p, kw: petar.BSETypeChange(p),
+            "petar.BSETypeChange(path)",
+        ),
         f"petar.BSETypeChange(interrupt_mode={interrupt_mode}).loadtxt(path)",
         expect_format="ascii",
     )
@@ -1079,6 +1291,24 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
     if snap_list.exists():
         snap_names = [line.strip() for line in snap_list.read_text(encoding="utf-8").splitlines() if line.strip()]
         if snap_names:
+
+
+            def read_particle_explicit(p, im=interrupt_mode, em=external_mode):
+                obj = petar.Particle(interrupt_mode=im, external_mode=em)
+                obj.fromfile(p)
+                return obj
+
+            def read_particle_auto(p, kw):
+                return petar.Particle(p)
+
+            def read_binary_explicit(p, im=interrupt_mode, em=external_mode):
+                obj = petar.Binary(member_particle_type=petar.Particle, interrupt_mode=im, external_mode=em, G=petar.G_MSUN_PC_MYR)
+                obj.fromfile(p)
+                return obj
+
+            def read_binary_auto(p, kw):
+                return petar.Binary(p, G=petar.G_MSUN_PC_MYR)
+
             snap_name = snap_names[-1]
             snap_path = case_dir / snap_name
             offset = petar.HEADER_OFFSET_WITH_CM if external_mode != "none" else petar.HEADER_OFFSET
@@ -1088,30 +1318,89 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
                 obj.fromfile(str(path), offset=off)
                 return obj
 
+            def snap_particle_auto(p, kw):
+                obj, _header = petar.readSnapshot(p)
+                return obj
+
             add_check(
                 f"snapshot:{snap_name}",
                 snap_path,
-                snap_particle,
+                paired_loader(
+                    f"petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path, offset={offset})",
+                    lambda p: snap_particle(p),
+                    snap_particle_auto,
+                    "petar.Particle(path)",
+                ),
                 f"petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path, offset={offset})",
             )
             add_check(
                 f"snapshot.single:{snap_name}.single",
                 case_dir / f"{snap_name}.single",
-                obj_loader(petar.Particle, interrupt_mode=interrupt_mode, external_mode=external_mode),
+                paired_loader(
+                    f"petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
+                    lambda p, im=interrupt_mode, em=external_mode: read_particle_explicit(p, im, em),
+                    read_particle_auto,
+                    "petar.Particle(path)",
+                ),
                 f"petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
             )
             add_check(
                 f"snapshot.binary:{snap_name}.binary",
                 case_dir / f"{snap_name}.binary",
-                obj_loader(
-                    petar.Binary,
-                    member_particle_type=petar.Particle,
-                    interrupt_mode=interrupt_mode,
-                    external_mode=external_mode,
-                    G=petar.G_MSUN_PC_MYR,
+                paired_loader(
+                    f"petar.Binary(member_particle_type=petar.Particle, interrupt_mode={interrupt_mode}, external_mode={external_mode}, G=petar.G_MSUN_PC_MYR).fromfile(path)",
+                    lambda p, im=interrupt_mode, em=external_mode: read_binary_explicit(p, im, em),
+                    read_binary_auto,
+                    "petar.Binary(path, G=petar.G_MSUN_PC_MYR)",
                 ),
                 f"petar.Binary(member_particle_type=petar.Particle, interrupt_mode={interrupt_mode}, external_mode={external_mode}, G=petar.G_MSUN_PC_MYR).fromfile(path)",
             )
+            # ASCII twin of the last snapshot: exercises the auto reader's
+            # format sniffing end to end (byte sniff -> header-line parse ->
+            # loadtxt(skiprows=1)) against the same explicit-kwargs read in
+            # text form. Written to a temp dir removed right after the check;
+            # getDataKwargs then has no sidecar, so this also proves the
+            # structure-sniff fallback path (ASCII header item count + row
+            # column count).
+            if snap_path.exists():
+                import tempfile as _tempfile
+                with _tempfile.TemporaryDirectory(dir=str(case_dir)) as _atd:
+                    ascii_path = Path(_atd) / f"{snap_name}.ascii"
+                    try:
+                        _hdr = petar.PeTarDataHeader(str(snap_path), snapshot_format="binary", external_mode=external_mode)
+                        _prt = petar.Particle(interrupt_mode=interrupt_mode, external_mode=external_mode)
+                        _prt.fromfile(str(snap_path), offset=offset)
+                        with ascii_path.open("w", encoding="utf-8") as _fh:
+                            _hdr.savetxt(_fh)
+                            _prt.savetxt(_fh)
+                    except Exception as _exc:  # noqa: BLE001 - report as failed check, keep going
+                        add_check(
+                            f"snapshot.ascii:{snap_name}.ascii",
+                            ascii_path,
+                            (lambda _p, _e=_exc: (_ for _ in ()).throw(_e)),
+                            f"ASCII twin generation failed: {_e}",
+                            expect_format="ascii",
+                        )
+                    else:
+
+                        def ascii_explicit(p, im=interrupt_mode, em=external_mode):
+                            obj = petar.Particle(interrupt_mode=im, external_mode=em)
+                            obj.loadtxt(p, skiprows=1)
+                            return obj
+
+                        add_check(
+                            f"snapshot.ascii:{snap_name}.ascii",
+                            ascii_path,
+                            paired_loader(
+                                f"petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}).loadtxt(path, skiprows=1)",
+                                ascii_explicit,
+                                lambda p, kw: petar.Particle(p),
+                                "petar.Particle(path)",
+                            ),
+                            f"petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}).loadtxt(path, skiprows=1)",
+                            expect_format="ascii",
+                        )
+
             # Early-interval binary readback: the last snapshot can be binary-free
             # by design (injected compact binaries merge via BSE; std/merger ICs
             # carry none), which would make the binary reader check trivial.
@@ -1120,12 +1409,11 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
                 add_check(
                     f"snapshot.binary.early:{early_name}.binary",
                     case_dir / f"{early_name}.binary",
-                    obj_loader(
-                        petar.Binary,
-                        member_particle_type=petar.Particle,
-                        interrupt_mode=interrupt_mode,
-                        external_mode=external_mode,
-                        G=petar.G_MSUN_PC_MYR,
+                    paired_loader(
+                        f"petar.Binary(member_particle_type=petar.Particle, interrupt_mode={interrupt_mode}, external_mode={external_mode}, G=petar.G_MSUN_PC_MYR).fromfile(path)",
+                        lambda p, im=interrupt_mode, em=external_mode: read_binary_explicit(p, im, em),
+                        read_binary_auto,
+                        "petar.Binary(path, G=petar.G_MSUN_PC_MYR)",
                     ),
                     f"petar.Binary(member_particle_type=petar.Particle, interrupt_mode={interrupt_mode}, external_mode={external_mode}, G=petar.G_MSUN_PC_MYR).fromfile(path)",
                 )
@@ -1179,9 +1467,131 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         add_check(
             f"group:{group_path.name}",
             group_path,
-            obj_loader(petar.GroupInfo, N=n_member, interrupt_mode=interrupt_mode, external_mode=external_mode),
+            paired_loader(
+                f"petar.GroupInfo(N={n_member}, interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
+                obj_loader(petar.GroupInfo, N=n_member, interrupt_mode=interrupt_mode, external_mode=external_mode),
+                lambda p, kw, n=n_member: petar.GroupInfo(p, N=n),
+                f"petar.GroupInfo(path, N={n_member})",
+            ),
             f"petar.GroupInfo(N={n_member}, interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path)",
         )
+
+    # Schema sidecar + auto-detection checks (doc/output-schema-tagging-plan.md):
+    # 1) the solver-written <prefix>.meta must exist and agree with the case's
+    #    configure modes;
+    # 2) structure sniffing (getDataKwargs) must recover the same schema;
+    # 3) the CLI auto-fill path (autoFillKwargs from empty options) must fill
+    #    the same layout kwargs;
+    # 4) readSnapshot (auto-detected) must equal the explicit-kwargs read.
+    schema_api = {
+        "getDataKwargs": getattr(petar, "getDataKwargs", None),
+        "readMetaData": getattr(petar, "readMetaData", None),
+        "autoFillKwargs": getattr(petar, "autoFillKwargs", None),
+        "readSnapshot": getattr(petar, "readSnapshot", None),
+    }
+    bse_family = ("bse", "mobse", "bseEmp")
+
+    def interrupt_family_matches(value: str, expected: str) -> bool:
+        if value == expected:
+            return True
+        return expected == "bse" and value in bse_family
+
+    def last_snapshot_path() -> Optional[Path]:
+        candidates = [
+            p
+            for p in case_dir.glob(f"{output_prefix}.[0-9]*")
+            if re.fullmatch(rf"{re.escape(output_prefix)}\.\d+", p.name)
+        ]
+        if not candidates:
+            return None
+        return max(candidates, key=lambda p: int(p.name.rsplit(".", 1)[1]))
+
+    snap_for_schema = last_snapshot_path()
+    if None in schema_api.values():
+        # Old installed petar package: report as a failed check (environment
+        # gap) rather than silently skipping, but only when snapshots exist.
+        if snap_for_schema is not None:
+            checks.append(
+                {
+                    "label": "schema:api",
+                    "file": str(snap_for_schema),
+                    "command": "petar.getDataKwargs/readMetaData/autoFillKwargs/readSnapshot",
+                    "ok": False,
+                    "error": "installed petar package predates the schema-detection API; reinstall with make install",
+                    "warnings": [],
+                    "details": {},
+                }
+            )
+    elif snap_for_schema is not None:
+        snap_fmt = "ascii" if detect_ascii(str(snap_for_schema)) else "binary"
+
+        def load_schema_meta(path: Path):
+            meta = schema_api["readMetaData"](str(path))
+            if meta is None:
+                raise ValueError(f"{output_prefix}.meta not found next to {path.name}: the solver build predates the sidecar writer")
+            details = {"meta": {k: meta[k] for k in sorted(meta)}}
+            meta_im = meta.get("layout.interrupt_mode", meta.get("interrupt_mode", "none"))
+            meta_ext = meta.get("layout.external_mode", meta.get("external_mode", "none"))
+            if not interrupt_family_matches(meta_im, interrupt_mode):
+                raise ValueError(f"data.meta interrupt_mode={meta_im} does not match the case mode {interrupt_mode}")
+            if (meta_ext != "none") != (external_mode != "none"):
+                raise ValueError(f"data.meta external_mode={meta_ext} does not match the case mode {external_mode}")
+            return {
+                "command": "petar.readMetaData(path)",
+                "details": details,
+                "_object": None,
+            }
+
+        def load_schema_detect(path: Path):
+            kw = schema_api["getDataKwargs"](str(path))
+            det_im = kw.get("interrupt_mode", "none")
+            det_ext = kw.get("external_mode", "none")
+            if not interrupt_family_matches(det_im, interrupt_mode):
+                raise ValueError(f"detected interrupt_mode={det_im} does not match the case mode {interrupt_mode}")
+            if (det_ext != "none") != (external_mode != "none"):
+                raise ValueError(f"detected external_mode={det_ext} does not match the case mode {external_mode}")
+            # round-trip: auto-detected read vs explicit-kwargs read
+            auto_p, _ = schema_api["readSnapshot"](str(path))
+            explicit = petar.Particle(interrupt_mode=interrupt_mode, external_mode=external_mode)
+            if snap_fmt == "ascii":
+                explicit.loadtxt(str(path), skiprows=1)
+            else:
+                explicit.fromfile(
+                    str(path),
+                    offset=petar.HEADER_OFFSET_WITH_CM if external_mode != "none" else petar.HEADER_OFFSET,
+                )
+            if auto_p.size != explicit.size:
+                raise ValueError(f"detected-kwargs read size {auto_p.size} != explicit-kwargs read size {explicit.size}")
+            for key, _ in explicit.keys:
+                a, b = getattr(auto_p, key), getattr(explicit, key)
+                if isinstance(a, np.ndarray) and not np.array_equal(a, b):
+                    raise ValueError(f"detected-kwargs read differs from explicit-kwargs read in member '{key}'")
+            return {
+                "command": "petar.getDataKwargs(path) + petar.readSnapshot(path) vs explicit kwargs",
+                "details": {"detected": {k: str(v) for k, v in kw.items()}, "records": int(auto_p.size)},
+                "_object": auto_p,
+            }
+
+        def load_schema_autofill(path: Path):
+            kw: Dict[str, Any] = {}
+            schema_api["autoFillKwargs"](str(path), kw, verbose=False)
+            if not kw:
+                raise ValueError("autoFillKwargs filled nothing from an empty option set")
+            fill_im = kw.get("interrupt_mode", "none")
+            fill_ext = kw.get("external_mode", "none")
+            if not interrupt_family_matches(fill_im, interrupt_mode):
+                raise ValueError(f"auto-filled interrupt_mode={fill_im} does not match the case mode {interrupt_mode}")
+            if (fill_ext != "none") != (external_mode != "none"):
+                raise ValueError(f"auto-filled external_mode={fill_ext} does not match the case mode {external_mode}")
+            return {
+                "command": "petar.autoFillKwargs(path, {})",
+                "details": {"filled": {k: str(v) for k, v in kw.items()}},
+                "_object": None,
+            }
+
+        add_check("schema:meta", snap_for_schema, load_schema_meta, "petar.readMetaData(path)", expect_format=snap_fmt)
+        add_check("schema:detect", snap_for_schema, load_schema_detect, "petar.getDataKwargs(path)", expect_format=snap_fmt)
+        add_check("schema:autofill", snap_for_schema, load_schema_autofill, "petar.autoFillKwargs(path, {})", expect_format=snap_fmt)
 
     all_warnings = []
     for chk in checks:
@@ -1200,6 +1610,307 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         "warnings": all_warnings,
         "mismatch_warnings": mismatch_warnings,
     }
+
+
+LAGR_DEFAULT_MASS_FRACTION = [0.1, 0.3, 0.5, 0.7, 0.9]
+
+
+def _lagr_variant_expected_labels(args: List[str]) -> Dict[str, Any]:
+    """Per-run Lagrangian labels a petar.data.process variant passes on the CLI."""
+    expected: Dict[str, Any] = {}
+    for idx, tok in enumerate(args):
+        if tok in ("-m", "--mass-fraction") and idx + 1 < len(args):
+            expected["mass_fraction"] = [float(x) for x in args[idx + 1].split(",")]
+        elif tok == "--add-star-type" and idx + 1 < len(args):
+            expected["add_star_type"] = [x for x in args[idx + 1].split(",") if x]
+        elif tok == "--add-mass-range" and idx + 1 < len(args):
+            expected["add_mass_range"] = [x for x in args[idx + 1].split(",") if x]
+    return expected
+
+
+def run_lagr_variant_checks(
+    repo_root: Path,
+    case: Dict[str, Any],
+    case_dir: Path,
+    env: Dict[str, str],
+    log_path: Path,
+    process_args: List[str],
+    snap_list_name: str,
+    timeout_s: Optional[float] = None,
+    variants: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """Lagrangian read/write matrix beyond the default petar.data.process run.
+
+    Variants come from the matrix global 'lagr_variants' (universal defaults,
+    run for EVERY case) merged with the case key of the same name (case entries
+    override global ones by name, otherwise append). Each entry re-runs
+    petar.data.process on the case's snapshot list under a scratch prefix
+    (lagrvar<N>) with adjusted
+    --mass-fraction / --add-star-type / --add-mass-range (plus the case's own
+    mode flags inherited from process_args), then checks:
+
+    1. the tool run itself — or, for an 'expect_fail' entry, the loud failure
+       (e.g. the auto escape-radius guard when 0.5 is not among the mass
+       fractions and no --r-escape is given),
+    2. the zero-warning auto read petar.LagrangianMultiple(path) recovering
+       the exact per-run labels (mass_fraction, add_star_type,
+       add_mass_range, external_mode) from the <prefix>.lagr.meta sidecar,
+       and a shape-strict explicit-kwargs read agreeing on record count
+       and the time column,
+    3. the legacy read of the bare table copied without its sidecar: a shape
+       mismatch must raise (with the no-sidecar guidance warning), while a
+       same-shape/different-value table must read successfully but carry the
+       no-sidecar mislabel warning (labels fall back to the defaults).
+
+    Returns a step dict; the caller appends it and fails the case when its
+    status is not 'pass'.
+    """
+    import tempfile  # local, mirrors run_schema_selftest
+
+    if variants is None:
+        variants = case.get("lagr_variants", [])
+    variant_names = [v.get("name", "") for v in variants]
+    if len(variant_names) != len(set(variant_names)):
+        dupes = sorted({n for n in variant_names if variant_names.count(n) > 1})
+        return {
+            "name": "lagr.variants",
+            "code": 1,
+            "status": "fail",
+            "reason": f"duplicate lagr_variants names (override-by-name would silently drop work): {', '.join(dupes)}",
+            "command": "internal.lagr_variants_validation",
+            "cwd": str(case_dir),
+            "details": {"variants": []},
+        }
+    step: Dict[str, Any] = {
+        "name": "lagr.variants",
+        "code": 0,
+        "status": "pass",
+        "reason": "",
+        "command": f"petar.data.process -p lagrvar<N> (x{len(variants)}; scratch variants under lagrvar_scratch/) ... {snap_list_name}",
+        "cwd": str(case_dir),
+        "details": {"variants": []},
+    }
+    if not variants:
+        step["details"]["skipped"] = True
+        return step
+
+    to = timeout_s if timeout_s is not None and timeout_s > 0 else _step_timeout({})
+    tools_path = repo_root / "tools"
+    if str(tools_path) not in sys.path:
+        sys.path.insert(0, str(tools_path))
+    import analysis as petar  # type: ignore
+    import numpy as np  # type: ignore
+
+    require_tokens = {x.strip() for x in case.get("require", "").split(",") if x.strip()}
+    external_mode = "galpy" if "galpy" in require_tokens else ("agama" if "agama" in require_tokens else "none")
+
+    snap_list = case_dir / snap_list_name
+    n_snapshots = sum(1 for line in snap_list.read_text(encoding="utf-8").splitlines() if line.strip())
+
+    # scratch products of earlier runs must not leak into this one
+    for stale in case_dir.glob("lagrvar*"):
+        if stale.is_file():
+            stale.unlink()
+    stale_scratch = case_dir / "lagrvar_scratch"
+    if stale_scratch.exists():
+        shutil.rmtree(stale_scratch)
+
+    def check(name: str, ok: bool, detail: str = "", command: str = "") -> None:
+        entry = {"name": name, "ok": bool(ok), "detail": detail}
+        if command:
+            entry["command"] = command
+        step["details"]["variants"].append(entry)
+        if not ok:
+            step["code"] = 1
+            step["status"] = "fail"
+            step["reason"] = step["reason"] or f"lagr variant check failed: {name}"
+
+    for vi, variant in enumerate(variants):
+        vname = variant.get("name", f"variant{vi}")
+        vprefix = f"lagrvar{vi}"
+        vargs = resolve_tokens(variant.get("args", []))
+        expect_fail_marker = variant.get("expect_fail", "")
+        # scan the full effective CLI (case mode flags first, variant args last,
+        # matching argparse precedence) so expected labels cannot drift from the
+        # actual run if a case ever puts -m/--add-* into process_args
+        eff_args = list(process_args) + vargs
+        expected = _lagr_variant_expected_labels(eff_args)
+        wants_ascii = False
+        wants_calc_energy = False
+        for idx, tok in enumerate(eff_args):
+            if tok in ("-o", "--output-format") and idx + 1 < len(eff_args):
+                wants_ascii = eff_args[idx + 1] == "ascii"
+            elif tok in ("-e", "--calc-energy"):
+                wants_calc_energy = True
+        # -o/--output-format also rewrites the DERIVED snapshot files
+        # (data.<N>.single/.binary) in place: such variants must run on a
+        # scratch copy so the case's canonical outputs stay untouched
+        # (matrix flag 'scratch').
+        run_dir = case_dir
+        if variant.get("scratch", False):
+            run_dir = case_dir / "lagrvar_scratch"
+            run_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(snap_list, run_dir / snap_list_name)
+            for line in snap_list.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    src = case_dir / line.strip()
+                    if src.is_file():
+                        shutil.copy2(src, run_dir / src.name)
+            # solver sidecar is <output-prefix>.meta (e.g. data.snap.lst ->
+            # data.meta), NOT <snap-list stem>.meta - derive from the prefix
+            # so the scratch run keeps the sidecar-first detection path
+            solver_meta = case_dir / (snap_list_name.split(".")[0] + ".meta")
+            if solver_meta.is_file():
+                shutil.copy2(solver_meta, run_dir / solver_meta.name)
+        cmd = ["petar.data.process", "--no-auto-resume", "-p", vprefix, *process_args, *vargs, snap_list_name]
+        log_pos = log_path.stat().st_size if log_path.exists() else 0
+        rc, warns = run_cmd(cmd, cwd=run_dir, env=env, log_path=log_path, timeout_s=to)
+        if warns:
+            step.setdefault("warnings", []).extend(warns)
+            step.setdefault("_warn_steps", []).append({"step": f"lagr.variants:{vname}", "messages": warns})
+
+        if expect_fail_marker:
+            log_segment = ""
+            if log_path.exists():
+                with log_path.open("r", encoding="utf-8", errors="ignore") as fh:
+                    fh.seek(log_pos)
+                    log_segment = fh.read()
+            found = expect_fail_marker in log_segment
+            check(f"{vname}: expected failure with guidance", rc != 0 and found, f"rc={rc}, marker found={found}", command="$ " + " ".join(cmd))
+            continue
+        if rc != 0:
+            check(f"{vname}: petar.data.process exit", False, f"exit code {rc}", command="$ " + " ".join(cmd))
+            continue
+        check(f"{vname}: petar.data.process exit", True, "rc=0", command="$ " + " ".join(cmd))
+
+        lagr_path = run_dir / f"{vprefix}.lagr"
+        meta_path = run_dir / f"{vprefix}.lagr.meta"
+        if not lagr_path.exists():
+            check(f"{vname}: output table", False, f"{lagr_path.name} missing")
+            continue
+        check(f"{vname}: output table", True, lagr_path.name)
+        check(f"{vname}: sidecar written", meta_path.exists(), meta_path.name if meta_path.exists() else f"{meta_path.name} missing")
+        sniffed = petar.detectAsciiFile(str(lagr_path)) if lagr_path.stat().st_size > 0 else None
+        check(f"{vname}: output format honored", sniffed == wants_ascii, f"wants ascii={wants_ascii}, sniffed={sniffed}")
+
+        # 2) auto read: new data must resolve cleanly from the sidecar
+        disp = str(lagr_path.relative_to(case_dir)) if lagr_path.is_relative_to(case_dir) else str(lagr_path)
+        meta_disp = str(meta_path.relative_to(case_dir)) if meta_path.is_relative_to(case_dir) else str(meta_path)
+        auto_cmd = f"petar.LagrangianMultiple('{disp}')"
+        try:
+            with warnings.catch_warnings(record=True) as rec:
+                warnings.simplefilter("always")
+                auto = petar.LagrangianMultiple(str(lagr_path))
+            guidance = [str(w.message) for w in rec if "sidecar" in str(w.message) or "pass them explicitly" in str(w.message)]
+            check(f"{vname}: auto read zero-warning", not guidance, "; ".join(guidance) if guidance else f"{int(auto.size)} records", command=auto_cmd)
+            labels = dict(getattr(auto, "initargs", {}) or {})
+            if "mass_fraction" in expected:
+                got = labels.get("mass_fraction")
+                got_vals = np.asarray(got, dtype=float) if got is not None else None
+                check(
+                    f"{vname}: mass_fraction label recovered",
+                    got_vals is not None and np.allclose(got_vals, expected["mass_fraction"]),
+                    f"got={got}",
+                    command=f"auto.initargs['mass_fraction']",
+                )
+            for key in ("add_star_type", "add_mass_range"):
+                if key in expected:
+                    got = list(labels.get(key) or [])
+                    check(f"{vname}: {key} label recovered", got == expected[key], f"got={got}", command=f"auto.initargs['{key}']")
+            check(f"{vname}: external_mode label recovered", str(labels.get("external_mode", external_mode)) == external_mode, f"got={labels.get('external_mode')}", command="auto.initargs['external_mode']")
+            if wants_calc_energy:
+                check(f"{vname}: calc_energy label recovered", bool(labels.get("calc_energy")), f"got={labels.get('calc_energy')}", command="auto.initargs['calc_energy']")
+            check(f"{vname}: record count == snapshots", int(auto.size) == n_snapshots, f"records={int(auto.size)} snapshots={n_snapshots}", command=auto_cmd)
+
+            # explicit read with the known labels: shape-strict (fromfile
+            # raises on mismatch) - compare record count and the time column
+            explicit = petar.LagrangianMultiple(
+                mass_fraction=labels.get("mass_fraction"),
+                add_star_type=labels.get("add_star_type"),
+                add_mass_range=labels.get("add_mass_range"),
+                calc_energy=labels.get("calc_energy", wants_calc_energy),
+                external_mode=external_mode,
+            )
+            explicit.fromfile(str(lagr_path))
+            kw_txt = ", ".join(
+                f"{k}={labels.get(k)!r}"
+                for k in ("mass_fraction", "add_star_type", "add_mass_range", "calc_energy", "external_mode")
+                if labels.get(k) is not None
+            )
+            explicit_cmd = f"petar.LagrangianMultiple({kw_txt}).fromfile('{disp}')"
+            agrees = int(explicit.size) == int(auto.size) and np.allclose(np.asarray(auto.time, dtype=float), np.asarray(explicit.time, dtype=float))
+            check(f"{vname}: explicit read agrees", agrees, f"records={int(explicit.size)}", command=explicit_cmd)
+
+            # meta= explicit injection: the documented escape hatch for files
+            # copied away from their run directory must behave like the auto walk
+            if meta_path.exists():
+                try:
+                    with warnings.catch_warnings(record=True) as rec:
+                        warnings.simplefilter("always")
+                        injected = petar.LagrangianMultiple(str(lagr_path), meta=str(meta_path))
+                    guidance_inj = [str(w.message) for w in rec if "sidecar" in str(w.message) or "pass them explicitly" in str(w.message)]
+                    same = int(injected.size) == int(auto.size) and np.allclose(np.asarray(injected.time, dtype=float), np.asarray(auto.time, dtype=float))
+                    inj_cmd = f"petar.LagrangianMultiple('{disp}', meta='{meta_disp}')"
+                    check(f"{vname}: meta= injection read", not guidance_inj and same, "; ".join(guidance_inj) if guidance_inj else f"{int(injected.size)} records", command=inj_cmd)
+                except Exception as exc:  # noqa: BLE001 - report, do not mask
+                    check(f"{vname}: meta= injection read", False, str(exc))
+        except Exception as exc:  # noqa: BLE001 - report, do not mask
+            check(f"{vname}: auto read", False, str(exc))
+            continue
+
+        # 3) legacy probe: the bare table without its sidecar
+        with tempfile.TemporaryDirectory(dir=str(lagr_path.parent)) as td:
+            legacy = Path(td) / f"{vprefix}.legacy.lagr"
+            shutil.copy2(lagr_path, legacy)
+            exp_fracs = expected.get("mass_fraction", LAGR_DEFAULT_MASS_FRACTION)
+            shape_differs = (
+                len(exp_fracs) != len(LAGR_DEFAULT_MASS_FRACTION)
+                or bool(expected.get("add_star_type"))
+                or bool(expected.get("add_mass_range"))
+            )
+
+            captured: List[str] = []
+            legacy_obj = None
+            raised = ""
+            try:
+                with warnings.catch_warnings(record=True) as rec:
+                    warnings.simplefilter("always")
+                    legacy_obj = petar.LagrangianMultiple(str(legacy))
+                captured = [str(w.message) for w in rec]
+            except Exception as exc:  # noqa: BLE001 - any failure must fail the case, not the suite
+                raised = f"{type(exc).__name__}: {exc}"
+                captured = [str(w.message) for w in rec]
+            guided = [m for m in captured if "no sidecar found" in m]
+            legacy_cmd = f"petar.LagrangianMultiple('{legacy.name}')  # bare copy, no sidecar"
+            if shape_differs:
+                check(f"{vname}: legacy read raises (shape differs)", bool(raised), raised or "read succeeded without the sidecar", command=legacy_cmd)
+                check(f"{vname}: legacy raise carries guidance", bool(guided), "; ".join(guided) or "no no-sidecar warning", command=legacy_cmd)
+            else:
+                check(f"{vname}: legacy read succeeds (same shape)", not raised, raised, command=legacy_cmd)
+                check(f"{vname}: legacy read warns mislabel", bool(guided), "; ".join(guided) or "no no-sidecar warning", command=legacy_cmd)
+                if legacy_obj is not None:
+                    legacy_labels = dict(getattr(legacy_obj, "initargs", {}) or {})
+                    raw = legacy_labels.get("mass_fraction")
+                    mis = np.asarray(raw, dtype=float) if raw is not None else np.array([])
+                    check(
+                        f"{vname}: legacy labels fall back to defaults",
+                        mis.size == len(LAGR_DEFAULT_MASS_FRACTION) and np.allclose(mis, LAGR_DEFAULT_MASS_FRACTION),
+                        f"got={mis}",
+                        command="legacy.initargs['mass_fraction']",
+                    )
+                    # meta=False is the documented explicit opt-out: structure /
+                    # explicit kwargs only, no guidance warning
+                    try:
+                        with warnings.catch_warnings(record=True) as rec2:
+                            warnings.simplefilter("always")
+                            optout = petar.LagrangianMultiple(str(legacy), meta=False)
+                        guided2 = [str(w.message) for w in rec2 if "no sidecar found" in str(w.message)]
+                        optout_cmd = f"petar.LagrangianMultiple('{legacy.name}', meta=False)"
+                        check(f"{vname}: meta=False opt-out is silent", not guided2 and int(optout.size) == n_snapshots, "; ".join(guided2) or f"{int(optout.size)} records", command=optout_cmd)
+                    except Exception as exc:  # noqa: BLE001 - report, do not mask
+                        check(f"{vname}: meta=False opt-out is silent", False, str(exc))
+
+    return step
 
 
 def run_tool_smokes(result: Dict[str, Any], case: Dict[str, Any], case_dir: Path, output_prefix: str, log_path: Path, env: Dict[str, str], t_end: str, run_args: List[str], timeout_s: Optional[float] = None) -> None:
@@ -1852,6 +2563,30 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         result["status"] = "fail"
         return result
 
+    # 5a) Lagrangian variants: petar.data.process with non-default
+    # --mass-fraction / --add-star-type / --add-mass-range under scratch
+    # prefixes, plus the sidecar/legacy read matrix (see
+    # run_lagr_variant_checks). Universal defaults come from the matrix
+    # global 'lagr_variants'; case entries override by name or append.
+    global_lagr_variants = matrix.get("global", {}).get("lagr_variants", [])
+    effective_lagr_variants = list(global_lagr_variants)
+    for case_variant in case.get("lagr_variants", []):
+        for gi, gvi in enumerate(effective_lagr_variants):
+            if gvi.get("name") == case_variant.get("name"):
+                effective_lagr_variants[gi] = case_variant
+                break
+        else:
+            effective_lagr_variants.append(case_variant)
+    lagr_variant_step = run_lagr_variant_checks(repo_root, case, case_dir, env, log_path, process_args, snap_list.name, timeout_s=to, variants=effective_lagr_variants)
+    if not lagr_variant_step["details"].get("skipped"):
+        result["steps"].append(lagr_variant_step)
+        for entry in lagr_variant_step.pop("_warn_steps", []):
+            result["warnings"].append(entry)
+        if lagr_variant_step["status"] != "pass":
+            result["status"] = "fail"
+            result["skip_reason"] = lagr_variant_step["reason"]
+            return result
+
     # 5b) petar.group.dedup smoke on the first binary group file (writes
     # <input>.dedup; input is never modified). The tool's layout validation
     # needs >=50 records, so tiny files are recorded as skipped, not failed.
@@ -2066,6 +2801,69 @@ def run_build(repo_root: Path, matrix: Dict[str, Any], out_root: Path, selected_
     }
 
 
+def run_schema_selftest(repo_root: Path, out_root: Path) -> Dict[str, Any]:
+    """One-time synthetic checks for the schema auto-detection layer.
+
+    Covers the cases the per-case checks cannot (no rare-flag build exists in
+    the matrix): same-tier ambiguity must raise, a correct rare-flag sidecar
+    must be accepted even when the tier-0 structure sniff resolves elsewhere,
+    and a wrong-family sidecar must be rejected.
+    """
+    tools_path = repo_root / "tools"
+    if str(tools_path) not in sys.path:
+        sys.path.insert(0, str(tools_path))
+    import analysis as petar  # type: ignore
+    import numpy as np  # type: ignore
+    import tempfile
+
+    result: Dict[str, Any] = {"status": "pass", "checks": []}
+
+    def record(name: str, ok: bool, detail: str = "") -> None:
+        result["checks"].append({"name": name, "ok": ok, "detail": detail})
+        if not ok:
+            result["status"] = "fail"
+
+    def write_ascii_table(path: Path, ncol: int, rows: int = 5, ext: bool = False) -> None:
+        with path.open("w", encoding="utf-8") as fh:
+            fh.write(("0 %d 1.0 " % rows + " ".join(["1.0"] * 6) + "\n") if ext else ("0 %d 1.0\n" % rows))
+            for _ in range(rows):
+                fh.write(" ".join(["1.0"] * ncol) + "\n")
+
+    with tempfile.TemporaryDirectory(dir=str(out_root)) as td:
+        tdp = Path(td)
+        # 1) same-tier collision (23 columns: none+sp_acc vs none+mpfrc) must raise
+        f_amb = tdp / "data.0"
+        write_ascii_table(f_amb, 23)
+        try:
+            petar.getDataKwargs(str(f_amb))
+            record("same-tier-ambiguity-raises", False, "AmbiguousSchemaError not raised")
+        except petar.AmbiguousSchemaError:
+            record("same-tier-ambiguity-raises", True)
+        # 2) correct tier-2 sidecar accepted although the tier-0 sniff resolves elsewhere
+        #    (36 columns: dsm+mpfrc+sp_acc collides with bse/spin_3d)
+        write_ascii_table(f_amb, 36)
+        petar.writeMetaData(str(tdp / "data.meta"), interrupt_mode="dsm", external_mode="none",
+                            use_mpfrc=True, collect_sp_acc=True)
+        try:
+            kw = petar.getDataKwargs(str(f_amb))
+            ok = kw.get("interrupt_mode") == "dsm" and kw.get("use_mpfrc") and kw.get("collect_sp_acc")
+            record("rare-flag-sidecar-accepted", ok, str(kw))
+        except Exception as exc:  # noqa: BLE001
+            record("rare-flag-sidecar-accepted", False, str(exc))
+        # 3) wrong-family sidecar rejected
+        petar.writeMetaData(str(tdp / "data.meta"), interrupt_mode="merger", external_mode="none")
+        try:
+            petar.getDataKwargs(str(f_amb))
+            record("wrong-sidecar-rejected", False, "ValueError not raised")
+        except ValueError:
+            record("wrong-sidecar-rejected", True)
+        # 4) explicit-flag precedence in the CLI auto-fill helper
+        kw = petar.autoFillKwargs(str(f_amb), {"interrupt_mode": "bse"}, verbose=False)
+        record("autofill-explicit-wins", kw.get("interrupt_mode") == "bse", str(kw.get("interrupt_mode")))
+
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="PeTar functional smoke test: build matrix + quick run + analysis pipeline")
     parser.add_argument("--matrix", default="test/functional/functional_matrix.json")
@@ -2141,6 +2939,7 @@ def main() -> int:
         if stale:
             print(f"[cleanup] removed {len(stale)} stale per-case report(s): {', '.join(stale)}")
         report["preflight"] = preflight_families(repo_root, matrix, selected, out_root)
+        report["schema_selftest"] = run_schema_selftest(repo_root, out_root)
         for case in selected:
             case_result = run_case(repo_root, case, matrix, out_root)
             report["cases"].append(case_result)
@@ -2152,6 +2951,7 @@ def main() -> int:
                     "phase": args.phase,
                     "started_at": report["started_at"],
                     "preflight": case_preflight,
+                    "schema_selftest": report.get("schema_selftest"),
                     "build": None,
                     "cases": [case_result],
                 },
@@ -2166,7 +2966,8 @@ def main() -> int:
 
     failed = [c for c in report.get("cases", []) if c.get("status") == "fail"]
     build_failed = report.get("build", {}).get("status") == "fail" if report.get("build") else False
-    return 1 if failed or build_failed else 0
+    selftest_failed = report.get("schema_selftest", {}).get("status") == "fail"
+    return 1 if failed or build_failed or selftest_failed else 0
 
 
 if __name__ == "__main__":

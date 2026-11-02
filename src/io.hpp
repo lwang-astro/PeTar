@@ -23,6 +23,87 @@ using COMM::IOParamsContainer;
 using COMM::IOParamsPrintHelp;
 using COMM::FindUndefinedOptions;
 
+//! configure-time interrupt mode (exact token recovered from compile macros;
+//! 'off' collapses to 'none' since no stellar-evolution columns exist then)
+inline const char* getInterruptModeName() {
+#ifdef BSEEMP
+    return "bseEmp";
+#elif defined(MOBSE)
+    return "mobse";
+#elif defined(SEVN)
+    return "sevn";
+#elif defined(BSE_BASE)
+    return "bse";
+#elif defined(DISK_STAR_MERGER)
+    return "dsm";
+#elif defined(STELLAR_EVOLUTION)
+    return "merger";
+#else
+    return "none";
+#endif
+}
+
+//! configure-time external potential mode
+inline const char* getExternalModeName() {
+#ifdef GALPY
+    return "galpy";
+#elif defined(AGAMA)
+    return "agama";
+#else
+    return "none";
+#endif
+}
+
+//! write the output-schema sidecar (<prefix>.meta, output-meta/1) next to the
+//! parameter files; the Python readers (petar.getDataKwargs) use it to select
+//! the reader keyword arguments without guessing from the file structure.
+inline void writeOutputMeta(const std::string& _prefix, const int _data_format, const std::string& _version) {
+    const char* interrupt = getInterruptModeName();
+    const char* external = getExternalModeName();
+    std::string family = std::string("petar");
+    if (std::string(interrupt) != "none") family += std::string(".") + interrupt;
+    if (std::string(external) != "none") family += std::string(".") + external;
+    FILE* fmeta = fopen((_prefix + ".meta").c_str(), "w");
+    if (fmeta == NULL) {
+        std::cerr<<"Error: cannot open "<<_prefix<<".meta for writing.\n";
+        return;
+    }
+    fprintf(fmeta, "# output-meta/1: output schema tag; see doc/output-schema-tagging-plan.md\n");
+    fprintf(fmeta, "format = output-meta/1\n");
+    fprintf(fmeta, "producer = petar\n");
+    fprintf(fmeta, "petar_version = %s\n", _version.c_str());
+    fprintf(fmeta, "binary_family = %s\n", family.c_str());
+    fprintf(fmeta, "snapshot_format = %s\n", (_data_format == 1 || _data_format == 3) ? "ascii" : "binary");
+    fprintf(fmeta, "layout.interrupt_mode = %s\n", interrupt);
+    fprintf(fmeta, "layout.external_mode = %s\n", external);
+    fprintf(fmeta, "layout.use_mpfrc = %d\n",
+#ifdef PETAR_USE_MPFRC
+            1
+#else
+            0
+#endif
+            );
+    fprintf(fmeta, "layout.collect_sp_acc = %d\n",
+#ifdef COLLECT_SP_ACC
+            1
+#else
+            0
+#endif
+            );
+#ifdef BSE_BASE
+    // BSE-family star.spin width: 3 columns since 2024-12 (ospin[3] in bse_interface.h)
+    fprintf(fmeta, "layout.spin_3d = true\n");
+#endif
+    fprintf(fmeta, "layout.float_type = %s\n",
+#ifdef PETAR_USE_MPFRC
+            "float128"
+#else
+            "float64"
+#endif
+            );
+    fclose(fmeta);
+}
+
 
 class FileHeader{
 public:

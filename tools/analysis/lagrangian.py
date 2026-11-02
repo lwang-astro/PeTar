@@ -4,7 +4,9 @@ from scipy import spatial as sp
 from sdar.base import *
 from .data import *
 from .bse import *
+from sdar.base import enablePathInit
 
+@enablePathInit
 class Core(DictNpArrayMix):
     """ Core of a star cluster
     Keys: (class members)
@@ -498,6 +500,7 @@ class Lagrangian(DictNpArrayMix):
                     self.epot_ext = np.append(self.epot_ext, [np.array(epot_ext)], axis=0)
             return rlagr
 
+@enablePathInit
 class LagrangianMultiple(DictNpArrayMix):
     """ Lagrangian for single, binaries and all
     Keys: (class members)
@@ -556,6 +559,17 @@ class LagrangianMultiple(DictNpArrayMix):
         If one component is this type of star or within the mass range, its mass and c.m. position and velocity are used.
 
     """
+    # Layout declarations (see DictNpArrayMix in sdar.base): the enumerable
+    # column-changing options of petar.data.process, and the per-run values
+    # (mass-fraction array, star-type / mass-range name lists) carried by the
+    # producer sidecar <prefix>.lagr.meta but never enumerated. calc_multi_rc
+    # changes computation, not columns, so it is not a layout parameter.
+    LAYOUT_PARAMS = {
+        'calc_energy': (False, True),
+        'external_mode': ('none', 'galpy', 'agama'),
+    }
+    LAYOUT_META_PARAMS = ('mass_fraction', 'add_star_type', 'add_mass_range')
+
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
 

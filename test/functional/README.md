@@ -7,7 +7,17 @@ Goals:
 1. Build/compile matrix sanity check across major features.
 2. One very fast simulation run per feature case.
 3. Analysis tools pipeline check without runtime errors.
-4. Determinism where chaos matters: the `bse` case pins `--rand-seed
+4. Output-schema checks per case (`schema:meta|detect|autofill` in the
+   readback): the solver-written `data.meta` sidecar exists and matches the
+   case modes; `petar.getDataKwargs` recovers the schema from the data; the
+   CLI auto-fill path fills the same reader kwargs (see
+   `doc/output-schema-tagging-plan.md`). Snapshot-family readbacks
+   (`snapshot*` rows) are paired reads: the legacy explicit-kwargs command
+   and the auto-detection command (`petar.readSnapshot(path)` /
+   `**petar.getDataKwargs(path)`) each read the same file, and the check
+   details carry a member-wise comparison (detected kwargs source, record
+   counts, identical/differ).
+5. Determinism where chaos matters: the `bse` case pins `--rand-seed
    1792391053081014136` (known non-grinding realization; the wall-clock
    default re-rolled a pathological tight-binary encounter on some draws,
    1.2 s … 6+ min — record: `SDAR/docs/etot_sd_ref_corruption_fix_notes.md`).
@@ -60,6 +70,13 @@ Binary analysis coverage is distributed per mode instead of a dedicated case: th
 ## Tool Coverage
 
 Core chain, every case: `petar.init` → `petar.select` → `petar` → `petar.data.process` → `petar.group.dedup` (when group files exist) → `petar.get.object.snap` → `petar.format.transfer.post` → `petar.movie`, plus mode-correct Python readback (including `GroupInfo`).
+
+Lagrangian variants (matrix key `lagr_variants`): beyond the default run, `petar.data.process` re-runs under scratch `lagrvar<N>` prefixes with non-default `--mass-fraction` / `--add-star-type` / `--add-mass-range` / `--calc-energy` / `-o ascii` (case mode flags inherited from `process_args`; output-format-changing variants run on a scratch copy of the snapshots — matrix flag `scratch` — because `data.process` rewrites the derived `.single/.binary` files in place). **Every case** runs the matrix-global default variant (custom fractions + mass range + calc-energy); stellar-evolution cases (`bse`, `sevn`, `bse-galpy`, `bse-galpy-gasdrag`, `bse-agama`) add a star-type/cross-group variant; `std` adds the same-shape mislabel, no-0.5 guard, and ASCII probes. Case entries override global ones by name. Each variant checks:
+
+- the tool run itself, or the expected loud failure (`expect_fail`; the auto escape-radius guard when `--mass-fraction` lacks `0.5` and no `--r-escape` is given);
+- the physical output format matches the requested one (`-o ascii` vs binary);
+- the zero-warning auto read `petar.LagrangianMultiple(path)` recovering the exact per-run labels (mass fractions, star-type/mass-range groups incl. `A__in__B` cross groups, `calc_energy`, external mode) from the `<prefix>.lagr.meta` sidecar, agreeing with an explicit-kwargs read, and the `meta='<sidecar>'` injection behaving like the auto walk;
+- the legacy read of the bare table without its sidecar: a shape mismatch (different fraction count, or extra star-type/mass-range groups) must raise with the no-sidecar guidance warning; a same-shape/different-value table must read but warn (labels silently fall back to the defaults; `meta=False` opts out silently).
 
 Per-case extra tools (matrix key `tool_smokes`; mutating tools run on scratch copies):
 
@@ -117,6 +134,7 @@ Set `AGAMA_CONF_FILE` explicitly only when you want to override that default.
 3. `petar` run can start and finish normally (`--write-group-info 2` enabled so binary group files are produced).
 4. Analysis chain runs successfully:
    - `petar.data.process`
+   - `petar.data.process` Lagrangian variants (all cases: matrix-global default + per-case extras; see Tool Coverage)
    - `petar.group.dedup` (when group files exist; output `<file>.dedup`, input untouched)
    - `petar.get.object.snap`
    - `petar.format.transfer.post`

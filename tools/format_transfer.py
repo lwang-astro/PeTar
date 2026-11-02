@@ -28,8 +28,8 @@ if __name__ == '__main__':
         print("  Please ensure that the stellar evolution method (-i), external mode (-t), and binary information (-B) used in petar.data.process are the same here.")
         print("Options (default arguments shown in parentheses at the end):")
         print("  -h(--help)                Display help information.")
-        print("  -i(--interrupt-mode)  [S] The interruption mode used in petar; choices: no, merger, dsm, bse, mobse, sevn (default: no).")
-        print("  -t(--external-mode)   [S] External mode used in petar; choices: galpy, no (default: no).")
+        print("  -i(--interrupt-mode)  [S] The interruption mode used in petar; choices: no, merger, dsm, bse, mobse, sevn (default: auto-detect from the data, fallback no).")
+        print("  -t(--external-mode)   [S] External mode used in petar; choices: galpy, agama, no (default: auto-detect from the data, fallback no).")
         print("  -B(--full-binary)         If petar.data.process uses the -B option to obtain full (physical) binary orbital parameters, ")
         print("                            this option is needed to correctly read (physical) binary snapshots.")
         print(f"  -s(--snapshot-format) [S] Input snapshot file format: ascii, binary, or npy (default: {snapshot_format}).")
@@ -81,6 +81,14 @@ if __name__ == '__main__':
     fl = open(filename,'r')
     file_list = fl.read()
     path_list = file_list.splitlines()
+
+    # Auto-detect the output schema from the first snapshot of the list when
+    # -i/-t are not given; explicit flags always win.
+    if (len(path_list)>0):
+        sample = path_list[0]
+        if (not os.path.exists(sample)) and os.path.exists(sample+'.single'):
+            sample = sample+'.single'
+        petar.autoFillKwargs(sample, snapshot_kwargs, label='petar.format.transfer.post')
 
     data_type_list = data_type.split(',')
     for file_path in path_list:

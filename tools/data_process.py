@@ -261,10 +261,10 @@ if __name__ == '__main__':
         print("     --e-escape       [S|F] Energy criterion for escaper when objects are outside distance criterion; only works when --r-escape is used; if the value is 'bound_noext', calculate bound energy without external potential and remove etot > 0; otherwise etot > mass * e-escape (default: 0.0).")
         print("     --m-ext            [S] Read a table of masses of external potential for each time, used for the calculation of tidal radius (default: not used).")
         print("                            The argument is the filename of the table. The file contains two columns: time, mass.")
-        print("  -i(--interrupt-mode)  [S] The interruption mode used in petar; choices: no, merger, dsm, bse, mobse, bseEmp, sevn (default: no).")
-        print("  -t(--external-mode)   [S] External mode used in petar; choices: galpy, no (default: no).")
-        print("  -P(--use_mpfrc)           Include three columns of high-precision parts of particle position x, y, z.")
-        print("     --spin-1d               Stellar evolution data use 1D spin (one column) instead of 3D; for PeTar outputs before Dec 2024.")
+        print("  -i(--interrupt-mode)  [S] The interruption mode used in petar; choices: no, merger, dsm, bse, mobse, bseEmp, sevn (default: auto-detect from the data, fallback no).")
+        print("  -t(--external-mode)   [S] External mode used in petar; choices: galpy, agama, no (default: auto-detect from the data, fallback no).")
+        print("  -P(--use_mpfrc)           Include three columns of high-precision parts of particle position x, y, z (default: auto-detect, fallback off).")
+        print("     --spin-1d               Stellar evolution data use 1D spin (one column) instead of 3D; for PeTar outputs before Dec 2024 (default: auto-detect, fallback 3D).")
         print(f"  -s(--snapshot-format) [S] Input snapshot data format: binary, ascii (default: binary).")
         print("                             Refer to the '-i' option of petar.")
         print("     --esc-snapshot-format [S] Set escaper snapshot data format for reading: binary, ascii, npy (follows -s).")
@@ -424,6 +424,17 @@ if __name__ == '__main__':
 
     filename = remainder[0]
 
+    # Auto-detect the output schema (interrupt/external mode, spin width, MPFR
+    # columns) from the first snapshot when the layout flags are not given;
+    # explicit flags always win. Done before the G default, which depends on
+    # the interrupt mode.
+    if (('interrupt_mode' not in kwargs.keys()) or ('external_mode' not in kwargs.keys())
+            or ('spin_3d' not in kwargs.keys()) or ('use_mpfrc' not in kwargs.keys())):
+        with open(filename,'r') as fl_peek:
+            first_path = next((line.strip() for line in fl_peek if line.strip()), None)
+        if (first_path is not None):
+            petar.autoFillKwargs(first_path, kwargs, label='petar.data.process')
+
     if (not 'G' in kwargs.keys()):
         if ('interrupt_mode' in kwargs.keys()):
             if ('bse' in kwargs['interrupt_mode'] or 'sevn' in kwargs['interrupt_mode']): kwargs['G'] = petar.G_MSUN_PC_MYR # pc^3/(Msun*Myr^2)
@@ -508,6 +519,7 @@ if __name__ == '__main__':
                     result_mix = deduplicateByTime(result_mix)
                 writeMixData(result_mix, key_filename, output_format)
                 print (key,"data is saved in file:",getMixFilename(key_filename, output_format))
+
                 continue
             if (output_format == 'ascii'):
                 with open(key_filename, write_option) as f:
@@ -520,6 +532,18 @@ if __name__ == '__main__':
             else:
                 raise ValueError('Output format %s is unknown, should be ascii, binary or npy.' % output_format)
             print (key,"data is saved in file:",getMixFilename(key_filename, output_format))
+
+    # producer sidecar for the Lagrangian table: its layout depends on
+    # data.process options (mass fractions, energy columns, extra groups)
+    # that the solver's data.meta cannot know; writeLayoutMeta encodes the
+    # resolved LAYOUT_PARAMS + LAYOUT_META_PARAMS of the final product
+    if 'lagr' in result.keys():
+        try:
+            result['lagr'].writeLayoutMeta(filename_prefix + '.lagr.meta',
+                                           producer='petar.data.process')
+            print("lagr layout sidecar:", filename_prefix + '.lagr.meta')
+        except Exception as e:
+            print('WARNING: cannot write the lagr layout sidecar:', e)
 
     for key in ['esc_single','esc_binary']:
         if key in result.keys():

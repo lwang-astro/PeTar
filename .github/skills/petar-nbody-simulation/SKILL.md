@@ -269,7 +269,7 @@ One-line hints only — exact constructor signatures, header offsets, and worked
 | File pattern | Reader class | Key hint |
 |---|---|---|
 | `data.<N>` (raw snapshot) | `petar.Particle` | Binary: `offset=` depends on build (see asset); ASCII: `skiprows=1`; header via `petar.PeTarDataHeader` |
-| `data.lagr` | `petar.LagrangianMultiple` | `external_mode` controls COM-offset columns |
+| `data.lagr` | `petar.LagrangianMultiple` | Auto-recovers per-run labels (`mass_fraction`, `add_*`, `calc_energy`) from `data.lagr.meta`; `external_mode` gates `epot_ext` (with `calc_energy`) |
 | `data.core` / `data.status` | `petar.Core` / `petar.Status` | Plain `.fromfile()` |
 | `data.esc_single` / `data.esc_binary` | `petar.SingleEscaper` / `petar.BinaryEscaper` | Needs `interrupt_mode`, `external_mode` |
 | `data.sse` / `data.bse` | `petar.SSEType` / `petar.BSEType` | ASCII — `.loadtxt()` |
@@ -292,7 +292,9 @@ These kwargs control column layout and **must match the producing solver**. Pass
 | `external_mode` | `none`, `galpy`, `agama` | Must match solver `--with-external` |
 
 Mismatched kwargs cause column misalignment and read errors (see `Snapshot Read-Mismatch Policy`).
+**Recover them with auto-detection instead of guessing**: every reader accepts a path — `petar.Particle('data.5')` auto-reads with the schema from the `<prefix>.meta` sidecar (or the file structure for older runs; explicit kwargs win); CLIs auto-fill `-i`/`-t`. Ambiguity raises `AmbiguousSchemaError` — details: `assets/data-readback-patterns.md` → "Schema auto-detection".
 
+**Keep `.meta` files with the data when copying or archiving**: `data.meta` (solver) and `<prefix>.lagr.meta` (`petar.data.process`, carries the mass-fraction/star-type/mass-range labels) are part of the output, not disposable extras — without them reads fall back to structure guessing with warnings, and a same-shape Lagrangian table silently mislabels its radii. For files already copied away from their run directory, pass `meta='<path>'` to point the reader at the sidecar.
 ### Analysis Modules (import petar.<module>)
 
 | Module | Purpose |
@@ -323,7 +325,7 @@ Recovery sequence:
 
 1. Stop current downstream command.
 2. Re-check producing solver family and runtime output mode.
-3. Re-check reader flags (`-i`, `-t`, format flags, snapshot type flags) and Python kwargs (`interrupt_mode`, `external_mode`, header offset).
+3. Re-check reader flags (`-i`, `-t`, format flags, snapshot type flags) and Python kwargs (`interrupt_mode`, `external_mode`, header offset) — or let `petar.getDataKwargs(path)` recover them from the `data.meta` sidecar / file structure.
 4. Retry with corrected mode.
 5. **Do not write a custom binary/ASCII parser as a workaround.** PeTar output formats are intentionally covered by the installed Python readers; a column mismatch almost always means the reader mode/flags are wrong. If the mode/flags are verified and the mismatch persists, treat it as a potential bug in the reader or the producing solver, stop the analysis, and report the issue to the user with the exact file pattern, reader class, kwargs, and error message.
 

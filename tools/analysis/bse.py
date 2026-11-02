@@ -1,6 +1,7 @@
 # BSE data interface
 from sdar.base import *
 from sdar.functions import *
+from sdar.base import enablePathInit
 
 BSE_STAR_TYPE_INDEX={'LMS':0, 'MS':1, 'HG':2, 'GB':3, 'CHeB':4, 
                      'FAGB':5, 'SAGB':6, 'HeMS':7, 'HeHG':8, 'HeGB':9, 
@@ -98,7 +99,12 @@ class SEVNStarParameter(DictNpArrayMix):
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 
+@enablePathInit
 class SSETypeChange(DictNpArrayMix):
+    # layout parameters: the stellar-evolution mode changes the event
+    # columns (bse-family and sevn have distinct layouts)
+    LAYOUT_PARAMS = {'interrupt_mode': ('none', 'merger', 'bse', 'dsm', 'sevn')}
+
     """ SSE type change output data from PeTar
     Keys: (class members)
         id (1D): particle id
@@ -178,7 +184,12 @@ class SSETypeChange(DictNpArrayMix):
 
         DictNpArrayMix.printTable(self, column_format, print_title)
 
+@enablePathInit
 class SSESNKick(DictNpArrayMix):
+    # layout parameters: the stellar-evolution mode changes the event
+    # columns (bse-family and sevn have distinct layouts)
+    LAYOUT_PARAMS = {'interrupt_mode': ('none', 'merger', 'bse', 'dsm', 'sevn')}
+
     """ SSE SN kick output data from PeTar
     Keys: (class members)
         id (1D): particle id
@@ -200,7 +211,12 @@ class SSESNKick(DictNpArrayMix):
 
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
+@enablePathInit
 class SSEType(DictNpArrayMix):
+    # layout parameters: the stellar-evolution mode changes the event
+    # columns (bse-family and sevn have distinct layouts)
+    LAYOUT_PARAMS = {'interrupt_mode': ('none', 'merger', 'bse', 'dsm', 'sevn')}
+
     """ SSE stellar types
     Keys: (class members), the corresponding stellar type index used in SSE is shown in [] at the end
         LMS (1D): deeply or fully convective low mass MS star [0]
@@ -282,7 +298,12 @@ class BSEBinaryEvent(DictNpArrayMix):
                 keys = keys_base
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
+@enablePathInit
 class BSETypeChange(DictNpArrayMix):
+    # layout parameters: the stellar-evolution mode changes the event
+    # columns (bse-family and sevn have distinct layouts)
+    LAYOUT_PARAMS = {'interrupt_mode': ('none', 'merger', 'bse', 'dsm', 'sevn')}
+
     """ BSE type change output data from PeTar
     Keys: (class members)
         type (1D): binary type, see help(petar.BSEType)
@@ -383,7 +404,12 @@ class BSETypeChange(DictNpArrayMix):
 
         DictNpArrayMix.printTable(self, column_format, print_title)
 
+@enablePathInit
 class BSEKick(DictNpArrayMix):
+    # layout parameters: the stellar-evolution mode changes the event
+    # columns (bse-family and sevn have distinct layouts)
+    LAYOUT_PARAMS = {'interrupt_mode': ('none', 'merger', 'bse', 'dsm', 'sevn')}
+
     """ BSE SN/GW kick output data from PeTar
     Keys: (class members)
         id1 (1D): particle id of component 1
@@ -434,7 +460,12 @@ class SSEStarParameterPair(DictNpArrayMix):
             keys = [['p1',SSEStarParameter],['p2',SSEStarParameter]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
+@enablePathInit
 class BSEDynamicMerge(DictNpArrayMix):
+    # layout parameters: the stellar-evolution mode changes the event
+    # columns (bse-family and sevn have distinct layouts)
+    LAYOUT_PARAMS = {'interrupt_mode': ('none', 'merger', 'bse', 'dsm', 'sevn')}
+
     """ BSE Dynamical merger from PeTar
     Keys: (class members)
         id1 (1D): particle id of component 1
@@ -500,7 +531,12 @@ class BSEDynamicMerge(DictNpArrayMix):
 #            self.mave[key] = np.append(self.mave[key], np.average(mass))
 #        self.size +=1
 
+@enablePathInit
 class BSEType(DictNpArrayMix):
+    # layout parameters: the stellar-evolution mode changes the event
+    # columns (bse-family and sevn have distinct layouts)
+    LAYOUT_PARAMS = {'interrupt_mode': ('none', 'merger', 'bse', 'dsm', 'sevn')}
+
     """ BSE binary types
     Keys: (class members)
         Unset   (1D): no special [0]
@@ -543,7 +579,12 @@ class BSENumberCount(DictNpArrayMix):
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs_loc)
 
 
+@enablePathInit
 class BSEStatus(DictNpArrayMix):
+    # layout parameters: the stellar-evolution mode changes the event
+    # columns (bse-family and sevn have distinct layouts)
+    LAYOUT_PARAMS = {'interrupt_mode': ('none', 'merger', 'bse', 'dsm', 'sevn')}
+
     """ BSE event record
     Keys: (class members)
         time (1D): evolved time

@@ -129,6 +129,10 @@
 125. (1861e) Fix restart-boundary duplicate group records in petar.data.clear (group-stream trim now strict; sse/bse events unaffected).
 126. (1863e) Fix input data filename detection failing when an option with a negative value (e.g. `--rlo_gamma_angmom -1`) is on the command line.
 127. (1864e) Fix PM pseudo-particle mirror flip on binary member-order swap (odd-multipole force jumps ~(a/d)^3 at group reformations). [major]
+128. (1867e) Add automatic schema detection: petar.Particle('data.5') reads output using data.meta; -i/-t optional (needs SDAR >= 483e). [major]
+129. (1867e) Add Lagrangian metadata file <prefix>.lagr.meta from petar.data.process; petar.LagrangianMultiple(path) needs no manual keywords. [major]
+130. (1867e) Fix petar.data.process crash when --mass-fraction lacks 0.5: it now stops with a clear message (add 0.5 or pass --r-escape).
+131. (1867e) Fix reading --add-mass-range values from the Lagrangian metadata file: mass bins like 1_150 were misread as the number 1150.
 
 **Existing issues (consolidated, live list — historical sections below no longer repeat their issues)**
 

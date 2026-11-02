@@ -104,8 +104,8 @@ if __name__ == '__main__':
         print("                   # core: core data at the time of the snapshot")
         print("                   # origin, single, and binary: all three types of snapshots without position and velocity correction")
         print("                   # Return selected data")
-        print("  -i(--interrupt-mode)  [S]  The interruption mode used in Petar, choices: none, merger, bse, mobse, bseEmp, dsm, sevn [%s]" % interrupt_mode)
-        print("  -t(--external-mode)   [S]  External mode used in Petar, choices: galpy, none [%s]" % external_mode)
+        print("  -i(--interrupt-mode)  [S]  The interruption mode used in Petar, choices: none, merger, bse, mobse, bseEmp, dsm, sevn [auto-detect, fallback %s]" % interrupt_mode)
+        print("  -t(--external-mode)   [S]  External mode used in Petar, choices: galpy, agama, none [auto-detect, fallback %s]" % external_mode)
         print("       Notice that when the external mode is not none and the mode is not custom,")
         print("       the position and velocity offset from the header are added for single and binary snapshots.")
         print("  -P(--use_mpfrc)           Include three columns of high-precision parts of particle position x, y, z.")
@@ -179,6 +179,14 @@ if __name__ == '__main__':
         usage()
         sys.exit(1)
 
+    # flag-presence tests: tuple-in-list would be silently always-False (list holds
+    # single strings), so test each option token individually
+    opt_tokens = [opt[0] for opt in opts]
+    interrupt_mode_set = any(tok in ('-i', '--interrupt-mode') for tok in opt_tokens)
+    external_mode_set = any(tok in ('-t', '--external-mode') for tok in opt_tokens)
+    use_mpfrc_set = any(tok in ('-P', '--use-mpfrc') for tok in opt_tokens)
+    spin_3d_set = ('--spin-1d' in opt_tokens)
+
     if (mode=='bid') | (mode=='bidfile'):
         if (snap_type!='binary'):
             raise ValueError("Mode is %s but snapshot file type (-f) is not binary (given: %s)" % (mode,snap_type))
@@ -244,6 +252,24 @@ if __name__ == '__main__':
         write_option = write_option + 'b'
     print('Output file: ',filename_out)
 
+    # Auto-detect the output schema from the first snapshot of the list when
+    # the layout flags are not given; explicit flags always win.
+    auto_kwargs = dict()
+    if (interrupt_mode_set): auto_kwargs['interrupt_mode'] = interrupt_mode
+    if (external_mode_set): auto_kwargs['external_mode'] = external_mode
+    if (use_mpfrc_set): auto_kwargs['use_mpfrc'] = use_mpfrc
+    if (spin_3d_set): auto_kwargs['spin_3d'] = spin_3d
+    fl = open(filename,'r')
+    file_list = fl.read()
+    path_list = file_list.splitlines()
+    fl.close()
+    if (len(path_list)>0):
+        petar.autoFillKwargs(path_list[0], auto_kwargs, label='petar.get.object.snap')
+    interrupt_mode = auto_kwargs.get('interrupt_mode', interrupt_mode)
+    external_mode = auto_kwargs.get('external_mode', external_mode)
+    use_mpfrc = auto_kwargs.get('use_mpfrc', use_mpfrc)
+    spin_3d = auto_kwargs.get('spin_3d', spin_3d)
+
     snap_kwargs=dict()
     snap_kwargs['interrupt_mode'] = interrupt_mode
     snap_kwargs['external_mode'] = external_mode
@@ -254,11 +280,6 @@ if __name__ == '__main__':
 
     for key, item in snap_kwargs.items(): print(key,':',item)
     for key, item in kwargs.items(): print(key,':',item)
-
-    fl = open(filename,'r')
-    file_list = fl.read()
-    path_list = file_list.splitlines()
-    fl.close()
 
     core = petar.Core()
     read_core = False

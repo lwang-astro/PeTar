@@ -42,6 +42,10 @@ petar.data.process -i bse -t agama --r-escape tidal -G 0.00449830997959438 data.
 
 If the user explicitly asks for run command only, omit post-processing.
 
+## Escape radius and mass fractions
+
+`petar.data.process` derives the default escape radius from the half-mass radius: a custom `--mass-fraction` list **must contain `0.5`**, or `--r-escape` must be given explicitly — otherwise the tool stops with a guidance error instead of computing a wrong escaper list.
+
 ## petar.movie Defaults by Scenario
 
 When the user asks for a full workflow that includes visualization, use these `petar.movie` argument templates based on the scenario. Mode flags `-i`/`-t` must match the producing solver. Add `--n-cpu 1` for deterministic smoke/functional runs.

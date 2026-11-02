@@ -597,8 +597,9 @@ class Data:
     def __init__(self, **kwargs):
         self.skiprows = 0
         self.snapshot_type = 'post'
-        self.interrupt_mode = 'bse'
-        self.external_mode = 'none'
+        self.interrupt_mode = None  # None: auto-detect from the data at read time (fallback 'bse')
+        self.external_mode = None   # None: auto-detect from the data at read time (fallback 'none')
+        self._schema_notice_printed = False
         self.G = petar.G_MSUN_PC_MYR # pc^3/(Msun*Myr^2)
         self.semi_max = 0.1
         self.snapshot_format = 'binary'
@@ -633,6 +634,24 @@ class Data:
         snapshot_name = os.path.basename(file_path)
         idx_match = re.search(r'(\d+)$', snapshot_name)
         data['snapshot_index'] = int(idx_match.group(1)) if (idx_match is not None) else None
+
+        # resolve auto-detected interrupt/external modes once (explicit -i/-t win)
+        if (self.interrupt_mode is None) or (self.external_mode is None):
+            detected = None
+            try:
+                detected = petar.getDataKwargs(file_path)
+            except Exception:
+                detected = None
+            if (self.interrupt_mode is None):
+                self.interrupt_mode = detected['interrupt_mode'] if (detected is not None) else 'bse'
+            if (self.external_mode is None):
+                self.external_mode = detected['external_mode'] if (detected is not None) else 'none'
+            if (not self._schema_notice_printed):
+                if (detected is not None):
+                    print('[petar.movie] output schema auto-detected: interrupt_mode=%s, external_mode=%s' % (self.interrupt_mode, self.external_mode))
+                else:
+                    print('[petar.movie] WARNING: cannot auto-detect the output schema from %s; using interrupt_mode=%s, external_mode=%s (pass -i/-t to override).' % (file_path, self.interrupt_mode, self.external_mode))
+                self._schema_notice_printed = True
 
         header=petar.PeTarDataHeader(file_path, snapshot_format=self.snapshot_format, external_mode=self.external_mode)
         header_offset = petar.HEADER_OFFSET
@@ -1188,8 +1207,8 @@ if __name__ == '__main__':
         print("          When reading data, the path and the prefix will be added in front of the filenames.")
         print("          For example, path'./'; prefix'data'; reading file'./data.[0-9*'.")
         print("          The number of snapshots should be the same for all models.")
-        print("  -i [S]  Interrupt mode used in petar: none, merger, bse, mobse, bseEmp, dsm, sevn: ", data.interrupt_mode)
-        print("  -t [S]  External mode used in petar: none, galpy, agama: ", data.external_mode)
+        print("  -i [S]  Interrupt mode used in petar: none, merger, bse, mobse, bseEmp, dsm, sevn: ", 'auto-detect (fallback bse)' if data.interrupt_mode is None else data.interrupt_mode)
+        print("  -t [S]  External mode used in petar: none, galpy, agama: ", 'auto-detect (fallback none)' if data.external_mode is None else data.external_mode)
         print("  -c [S]  Color type for particles: loglum, logtemp, ekin, pot, etot, white: ", pxy.color_mode)
         print("              loglum: log(luminosity).")
         print("              logtemp: log(temperature).")

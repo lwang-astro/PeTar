@@ -4146,6 +4146,11 @@ public:
             // save exthard parameters
             external_hard_parameters.writeModelParamsAscii(model_par_prefix);
 #endif
+            // save the output-schema sidecar (output-meta/1) for the Python readers;
+            // rewritten on restart so a resumed run refreshes it with the current binary
+            writeOutputMeta(input_parameters.fname_snp.value,
+                            input_parameters.data_format.value,
+                            GetVersion());
         }
 
         if (print_flag) std::cout<<"-----  Finish parameter initialization -----"<<std::endl;

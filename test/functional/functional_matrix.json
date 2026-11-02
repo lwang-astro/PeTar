@@ -19,7 +19,19 @@
     "restart": {
       "t_end_first": 4,
       "clear_t": 3
-    }
+    },
+    "lagr_variants": [
+      {
+        "name": "custom-fractions+mass-range",
+        "args": [
+          "-m",
+          "0.05,0.15,0.5,0.95",
+          "--add-mass-range",
+          "0.1_1,1_150",
+          "--calc-energy"
+        ]
+      }
+    ]
   },
   "cases": [
     {
@@ -47,6 +59,33 @@
         "format.transfer",
         "read.par",
         "update.par"
+      ],
+      "lagr_variants": [
+        {
+          "name": "same-shape-fractions",
+          "args": [
+            "-m",
+            "0.1,0.3,0.5,0.7,0.85"
+          ]
+        },
+        {
+          "name": "no-half-fraction-guard",
+          "args": [
+            "-m",
+            "0.2,0.4,0.6"
+          ],
+          "expect_fail": "requires the mass fraction 0.5"
+        },
+        {
+          "name": "same-shape-ascii",
+          "args": [
+            "-m",
+            "0.1,0.3,0.5,0.7,0.85",
+            "-o",
+            "ascii"
+          ],
+          "scratch": true
+        }
       ]
     },
     {
@@ -146,6 +185,17 @@
       "ic_case": "functional_mcluster_dual_merge_smoke",
       "tool_smokes": [
         "bse"
+      ],
+      "lagr_variants": [
+        {
+          "name": "star-type-groups",
+          "args": [
+            "-m",
+            "0.2,0.4,0.5,0.6,0.8",
+            "--add-star-type",
+            "BH,MS,BH__in__MS"
+          ]
+        }
       ]
     },
     {
@@ -209,6 +259,17 @@
       "object_snap_args": [
         "-i",
         "sevn"
+      ],
+      "lagr_variants": [
+        {
+          "name": "star-type-groups",
+          "args": [
+            "-m",
+            "0.2,0.4,0.5,0.6,0.8",
+            "--add-star-type",
+            "MS"
+          ]
+        }
       ]
     },
     {
@@ -279,7 +340,18 @@
         "-t",
         "galpy"
       ],
-      "ic_case": "functional_mcluster_dual_merge_smoke"
+      "ic_case": "functional_mcluster_dual_merge_smoke",
+      "lagr_variants": [
+        {
+          "name": "star-type-groups",
+          "args": [
+            "-m",
+            "0.2,0.4,0.5,0.6,0.8",
+            "--add-star-type",
+            "BH,MS,BH__in__MS"
+          ]
+        }
+      ]
     },
     {
       "name": "bse-galpy-gasdrag",
@@ -325,6 +397,17 @@
       "expect_files": [
         "{prefix}.par.gasdrag",
         "{prefix}.par.exthard"
+      ],
+      "lagr_variants": [
+        {
+          "name": "star-type-groups",
+          "args": [
+            "-m",
+            "0.2,0.4,0.5,0.6,0.8",
+            "--add-star-type",
+            "BH,MS,BH__in__MS"
+          ]
+        }
       ]
     },
     {
@@ -366,7 +449,18 @@
         "-t",
         "agama"
       ],
-      "ic_case": "functional_mcluster_dual_merge_smoke"
+      "ic_case": "functional_mcluster_dual_merge_smoke",
+      "lagr_variants": [
+        {
+          "name": "star-type-groups",
+          "args": [
+            "-m",
+            "0.2,0.4,0.5,0.6,0.8",
+            "--add-star-type",
+            "BH,MS,BH__in__MS"
+          ]
+        }
+      ]
     }
   ]
 }

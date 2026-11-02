@@ -489,6 +489,14 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Prevention rule**: 参数解析 bug 先用最小 getopt 复现程序实证行为（哪个 reader、哪个 token、计数如何走）再动代码；文件名/位置参数必须在 getopt 循环内捕获而非事后取 `argv[argc-1]`；绝不在一个 reader 内就地移位/重写跨 reader 共享的 argv——需要改写就构造新数组传递。
 
+### 2026-10-30: 快速验证求解器改动时手造 IC 会在物理深处假失败——直接复用 functional 矩阵的 IC+init 参数
+
+**Mistake**: 验证 data.meta 写出时手写 20 体 IC 跑 bse 族：先因缺 r_search/id/group_data 列在读入即崩，改用 `petar.init` 默认参数仍缺恒星演化列，凑齐列后又因 IC 物理不合理在 SDAR 自适应步长（adaptive ds below time resolution）处 abort——三轮排障全部与被验证的改动无关，浪费整轮时间。
+
+**Root cause**: bse 族 IC 需要 `petar.init -s bse -v <scale>` 补齐 SE 列，且任意手造质量/位置分布可能触发真实物理失败；functional 矩阵（test/functional/functional_matrix.json）每 case 的 `ic_case`（make_ic.py）+ `init_args` + `run_args` 是现成的已验证组合。
+
+**Prevention rule**: 求解器侧改动的快速验证，优先复用 functional 矩阵的 IC 生成与 init/run 参数（或直接拷 `test/out/functional_<case>/ic.raw` + 矩阵 init_args 重跑）；手造 IC 只用于纯工具链（petar.init/reader）验证，不当求解器输入。
+
 ## Post-Processing
 
 ### 2026-09-14: 读 PeTar 二进制快照漏掉 `offset=HEADER_OFFSET` 且未指定 `interrupt_mode`
@@ -563,6 +571,22 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Prevention rule**:
 1. 编辑 `tools/analysis/*.py` 或 `tools/*.py` 后、做任何运行时验证前，先重新安装：`install -m 644 tools/analysis/*.py ~/include/petar/` 及对应 `~/bin/petar.*`（C++ 构建独立，可跳过）。
 2. 验证脚本里打印 `petar.__file__` 确认实际加载路径再下结论。
+
+### 2026-10-30: 用 `ls data.*` 拼 snap.lst 会把 `.single/.binary` 派生文件喂给 petar.data.process——头偏移错读伪装成 schema 错配
+
+**Mistake**: 测试 `petar.data.process` 自动检测时用 `ls data.* data.0 data.1 > snap.lst` 生成快照清单，通配把 `data.0.single/.binary` 也列入；process 对每个清单项施加原始快照的 24 字节头偏移，派生文件（无头）被错读，报 `binary file size ... not aligned with dtype itemsize` ——与真正的 schema 错配同指纹。
+
+**Root cause**: `data.*` 同时匹配原始快照与派生后缀；`petar.data.process` 的快照清单只应含原始快照路径（`data.<N>`），`data.snap.lst` 由求解器事务性生成即为正确来源。
+
+**Prevention rule**: 构造快照清单用精确模式（`ls data.[0-9]*` 后过滤派生后缀，或直接用求解器生成的 `<prefix>.snap.lst`）；读回错位排查时先核对清单内容是否混入 `.single/.binary/.npy` 等派生文件，再怀疑 reader kwargs/schema。
+
+### 2026-10-30: 【元组误作成员测试】`('-i','--interrupt-mode') in [opt[0] for opt in opts]` 恒 False——显式 flag 被自动检测静默覆盖，smoke 因“flag 与检测一致”而漏网
+
+**Mistake**: `petar.get.object.snap` 的显式 flag 检测写成元组对字符串列表做 `in`（Python 语义：元组不是列表任一元素），四个检测全部恒 False；自动填充覆盖了用户的显式 `-i/-t/--use-mpfrc`。functional smoke 一直全绿——它传的 flag 恰与检测结论一致，覆盖不住优先级回归。
+
+**Root cause**: 成员测试的类型错误在 Python 里不报错只永假；测试只验证“默认路径正确”未验证“显式输入胜出”的优先级不变量。
+
+**Prevention rule**: ① 多 token 任一匹配写 `any(tok in (...) for tok in tokens)`，永不用元组对列表做 `in`；② 优先级/覆盖类逻辑的验证必须用**与默认相反的显式值**做 disagreeing-flag 复现（显式错值应被保留并让下游大声失败，而不是被“纠正”）；③ 交叉验证只比对探测器能**唯一钉死**的事实——tier 解析胜者不是 ground truth（同题另见 schema.py `_verifyMetaAgainstStructure` 修复：稀有构建的正确 sidecar 不得被 tier-0 嗅探否决）。
 
 ---
 
@@ -1372,3 +1396,20 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: ① 位置与速度公式取自不同教材形式(位置是 E-异常形式,速度是 f-异常形式),混用产生能量不自洽状态,部分样本 e>1;② β=√((1−e²)/4) 对 e>1 静默 NaN;③ 调试顺序按"最近改动"(生产路径重构)而非"数据本身"(先打印根数)。
 
 **Prevention rule**: ① 测试里生成 Kepler 态后立即用分解(`particleToOrbit`)断言 semi>0 && ecc<1——一个便宜不变量把生成器 bug 钉死在第一现场;② NaN 守卫(isfinite+exit)必须保留,防止 NaN==NaN 空洞通过;③ 数值 NaN 类 bug 先打印最小复现的全部根数/中间量,再怀疑代码路径。
+
+### 2026-10-31: 【迁移重构丢策略】schema.py 拆解迁移后 sidecar-结构交叉验证静默消失——selftest 场景(wrong-sidecar-rejected)当场抓回;行为清单先于代码搬迁
+
+**Mistake**: 消解 schema.py 的类迁移重构中,sidecar 与结构的交叉验证(防拷贝错配 sidecar)只搬了检测、没搬验证——wrong-sidecar 场景从"拒"退化为"静默接受";同轮还发现 `__func__` 重绑单个 classmethod 无法让 Binary/GroupInfo 复用整套机制(cls 错绑成 Particle,验证用了错误记录布局,误拒合法数据)。
+
+**Root cause**: 按"函数"而非"行为清单"迁移——每个函数都有归宿≠每个可观察行为都有归宿;classmethod 机制是成组的,单方法重绑破坏 cls 一致性。
+
+**Prevention rule**: ① 迁移/拆解类重构前先列**可观察行为清单**(每条对应一个自检场景:selftest 的 4 场景即此清单),迁移后逐条对账,清单缺项即测试缺口;② 多个 classmethod 协作的机制用 **mixin 类**整体复用(单一继承点,cls 全程正确),不用 `__func__`/委托单方法;③ "检测"与"验证"是两个行为,重命名/合并函数时最容易只留其一。
+
+
+### 2026-11-02: 伴生文件副本的文件名必须按生产者的命名规则推导——is_file() 守卫会掩盖死分支
+
+**Mistake**: lagr 变体 scratch 隔离里,求解器 sidecar 副本用 `snap_list.stem + '.meta'`(→ `data.snap.meta`)推导,而求解器实际写 `<output-prefix>.meta`(`data.meta`);`if solver_meta.is_file()` 守卫让这个错名副本静默变成死代码,scratch 运行悄悄回落到结构嗅探路径——std 上无感,但 bse/galpy/稀有布局 case 上会退化为 tier 抑制警告甚至 AmbiguousSchemaError。Reviewer 比对磁盘文件与 `src/io.hpp` 命名规则后抓出。
+
+**Root cause**: 伴生文件名从"手头对象"(snap list 文件名)猜,而不是从生产者的命名契约推导;`is_file()` 守卫把"找不到"吞成无操作,分支死了没有信号。
+
+**Prevention rule**: ① 复制伴生文件前先确认生产者的命名规则(读写入方代码/实际 ls 产物目录),文件名从 `output prefix` 等契约字段推导,不从相邻文件名拼接;② 带 `is_file()` 守卫的复制分支,验收时必须 ls 目标目录确认副本真的落了(守卫静默跳过=死代码无告警);③ 依赖 sidecar 的测试路径,日志/报告应能区分"sidecar 命中"与"结构嗅探回落",否则隔离副本缺失不可见。

@@ -1014,6 +1014,7 @@ In addition to the printed information provided by the `petar` commander, there 
 |                      | Users can reference the definitions of the first line (header) and columns using `petar -h`.                               |
 |                      | [index] denotes the output order, starting from 0 (initial snapshot). It does not correspond to time unless the output interval is set to 1. |
 | data.snap.lst        | Snapshot filename list generated during runtime output (`-w 1`). It is appended transactionally by rank 0 and can be used directly by `petar.data.process` and `petar.movie`. |
+| data.meta            | Output-schema sidecar (petar-meta/1): records the configure-time modes of the producing binary (interrupt/external mode, MPFR, superparticle-acceleration collection, spin width, version). It is refreshed at every startup (including restarts) and is used by the Python tools to auto-select the reader keyword arguments; see [Checking Reading Consistency](#checking-reading-consistency). |
 | data.[index].randseeds| The random seeds for each OpenMP thread, used for restarting purposes. |
 | data.esc             | Contains information on escaped particles. Runtime temporary files are created per MPI rank and then appended into this shared final file. In ASCII mode, the columns match those in snapshot files with an additional escaped-time column at the beginning. In BINARY mode, each record is stored as one escaped time followed by one particle record in the same binary layout as snapshots. |
 | data.group.n[member count] | Provides details on the start and end of multiple systems (e.g., binary, triple ...) identified during SDAR integration. The runtime temporary files are created per MPI rank and committed into the shared final files `data.group.n2`, `data.group.n3`, ... |
@@ -1829,6 +1830,15 @@ Here, `fromfile` is similar to `numpy.fromfile`. The keyword argument `dtype` is
 #### Checking Reading Consistency
 
 When using the Python analysis tool to read data, users must ensure that the keyword arguments in the initialization function align with the options set in the PeTar configuration during installation and the options in the data analysis tool `petar.data.process`. This is crucial to prevent incorrect data reading.
+
+**Automatic schema detection.** The keyword arguments no longer need to be guessed:
+
+- **Concise form**: pass the file path to the reader constructor and it auto-reads with the detected schema — `petar.Particle('data.0')`, `petar.Particle('data.0.single')`, `petar.Binary('data.0.binary', G=...)`, `petar.SingleEscaper('data.esc_single')`, `petar.GroupInfo('data.group.n2', N=2)`, `petar.LagrangianMultiple('data.lagr')`. Explicit keyword arguments passed alongside always win over detection, and `.npy`/ASCII/binary formats are dispatched automatically.
+- The solver writes the sidecar `data.meta` (see [Output Files](#output-files)) next to `data.par`, and `petar.getDataKwargs('data.0')` returns the reader keyword arguments from it — or, for runs older than the sidecar, by detecting the schema from the file structure itself (snapshot header width and column/record layout).
+- `petar.readSnapshot('data.0')` additionally returns the snapshot header as `(particles, header)`.
+- The command-line tools `petar.data.process`, `petar.get.object.snap`, `petar.format.transfer.post` and `petar.movie` auto-detect the schema when `-i`/`-t` (and `--use-mpfrc`/`--spin-1d`) are omitted, print what was detected, and always honor explicitly given flags.
+
+When the structure alone cannot decide between rare build layouts, detection raises `AmbiguousSchemaError` listing the candidates instead of guessing; passing the explicit keyword arguments (or regenerating `data.meta` from the producing run) resolves it.
 
 For instance, if the configuration includes bse with `--with-interrupt=bse`, additional columns of stellar evolution parameters are saved in snapshot files. If the initialization of `petar.Particle` lacks the keyword argument `interrupt_mode='bse'` like this:
 

@@ -12,6 +12,7 @@ import sdar.group as hermite_group
 from .bse import *
 from .dsm import *
 from .astro_units import G_ASTRO
+from sdar.base import enablePathInit, AmbiguousSchemaError, detectAsciiFile
 
 # alias kept for existing tools; single source: tools/analysis/astro_units.py
 # (generated together with src/astro_units.hpp by tools/generate_astro_units.py)
@@ -38,6 +39,50 @@ class PeTarDataHeader():
   
         pos_offset and vel_offset only exist when keyword argument 'external_mode' is not none
     """
+
+    # binary header variants: (header bytes, c.m.-offset entries present, float type)
+    BINARY_VARIANTS = ((24, False, np.float64), (72, True, np.float64),
+                       (32, False, np.float128), (128, True, np.float128))
+    # ASCII header line item counts: (file_id N time) or (+ 6 c.m. offsets)
+    ASCII_HEADER_ITEMS = (3, 9)
+
+    @classmethod
+    def asciiHeaderInfo(cls, path):
+        """ (external_present, first_data_row_ncols) of an ASCII snapshot, or
+        None when the first line is not a snapshot header (file_id N time
+        [cm offsets]) - e.g. headerless event/stream tables. """
+        with open(str(path)) as fp:
+            header = fp.readline().split()
+            first_row = fp.readline().split()
+        if len(header) not in cls.ASCII_HEADER_ITEMS:
+            return None
+        try:
+            int(header[0]); int(header[1]); float(header[2])
+        except (ValueError, IndexError):
+            return None
+        if not first_row:
+            raise ValueError('%s: snapshot has no particle rows; pass explicit reader kwargs' % path)
+        return (len(header) == 9, len(first_row))
+
+    @classmethod
+    def binaryHeaderVariants(cls, path):
+        """ (n_glb, [(hsize, cm_present, float_type), ...]) of a binary
+        snapshot: reads the leading (file_id, N) ints (fingerprint sanity)
+        and returns the header variants that remain size-plausible. None
+        when the file carries no snapshot header (derived/stream files and
+        non-snapshot data start with data, whose leading bytes do not pass
+        the fingerprint). """
+        import os
+        path = str(path)
+        size = os.path.getsize(path)
+        if size < 16:
+            return None
+        head = np.fromfile(path, dtype=np.int64, count=2)
+        file_id, n_glb = int(head[0]), int(head[1])
+        if not (0 <= file_id <= 10**8) or (n_glb <= 0):
+            return None
+        variants = [(h, cm, ft) for (h, cm, ft) in cls.BINARY_VARIANTS if size > h]
+        return (n_glb, variants) if variants else None
 
     def __init__(self, _filename=None, **kwargs):
         """ Initial data header
@@ -234,10 +279,389 @@ class PeTarDataHeader():
                        frame='galactocentric', representation_type='cartesian', **parameters)
         return sky
     
-class BaseParticle(SimpleParticle):
+#: derived per-snapshot products sharing the particle record layout
+_DERIVED_SUFFIXES = ('.single', '.binary', '.triple', '.quadruple')
+
+#: interrupt_mode values sharing one reader schema; 'bse' represents them all
+BSE_FAMILY = ('bse', 'mobse', 'bseEmp')
+
+
+def _isSnapshotFamilyName(name):
+    """ True for petar snapshot-family file names (snapshots, derived
+    products, run-level streams) - used only for the strict no-silent-
+    misparse policy, not for sidecar lookup (that uses the generic walk). """
+    import re
+    if any(name.endswith(s) for s in _DERIVED_SUFFIXES) or name.endswith('.npy'):
+        return True
+    if re.search(r'\.\d+$', name):
+        return True
+    return bool(re.search(r'\.(?:esc_single|esc_binary|lagr|core|status|group(?:\.\d+)?\.n\d+'
+                          r'|sse(?:\.(?:type_change|sn_kick))?|bse_status|interrupt'
+                          r'|bse(?:\.(?:type_change|sn_kick|gw_kick|dynamic_merge|binary_merge'
+                          r'|hyperbolic_tde|binary_tde|tide|gw_tide_merge))?)$', name))
+
+
+def _refineLabelByRunFiles(path, value):
+    """ Values detected structurally can be family representatives (e.g. the
+    external-potential variant): probe the solver-written parameter sidecars
+    of each run-prefix stem (generic walk) to name the actual variant, else
+    keep the detected value """
+    import os
+    directory = os.path.dirname(str(path)) or '.'
+    name = os.path.basename(str(path))
+    if name.endswith('.npy'):
+        name = name[:-len('.npy')]
+    parts = name.split('.')
+    for n in range(len(parts), 0, -1):
+        stem = '.'.join(parts[:n])
+        for variant in ('galpy', 'agama'):
+            if os.path.isfile(os.path.join(directory, stem + '.par.' + variant)):
+                return variant
+    return value
+
+
+class ParticleRecordLayoutMixin:
+    """ Layout machinery for petar readers whose FILE RECORDS embed the
+    particle-record layout (the snapshot family: snapshots, .single/.binary/
+    .triple/.quadruple, escapers, group files). Their records can only be
+    parsed after the particle layout combination is pinned, using the
+    snapshot-family evidence chain (sidecar -> sibling snapshot header ->
+    divisibility). Readers with their own column layouts (Lagrangian, Core,
+    SSE/BSE event tables, Status, SDAR/Hermite data) do NOT use this mixin -
+    the generic sdar.base machinery suffices for them.
+
+    The mixin itself contains NO parameter names: everything layout-specific
+    is read from class-level declarations -
+
+      LAYOUT_PARAMS          (sdar.base) - enumerable layout parameters,
+                              first value = default/most plausible
+      HEADER_PINNED_PARAMS   - physical snapshot-header facts that pin a
+                              parameter: fact name -> parameter name
+                              ('cm': 'external_mode', 'float128': 'float_type')
+      LABEL_REFINE_PARAMS    - parameters whose detected value is only a
+                              family representative and should be refined by
+                              probing the run directory (galpy/agama)
+      PINNING_PARAMS         - parameters that pin the main layout; given
+                              explicitly they exempt a detection failure from
+                              the strict raise policy
+
+    Mixed into every petar reader whose records carry the particle layout
+    (particle chain, Binary, escapers, GroupInfo); each class detects with
+    ITS OWN record layout and declarations. """
+
+    LAYOUT_PARAMS = {}
+    #: header-fact -> layout-parameter bindings (overridden by declaring classes)
+    HEADER_PINNED_PARAMS = {}
+    #: parameters refined by run-directory probing after structure detection
+    LABEL_REFINE_PARAMS = ()
+    #: explicitly-given parameters that pin the layout (failure-policy exemption)
+    PINNING_PARAMS = ()
+
+    @classmethod
+    def _resolveTierMatches(cls, path, matches, facts):
+        """ Plausibility-tier resolution over raw structure matches (fewest
+        non-default layout parameters wins; same-tier collision or no match
+        raises AmbiguousSchemaError; suppressed alternatives warn). """
+        if not matches:
+            raise AmbiguousSchemaError(
+                'No known reader schema matches %s (%s): the output is likely from a PeTar '
+                'version or build variant whose layout this reader does not know. Report it '
+                'as a version gap instead of working around it.' % (path, facts))
+        tier = cls.layoutTier
+        min_tier = min(tier(m) for m in matches)
+        best = [m for m in matches if tier(m) == min_tier]
+        if len(best) > 1:
+            cand = ', '.join(str({k: v for k, v in m.items()}) for m in best)
+            keys = ', '.join(cls.LAYOUT_PARAMS.keys())
+            raise AmbiguousSchemaError(
+                'Cannot uniquely determine the reader schema of %s (%s): candidates [%s]. '
+                'Pass explicit layout kwargs (%s) or provide/regenerate the .meta sidecar '
+                'next to the data.' % (path, facts, cand, keys))
+        if min_tier < max(tier(m) for m in matches):
+            suppressed = [str({k: v for k, v in m.items()})
+                          for m in matches if tier(m) > min_tier]
+            import warnings as _w
+            _w.warn('Schema detection of %s (%s) resolved to the default-build layout %s; the '
+                    'file could also match rarer builds [%s]. If the producing solver used '
+                    'those flags, pass explicit kwargs or a .meta sidecar.'
+                    % (path, facts, best[0], '; '.join(suppressed)))
+        return dict(best[0])
+
+    @classmethod
+    def _factCheck(cls, kw, fact, value):
+        """ generic header-fact filter: the parameter bound to `fact` (see
+        HEADER_PINNED_PARAMS) must be consistent with the measured fact """
+        param = cls.HEADER_PINNED_PARAMS.get(fact)
+        if param is None:
+            return True
+        kw_value = kw.get(param)
+        if fact == 'cm':
+            return ((kw_value is not None) and (kw_value != cls.LAYOUT_PARAMS[param][0])) == value
+        if fact == 'float128':
+            return (kw_value == np.float128) == value
+        return True
+
+    @classmethod
+    def _snapshotMatches(cls, path):
+        """ Raw (pre-resolution) structure evidence for a snapshot-family
+        file: (matches, pinned, facts) where `pinned` maps fact-name ->
+        measured value for every header fact the file pins (ASCII header
+        item count -> cm; binary header variant -> cm/float128). Derived
+        products fall back to their raw sibling; isolated headerless
+        products give weak divisibility evidence (unique-match enforced by
+        the caller). """
+        import os
+        path = str(path)
+        if detectAsciiFile(path):
+            info = PeTarDataHeader.asciiHeaderInfo(path)
+            if info is None:
+                raise ValueError('%s: first line is not a PeTar snapshot header' % path)
+            ext_pinned, ncol = info
+            matches = [kw for kw in cls._layoutMatches(ncols=ncol)
+                       if cls._factCheck(kw, 'cm', ext_pinned)]
+            return matches, {'cm': ext_pinned}, 'ASCII snapshot, %d columns' % ncol
+        head = PeTarDataHeader.binaryHeaderVariants(path)
+        if head is None:
+            name = os.path.basename(path)
+            if name.endswith('.npy') and os.path.isfile(path[:-len('.npy')]):
+                return cls._snapshotMatches(path[:-len('.npy')])
+            derived = next((s for s in _DERIVED_SUFFIXES if name.endswith(s)), None)
+            if (derived is not None) and os.path.isfile(path[:-len(derived)]):
+                return cls._snapshotMatches(path[:-len(derived)])
+            size = os.path.getsize(path)
+            if size == 0:
+                raise ValueError('%s is empty' % path)
+            divisors = set()
+            for d in range(1, int(size ** 0.5) + 1):
+                if size % d == 0:
+                    divisors.add(d)
+                    divisors.add(size // d)
+            return cls._layoutMatches(record_size=divisors), {}, \
+                'headerless file, %d bytes' % size
+        n_glb, variants = head
+        size = os.path.getsize(path)
+        matches = []
+        cm_vals, f128_vals = set(), set()
+        for hsize, cm_present, ftype in variants:
+            body = size - hsize
+            if (body <= 0) or (body % n_glb != 0):
+                continue
+            for kw in cls._layoutMatches(record_size=body // n_glb):
+                if cls._factCheck(kw, 'cm', cm_present) and cls._factCheck(kw, 'float128', ftype == np.float128):
+                    matches.append(kw)
+                    cm_vals.add(cm_present)
+                    f128_vals.add(ftype == np.float128)
+        pinned = {}
+        if len(cm_vals) == 1:
+            pinned['cm'] = cm_vals.pop()
+        if len(f128_vals) == 1:
+            pinned['float128'] = f128_vals.pop()
+        return matches, pinned, 'binary snapshot, %d bytes, N = %d' % (size, n_glb)
+
+    @classmethod
+    def _detectSnapshotLayout(cls, path):
+        """ Resolved layout kwargs for a snapshot-family file: raw structure
+        evidence from _snapshotMatches, plausibility-tier resolution, then
+        label refinement (e.g. galpy/agama) by run-directory probing. """
+        matches, _pinned, facts = cls._snapshotMatches(str(path))
+        if facts.startswith('headerless'):
+            # weak divisibility evidence: several layouts can divide one
+            # file size, so a plausibility pick could misparse silently;
+            # the match must be unique
+            if len(matches) != 1:
+                cand = ', '.join(str({k: v for k, v in m.items()}) for m in matches) or 'none'
+                raise AmbiguousSchemaError(
+                    'Cannot uniquely determine the reader schema of %s (%s): candidates [%s]. '
+                    'Pass explicit kwargs or provide/regenerate the .meta sidecar next to the data.'
+                    % (path, facts, cand))
+            kw = dict(matches[0])
+        else:
+            kw = cls._resolveTierMatches(str(path), matches, facts)
+        for param in cls.LABEL_REFINE_PARAMS:
+            default = cls.LAYOUT_PARAMS.get(param, (None,))[0]
+            if (param in kw) and (kw[param] != default):
+                kw[param] = _refineLabelByRunFiles(str(path), kw[param])
+        return kw
+
+    @classmethod
+    def _verifySidecarAgainstStructure(cls, path, kwargs):
+        """ Cross-validate sidecar-provided layout kwargs with the file
+        structure; a disagreement means the sidecar was likely copied from
+        another run and raises ValueError. Generic: the sidecar layout is
+        instantiated with THIS class and its measured shape (column count /
+        record size) must agree with the structure; header-pinned facts are
+        checked through HEADER_PINNED_PARAMS. Weak (headerless) evidence
+        cannot refute. Skipped when the structure cannot refute. """
+        import os
+        try:
+            matches, pinned, facts = cls._snapshotMatches(str(path))
+        except (AmbiguousSchemaError, ValueError):
+            return
+        if (not matches) or facts.startswith('headerless'):
+            return
+        side_kwargs = {k: v for k, v in kwargs.items() if k in cls.LAYOUT_PARAMS}
+        if not side_kwargs:
+            return
+        try:
+            side_obj = cls(**dict(side_kwargs))
+        except Exception:
+            return
+        # the sidecar layout must be among the structure candidates: equal
+        # declared shape (columns for ASCII / record size for binary)
+        try:
+            ref = cls(**dict(matches[0]))
+        except Exception:
+            return
+        def reject(key, meta_value, struct_value):
+            raise ValueError(
+                'data.meta disagrees with the file structure of %s (%s: meta=%s, structure=%s). '
+                'The sidecar was likely produced by a different run; remove or regenerate it.'
+                % (path, key, meta_value, struct_value))
+        if detectAsciiFile(str(path)):
+            if side_obj.ncols != ref.ncols:
+                reject('layout columns', side_obj.ncols, ref.ncols)
+        else:
+            if np.dtype(side_obj.collectDtype()).itemsize != np.dtype(ref.collectDtype()).itemsize:
+                reject('layout record size',
+                       np.dtype(side_obj.collectDtype()).itemsize,
+                       np.dtype(ref.collectDtype()).itemsize)
+        for fact, value in pinned.items():
+            param = cls.HEADER_PINNED_PARAMS.get(fact)
+            if param is None or param not in side_kwargs:
+                continue
+            if fact == 'cm':
+                side_on = side_kwargs[param] != cls.LAYOUT_PARAMS[param][0]
+                if side_on != value:
+                    reject(param, side_kwargs[param],
+                           'external' if value else cls.LAYOUT_PARAMS[param][0])
+            elif fact == 'float128':
+                if (side_kwargs[param] == np.float128) != value:
+                    reject(param, side_kwargs[param],
+                           np.float128 if value else np.float64)
+
+    @classmethod
+    def resolvePathInput(cls, _dat, kwargs):
+        """ petar concise-constructor entry: sidecar first (generic walk,
+        legacy bridges, values merged explicitly), then snapshot structure
+        detection with the strict failure policy; explicit kwargs and the
+        ``meta=`` injection always win. """
+        import os
+        if not isinstance(_dat, (str, bytes, os.PathLike)):
+            return _dat, kwargs, None
+        path = str(_dat)
+        if not os.path.isfile(path):
+            return _dat, kwargs, None
+        meta_arg = kwargs.pop('meta', 'auto')
+        if isinstance(meta_arg, dict):
+            for key, value in meta_arg.items():
+                kwargs.setdefault(key, value)
+            return None, kwargs, path
+        if (meta_arg is not False) and (meta_arg != 'none'):
+            if (meta_arg is not None) and (meta_arg != 'auto'):
+                meta_file = str(meta_arg)
+                if not os.path.isfile(meta_file):
+                    raise ValueError('meta sidecar not found: %s' % meta_file)
+            else:
+                meta_file = cls.findLayoutMeta(path)
+            if meta_file is not None:
+                try:
+                    layout = cls.readLayoutMeta(meta_file)
+                except ValueError:
+                    layout = None
+                if not layout:
+                    # transitional bridges: sidecars written before the
+                    # layout.* key convention carry unprefixed keys
+                    layout = _legacyPetarLayoutMeta(meta_file)
+                if layout:
+                    # petar readers test kwarg truthiness, not presence, so
+                    # merging values equal to the defaults is safe and keeps
+                    # the modes explicit for CLI auto-fill
+                    for name, value in layout.items():
+                        kwargs.setdefault(name, value)
+                    cls._verifySidecarAgainstStructure(path, kwargs)
+                    return None, kwargs, path
+        try:
+            detected = cls._detectSnapshotLayout(path)
+        except (AmbiguousSchemaError, ValueError) as error:
+            cls._onLayoutDetectionFailure(path, kwargs, error)
+            return None, kwargs, path
+        for key, value in detected.items():
+            kwargs.setdefault(key, value)
+        return None, kwargs, path
+
+    @classmethod
+    def _onLayoutDetectionFailure(cls, path, kwargs, error):
+        """ petar policy: for snapshot-family files a default-kwargs
+        fallback can misparse SILENTLY when the byte size happens to align,
+        so detection failure raises unless the caller pinned the main
+        layout (all PINNING_PARAMS given explicitly); other file types
+        (e.g. hermite .log dumps) warn. """
+        import os
+        pinning_given = all(p in kwargs for p in cls.PINNING_PARAMS)
+        if (not pinning_given) and _isSnapshotFamilyName(os.path.basename(path)):
+            keys = ', '.join(list(cls.LAYOUT_PARAMS.keys()) + ['...'])
+            raise AmbiguousSchemaError(
+                'Cannot auto-detect the reader schema for the snapshot-family file %s (%s). '
+                'Pass the layout kwargs (%s) explicitly, or read it next to its run outputs '
+                '(the <prefix>.meta sidecar or the raw snapshots make the schema recoverable); '
+                'a fallback to default kwargs could misparse the file silently.'
+                % (path, error, keys)) from error
+        import warnings as _w
+        _w.warn('Cannot auto-detect the reader schema for %s (%s); constructing with the '
+                'given/default keyword arguments. Pass layout kwargs explicitly if the read fails.'
+                % (path, error))
+        return kwargs
+
+    def readAutoFile(self, path):
+        """ petar format dispatch: .npy -> load(); ASCII -> loadtxt with the
+        snapshot header line skipped when present; binary -> fromfile with
+        the snapshot header offset when the leading (file_id, N) fingerprint
+        and the record size identify a headered snapshot, else offset 0. """
+        import os
+        path = str(path)
+        if path.endswith('.npy'):
+            self.load(path)
+            return self
+        if detectAsciiFile(path):
+            skip = 1 if PeTarDataHeader.asciiHeaderInfo(path) is not None else 0
+            self.loadtxt(path, skiprows=skip)
+            return self
+        head = PeTarDataHeader.binaryHeaderVariants(path)
+        if head is not None:
+            n_glb, variants = head
+            size = os.path.getsize(path)
+            rec = np.dtype(self.collectDtype()).itemsize
+            for hsize, _cm, _ft in variants:
+                body = size - hsize
+                if (body > 0) and (body % n_glb == 0) and (body // n_glb == rec):
+                    self.fromfile(path, offset=hsize)
+                    return self
+        self.fromfile(path)
+        return self
+
+
+def _legacyPetarLayoutMeta(meta_file):
+    """ Transitional bridge: layout kwargs from a pre-release petar-meta/1
+    sidecar (unprefixed keys, '0'/'1' booleans). Removed once all run
+    directories carry output-meta/1 sidecars with layout.* keys. """
+    meta = readMetaData(meta_file)
+    layout = {}
+    if meta.get('interrupt_mode'):
+        layout['interrupt_mode'] = meta['interrupt_mode']
+    if meta.get('external_mode'):
+        layout['external_mode'] = meta['external_mode']
+    for key in ('use_mpfrc', 'collect_sp_acc', 'spin_3d'):
+        if key in meta:
+            layout[key] = meta[key] in ('1', 'true', 'True')
+    if meta.get('float_type') == 'float128':
+        layout['float_type'] = np.float128
+    return layout
+
+
+class BaseParticle(ParticleRecordLayoutMixin, SimpleParticle):
     """ Base particle type of PeTar
         The members include simple particle information, binary status and stellar evolution data
-       
+
     keys: (class members)
         Members inherited from SimpleParticle: mass (1D), pos (2D,3), *pos_high (2D,3) vel (2D,3) 
             see help(petar.SimpleParticle)
@@ -252,6 +676,26 @@ class BaseParticle(SimpleParticle):
         if (keyword argument 'interrupt_mode' == 'dsm'):
             star  (DSMStarParameter): Disk star merger parameters
     """
+
+    # Layout-parameter declaration for the generic schema detection in
+    # DictNpArrayMix (sdar.base): the constructor keyword arguments that change
+    # the column layout, with all allowed values (first = default/most
+    # plausible). Combinations producing identical columns are collapsed
+    # automatically, so parameters that only matter for some modes (e.g.
+    # spin_3d for the bse family) can be declared unconditionally.
+    LAYOUT_PARAMS = {
+        'interrupt_mode': ('none', 'merger', 'bse', 'dsm', 'sevn'),
+        'use_mpfrc': (False, True),
+        'spin_3d': (True, False),
+        'float_type': (np.float64, np.float128),
+    }
+
+    # snapshot-header facts that pin a layout parameter (see ParticleRecordLayoutMixin)
+    HEADER_PINNED_PARAMS = {'cm': 'external_mode', 'float128': 'float_type'}
+    #: structurally-detected family representatives refined by run-dir probing
+    LABEL_REFINE_PARAMS = ('external_mode',)
+    #: explicitly-given parameters that pin the layout (failure exemption)
+    PINNING_PARAMS = ('interrupt_mode', 'external_mode')
 
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
@@ -363,6 +807,7 @@ class HermiteParticle(HardParticle):
         HardParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
 
+@enablePathInit
 class Particle(HardParticle):
     """ (Soft) Particle type of PeTar, also used in snapshot
         The particle data of PeTar. Depending on the compile configuration of PeTar, 
@@ -382,6 +827,12 @@ class Particle(HardParticle):
              pot_ext  (1D): external potential (only exist when keyword argument 'external_mode' is not 'none')
         n_nb:    (1D): number of neighbors (short-interaction)
     """
+
+    # snapshot-level layout parameters on top of the particle-chain ones;
+    # see BaseParticle.LAYOUT_PARAMS for the mechanism
+    LAYOUT_PARAMS = dict(HardParticle.LAYOUT_PARAMS,
+                         external_mode=('none', 'galpy', 'agama'),
+                         collect_sp_acc=(False, True))
 
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
@@ -424,7 +875,14 @@ class Particle(HardParticle):
         etot = self.ekin + self.mass*self.pot
         self.addNewMember('etot',etot)
 
-class Binary(sdar_Binary):
+@enablePathInit
+class Binary(ParticleRecordLayoutMixin, sdar_Binary):
+    # members are Particles: the snapshot layout parameters and header-fact
+    # bindings apply
+    LAYOUT_PARAMS = dict(Particle.LAYOUT_PARAMS)
+    HEADER_PINNED_PARAMS = dict(Particle.HEADER_PINNED_PARAMS)
+    LABEL_REFINE_PARAMS = Particle.LABEL_REFINE_PARAMS
+    PINNING_PARAMS = Particle.PINNING_PARAMS
     """ Binary class
         The binary (tree) data. Depending on the definition of two members 
         (keyword argument member_particle_type(|_one|_two), 
@@ -517,7 +975,13 @@ class Binary(sdar_Binary):
         super().__init__(_p1, _p2, _offset, _append, **kwargs_local)
 
 
+
+@enablePathInit
 class InterruptBinary(SDARInterruptBinary):
+    # records embed HardParticle columns: the particle-chain layout
+    # parameters apply (sidecar + ASCII column-count detection)
+    LAYOUT_PARAMS = dict(BaseParticle.LAYOUT_PARAMS)
+
     """ Data of stellar evolution interrupted binary in base mode
         Inherit from sdar.ar.SDARInterruptBinary
     """
@@ -560,7 +1024,14 @@ def calculateParticleCMDict(pcm, _p1, _p2):
     else:
         raise ValueError('Initial fail, date type should be Particle or collections.OrderDict, given',type(_p1))
 
-class GroupInfo(hermite_group.GroupInfo):
+@enablePathInit
+class GroupInfo(ParticleRecordLayoutMixin, hermite_group.GroupInfo):
+    # members are HardParticles: the particle-chain layout parameters and
+    # header-fact bindings apply
+    LAYOUT_PARAMS = dict(HardParticle.LAYOUT_PARAMS)
+    HEADER_PINNED_PARAMS = dict(HardParticle.HEADER_PINNED_PARAMS)
+    LABEL_REFINE_PARAMS = HardParticle.LABEL_REFINE_PARAMS
+    PINNING_PARAMS = HardParticle.PINNING_PARAMS
     """ Group information output from PeTar
     Keys: (class members)
         type (1D): group type, 0: new group; 1: end group
@@ -599,7 +1070,9 @@ class GroupInfo(hermite_group.GroupInfo):
         kwargs_local = dict(kwargs)
         kwargs_local['member_particle_type'] = HardParticle
         super().__init__(_dat, _offset, _append, **kwargs_local)
+
     
+@enablePathInit
 class SDARData(sdar_SDARData):
     """ SDARData class for petar, inherit from sdar.SDARData
 
@@ -673,6 +1146,7 @@ class SDARData(sdar_SDARData):
 
         super().__init__(_dat, _offset, _append, **kwargs_local)
 
+@enablePathInit
 class HermiteData(hermite_HermiteData):
     """ HermiteData class for petar, inherit from sdar.HermiteData
     Keys: (class members)
@@ -715,3 +1189,123 @@ class HermiteData(hermite_HermiteData):
         kwargs_local['cm_type'] = HermiteParticle
 
         super().__init__(_dat, _offset, _append, **kwargs_local)
+
+# ---------------------------------------------------- snapshot + conveniences
+
+class Snapshot:
+    """ A PeTar snapshot: header + particles in one object.
+
+    ``petar.Snapshot('data.0')`` reads both with the auto-detected layout
+    (sidecar first, structure sniff fallback; explicit kwargs win) - this is
+    the dedicated home of the headered-snapshot reading path; header format
+    knowledge lives in PeTarDataHeader, layout knowledge in the particle
+    classes' LAYOUT_PARAMS.
+
+    members:
+        particle (petar.Particle): particle records
+        header (petar.PeTarDataHeader): snapshot header (file id, N, time,
+               and the c.m. offsets when the producing run used an external
+               potential)
+    """
+
+    def __init__(self, path=None, **kwargs):
+        if path is None:
+            self.particle = Particle(**kwargs)
+            self.header = PeTarDataHeader()
+            return
+        path = str(path)
+        self.particle = Particle(path, **kwargs)
+        external = self.particle.initargs.get('external_mode', 'none')
+        if external == 'none':
+            external = 'none'
+        self.header = PeTarDataHeader(path,
+                                      snapshot_format='ascii' if detectAsciiFile(path) else 'binary',
+                                      external_mode=external,
+                                      float_type=self.particle.initargs.get('float_type', np.float64))
+
+
+def readSnapshot(path, **kwargs):
+    """ Compatibility alias for ``Snapshot(path, **kwargs)``; returns
+    (particle, header). """
+    snap = Snapshot(path, **kwargs)
+    return snap.particle, snap.header
+
+
+def getDataKwargs(path, return_provenance=False, meta='auto'):
+    """ Layout kwargs for a snapshot-family file via the Particle concise
+    machinery (sidecar first, structure sniff fallback). Raises
+    AmbiguousSchemaError when neither source resolves the layout. """
+    kwargs = {'meta': meta}
+    _dat, kwargs, _path = Particle.resolvePathInput(str(path), kwargs)
+    if return_provenance:
+        import os
+        if (meta is not False) and (meta != 'none'):
+            mf = str(meta) if (meta is not None and meta != 'auto') else Particle.findLayoutMeta(str(path))
+            if mf is not None and os.path.isfile(mf):
+                return kwargs, 'sidecar %s' % mf
+        return kwargs, 'structure'
+    return kwargs
+
+
+def readMetaData(path):
+    """ Parse an output-meta sidecar into a plain all-keys dict (producer
+    information included); accepts the shared output-meta/1 and the
+    pre-release petar-meta/1 id. Accepts either the sidecar path itself or
+    any run-family data file (the sidecar is located by the generic prefix
+    walk); returns None when no sidecar exists. Raises ValueError for other
+    formats. """
+    import warnings as _w
+    p = str(path)
+    if not p.endswith('.meta'):
+        from sdar.base import DictNpArrayMix
+        p = DictNpArrayMix.findLayoutMeta(p)
+        if p is None:
+            return None
+    meta = {}
+    with open(p) as fp:
+        for line in fp:
+            line = line.strip()
+            if (not line) or line.startswith('#') or ('=' not in line):
+                continue
+            key, value = (part.strip() for part in line.split('=', 1))
+            meta[key] = value
+    fmt = meta.get('format', '')
+    if not (fmt.startswith('output-meta/') or fmt.startswith('petar-meta/')):
+        raise ValueError('%s is not an output-meta sidecar (format = %r)' % (path, fmt))
+    if fmt not in ('output-meta/1', 'petar-meta/1'):
+        _w.warn('%s uses sidecar format %r, but this reader implements output-meta/1; '
+                'parsing may be incomplete or wrong - update the petar tools.' % (path, fmt))
+    return meta
+
+
+def writeMetaData(fname, interrupt_mode, external_mode='none', use_mpfrc=False,
+                  collect_sp_acc=False, spin_3d=None, float_type=np.float64,
+                  producer='petar', petar_version=None, binary_family=None,
+                  snapshot_format=None):
+    """ Write a petar output-meta/1 sidecar (layout.<param> keys, matching
+    the solver's writer; used by producing tools to propagate the schema
+    next to outputs written outside the run directory). """
+    lines = ['# output-meta/1: output schema tag; see doc/output-schema-tagging-plan.md',
+             'format = output-meta/1',
+             'producer = %s' % producer]
+    if petar_version is not None:
+        lines.append('petar_version = %s' % petar_version)
+    if binary_family is not None:
+        lines.append('binary_family = %s' % binary_family)
+    if snapshot_format is not None:
+        lines.append('snapshot_format = %s' % snapshot_format)
+    lines.append('layout.interrupt_mode = %s' % interrupt_mode)
+    lines.append('layout.external_mode = %s' % external_mode)
+    lines.append('layout.use_mpfrc = %s' % ('true' if use_mpfrc else 'false'))
+    lines.append('layout.collect_sp_acc = %s' % ('true' if collect_sp_acc else 'false'))
+    if spin_3d is not None:
+        lines.append('layout.spin_3d = %s' % ('true' if spin_3d else 'false'))
+    lines.append('layout.float_type = %s' % ('float128' if float_type == np.float128 else 'float64'))
+    with open(fname, 'w') as fp:
+        fp.write('\n'.join(lines) + '\n')
+
+
+def autoFillKwargs(sample_path, kwargs=None, verbose=True, label=None):
+    """ CLI helper: fill missing layout kwargs from a sample file via
+    Particle.resolvePathInput (detection without reading). """
+    return Particle.autoFillKwargs(sample_path, kwargs, verbose=verbose, label=label)

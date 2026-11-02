@@ -330,6 +330,8 @@ def dataProcessOne(file_path, result, time_profile,
 
     if (r_escape is None):
         rhindex=np.where(m_frac==0.5)[0]
+        if (rhindex.size==0):
+            raise ValueError('Automatic escape-radius determination uses the half-mass radius and requires the mass fraction 0.5 in --mass-fraction (given: %s). Add 0.5 to the fractions or pass --r-escape explicitly.' % np.array2string(m_frac))
         r_escape = calcREscapeIsolate(lagr.all.r[-1,rhindex])
         esc_single.findEscaper(header.time, single, r_escape)
         esc_binary.findEscaper(header.time, binary, r_escape)

@@ -1,6 +1,7 @@
 import numpy as np
 from sdar.base import *
 from .data import *
+from sdar.base import enablePathInit
 
 
 def _replaceDataInPlace(obj, data_new):
@@ -14,6 +15,7 @@ def _replaceDataInPlace(obj, data_new):
     obj.size = data_new.size
 
 
+@enablePathInit
 class SingleEscaper(Particle):
     """ Single escaper recorder output from PeTar
     Keys: (class members)
@@ -88,6 +90,7 @@ class SingleEscaper(Particle):
         unid, index= np.unique(data_sort.id, return_index=True)
         _replaceDataInPlace(self, data_sort[index])
 
+@enablePathInit
 class BinaryEscaper(Binary):
     """ Binary escaper information
     Keys: (class members)
