@@ -2023,6 +2023,10 @@ public:
             Float de_kin = 0.5*dm*(cm_vel_org[0]*cm_vel_org[0]+cm_vel_org[1]*cm_vel_org[1]+cm_vel_org[2]*cm_vel_org[2]);
             Float dcm_vel[3] = {pcm.vel[0] - cm_vel_org[0], pcm.vel[1] - cm_vel_org[1], pcm.vel[2] - cm_vel_org[2]};
             de_kin += pcm.mass*(dcm_vel[0]*cm_vel_org[0]+dcm_vel[1]*cm_vel_org[1]+dcm_vel[2]*cm_vel_org[2]);
+            // quadratic completion (same rationale as the Hermite interrupt-side de_kin):
+            // exact c.m. kinetic change needs + 0.5*pcm.mass*|dcm_vel|^2, which is of the
+            // natal-kick energy scale when the c.m. is recoiled by a kick (2026-11-03)
+            de_kin += 0.5*pcm.mass*(dcm_vel[0]*dcm_vel[0]+dcm_vel[1]*dcm_vel[1]+dcm_vel[2]*dcm_vel[2]);
 #ifdef RECORD_CM_IN_HEADER
             de_kin += manager->status->pcm.calcDEKinFrameShift(pcm.mass, PS::F64vec(pcm.vel[0], pcm.vel[1], pcm.vel[2]),
                                                                mcm_bk, cm_vel_org);
