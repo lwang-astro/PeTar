@@ -925,23 +925,9 @@ public:
             const std::string fproname = fname_snp + ".prof.rank." + std::to_string(my_rank);
             if (fprofile.is_open()) fprofile.close();
             const std::string fproname_tmp = makeTmpPath(fproname);
+            // no column-name header: output streams are uniformly headerless
+            // (status/lagr/core/esc); the layout is recovered by the reader
             fprofile.open(fproname_tmp.c_str(), std::ofstream::out);
-            if (!OutputCommitManager::fileExists(fproname)) {
-                fprofile<<std::setw(WRITE_WIDTH)<<"my_rank"
-                        <<std::setw(WRITE_WIDTH)<<"Time"
-                        <<std::setw(WRITE_WIDTH)<<"N_steps"
-                        <<std::setw(WRITE_WIDTH)<<"N_real_loc";
-                profile.dumpName(fprofile, WRITE_WIDTH);
-                profile.dumpBarrierName(fprofile, WRITE_WIDTH);
-                tree_soft_profile.dumpName(fprofile, WRITE_WIDTH);
-                tree_nb_profile.dumpName(fprofile, WRITE_WIDTH);
-#if defined(USE_GPU) && defined(GPU_PROFILE)
-                gpu_profile.dumpName(fprofile, WRITE_WIDTH);
-                gpu_counter.dumpName(fprofile, WRITE_WIDTH);
-#endif
-                n_count.dumpName(fprofile, 0, WRITE_WIDTH);
-                fprofile<<std::endl;
-            }
             fprofile<<std::setprecision(WRITE_PRECISION);
         }
 #endif
@@ -3168,22 +3154,8 @@ public:
             }
 
             fprofile.open(fproname_open.c_str(),std::ofstream::out);
-            if (!OutputCommitManager::fileExists(fproname_final)) {
-                fprofile<<std::setw(WRITE_WIDTH)<<"my_rank"
-                        <<std::setw(WRITE_WIDTH)<<"Time"
-                        <<std::setw(WRITE_WIDTH)<<"N_steps"
-                        <<std::setw(WRITE_WIDTH)<<"N_real_loc";
-                profile.dumpName(fprofile, WRITE_WIDTH);
-                profile.dumpBarrierName(fprofile, WRITE_WIDTH);
-                tree_soft_profile.dumpName(fprofile, WRITE_WIDTH);
-                tree_nb_profile.dumpName(fprofile, WRITE_WIDTH);
-#if defined(USE_GPU) && defined(GPU_PROFILE)
-                gpu_profile.dumpName(fprofile, WRITE_WIDTH);
-                gpu_counter.dumpName(fprofile, WRITE_WIDTH);
-#endif
-                n_count.dumpName(fprofile, 0, WRITE_WIDTH);
-                fprofile<<std::endl;
-            }
+            // no column-name header: output streams are uniformly headerless
+            // (status/lagr/core/esc); the layout is recovered by the reader
             fprofile<<std::setprecision(WRITE_PRECISION);
         }
 #endif    

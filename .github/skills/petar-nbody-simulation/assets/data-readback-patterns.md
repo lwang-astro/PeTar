@@ -37,7 +37,7 @@ Pass these consistently to all readers. **Do not guess them by trial and error**
 
 The layout kwargs are recoverable from the data itself, in this precedence (highest wins): **explicit kwargs → `<prefix>.meta` sidecar → structure sniffing**.
 
-**Concise construction (preferred)**: every public petar reader accepts a file path as its first constructor argument and auto-reads it with the auto-detected layout — `petar.Particle('data.5')`, `petar.Particle('data.5.single')`, `petar.Binary('data.5.binary', G=...)`, `petar.SingleEscaper('data.esc_single')`, `petar.BinaryEscaper('data.esc_binary')`, `petar.GroupInfo('data.group.n2', N=2)`, `petar.LagrangianMultiple('data.lagr')`, `petar.Core('data.core')`, `petar.BSEStatus('data.bse_status')`, and the SSE/BSE event readers (`petar.SSETypeChange('data.sse.type_change')`, `petar.BSEKick('data.bse.gw_kick')`, ...). Explicit kwargs passed alongside win over detection; `.npy` / ASCII / binary (with or without snapshot header) are dispatched automatically. No explicit kwargs are needed for default-build data. Exceptions kept explicit: `Status` (the optional per-particle blocks need `N_particle`), `object.*` (needs the extra `time` member added first), and `Profile` (its own kwargs universe).
+**Concise construction (preferred)**: every public petar reader accepts a file path as its first constructor argument and auto-reads it with the auto-detected layout — `petar.Particle('data.5')`, `petar.Particle('data.5.single')`, `petar.Binary('data.5.binary', G=...)`, `petar.SingleEscaper('data.esc_single')`, `petar.BinaryEscaper('data.esc_binary')`, `petar.GroupInfo('data.group.n2', N=2)`, `petar.LagrangianMultiple('data.lagr')`, `petar.Core('data.core')`, `petar.BSEStatus('data.bse_status')`, and the SSE/BSE event readers (`petar.SSETypeChange('data.sse.type_change')`, `petar.BSEKick('data.bse.gw_kick')`, ...). Explicit kwargs passed alongside win over detection; `.npy` / ASCII / binary (with or without snapshot header) are dispatched automatically. No explicit kwargs are needed for default-build data. Exceptions kept explicit: `Status` (the optional per-particle blocks need `N_particle`) and `object.*` (needs the extra `time` member added first). `petar.Profile(path)` also auto-reads (see Pattern 8).
 
 **`meta=` injection** (concise constructor and `petar.getDataKwargs`): `meta='<path>'` uses an explicit sidecar — the escape hatch for files copied away from their run directory; `meta={...}` passes ready layout kwargs as a group (no detection, no warnings); `meta=False` disables the sidecar (structure/explicit only). Default `'auto'` locates `<prefix>.meta` by the generic prefix walk (successively shorter stems: `data.5.single` → `data.5.meta`, `data.meta`) — no per-file-type name mapping; works for any run prefix and all stream files.
 
@@ -282,58 +282,38 @@ This pattern is required for all interrupt/external mode combinations.
 
 ## Pattern 8: Profile Tables (`data.prof.rank.*`)
 
-Profiles are ASCII tables whose column count depends on the compile-time configuration (GPU, FDPS version, old_version flags). The correct `Profile()` keyword arguments must be determined by matching against the actual column count in the file.
-
-### Matching strategy
-
-Try the following `Profile()` constructor keyword arguments in order until `ncols` matches the file's column count:
+Profiles are ASCII tables whose column count depends on the compile-time configuration (GPU, FDPS version, old_version flags). **Use the concise constructor**: it detects the layout from the numeric body's column count.
 
 ```python
-candidates = [
-    {},                                                    # default
-    {"use_gpu": True},
-    {"old_version": True},
-    {"use_gpu": True, "old_version": True},
-    {"FDPS_version": 7.0},
-    {"use_gpu": True, "FDPS_version": 7.0},
-    {"old_version": True, "FDPS_version": 7.0},
-    {"use_gpu": True, "old_version": True, "FDPS_version": 7.0},
-]
+prof = petar.Profile("data.prof.rank.0")
 ```
 
-For each candidate, read the first data row to check `ncols`:
-
-```python
-first_row = np.loadtxt(path, skiprows=1, max_rows=1, ndmin=2)
-ncols = first_row.shape[1]
-
-for kwargs in candidates:
-    prof = petar.Profile(**kwargs)
-    if prof.ncols == ncols:
-        prof.loadtxt(str(path), skiprows=1)
-        break
-```
+- Output streams are uniformly headerless (like status/lagr/core/esc). Files from older versions (2020-02 to 1868e) may carry a column-name first line — the generic path-constructor title skip handles it for any ASCII file, no prof-specific logic.
+- The detected layout covers `use_gpu` / `FDPS_version` (<8.0 key set vs 8.0) / `old_version` / `group_count`. Rare-flag combinations that collide on column count resolve to the fewest-rare-flags candidate with a warning (same-tier collisions raise `AmbiguousSchemaError`); GPU builds additionally add the `gpu` member — verify with `prof.ncols` when in doubt.
+- Manual matching (legacy pattern): construct `petar.Profile(**kwargs)` candidates and compare `prof.ncols` against the first data row's column count.
 
 ### Column-count mismatch fallback
 
 **Scope: `data.profile` files only** — never generalize this column trim to snapshot/status/escaper/group files (see "Column mismatch: stop rules").
 
-If a profile has additional diagnostic columns in later rows (after a consistent numeric prefix), parse the minimum common column count:
+If a profile has additional diagnostic columns in later rows (after a consistent numeric prefix), parse the minimum common column count (uniformly headerless; legacy files with a title line need one extra skipped row):
 
 ```python
 min_cols = 0
 with path.open("r") as fh:
-    for i, line in enumerate(fh):
-        if i == 0:
-            continue
+    for line in fh:
         tokens = line.strip().split()
         if not tokens:
             continue
+        try:
+            float(tokens[0])
+        except ValueError:
+            continue  # title line (legacy files)
         row_cols = len(tokens)
         min_cols = row_cols if min_cols == 0 else min(min_cols, row_cols)
 
 if min_cols > 0:
-    np.loadtxt(str(path), skiprows=1, usecols=tuple(range(min_cols)))
+    np.loadtxt(str(path), usecols=tuple(range(min_cols)))
 ```
 
 ## Pattern 9: GroupInfo (`data.group.n<N>`)

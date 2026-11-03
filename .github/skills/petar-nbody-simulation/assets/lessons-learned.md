@@ -1413,3 +1413,19 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 伴生文件名从"手头对象"(snap list 文件名)猜,而不是从生产者的命名契约推导;`is_file()` 守卫把"找不到"吞成无操作,分支死了没有信号。
 
 **Prevention rule**: ① 复制伴生文件前先确认生产者的命名规则(读写入方代码/实际 ls 产物目录),文件名从 `output prefix` 等契约字段推导,不从相邻文件名拼接;② 带 `is_file()` 守卫的复制分支,验收时必须 ls 目标目录确认副本真的落了(守卫静默跳过=死代码无告警);③ 依赖 sidecar 的测试路径,日志/报告应能区分"sidecar 命中"与"结构嗅探回落",否则隔离副本缺失不可见。
+
+### 2026-11-02: 裁剪工具不得静默改变文件格式标记;读取侧应自动识别而非依赖调用者记住格式
+
+**Mistake**: `petar.data.clear` 裁剪 `data.prof.rank.*` 时丢掉了列名 header 行——fresh 运行写 header、restart 保留、经 data.clear 的文件没有,同一文件族三种形态;读取侧(`Profile().loadtxt(skiprows=)`)要求调用者知道 header 在不在,连 functional 检查都无条件 `skiprows=1`,对无 header 文件静默丢掉第一行数据(10 行读成 9 行,无人察觉)。
+
+**Root cause**: 流裁剪工具按"纯数据行"处理 ASCII 流,没有把 header 视为文件格式的一部分;而读者把格式知识外包给调用者,两层都无信号。
+
+**Prevention rule**: ① 输出格式必须全族统一:同一族流要么都有格式标记要么都没有——为单一文件族加独有标记(header/前缀行)就是制造多形态的根源,加之前先对照其他流;② 格式不一致的修法优先改生产侧恢复统一(prof header 已于 1868e 从写入端移除,与 status/lagr/core/esc 一致无 header),不新造读取侧特判;③ 历史多形态数据靠通用机制兜底(路径构造的通用标题行跳过对任何 ASCII 文件生效,非某类专属),不为单一类写专属探测;④ 测试的读取检查禁止无条件 skiprows——必须走自动路径,否则丢行是静默的。
+
+### 2026-11-03: 编辑器旧缓冲区覆盖工作区文件——窗口/profile 恢复后必须先 `git status` 校验再动手
+
+**Mistake**: VS Code(profile 损坏/窗口恢复 bug)把 `test/functional/run_functional_smoke.py` 的**数周前旧缓冲区**写回磁盘:已提交内容(schema selftest、paired_loader、lagr_variants、ASCII twin 检查)与待提交的 1868e loader 改动被一次性抹掉,文件内容回到 5c1963f 之前的未提交中间态;期间我基于会话开头读到的 diff 与随后磁盘内容自相矛盾排查了三轮才定位。
+
+**Root cause**: 长期打开的编辑器 tab 持有旧缓冲区,窗口/profile 恢复后按缓冲区时间戳覆盖磁盘,git 未察觉(工作区改动本来就有,`git status` 仍显示 modified,签名不变);会话内两次读取间文件被静默替换。
+
+**Prevention rule**: ① 会话中若同一文件的两次读取出现不可解释的矛盾(内容回退/改动消失),立即 `git diff <历史提交> -- <file>` 逐提交对比定位还原基线(选 diff 最小的提交),不要继续在矛盾状态上编辑;② 恢复方法:`git checkout HEAD -- <file>` 取回已提交内容,再重放已知待提交改动(小改动优于猜测);③ 经历 VS Code 崩溃/profile 恢复后,动手前对全部 modified 文件 `git diff --stat` 与预期改动清单核对;④ 编辑器中打开过但已被外部恢复的文件,先 Revert/关闭 tab 再编辑,防止二次覆盖。

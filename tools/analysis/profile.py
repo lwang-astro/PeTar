@@ -1,6 +1,7 @@
 # analysis profile data
 
 from sdar.base import *
+from sdar.base import enablePathInit
 
 class FDPSProfile(DictNpArrayMix):
     """ FDPS time profile for tree for one tree step
@@ -161,6 +162,7 @@ class PeTarCount(DictNpArrayMix):
         keys += keys_group + [["Hermite_step_sum",np.int64], ["n_neighbor_zero",np.int64], ["Ep_Ep_interaction",np.int64], ["Ep_Sp_interaction",np.int64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
+@enablePathInit
 class Profile(DictNpArrayMix):
     """ Profile class
     Keys: (class members)
@@ -176,6 +178,18 @@ class Profile(DictNpArrayMix):
             gpu (GPUProfile): GPU profile for tree force calculation
         count (PeTarCount): number counts
     """
+    # Column-layout parameters for schema auto-detection (first value =
+    # default/most plausible). The solver-written sidecar does not carry
+    # them (they depend on the build, not the run), so detection is purely
+    # structural: the column count of the numeric body pins the combination.
+    # FDPS_version 7.0 stands for the FDPS <8.0 key layout (any value <8.0).
+    LAYOUT_PARAMS = {
+        'use_gpu': (False, True),
+        'FDPS_version': (8.0, 7.0),
+        'old_version': (False, True),
+        'group_count': (True, False),
+    }
+
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
 

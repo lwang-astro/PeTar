@@ -977,63 +977,14 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
         }
 
     def load_profile_with_matching_schema(path: Path) -> Dict[str, Any]:
-        # Select Profile schema by matching column count in the numeric body.
-        first_row = np.loadtxt(str(path), skiprows=1, max_rows=1, ndmin=2)
-        if first_row.size == 0:
-            petar.Profile().loadtxt(str(path), skiprows=1)
-            return {
-                "command": "petar.Profile().loadtxt(path, skiprows=1)",
-                "details": {"profile_kwargs": {}, "matched_ncols": 0},
-            }
-
-        ncols = first_row.shape[1]
-        candidates = [
-            {},
-            {"use_gpu": True},
-            {"old_version": True},
-            {"use_gpu": True, "old_version": True},
-            {"FDPS_version": 7.0},
-            {"use_gpu": True, "FDPS_version": 7.0},
-            {"old_version": True, "FDPS_version": 7.0},
-            {"use_gpu": True, "old_version": True, "FDPS_version": 7.0},
-        ]
-
-        for kwargs in candidates:
-            prof = petar.Profile(**kwargs)
-            if prof.ncols == ncols:
-                try:
-                    prof.loadtxt(str(path), skiprows=1)
-                except Exception as exc:
-                    msg = str(exc)
-                    if "number of columns changed" not in msg:
-                        raise
-                    # Some profile outputs can append extra diagnostic columns in later rows.
-                    # For smoke checks, validate a common numeric prefix can be parsed.
-                    min_cols = 0
-                    with path.open("r", encoding="utf-8") as fh:
-                        for i, line in enumerate(fh):
-                            if i == 0:
-                                continue
-                            tokens = line.strip().split()
-                            if not tokens:
-                                continue
-                            row_cols = len(tokens)
-                            min_cols = row_cols if min_cols == 0 else min(min_cols, row_cols)
-                    if min_cols <= 0:
-                        raise
-                    np.loadtxt(str(path), skiprows=1, usecols=tuple(range(min_cols)))
-                return {
-                    "command": f"petar.Profile({', '.join(f'{k}={v!r}' for k, v in kwargs.items())}).loadtxt(path, skiprows=1)" if kwargs else "petar.Profile().loadtxt(path, skiprows=1)",
-                    "details": {"profile_kwargs": kwargs, "matched_ncols": ncols, "records": int(prof.size)},
-                }
-
-        # Fallback for legacy FDPS-profile layouts.
-        fallback_kwargs = {"FDPS_version": 7.0}
-        prof_fb = petar.Profile(**fallback_kwargs)
-        prof_fb.loadtxt(str(path), skiprows=1)
+        # Uniform concise-constructor read (same pattern as every other
+        # stream): petar.Profile(path) detects the column layout from the
+        # numeric body; legacy files carrying a title line are handled by
+        # the generic path-constructor title skip (no prof-specific logic).
+        prof = petar.Profile(str(path))
         return {
-            "command": "petar.Profile(FDPS_version=7.0).loadtxt(path, skiprows=1)",
-            "details": {"profile_kwargs": fallback_kwargs, "matched_ncols": ncols, "fallback": True, "records": int(prof_fb.size)},
+            "command": "petar.Profile(path)",
+            "details": {"records": int(prof.size), "ncols": int(prof.ncols)},
         }
 
     # Stellar-event record loaders switch dtype (SEVN columns) via interrupt_mode.
@@ -1452,7 +1403,7 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
             f"profile:{prof_path.name}",
             prof_path,
             load_profile_with_matching_schema,
-            "petar.Profile(...).loadtxt(path, skiprows=1)",
+            "petar.Profile(path)",
             expect_format="ascii",
         )
 

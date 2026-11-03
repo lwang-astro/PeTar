@@ -266,21 +266,22 @@ The primary reference is `sample/data_analysis.ipynb`; the verified readback pat
 
 One-line hints only — exact constructor signatures, header offsets, and worked examples are in `assets/data-readback-patterns.md` and must be read from there rather than guessed.
 
-| File pattern | Reader class | Key hint |
+| File pattern | Reader class | Path read (uniform pattern) |
 |---|---|---|
-| `data.<N>` (raw snapshot) | `petar.Particle` | Binary: `offset=` depends on build (see asset); ASCII: `skiprows=1`; header via `petar.PeTarDataHeader` |
-| `data.lagr` | `petar.LagrangianMultiple` | Auto-recovers per-run labels (`mass_fraction`, `add_*`, `calc_energy`) from `data.lagr.meta`; `external_mode` gates `epot_ext` (with `calc_energy`) |
-| `data.core` / `data.status` | `petar.Core` / `petar.Status` | Plain `.fromfile()` |
-| `data.esc_single` / `data.esc_binary` | `petar.SingleEscaper` / `petar.BinaryEscaper` | Needs `interrupt_mode`, `external_mode` |
-| `data.sse` / `data.bse` | `petar.SSEType` / `petar.BSEType` | ASCII — `.loadtxt()` |
-| `data.sse.*` / `data.bse.*` event tables | `petar.SSETypeChange`, `petar.SSESNKick`, `petar.BSETypeChange`, `petar.BSEKick`, `petar.BSEDynamicMerge` | `.loadtxt()`; `gw_kick` → `BSEKick`, `binary_merge` → `BSETypeChange` |
-| `data.bse_status` | `petar.BSEStatus` | Binary — `.fromfile()` |
-| `data.<N>.single[.npy]` | `petar.Particle` | No header/offset; `.npy` → `.load()` |
-| `data.<N>.binary[.npy]` | `petar.Binary` | No header/offset; needs `G=`, `member_particle_type`; `.npy` → `.load()` |
-| `data.<N>.triple` / `.quadruple` / `data.group.n<N>` | `petar.GroupInfo(N=…)` | `N=` must match the file |
-| `object.<N>` | `petar.Particle` | Call `addNewMember("time", …)` before `fromfile()` |
-| `data.prof.rank.*` | `petar.Profile` | Column count varies by GPU/FDPS build |
-| `data.*_h4_<N>_<rank>.log` | `petar.HermiteData` | PeTar reader only (not `sdar`); split by column count first; rerun with `OMP_NUM_THREADS=1` |
+| `data.<N>` (raw snapshot) | `petar.Particle` | `petar.Particle(path)`; header/offset auto-detected (manual `.fromfile()` needs `offset=`, see asset) |
+| `data.lagr` | `petar.LagrangianMultiple` | `petar.LagrangianMultiple(path)`; per-run labels (`mass_fraction`, `add_*`, `calc_energy`) auto-recovered from `data.lagr.meta` |
+| `data.core` | `petar.Core` | `petar.Core(path)` |
+| `data.status` | `petar.Status` | exception — `petar.Status(N_particle=…).fromfile(path)`; per-particle blocks need `N_particle` |
+| `data.esc_single` / `data.esc_binary` | `petar.SingleEscaper` / `petar.BinaryEscaper` | `petar.SingleEscaper(path)` / `petar.BinaryEscaper(path)`; interrupt/external modes auto-detected |
+| `data.sse` / `data.bse` | `petar.SSEType` / `petar.BSEType` | `petar.SSEType(path)` / `petar.BSEType(path)` (ASCII) |
+| `data.sse.*` / `data.bse.*` event tables | `petar.SSETypeChange`, `petar.SSESNKick`, `petar.BSETypeChange`, `petar.BSEKick`, `petar.BSEDynamicMerge` | `petar.BSEKick(path)` etc.; `gw_kick` → `BSEKick`, `binary_merge` → `BSETypeChange` |
+| `data.bse_status` | `petar.BSEStatus` | `petar.BSEStatus(path)` |
+| `data.<N>.single[.npy]` | `petar.Particle` | `petar.Particle(path)`; no header/offset; `.npy` dispatched |
+| `data.<N>.binary[.npy]` | `petar.Binary` | `petar.Binary(path, G=…)`; `G` stays explicit; `.npy` dispatched |
+| `data.<N>.triple` / `.quadruple` / `data.group.n<N>` | `petar.GroupInfo` | `petar.GroupInfo(path, N=…)`; `N=` must match the file |
+| `object.<N>` | `petar.Particle` | exception — call `addNewMember("time", …)` before reading |
+| `data.prof.rank.*` | `petar.Profile` | `petar.Profile(path)`; column layout auto-detected (GPU/FDPS build) |
+| `data.*_h4_<N>_<rank>.log` | `petar.HermiteData` | `petar.HermiteData(path)`; PeTar reader only (not `sdar`); rerun with `OMP_NUM_THREADS=1` |
 
 ### Universal Keyword Arguments
 

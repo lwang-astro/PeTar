@@ -133,6 +133,8 @@
 129. (1867e) Add Lagrangian metadata file <prefix>.lagr.meta from petar.data.process; petar.LagrangianMultiple(path) needs no manual keywords. [major]
 130. (1867e) Fix petar.data.process crash when --mass-fraction lacks 0.5: it now stops with a clear message (add 0.5 or pass --r-escape).
 131. (1867e) Fix reading --add-mass-range values from the Lagrangian metadata file: mass bins like 1_150 were misread as the number 1150.
+132. (1868e) Remove the data.prof.rank.* column-name header: output streams are uniformly headerless like status/lagr/core.
+133. (1868e) Add petar.Profile(path) with column-layout auto-detection (use_gpu/FDPS version); old headered files still read.
 
 **Existing issues (consolidated, live list — historical sections below no longer repeat their issues)**
 
