@@ -371,7 +371,7 @@ There are currently four options for stellar evolution packages based on SSE/BSE
 - mobse: the MOSSE/MOBSE from Giacobbo et al. 2018, MNRAS, 474, 2959.
 - sevn: the SEVN code from Iorio G., Mapelli M., Costa G., Spera M., Escobar G. J., Sgalletta C., Trani A. A., et al.,
   2023, MNRAS, 524, 426 and Spera M., Mapelli M., Giacobbo N., Trani A. A., Bressan A., Costa G., 2019, MNRAS, 485, 889,
-  implemented in PeTar in Marín Pina et al, in prep.
+  implemented in PeTar in Marín Pina et al. (2026) (https://arxiv.org/pdf/2610.18601).
 - bseEmp: the updated SSE/BSE version from Tanikawa et al. 2020, MNRAS, 495, 4170.
 
 It is important to mention that while all SSE/BSE package names only contain 'bse', the SSE package is also encompassed within them. From now on, the SSE/BSE based package will be denoted in a universal form as '[bse_name]'. The exception is 'sevn': its name contains no 'bse' substring, so post-processing tools match it via an explicit 'sevn' branch, and its SSE/BSE event file suffixes are '.sevn' and '.sevnB' instead of '[bse_name]'.
