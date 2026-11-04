@@ -456,9 +456,9 @@ std::vector<int> get_bse_event_id(Binstar* sevnbinary) {
     throw std::runtime_error("Error in stellar evolution with SEVN: Unknown binary event");
 }
 
-void init_sevn_event(double (&bse_event)[33][9]) {
+void init_sevn_event(double (&bse_event)[37][9]) {
     for (int i = 0; i < BinaryEvent::getEventNMax(); i++) {
-        for (int j = 0; j < 33; j++) {
+        for (int j = 0; j < 37; j++) {
             bse_event[j][i] = -1;
         }
     }
@@ -466,7 +466,7 @@ void init_sevn_event(double (&bse_event)[33][9]) {
 
 bool log_sevn_event(const double* tphys, Star* star0, Star* star1, const double radro0, double radro1,
                     const vector<int>& event_id_vec, int bevent,
-                    double semi_rsun, double ecc, double (&bse_event)[33][9], int* current_event_idx) {
+                    double semi_rsun, double ecc, double (&bse_event)[37][9], int* current_event_idx) {
     bool retval = false;
 
     for (const int event_id : event_id_vec) {
@@ -500,21 +500,27 @@ bool log_sevn_event(const double* tphys, Star* star0, Star* star1, const double 
             bse_event[15][j] = star1->getp(MCO::ID) > 0.0 ? star1->getp(MCO::ID) : star1->getp(MHE::ID);
             bse_event[16][j] = star0->getp(MCO::ID) > 0.0 ? star0->getp(RCO::ID) : star0->getp(RHE::ID);
             bse_event[17][j] = star1->getp(MCO::ID) > 0.0 ? star1->getp(RCO::ID) : star1->getp(RHE::ID);
+            // 3D spins, interleaved as in BinaryEvent (s1x,s2x,s1y,s2y,s1z,s2z); SEVN only evolves the scalar spin,
+            // the 3D chi of compact objects is restored in BSEManager::evolveBinary
             bse_event[18][j] = star0->getp(Spin::ID);
             bse_event[19][j] = star1->getp(Spin::ID);
-            bse_event[20][j] = star0->get_zams();
-            bse_event[21][j] = star1->get_zams();
-            bse_event[22][j] = star0->getp(MHE::ID);
-            bse_event[23][j] = star1->getp(MHE::ID);
-            bse_event[24][j] = star0->getp(MCO::ID);
-            bse_event[25][j] = star1->getp(MCO::ID);
-            bse_event[26][j] = (star0->getp(Phase::ID) != Lookup::Phases::Remnant) ? star0->plife() : 1.0;
-            bse_event[27][j] = (star1->getp(Phase::ID) != Lookup::Phases::Remnant) ? star0->plife() : 1.0;
-            bse_event[28][j] = round(star0->getp(Phase::ID));
-            bse_event[29][j] = round(star1->getp(Phase::ID));
-            bse_event[30][j] = round(star0->getp(RemnantType::ID));
-            bse_event[31][j] = round(star1->getp(RemnantType::ID));
-            bse_event[32][j] = bevent;
+            bse_event[20][j] = 0.0;
+            bse_event[21][j] = 0.0;
+            bse_event[22][j] = 0.0;
+            bse_event[23][j] = 0.0;
+            bse_event[24][j] = star0->get_zams();
+            bse_event[25][j] = star1->get_zams();
+            bse_event[26][j] = star0->getp(MHE::ID);
+            bse_event[27][j] = star1->getp(MHE::ID);
+            bse_event[28][j] = star0->getp(MCO::ID);
+            bse_event[29][j] = star1->getp(MCO::ID);
+            bse_event[30][j] = (star0->getp(Phase::ID) != Lookup::Phases::Remnant) ? star0->plife() : 1.0;
+            bse_event[31][j] = (star1->getp(Phase::ID) != Lookup::Phases::Remnant) ? star1->plife() : 1.0;
+            bse_event[32][j] = round(star0->getp(Phase::ID));
+            bse_event[33][j] = round(star1->getp(Phase::ID));
+            bse_event[34][j] = round(star0->getp(RemnantType::ID));
+            bse_event[35][j] = round(star1->getp(RemnantType::ID));
+            bse_event[36][j] = bevent;
         }
 
         if (*current_event_idx == BinaryEvent::getEventIndexInit()) {
@@ -530,7 +536,7 @@ bool log_sevn_event(const double* tphys, Star* star0, Star* star1, const double 
 }
 
 void log_sevn_event(StarParameter* star1, StarParameter* star2, const double* tphys, const double* z, double* semi_rsun,
-                    const double* ecc, double (&bse_event)[33][9], std::map<std::string, std::string>* params_sevn,
+                    const double* ecc, double (&bse_event)[37][9], std::map<std::string, std::string>* params_sevn,
                     int* current_event_idx, int event_type) {
     vector<int> event_id_vec{event_type};
 
@@ -566,7 +572,7 @@ void log_sevn_event(StarParameter* star1, StarParameter* star2, const double* tp
 
 void evolv2_SEVN(StarParameter* star1, StarParameter* star2, StarParameterOut* out1, StarParameterOut* out2,
                  double* tphysf, double* z, double* period_days, double* semi_rsun, double* ecc,
-                 double (&bse_event)[33][9], std::map<std::string, std::string>* params_sevn) {
+                 double (&bse_event)[37][9], std::map<std::string, std::string>* params_sevn) {
     SevnLogging svnlog = SevnLogging();
     svnlog.set_level(params_sevn->at("log_level"));
 
@@ -674,15 +680,35 @@ void evolv2_SEVN(StarParameter* star1, StarParameter* star2, StarParameterOut* o
     *ecc = sevnbinary.getp(Eccentricity::ID);
     *semi_rsun = sevnbinary.getp(Semimajor::ID);
 
-    if (star1->kw == 15 || star2->kw == 15 || sevnbinary.broken) {
+    if (star1->kw == 15 || star2->kw == 15) {
+        *period_days = -1.0;
+        *ecc = -1.0;
+        *semi_rsun = 0.0;
+    } else if (sevnbinary.broken) {
         *period_days = 0.0;
         *ecc = -1.0;
         *semi_rsun = 0.0;
+
+        double SMALL_VALUE = 1e-20;
+
+        if (out1->vkick[3] == 0.0) {
+            out1->vkick[3] = SMALL_VALUE; // Add a tiny fake kick to handle otherwise zero-kick Blaauw disruptions
+            out1->vkick[0] = SMALL_VALUE;
+            out1->vkick[1] = 0.0;
+            out1->vkick[2] = 0.0;
+        }
+
+        if (out2->vkick[3] == 0.0) {
+            out2->vkick[3] = SMALL_VALUE; // Add a tiny fake kick to handle otherwise zero-kick Blaauw disruptions
+            out2->vkick[0] = SMALL_VALUE;
+            out2->vkick[1] = 0.0;
+            out2->vkick[2] = 0.0;
+        }
     }
 }
 
 void merge_SEVN(StarParameter* star1, StarParameter* star2, StarParameterOut* out1, StarParameterOut* out2,
-                double* z, double* semi_rsun, double* ecc, bool log_bse_event, double (&bse_event)[33][9],
+                double* z, double* semi_rsun, double* ecc, bool log_bse_event, double (&bse_event)[37][9],
                 std::map<std::string, std::string>* params_sevn) {
     SevnLogging svnlog = SevnLogging();
     svnlog.set_level(params_sevn->at("log_level"));
@@ -710,6 +736,9 @@ void merge_SEVN(StarParameter* star1, StarParameter* star2, StarParameterOut* ou
     if (coll.check_collision(&sevnbinary)) {
         coll.evolve(&sevnbinary);
         sevnbinary.evolve();
+
+        double tphys1_pre = star1->tphys;
+        double tphys2_pre = star2->tphys;
 
         bool is_merger_successful = false;
         for (int i = 0; i < 3; i++) {
@@ -748,6 +777,9 @@ void merge_SEVN(StarParameter* star1, StarParameter* star2, StarParameterOut* ou
                            sevnbinary.getp(Semimajor::ID), sevnbinary.getp(Eccentricity::ID),
                            bse_event, &current_event_idx);
         }
+
+        star1->tphys = tphys1_pre; // Reset the physical time, SEVN only handles the collision
+        star2->tphys = tphys2_pre;
     }
 }
 
