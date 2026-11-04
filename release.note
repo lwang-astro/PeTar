@@ -136,6 +136,7 @@
 132. (1868e) Remove the data.prof.rank.* column-name header: output streams are uniformly headerless like status/lagr/core.
 133. (1868e) Add petar.Profile(path) with column-layout auto-detection (use_gpu/FDPS version); old headered files still read.
 134. (1869e) Fix one-off Error_PP jump (1e3-1e5) at SN natal kicks in binaries by completing the c.m. kinetic bookkeeping (needs SDAR >= 484e)
+135. (1870e) Fix one-off Error_SD step at SN kicks in bound slowdown binaries: consume the dropped root-CM credit (needs SDAR >= 485e)
 
 **Existing issues (consolidated, live list — historical sections below no longer repeat their issues)**
 
