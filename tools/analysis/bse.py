@@ -272,7 +272,11 @@ class BSEBinaryEvent(DictNpArrayMix):
                 spin2 (1D): stellar rotation of component 2, 1D spin (rad/day）
             else:
                 spin1  (2D,3): stellar rotation of component 1, if type is BH, it is dimensionless 3D spin (chi); otherwise it is 1D spin (rad/day） and only spin[0] is used.
-                spin2  (2D,3): stellar rotation of component 2, if type is BH, it is dimensionless 3D spin (chi); otherwise it is 1D spin (rad/day） and only spin[0] is used. 
+                spin2  (2D,3): stellar rotation of component 2, if type is BH, it is dimensionless 3D spin (chi); otherwise it is 1D spin (rad/day） and only spin[0] is used.
+                With SEVN, spin[0] of non-BH stars is the SEVN Spin. SEVN outputs written before the 3D-spin
+                record (Nov 2026) have one spin column per star: read them with spin_3d=False.
+        SEVN (keyword argument "interrupt_mode" contains "sevn"):
+            Mzams_SEVN1/2, MHE_SEVN1/2, MCO_SEVN1/2, Plife_SEVN1/2, Phase_SEVN1/2, RemnantType_SEVN1/2, BEvent_SEVN
 
         if keyword argument "base_output" == False (default)
            class members: Base + Add

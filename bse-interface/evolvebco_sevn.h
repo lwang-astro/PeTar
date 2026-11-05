@@ -23,9 +23,10 @@
  */
 inline double evolve_bco(double& a, double& e, double m1, double m2, double r1, double r2, double dt,
                          double rtol = 1.0e-10) {
-    // Physical constants
-    constexpr double G = 3.947841760435743e13; // 4*pi**2*1e12
-    constexpr double c = 6.3198e10;
+    // Physical constants in Rsun, Msun, Myr (SEVN's utilities::G and utilities::c, converted from yr to Myr)
+    constexpr double G = 3.925125598496094e20; // [Rsun^3 Msun^-1 Myr^-2]
+    constexpr double c = 1.3598865132357053e13; // [Rsun Myr^-1]
+    constexpr double sec = 1.0 / 3.15576e13; // 1 s in Myr
     constexpr double c5 = c * c * c * c * c;
     constexpr double G3 = G * G * G;
 
@@ -68,14 +69,24 @@ inline double evolve_bco(double& a, double& e, double m1, double m2, double r1, 
         e_out = ev + (h / 6.0) * (de1 + 2 * de2 + 2 * de3 + de4);
     };
 
+    // Peters coalescence time, with the eccentric fit of Mandel (2021, RNAAS 5, 223)
+    auto merger_time = [&](double av, double ev) {
+        return (5.0 / 256.0) * av * av * av * av / beta
+            * (1.0 + 0.27 * std::pow(ev, 10) + 0.33 * std::pow(ev, 20) + 0.2 * std::pow(ev, 1000))
+            * std::pow(1.0 - ev * ev, 3.5);
+    };
+
     // Auto initial step: small fraction of the Peters coalescence time
-    const double T_merge_approx = (12.0 / 85.0) * a * a * a * a / beta;
-    double h = std::min({T_merge_approx * 1.0e-4, dt * 1.0e-3, dt});
-    h = std::max(h, 1.0); // floor at 1 s to avoid stalling
+    double h = std::min({merger_time(a, e) * 1.0e-4, dt * 1.0e-3, dt});
+    h = std::max(h, 1.0 * sec); // floor at 1 s to avoid stalling
+
+    // Close to coalescence the steps would fall below the round-off of t,
+    // so the last stretch (shorter than this) is taken from the analytic merger time
+    const double t_merge_tol = 1.0e-9 * dt;
 
     // Adaptive RK4 integration (step-doubling error control)
     constexpr double safety = 0.9;
-    constexpr double h_min = 1.0e-3; // [s]
+    const double h_min = std::max(1.0e-3 * sec, 1.0e-12 * dt); // keep steps above the round-off of t
     constexpr double grow_max = 5.0;
     constexpr double shrink_min = 0.1;
     constexpr long max_steps = 10'000'000;
@@ -87,8 +98,15 @@ inline double evolve_bco(double& a, double& e, double m1, double m2, double r1, 
         if (nsteps++ > max_steps)
             throw std::runtime_error("evolve_binary: max_steps exceeded");
 
-        h = std::min(h, dt - t); // don't overshoot end time
-        if (h < h_min) h = h_min;
+        // Merger within t_merge_tol: end at contact, GW emission has circularised the orbit
+        const double t_rem = merger_time(a, e);
+        if (t_rem <= t_merge_tol) {
+            a = r_sum;
+            e = 0.0;
+            return std::min(t + t_rem, dt);
+        }
+
+        h = std::min(std::max(h, h_min), dt - t); // floor at h_min, but never overshoot end time
 
         // One full step and two half-steps (step-doubling)
         double a1, e1;
@@ -107,7 +125,7 @@ inline double evolve_bco(double& a, double& e, double m1, double m2, double r1, 
         const double scale_e = std::max(rtol * std::max(std::abs(e), std::abs(e2)), 1.0e-13);
         const double err = std::max(err_a / scale_a, err_e / scale_e);
 
-        if (err > 1.0 && h > h_min) {
+        if (!(err <= 1.0) && h > h_min) { // also rejects a NaN error estimate
             // Reject step — shrink h and retry
             h *= std::max(shrink_min, safety * std::pow(err, -0.25));
             --nsteps;
@@ -135,7 +153,7 @@ inline double evolve_bco(double& a, double& e, double m1, double m2, double r1, 
                 } else {
                     t_lo = t_mid;
                 }
-                if (t_hi - t_lo < 1.0) break; // converged to ~ 1s
+                if (t_hi - t_lo < 1.0 * sec) break; // converged to ~ 1s
             }
             a = a_hi;
             e = e_hi;
@@ -153,5 +171,5 @@ inline double evolve_bco(double& a, double& e, double m1, double m2, double r1, 
                  : std::min(grow_max, safety * std::pow(err, -0.25));
     }
 
-    return t; // full dt elapsed, no merger
+    return std::min(t, dt); // full dt elapsed, no merger
 }

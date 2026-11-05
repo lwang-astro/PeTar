@@ -666,8 +666,9 @@ static double EstimateGRTimescale(StarParameter& _star1, StarParameter& _star2, 
 class BinaryEvent{
     public:
     // Tanikawa's BH model
+    // rows 18-23: 3D spins, interleaved s1x,s2x,s1y,s2y,s1z,s2z; SEVN adds 13 rows (24-36)
 #ifdef SEVN
-    double record[33][9];
+    double record[37][9];
 #else
     double record[24][9];
 #endif
@@ -866,31 +867,28 @@ class BinaryEvent{
             <<" mc2[M*]= "<<record[15][index]
             <<" rc1[R*]= "<<record[16][index]
             <<" rc2[R*]= "<<record[17][index]
-#ifdef SEVN
-            <<" ospin1= "<<record[18][index]
-            <<" ospin2= "<<record[19][index]
-            <<" Mzams_SEVN1[M*]= "<<record[20][index]
-            <<" Mzams_SEVN2[M*]= "<<record[21][index]
-            <<" MHE_SEVN1[M*]= "<<record[22][index]
-            <<" MHE_SEVN2[M*]= "<<record[23][index]
-            <<" MCO_SEVN1[M*]= "<<record[24][index]
-            <<" MCO_SEVN2[M*]= "<<record[25][index]
-            <<" Plife_SEVN1= "<<record[26][index]
-            <<" Plife_SEVN2= "<<record[27][index]
-            <<" Phase_SEVN1= "<<round(record[28][index])
-            <<" Phase_SEVN2= "<<round(record[29][index])
-            <<" RemnantType_SEVN1= "<<round(record[30][index])
-            <<" RemnantType_SEVN2= "<<round(record[31][index])
-            <<" BEvent_SEVN= "<<int(record[32][index])
-            ;
-#else
             <<" ospin1[0]= "<<record[18][index]
-            <<" ospin1[1]= "<<record[19][index]
-            <<" ospin1[2]= "<<record[20][index]
-            <<" ospin2[0]= "<<record[21][index]
-            <<" ospin2[1]= "<<record[22][index]
-            <<" ospin2[2]= "<<record[23][index];
+            <<" ospin1[1]= "<<record[20][index]
+            <<" ospin1[2]= "<<record[22][index]
+            <<" ospin2[0]= "<<record[19][index]
+            <<" ospin2[1]= "<<record[21][index]
+            <<" ospin2[2]= "<<record[23][index]
+#ifdef SEVN
+            <<" Mzams_SEVN1[M*]= "<<record[24][index]
+            <<" Mzams_SEVN2[M*]= "<<record[25][index]
+            <<" MHE_SEVN1[M*]= "<<record[26][index]
+            <<" MHE_SEVN2[M*]= "<<record[27][index]
+            <<" MCO_SEVN1[M*]= "<<record[28][index]
+            <<" MCO_SEVN2[M*]= "<<record[29][index]
+            <<" Plife_SEVN1= "<<record[30][index]
+            <<" Plife_SEVN2= "<<record[31][index]
+            <<" Phase_SEVN1= "<<round(record[32][index])
+            <<" Phase_SEVN2= "<<round(record[33][index])
+            <<" RemnantType_SEVN1= "<<round(record[34][index])
+            <<" RemnantType_SEVN2= "<<round(record[35][index])
+            <<" BEvent_SEVN= "<<int(record[36][index])
 #endif
+            ;
     }
 
     //! print titles of class members using column style
@@ -922,8 +920,23 @@ class BinaryEvent{
              <<std::setw(_width)<<"ospin1[2]"
              <<std::setw(_width)<<"ospin2[0]"
              <<std::setw(_width)<<"ospin2[1]"
-             <<std::setw(_width)<<"ospin2[2]";
-
+             <<std::setw(_width)<<"ospin2[2]"
+#ifdef SEVN
+             <<std::setw(_width)<<"Mzams_SEVN1[M*]"
+             <<std::setw(_width)<<"Mzams_SEVN2[M*]"
+             <<std::setw(_width)<<"MHE_SEVN1[M*]"
+             <<std::setw(_width)<<"MHE_SEVN2[M*]"
+             <<std::setw(_width)<<"MCO_SEVN1[M*]"
+             <<std::setw(_width)<<"MCO_SEVN2[M*]"
+             <<std::setw(_width)<<"Plife_SEVN1"
+             <<std::setw(_width)<<"Plife_SEVN2"
+             <<std::setw(_width)<<"Phase_SEVN1"
+             <<std::setw(_width)<<"Phase_SEVN2"
+             <<std::setw(_width)<<"RemnantType_SEVN1"
+             <<std::setw(_width)<<"RemnantType_SEVN2"
+             <<std::setw(_width)<<"BEvent_SEVN"
+#endif
+             ;
     }
 
     //! print data of class members using column style
@@ -937,10 +950,12 @@ class BinaryEvent{
         for (int i=3; i<5; i++) _fout<<std::setw(_width)<<int(record[i][_index]);
         for (int i=5; i<9; i++) _fout<<std::setw(_width)<<record[i][_index];
         _fout<<std::setw(_width)<<int(record[9][_index]);
+        for (int i=10; i<18; i++) _fout<<std::setw(_width)<<record[i][_index];
+        // spins are stored interleaved (s1x,s2x,s1y,s2y,s1z,s2z); print ospin1[0..2] then ospin2[0..2]
+        for (int i=18; i<24; i+=2) _fout<<std::setw(_width)<<record[i][_index];
+        for (int i=19; i<24; i+=2) _fout<<std::setw(_width)<<record[i][_index];
 #ifdef SEVN
-        for (int i=10; i<33; i++) _fout<<std::setw(_width)<<record[i][_index];
-#else
-        for (int i=10; i<24; i++) _fout<<std::setw(_width)<<record[i][_index];
+        for (int i=24; i<37; i++) _fout<<std::setw(_width)<<record[i][_index];
 #endif
     }
 };
@@ -958,7 +973,7 @@ void evolv1_SEVN(StarParameter* star, StarParameterOut* out, double* tphysf, dou
 
 void evolv2_SEVN(StarParameter* star1, StarParameter* star2, StarParameterOut* out1, StarParameterOut* out2,
                  double* tphysf, double* z, double* period_days, double* semi_rsun, double* ecc,
-                 double (&bse_event)[33][9], std::map<std::string, std::string>* input_params_SEVN);
+                 double (&bse_event)[37][9], std::map<std::string, std::string>* input_params_SEVN);
 
 double get_timestep(StarParameter* star, double* z, std::map<std::string, std::string>* input_params_SEVN);
 
@@ -966,13 +981,13 @@ double get_timestep(StarParameter* star1, StarParameter* star2, const double* se
                     std::map<std::string, std::string>* input_params_SEVN);
 
 void merge_SEVN(StarParameter* star1, StarParameter* star2, StarParameterOut* out1, StarParameterOut* out2,
-                double* z, double* semi_rsun, double* ecc, bool log_bse_event, double (&bse_event)[33][9],
+                double* z, double* semi_rsun, double* ecc, bool log_bse_event, double (&bse_event)[37][9],
                 std::map<std::string, std::string>* input_params_SEVN);
 
-void init_sevn_event(double (&bse_event)[33][9]);
+void init_sevn_event(double (&bse_event)[37][9]);
 
 void log_sevn_event(StarParameter* star1, StarParameter* star2, const double* tphys, const double* z, double* semi_rsun,
-                    const double* ecc, double (&bse_event)[33][9], std::map<std::string, std::string>* params_sevn,
+                    const double* ecc, double (&bse_event)[37][9], std::map<std::string, std::string>* params_sevn,
                     int* current_event_idx, int event_type);
 
 void printconst(std::map<std::string, std::string>* input_params_SEVN);
@@ -1615,7 +1630,7 @@ public:
         for (int i = 0; i < offset; i++) fout << " ";
         fout <<
             "SEVN: Iorio G., Mapelli M., Costa G., Spera M., Escobar G. J., Sgalletta C., Trani A. A., et al., 2023, MNRAS, 524, 426\n";
-        fout << "\t Paired with PeTar in Marin Pina et al. (in prep)\n";
+        fout << "\t Paired with PeTar in Marin Pina et al. (2026) [https://arxiv.org/pdf/2610.18601] \n";
         fout <<
             "\t\t see also Spera M., Mapelli M., Giacobbo N., Trani A. A., Bressan A., Costa G., 2019, MNRAS, 485, 889\n";
         fout << "\t \t (Online document: https://gitlab.com/sevncodes/sevn/-/blob/SEVN/resources/SEVN_userguide.pdf)"
@@ -2076,6 +2091,14 @@ public:
         if (event_flag<0) return event_flag;
 
 #ifdef SEVN
+        double chi1[3], chi2[3];
+        chi1[0] = _star1.ospin[0];
+        chi1[1] = _star1.ospin[1];
+        chi1[2] = _star1.ospin[2];
+        chi2[0] = _star2.ospin[0];
+        chi2[1] = _star2.ospin[1];
+        chi2[2] = _star2.ospin[2];
+
         if (semi_rsun > 0.0 and _ecc >= 0.0 and _ecc < 1.0) {
             if ((_star1.RemnantType_SEVN != Lookup::Remnants::NotARemnant) &&
                 (_star2.RemnantType_SEVN != Lookup::Remnants::NotARemnant) &&
@@ -2085,13 +2108,14 @@ public:
                 // If the binary is a BCO, the only possible evolution is through GW emission. For numerical stability,
                 // this is only considered for binaries with SMA < 10 Rsun (same than in BSE).
                 double semi_rsun0 = semi_rsun;
-                double t_fin = evolve_bco(semi_rsun, _ecc, _star1.mt, _star2.mt, _star1.r, _star2.r, tphysf);
-                _star1.tphys = t_fin;
-                _star2.tphys = t_fin;
+                double t_gw = evolve_bco(semi_rsun, _ecc, _star1.mt, _star2.mt, _star1.r, _star2.r, tphysf - tphys);
+                _star1.tphys = std::min(tphys + t_gw, tphysf);
+                _star2.tphys = _star1.tphys;
+
                 period_days *= std::pow(semi_rsun / semi_rsun0, 3.0 / 2.0);
 
                 double r_sum = _star1.r + _star2.r;
-                if (semi_rsun <= r_sum) {
+                if (semi_rsun * (1.0 - _ecc) <= r_sum) {
                     semi_rsun = r_sum / (1.0 - _ecc);
                     merge_SEVN(&_star1, &_star2, &_out1, &_out2, &z, &semi_rsun, &_ecc, true,
                                _bse_event.record, &input_params_SEVN);
@@ -2117,6 +2141,113 @@ public:
         _out1.dtmiss = tphysf - _star1.tphys;
         _out2.dm = _star2.mt - _out2.dm;
         _out2.dtmiss = tphysf - _star2.tphys;
+
+        // if it is a compact object with 3D chi, restore the chi, otherwise use ospin from evolv2
+        if ((kw[0]==13 || kw[0]==14) && (chi1[1]!=0 || chi1[2]!=0)) {
+            _star1.ospin[0] = chi1[0];
+        }
+        _star1.ospin[1] = chi1[1];
+        _star1.ospin[2] = chi1[2];
+
+        if ((kw[1]==13 || kw[1]==14) && (chi2[1]!=0 || chi2[2]!=0)) {
+            _star2.ospin[0] = chi2[0];
+        }
+        _star2.ospin[1] = chi2[1];
+        _star2.ospin[2] = chi2[2];
+
+        // apply the same chi restore to the recorded events (SEVN only records the scalar spin)
+        for (int i=0; i<=BinaryEvent::getEventIndexInit(); i++) {
+            if (_bse_event.getType(i)<0) continue;
+            int kw1_i = _bse_event.getType1(i);
+            int kw2_i = _bse_event.getType2(i);
+            if ((kw1_i==13 || kw1_i==14) && (chi1[1]!=0 || chi1[2]!=0)) _bse_event.record[18][i] = chi1[0];
+            if ((kw2_i==13 || kw2_i==14) && (chi2[1]!=0 || chi2[2]!=0)) _bse_event.record[19][i] = chi2[0];
+            _bse_event.record[20][i] = chi1[1];
+            _bse_event.record[21][i] = chi2[1];
+            _bse_event.record[22][i] = chi1[2];
+            _bse_event.record[23][i] = chi2[2];
+        }
+
+        double mt[2];
+        mt[0] = _star1.mt;
+        mt[1] = _star2.mt;
+
+        int merger_event_index = -1; // record binary event index for merger, if no merger, is -1
+        int nmax = BinaryEvent::getEventNMax();
+        for (int i=0; i<nmax; i++){
+            int binary_type = _bse_event.getType(i);
+            if (isMerger(binary_type)) {
+                if (merger_event_index==-1) merger_event_index = i; // avoid save index twice
+            }
+        }
+
+        int premerger_index = -1;
+        if (merger_event_index > 0) premerger_index = merger_event_index - 1;
+        if (merger_event_index == 0) premerger_index = nmax;
+
+        // check GW merger
+        double vkick_gw[3] ={0.0,0.0,0.0}, mf_ratio = 0, chif_vec[3]={0.0,0.0,0.0};
+        if (merger_event_index>=0) {
+            int type1 = _bse_event.getType1(premerger_index);
+            int type2 = _bse_event.getType2(premerger_index);
+
+            // GW with NS or BH binaries
+            if (type1>=13 && type1<=14 && type2>=13 && type2<=14) {
+                double q;
+                std::array<double,3> chi1_pre, chi2_pre;
+                double m1_pre = _bse_event.getMass1(premerger_index);
+                double m2_pre = _bse_event.getMass2(premerger_index);
+
+                if (chi1[2] == 0 && chi1[1] == 0) {
+                    chi1_pre = getCompactChi1Random(_bse_event, premerger_index);
+                } else {
+                    chi1_pre[0] = chi1[0];
+                    chi1_pre[1] = chi1[1];
+                    chi1_pre[2] = chi1[2];
+                }
+
+                if (chi2[2] == 0 && chi2[1] == 0) {
+                    chi2_pre = getCompactChi2Random(_bse_event, premerger_index);
+                } else {
+                    chi2_pre[0] = chi2[0];
+                    chi2_pre[1] = chi2[1];
+                    chi2_pre[2] = chi2[2];
+                }
+
+                // ensure mass ratio < 1, swap if necessary
+                q = m1_pre/m2_pre;
+                if (q>1) {
+                    q = 1/q;
+                    chi1_pre.swap(chi2_pre);
+                    std::swap(m1_pre, m2_pre);
+                }
+
+                // calculate kick properties
+                gw_kick.calcKickVel(vkick_gw, chi1_pre.data(), chi2_pre.data(), _am, pos_red, q);
+                gw_kick.calcFinalMass(mf_ratio, chi1_pre.data(), chi2_pre.data(), _am, pos_red, q);
+                gw_kick.calcFinalSpin(chif_vec, chi1_pre.data(), chi2_pre.data(), _am, pos_red, q);
+                assert(std::isfinite(mf_ratio) && std::isfinite(vkick_gw[0]) && std::isfinite(vkick_gw[1]) && std::isfinite(vkick_gw[2]));
+
+                if ( mt[0] ==0.0) {
+                    _star2.mt= mt[1]*mf_ratio;
+                    _bse_event.setMass2(merger_event_index, _star2.mt);
+                    for(int i=0; i<3; i++) _star2.ospin[i] = chif_vec[i];
+                    _bse_event.setSpin2(merger_event_index,chif_vec);
+                    for(int j=0; j<3; j++) _out2.vkick[j] += vkick_gw[j];
+                    _out2.vkick[3] = sqrt(_out2.vkick[0]*_out2.vkick[0]+_out2.vkick[1]*_out2.vkick[1]+_out2.vkick[2]*_out2.vkick[2]);
+                }
+                else if ( mt[1] ==0.0) {
+                    _star1.mt = mt[0]*mf_ratio;
+                    _bse_event.setMass1(merger_event_index,_star1.mt);
+                    for(int i=0; i<3; i++)_star1.ospin[i] = chif_vec[i];
+                    _bse_event.setSpin1(merger_event_index,chif_vec);
+                    for(int j=0; j<3; j++)_out1.vkick[j] += vkick_gw[j];
+                    _out1.vkick[3] = sqrt(_out1.vkick[0]*_out1.vkick[0]+_out1.vkick[1]*_out1.vkick[1]+_out1.vkick[2]*_out1.vkick[2]);
+                }
+
+                _bse_event.setType(merger_event_index, 14);
+            }
+        }
 
 #else
         int kw[2];

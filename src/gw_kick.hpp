@@ -41,7 +41,9 @@ public:
         \return the normalized vector
      */
     std::array<Float,3> normalize(const std::array<Float,3>& vec){
-        return {vec[0]/norm(vec),vec[1]/norm(vec),vec[2]/norm(vec)};
+        Float n = norm(vec);
+        if (n == 0.0) return {0.0, 0.0, 0.0}; // zero spin has no direction; avoid 0/0 = NaN
+        return {vec[0]/n,vec[1]/n,vec[2]/n};
     }
 
     // Function to calculate the dot product of two vectors
@@ -372,10 +374,10 @@ public:
         Float chit_par = dot(chit, hatL);
         const Float p0 = 0.04827;
         const Float p1 = 0.01707;
-        Float Z1 = 1 + pow((1-pow(chit_par, 2)),1/3)* (pow((1+chit_par),1/3)+pow((1-chit_par),1/3));
-        Float Z2 = pow((3*pow(chit_par,2) + pow(Z1,2)),1/2);
-        Float risco = 3 + Z2 - std::copysign(1.0,chit_par)*pow((3-Z1)*(3+Z1+2*Z2),1/2);
-        Float Eisco = pow((1-2/(3*risco)),1/2);
+        Float Z1 = 1 + std::pow(1 - chit_par * chit_par, 1.0 / 3.0) * (std::pow(1 + chit_par, 1.0 / 3.0) + std::pow(1 - chit_par, 1.0 / 3.0));
+        Float Z2 = std::sqrt(3 * chit_par * chit_par + Z1 * Z1);
+        Float risco = 3 + Z2 - std::copysign(1.0, chit_par) * std::sqrt((3 - Z1) * (3 + Z1 + 2 * Z2));
+        Float Eisco = std::sqrt(1 - 2 / (3 * risco));
         Float Erad = eta*(1-Eisco) + 4*pow(eta,2)*(4*p0+16*p1*chit_par*(chit_par+1)+Eisco -1);
         Mfin = 1 - Erad;
     }
