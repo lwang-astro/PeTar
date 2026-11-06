@@ -135,8 +135,13 @@
 131. (1867e) Fix reading --add-mass-range values from the Lagrangian metadata file: mass bins like 1_150 were misread as the number 1150.
 132. (1868e) Remove the data.prof.rank.* column-name header: output streams are uniformly headerless like status/lagr/core.
 133. (1868e) Add petar.Profile(path) with column-layout auto-detection (use_gpu/FDPS version); old headered files still read.
-134. (1869e) Fix one-off Error_PP jump (1e3-1e5) at SN natal kicks in binaries by completing the c.m. kinetic bookkeeping (needs SDAR >= 484e)
-135. (1870e) Fix one-off Error_SD step at SN kicks in bound slowdown binaries: consume the dropped root-CM credit (needs SDAR >= 485e)
+134. (1868e) Add GW kicks when SEVN is active and 3D compact-object spins to the SEVN interface. [major]
+135. (1869e) Fix one-off Error_PP jump (1e3-1e5) at SN natal kicks in binaries by completing the c.m. kinetic bookkeeping (needs SDAR >= 484e)
+136. (1870e) Fix one-off Error_SD step at SN kicks in bound slowdown binaries: consume the dropped root-CM credit (needs SDAR >= 485e)
+137. (1875e) Add packed snapshot output (-w 4): append-only [prefix].pack.<id> + .pack.idx replaces per-snapshot files; petar.pack + readers. [major]
+138. (1875e) Remove petar.readSnapshot: use petar.Snapshot(path) (.particle/.header), consistent with the other reader classes.
+139. (1875e) Fix CLI parsing: -s was misparsed as --spin-1d in petar.data.process (string membership test); same fix in all tools.
+140. (1875e) Fix DSM ASCII snapshots: a stray newline in the star-member writer split every particle across two lines.
 
 **Existing issues (consolidated, live list — historical sections below no longer repeat their issues)**
 

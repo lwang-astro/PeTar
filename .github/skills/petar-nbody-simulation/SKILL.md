@@ -218,6 +218,7 @@ Input-source branching in more detail (raw table / existing snapshot / restart /
 5. Use `-a 0` only when overwrite requested.
 6. **Duplicate-event prevention is now handled automatically** via the transactional `*.tmp` file mechanism: each output interval is first written to temporary files and only committed on successful completion. This eliminates the need for manual cleanup before restarts in modern PeTar.
 7. For **legacy (old-version) runs only**: if restarting from an intermediate snapshot with older output files that may contain already-committed duplicate records, use `petar.data.clear -t <time> [prefix]` to trim event files back to the snapshot time. The tool also trims `<prefix>.snap.lst` and deletes the stale snapshot files beyond the trim time (single-rank group files included), so a restart from an older snapshot leaves no duplicate list entries.
+8. **Packed-output runs (`-w 4`)**: restart input must be a standalone snapshot — materialize it first (`petar.pack extract <prefix> --last`, or `--nfile <N>`/`--time <t>`), then restart from that file with `-i 0` (binary read). Restarting from an **older** snapshot leaves stale container records: run `petar.pack trim <prefix> -t <restart time>` BEFORE restarting (container analog of `petar.data.clear`); otherwise the solver warns about the stale index tail. A non-empty volume without any committed index line aborts at startup (recover with `petar.pack rebuild` or remove the container files).
 
 ## Post-Processing Tool Policy
 
@@ -238,6 +239,7 @@ Use installed tools directly when user intent matches:
 - `petar.find.dt` — search for suitable tree time step (see "Timestep Tuning (petar.find.dt)" section)
 - `petar.galpy.help` — query Galpy potential families and argument/config help
 - `petar.external.galpy` / `petar.external.agama` — generate external potential map snapshots from run parameter files for visualization workflows
+- `petar.pack` — packed snapshot container (`-w 4`) manager: `list` / `extract` (materialize `data.<N>` + `snap.lst`; `--snap-lst` needs `--all`) / `trim -t <time>` (restart prep, container analog of `petar.data.clear`) / `rebuild` (index recovery from volumes) / `hdf5` (offline conversion); direct reads go through `petar.PackedSnapshots`
 
 Prefer the corresponding installed tool command pattern over generic workflow prose for conversion, extraction, movie generation, restart cleanup, and external-potential maps. Per-scenario `petar.data.process` and `petar.movie` defaults: `assets/default-postprocessing.md`.
 
@@ -268,7 +270,8 @@ One-line hints only — exact constructor signatures, header offsets, and worked
 
 | File pattern | Reader class | Path read (uniform pattern) |
 |---|---|---|
-| `data.<N>` (raw snapshot) | `petar.Particle` | `petar.Particle(path)`; header/offset auto-detected (manual `.fromfile()` needs `offset=`, see asset) |
+| `data.<N>` (raw snapshot) | `petar.Snapshot` | `petar.Snapshot(path)` — default, returns `.particle` + `.header` with auto-detected layout (use `petar.Particle(path)` for particles only; manual `.fromfile()` needs `offset=`, see asset) |
+| `data.pack.<id>` + `data.pack.idx` (packed container, `-w 4`, BINARY snapshot write only i.e. `-i 0/2`) | `petar.PackedSnapshots` | `pack = petar.PackedSnapshots(prefix)`; `pack.readSnapshot(nfile=…)` / `pack.readSnapshot(time=t)` (FIRST snapshot at/after `t`, falls back to last — not nearest) / `pack[-1]` seek by index and return a `petar.Snapshot`; `petar.pack extract` materializes the plain `data.<N>` layout |
 | `data.lagr` | `petar.LagrangianMultiple` | `petar.LagrangianMultiple(path)`; per-run labels (`mass_fraction`, `add_*`, `calc_energy`) auto-recovered from `data.lagr.meta` |
 | `data.core` | `petar.Core` | `petar.Core(path)` |
 | `data.status` | `petar.Status` | exception — `petar.Status(N_particle=…).fromfile(path)`; per-particle blocks need `N_particle` |

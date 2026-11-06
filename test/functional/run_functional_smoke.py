@@ -159,6 +159,10 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
         "th{background:#f8fafc;font-weight:700;}"
         "tr.step-details td{background:#fbfcfe;border-top:none;padding-top:2px;padding-bottom:10px;}"
         "tr.step-details pre{margin:0;background:#f1f5f9;color:#334155;}"
+        "table.mini{width:100%;margin:0;border-collapse:collapse;}"
+        "table.mini th{background:transparent;font-weight:600;white-space:nowrap;width:180px;text-align:left;vertical-align:top;padding:2px 10px 2px 0;font-size:13px;color:#334155;}"
+        "table.mini td{background:transparent;border-top:none;padding:2px 0;font-size:13px;}"
+        "tr.block-title td{background:#eef2f7;border-top:1px solid #d8dee6;font-weight:700;padding:6px 10px;font-size:13px;color:#16202a;}"
         "code,pre{font-family:SFMono-Regular,Consolas,Monaco,monospace;font-size:12px;}"
         "pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#e2e8f0;padding:12px;border-radius:10px;overflow:auto;}"
         ".fail{color:#b42318;font-weight:600;}.pass{color:#1b7f3b;font-weight:600;}.skip{color:#8a6d1f;font-weight:600;}"
@@ -238,8 +242,9 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
         for step in case.get("steps", []):
             details = [f"cwd: {step.get('cwd', '')}"]
             for key, value in step.get("details", {}).items():
-                # 'variants' gets its own table below (lagr.variants step)
-                if key == "variants":
+                # 'variants'/'matrix' get their own tables below
+                # (lagr.variants / format.matrix steps)
+                if key in ("variants", "matrix"):
                     continue
                 if isinstance(value, list):
                     value = " ".join(str(x) for x in value)
@@ -262,22 +267,82 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
         schema_checks = [chk for chk in read_checks if str(chk.get("label", "")).startswith("schema:")]
         other_checks = [chk for chk in read_checks if not str(chk.get("label", "")).startswith("schema:")]
 
+        def _shorten_value(value: Any) -> str:
+            """Compact a detail value: numpy class reprs -> short names,
+            dict-style layout reprs -> k=v lists."""
+            text = str(value)
+            text = re.sub(r"<class 'numpy\.([^']+)'>", r"\1", text)
+            text = re.sub(r"<class '([^']+)'>", r"\1", text)
+            return text
+
+        def _parse_layout(text: str) -> Dict[str, str]:
+            layout: Dict[str, str] = {}
+            for key, raw, sval in re.findall(r"'(\w+)':\s*('([^']*)'|<class '[^']*'>|True|False|[0-9.]+)", text):
+                if sval:
+                    layout[key] = sval
+                elif "class" in raw:
+                    layout[key] = raw.split("'")[1].replace("numpy.", "")
+                else:
+                    layout[key] = raw
+            return layout
+
+        def _fmt_schema_warning(msg: str) -> str:
+            """One readable line for the tier-resolution schema notice:
+            evidence, the resolved default layout, and each rarer
+            alternative as ONLY the flags differing from the default."""
+            m = re.match(
+                r"Schema detection of (\S+) \(([^)]*)\) resolved to the default-build layout (\{.*?\}); "
+                r"the file could also match rarer builds (\[.*?\])\.(.*)$",
+                msg,
+            )
+            if not m:
+                return _shorten_value(msg)
+            path, evidence, resolved_s, alts_s, tail = m.groups()
+            resolved = _parse_layout(resolved_s)
+            alt_summaries = []
+            for alt_s in re.findall(r"\{.*?\}", alts_s):
+                alt = _parse_layout(alt_s)
+                diff = ["%s=%s" % (k, alt[k]) for k in sorted(alt) if alt.get(k) != resolved.get(k)]
+                alt_summaries.append("+".join(diff) if diff else "identical")
+            head = "Schema: %s (%s) → default %s" % (
+                Path(path).name,
+                evidence,
+                ", ".join("%s=%s" % kv for kv in sorted(resolved.items())),
+            )
+            if alt_summaries:
+                head += "; rarer alternative: " + " | ".join(alt_summaries)
+            tail = tail.strip()
+            return head + ("" if not tail else " — " + tail)
+
         def render_check_rows(chk_list: List[Dict[str, Any]]) -> None:
             for chk in chk_list:
                 chk_status = "pass" if chk.get("ok") else "fail"
-                reason = chk.get("error", "") or "; ".join(chk.get("warnings", []))
                 details = chk.get("details", {}) or {}
-                detail_lines = []
-                for key, value in details.items():
-                    detail_lines.append(f"{key}: {value}")
-                if detail_lines:
-                    reason = (reason + "\n" if reason else "") + "\n".join(detail_lines)
                 parts.append("<tr>")
                 parts.append(f"<td>{esc(chk.get('label', ''))}</td>")
                 parts.append(f"<td><code>{esc(chk.get('command', ''))}</code></td>")
                 parts.append(f"<td class=\"{chk_status}\">{chk_status}</td>")
                 parts.append("</tr>")
-                parts.append(f"<tr class=\"step-details\"><td colspan=\"3\"><pre>{esc(chk.get('file', ''))}\n{esc(reason)}</pre></td></tr>")
+                # structured details: mini key/value table instead of a
+                # flat pre-formatted dump; warnings deduplicated and
+                # schema notices compacted to their decisive content
+                parts.append('<tr class="step-details"><td colspan="3"><table class="mini">')
+                if chk.get("file"):
+                    note = chk.get("file_note")
+                    note_html = (" &mdash; " + esc(str(note))) if note else ""
+                    parts.append(f'<tr><th>file</th><td><span title="{esc(chk["file"])}">{esc(Path(chk["file"]).name)}</span>{note_html}</td></tr>')
+                if chk.get("error"):
+                    parts.append(f'<tr><th>error</th><td class="fail">{esc(_shorten_value(chk["error"]))}</td></tr>')
+                for key, value in details.items():
+                    text = _shorten_value(value)
+                    cmd_like = key in ("explicit", "auto", "command", "autofill", "snapshot") or "petar." in text[:24]
+                    cell = f'<code>{esc(text)}</code>' if cmd_like else esc(text)
+                    cls = ' class="pass"' if key == "comparison" and text.startswith("identical") else ""
+                    parts.append(f"<tr><th>{esc(key)}</th><td{cls}>{cell}</td></tr>")
+                warn_msgs = list(dict.fromkeys(chk.get("warnings", []) or []))
+                for wmsg in warn_msgs:
+                    parts.append(f'<tr><th>warning</th><td>{esc(_fmt_schema_warning(wmsg))}</td></tr>')
+                parts.append("</table></td></tr>")
 
         if schema_checks:
             parts.append("<h3>Schema Auto-Detection Checks (data.meta sidecar + structure sniff)</h3><table><thead><tr><th>Label</th><th>Command</th><th>Result</th></tr></thead><tbody>")
@@ -289,26 +354,72 @@ def render_html_report(report: Dict[str, Any], out_path: Path) -> None:
             render_check_rows(other_checks)
             parts.append("</tbody></table>")
 
-        # Lagrangian variant matrix goes last: it builds on the default
+        # Variant-carrying steps go last: they build on the default
         # data.process run and the read checks above
-        lagr_variant_checks: List[Dict[str, Any]] = []
-        for step in case.get("steps", []):
-            if step.get("name") == "lagr.variants":
-                lagr_variant_checks.extend((step.get("details") or {}).get("variants", []))
-        if lagr_variant_checks:
-            parts.append(
-                "<h3>Lagrangian Variant Checks (petar.data.process with non-default "
-                "--mass-fraction / --add-star-type / --add-mass-range / --calc-energy / -o ascii)</h3>"
-                "<table><thead><tr><th>Check</th><th>Command</th><th>Result</th><th>Detail</th></tr></thead><tbody>"
-            )
+        for vstep in case.get("steps", []):
+            if vstep.get("name") == "format.matrix":
+                fmt_matrix = (vstep.get("details") or {}).get("matrix")
+                if fmt_matrix:
+                    parts.append("<h3>Format Coverage (per file: binary / ASCII / npy)</h3>")
+                    parts.append("<table><thead><tr><th>File</th><th>Binary</th><th>ASCII</th><th>npy</th></tr></thead><tbody>")
+                    row_labels = [
+                        ("snapshot", "snapshot <code>data.&lt;N&gt;</code>"),
+                        ("lagr", "Lagrangian <code>data.lagr</code>"),
+                        ("core", "core <code>data.core</code>"),
+                    ]
+                    fmt_order = ("binary", "ascii", "npy")
+                    for key, label in row_labels:
+                        parts.append(f"<tr><td>{label}</td>")
+                        for fmt in fmt_order:
+                            c = (fmt_matrix.get(key) or {}).get(fmt)
+                            if c is None:
+                                parts.append('<td><span class="muted">—</span></td>')
+                                continue
+                            status = "pass" if c.get("ok") else "fail"
+                            cmd = esc(c.get("command", ""))
+                            parts.append(
+                                f'<td class="{status}"><b>{status}</b> · {esc(c.get("detail", ""))}'
+                                + (f"<br><code>{cmd}</code>" if cmd else "")
+                                + "</td>"
+                            )
+                        parts.append("</tr>")
+                    parts.append("</tbody></table>")
+                continue
+            heading = {
+                "lagr.variants": "Lagrangian Variant Checks (petar.data.process with non-default "
+                                 "--mass-fraction / --add-star-type / --add-mass-range / --calc-energy / -o ascii)",
+            }.get(vstep.get("name", ""))
+            if heading is None:
+                continue
+            lagr_variant_checks = (vstep.get("details") or {}).get("variants", [])
+            if not lagr_variant_checks:
+                continue
+            parts.append(f"<h3>{esc(heading)}</h3>")
+            # the check name is "<variant>: <check>": the variant is the test
+            # subject and becomes a block TITLE row (full width); the table
+            # columns then carry only the short per-check remainder
+            parts.append("<table><thead><tr><th>Check</th><th>Command</th><th>Result</th><th>Detail</th></tr></thead><tbody>")
+            blocks: Dict[str, List[Dict[str, Any]]] = {}
+            block_order: List[str] = []
             for chk in lagr_variant_checks:
-                chk_status = "pass" if chk.get("ok") else "fail"
-                parts.append("<tr>")
-                parts.append(f"<td>{esc(chk.get('name', ''))}</td>")
-                parts.append(f"<td><code>{esc(chk.get('command', ''))}</code></td>")
-                parts.append(f"<td class=\"{chk_status}\">{chk_status}</td>")
-                parts.append(f"<td><code>{esc(chk.get('detail', ''))}</code></td>")
-                parts.append("</tr>")
+                name = str(chk.get("name", ""))
+                vname, _, sub = name.partition(":")
+                if vname not in blocks:
+                    blocks[vname] = []
+                    block_order.append(vname)
+                entry = dict(chk)
+                entry["_sub"] = sub.strip()
+                blocks[vname].append(entry)
+            for vname in block_order:
+                parts.append(f'<tr class="block-title"><td colspan="4">{esc(vname)}</td></tr>')
+                for chk in blocks[vname]:
+                    chk_status = "pass" if chk.get("ok") else "fail"
+                    parts.append("<tr>")
+                    parts.append(f"<td>{esc(chk.get('_sub', ''))}</td>")
+                    parts.append(f"<td><code>{esc(chk.get('command', ''))}</code></td>")
+                    parts.append(f"<td class=\"{chk_status}\">{chk_status}</td>")
+                    parts.append(f"<td><code>{esc(chk.get('detail', ''))}</code></td>")
+                    parts.append("</tr>")
             parts.append("</tbody></table>")
 
         parts.append("</div>")
@@ -937,6 +1048,15 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
                 except (TypeError, ValueError):
                     pass
 
+        # Make the read concrete for the report reader: the 'path' token in
+        # the API-call strings IS the checked file itself (see the file row)
+        fname = "'%s'" % Path(str(path)).name
+        command = re.sub(r"\bpath\b", fname, command)
+        for mkey in ("explicit", "auto", "snapshot"):
+            mval = details.get(mkey)
+            if isinstance(mval, str):
+                details[mkey] = re.sub(r"\bpath\b", fname, mval)
+
         warn_msgs = [str(item.message) for item in rec]
         mismatch_warns = [
             msg
@@ -1026,19 +1146,40 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
             return 'identical (all %d columns x %d records)' % (a.ncols, a.size)
         return 'DIFFER: ' + ','.join(diffs[:6])
 
-    def paired_loader(desc, load_explicit, make_auto, auto_desc):
-        """Read the same file twice and report the side-by-side comparison:
-        the legacy explicit-kwargs read vs the concise auto-detection read
-        (`petar.<Reader>(path)`); the comparison (detected kwargs source +
-        member-wise equality) is carried in the check details, rendered in the
-        HTML report."""
+    def paired_loader(desc, load_explicit, make_auto, auto_desc, make_snapshot=None, snapshot_desc=None):
+        """Read the same file twice (three times for snapshot-family files)
+        and report the side-by-side comparison: the legacy explicit-kwargs
+        read vs the concise auto-detection read (`petar.<Reader>(path)`),
+        plus - when ``make_snapshot`` is given - the dedicated
+        `petar.Snapshot(path)` path (particle + header in one object). The
+        comparisons (detected kwargs source + member-wise equality) are
+        carried in the check details, rendered in the HTML report."""
 
         def load(path: Path):
             obj_a = load_explicit(str(path))
-            details = {
-                "explicit": desc,
-                "explicit_result": "ok, %d records, %d columns" % (obj_a.size, obj_a.ncols),
-            }
+            details: Dict[str, Any] = {}
+            # when the dedicated Snapshot path is provided it is the PRIMARY
+            # (default) reading way: it owns the check's command field and
+            # the first details rows; the legacy explicit and auto reads
+            # follow as comparison methods
+            if make_snapshot is not None:
+                try:
+                    snap_obj = make_snapshot(str(path), {})
+                    header_ok = (int(snap_obj.header.n) == int(snap_obj.particle.size))
+                    details["snapshot"] = snapshot_desc
+                    details["snapshot_result"] = "ok, %d records, time=%.17g" % (snap_obj.particle.size, snap_obj.header.time)
+                    details["snapshot_comparison"] = "%s%s" % (
+                        compare_members(obj_a, snap_obj.particle),
+                        "; header N == records" if header_ok else "; HEADER N MISMATCH: %d vs %d" % (snap_obj.header.n, snap_obj.particle.size))
+                    if not header_ok:
+                        raise ValueError("snapshot header N (%d) != particle records (%d)" % (snap_obj.header.n, snap_obj.particle.size))
+                except Exception as exc:  # noqa: BLE001
+                    details["snapshot"] = snapshot_desc
+                    details["snapshot_result"] = "failed: %s" % exc
+                    details["snapshot_comparison"] = "SNAPSHOT READ FAILED"
+                    raise
+            details["explicit"] = desc
+            details["explicit_result"] = "ok, %d records, %d columns" % (obj_a.size, obj_a.ncols)
             try:
                 layout_keys = ("interrupt_mode", "external_mode", "spin_3d", "use_mpfrc", "collect_sp_acc", "float_type")
                 # kwargs come from the READER CLASS's own resolve machinery
@@ -1061,8 +1202,12 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
                 details["comparison"] = "AUTO READ FAILED"
                 raise
             details["records"] = int(obj_a.size)
+            # the command field shows the PRIMARY reading way (the dedicated
+            # Snapshot path when provided, else the legacy explicit read);
+            # every method is also reported as its own details row - a
+            # single "|" concatenated line wraps unreadably in the HTML table
             return {
-                "command": desc + "  |  auto: " + auto_desc,
+                "command": snapshot_desc if make_snapshot is not None else desc,
                 "details": details,
                 "_object": obj_a,
             }
@@ -1263,6 +1408,7 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
             snap_name = snap_names[-1]
             snap_path = case_dir / snap_name
             offset = petar.HEADER_OFFSET_WITH_CM if external_mode != "none" else petar.HEADER_OFFSET
+            offset_name = "HEADER_OFFSET_WITH_CM" if external_mode != "none" else "HEADER_OFFSET"
 
             def snap_particle(path: Path, off=offset, im=interrupt_mode, em=external_mode):
                 obj = petar.Particle(interrupt_mode=im, external_mode=em)
@@ -1270,19 +1416,23 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
                 return obj
 
             def snap_particle_auto(p, kw):
-                obj, _header = petar.readSnapshot(p)
-                return obj
+                return petar.Particle(p)
+
+            def snap_snapshot(p, kw):
+                return petar.Snapshot(p)
 
             add_check(
                 f"snapshot:{snap_name}",
                 snap_path,
                 paired_loader(
-                    f"petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path, offset={offset})",
+                    f"petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path, offset=petar.{offset_name})",
                     lambda p: snap_particle(p),
                     snap_particle_auto,
                     "petar.Particle(path)",
+                    make_snapshot=snap_snapshot,
+                    snapshot_desc="petar.Snapshot(path) — default (particle + header)",
                 ),
-                f"petar.Particle(interrupt_mode={interrupt_mode}, external_mode={external_mode}).fromfile(path, offset={offset})",
+                "petar.Snapshot(path)",
             )
             add_check(
                 f"snapshot.single:{snap_name}.single",
@@ -1399,6 +1549,9 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
 
     # Validate profiling outputs (ASCII table).
     for prof_path in sorted(case_dir.glob(f"{output_prefix}.prof.rank.*")):
+        if prof_path.name.endswith(".bk"):
+            # petar.data.clear backup of the trimmed stream - not a live output
+            continue
         add_check(
             f"profile:{prof_path.name}",
             prof_path,
@@ -1433,12 +1586,12 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
     # 2) structure sniffing (getDataKwargs) must recover the same schema;
     # 3) the CLI auto-fill path (autoFillKwargs from empty options) must fill
     #    the same layout kwargs;
-    # 4) readSnapshot (auto-detected) must equal the explicit-kwargs read.
+    # 4) Snapshot (auto-detected) must equal the explicit-kwargs read.
     schema_api = {
         "getDataKwargs": getattr(petar, "getDataKwargs", None),
         "readMetaData": getattr(petar, "readMetaData", None),
         "autoFillKwargs": getattr(petar, "autoFillKwargs", None),
-        "readSnapshot": getattr(petar, "readSnapshot", None),
+        "Snapshot": getattr(petar, "Snapshot", None),
     }
     bse_family = ("bse", "mobse", "bseEmp")
 
@@ -1466,7 +1619,7 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
                 {
                     "label": "schema:api",
                     "file": str(snap_for_schema),
-                    "command": "petar.getDataKwargs/readMetaData/autoFillKwargs/readSnapshot",
+                    "command": "petar.getDataKwargs/readMetaData/autoFillKwargs/Snapshot",
                     "ok": False,
                     "error": "installed petar package predates the schema-detection API; reinstall with make install",
                     "warnings": [],
@@ -1502,7 +1655,8 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
             if (det_ext != "none") != (external_mode != "none"):
                 raise ValueError(f"detected external_mode={det_ext} does not match the case mode {external_mode}")
             # round-trip: auto-detected read vs explicit-kwargs read
-            auto_p, _ = schema_api["readSnapshot"](str(path))
+            auto_snap = schema_api["Snapshot"](str(path))
+            auto_p = auto_snap.particle
             explicit = petar.Particle(interrupt_mode=interrupt_mode, external_mode=external_mode)
             if snap_fmt == "ascii":
                 explicit.loadtxt(str(path), skiprows=1)
@@ -1518,7 +1672,7 @@ def run_python_output_read_checks(repo_root: Path, case_dir: Path, require: str,
                 if isinstance(a, np.ndarray) and not np.array_equal(a, b):
                     raise ValueError(f"detected-kwargs read differs from explicit-kwargs read in member '{key}'")
             return {
-                "command": "petar.getDataKwargs(path) + petar.readSnapshot(path) vs explicit kwargs",
+                "command": "petar.getDataKwargs(path) + petar.Snapshot(path) vs explicit kwargs",
                 "details": {"detected": {k: str(v) for k, v in kw.items()}, "records": int(auto_p.size)},
                 "_object": auto_p,
             }
@@ -1864,6 +2018,192 @@ def run_lagr_variant_checks(
     return step
 
 
+def run_format_matrix_checks(
+    repo_root: Path,
+    case: Dict[str, Any],
+    case_dir: Path,
+    env: Dict[str, str],
+    log_path: Path,
+    process_args: List[str],
+    snap_list_name: str,
+    timeout_s: Optional[float] = None,
+) -> Dict[str, Any]:
+    """Output-format coverage matrix: solver snapshots in BINARY and ASCII,
+    petar.data.process products in npy / ascii / binary.
+
+    In one scratch copy of the case snapshots: (1) a data.process run with
+    -s binary -o npy (lagr/core .npy + per-snapshot .single.npy products,
+    all read back through the concise constructors), (2) the snapshots are
+    converted to ASCII with the family petar.<family>.format.transfer tool
+    (solver ASCII snapshot format) and read back, (3) a data.process run
+    with -s ascii -o ascii, its ASCII lagr/core read back, and the lagr
+    time series cross-checked against the npy run. Entries carry commands
+    like the lagr-variant step and render in the same HTML table family.
+    """
+    import tempfile
+
+    step: Dict[str, Any] = {
+        "name": "format.matrix",
+        "code": 0,
+        "status": "pass",
+        "reason": "",
+        "command": f"petar.data.process -s binary -o npy / -s ascii -o ascii (scratch) ... {snap_list_name}",
+        "cwd": str(case_dir),
+        "details": {"variants": []},
+    }
+    to = timeout_s if timeout_s is not None and timeout_s > 0 else _step_timeout({})
+    tools_path = repo_root / "tools"
+    if str(tools_path) not in sys.path:
+        sys.path.insert(0, str(tools_path))
+    import analysis as petar  # type: ignore
+    import numpy as np  # type: ignore
+
+    def check(name: str, ok: bool, detail: str = "", command: str = "") -> None:
+        entry = {"name": name, "ok": bool(ok), "detail": detail}
+        if command:
+            entry["command"] = command
+        step["details"]["variants"].append(entry)
+        if not ok:
+            step["code"] = 1
+            step["status"] = "fail"
+            step["reason"] = step["reason"] or f"format matrix check failed: {name}"
+
+    # per-file x per-format grid for the HTML report (binary / ascii / npy)
+    matrix: Dict[str, Dict[str, Dict[str, Any]]] = {"snapshot": {}, "lagr": {}, "core": {}}
+
+    def cell(file_key: str, fmt: str, ok: bool, detail: str, command: str = "") -> None:
+        matrix[file_key][fmt] = {"ok": bool(ok), "detail": detail, "command": command}
+
+    # scratch: snap list + listed snapshots + solver sidecar
+    scratch = case_dir / "fmt_scratch"
+    if scratch.exists():
+        shutil.rmtree(scratch)
+    scratch.mkdir(parents=True)
+    snap_list = case_dir / snap_list_name
+    shutil.copy2(snap_list, scratch / snap_list_name)
+    snap_files = [line.strip() for line in snap_list.read_text(encoding="utf-8").splitlines() if line.strip()]
+    for name in snap_files:
+        src = case_dir / name
+        if src.is_file():
+            shutil.copy2(src, scratch / name)
+    solver_meta = case_dir / (snap_list_name.split(".")[0] + ".meta")
+    if solver_meta.is_file():
+        shutil.copy2(solver_meta, scratch / solver_meta.name)
+    n_snapshots = len(snap_files)
+    first_snap = snap_files[0]
+    last_snap = snap_files[-1]
+
+    # ---- 0) binary baseline: solver binary snapshots + the main run's
+    # binary lagr/core products, read through the concise constructors
+    try:
+        bin_obj = petar.Particle(str(case_dir / first_snap))
+        cell("snapshot", "binary", True, f"{int(bin_obj.size)} particles", command=f"petar.Particle('{first_snap}')")
+    except Exception as exc:  # noqa: BLE001
+        bin_obj = None
+        cell("snapshot", "binary", False, str(exc)[:90], command=f"petar.Particle('{first_snap}')")
+    for path, ctor, label in ((case_dir / "data.lagr", petar.LagrangianMultiple, "data.lagr"), (case_dir / "data.core", petar.Core, "data.core")):
+        if not path.exists():
+            continue
+        try:
+            obj = ctor(str(path))
+            cell("lagr" if "lagr" in label else "core", "binary", int(obj.size) == n_snapshots, f"{int(obj.size)} records", command=f"{ctor.__name__}('{label}')")
+        except Exception as exc:  # noqa: BLE001
+            cell("lagr" if "lagr" in label else "core", "binary", False, str(exc)[:90], command=f"{ctor.__name__}('{label}')")
+
+    # ---- 1) data.process: -s binary -o npy (binary snapshots, npy products)
+    cmd_npy = ["petar.data.process", "--no-auto-resume", "-p", "fmtnpy", "-s", "binary", "-o", "npy", *process_args, snap_list_name]
+    rc, warns = run_cmd(cmd_npy, cwd=scratch, env=env, log_path=log_path, timeout_s=to)
+    if warns:
+        step.setdefault("warnings", []).extend(warns)
+        step.setdefault("_warn_steps", []).append({"step": "format.matrix:npy", "messages": warns})
+    check("npy: petar.data.process exit", rc == 0, f"rc={rc}", command="$ " + " ".join(cmd_npy))
+    lagr_npy_time = None
+    if rc == 0:
+        lagr_npy = scratch / "fmtnpy.lagr.npy"
+        core_npy = scratch / "fmtnpy.core.npy"
+        single_npy = scratch / f"{last_snap}.single.npy"
+        for path, ctor, label in ((lagr_npy, petar.LagrangianMultiple, "fmtnpy.lagr.npy"), (core_npy, petar.Core, "fmtnpy.core.npy")):
+            if not path.exists():
+                check(f"npy: {label} exists", False, f"{label} missing")
+                continue
+            try:
+                obj = ctor(str(path))
+                check(f"npy: read {label}", True, f"{int(obj.size)} records", command=f"{ctor.__name__}('{label}')")
+                cell("lagr" if "lagr" in label else "core", "npy", int(obj.size) == n_snapshots, f"{int(obj.size)} records", command=f"{ctor.__name__}('{label}')")
+                if "lagr" in label:
+                    lagr_npy_time = np.asarray(obj.time, dtype=float)
+            except Exception as exc:  # noqa: BLE001
+                check(f"npy: read {label}", False, str(exc)[:90], command=f"{ctor.__name__}('{label}')")
+                cell("lagr" if "lagr" in label else "core", "npy", False, str(exc)[:90], command=f"{ctor.__name__}('{label}')")
+        if single_npy.exists():
+            try:
+                p = petar.Particle(str(single_npy))
+                check("npy: read snapshot .single.npy", True, f"{int(p.size)} particles", command=f"petar.Particle('{last_snap}.single.npy')")
+                cell("snapshot", "npy", True, f"{int(p.size)} particles", command=f"petar.Particle('{last_snap}.single.npy')")
+            except Exception as exc:  # noqa: BLE001
+                check("npy: read snapshot .single.npy", False, str(exc)[:90], command=f"petar.Particle('{last_snap}.single.npy')")
+                cell("snapshot", "npy", False, str(exc)[:90], command=f"petar.Particle('{last_snap}.single.npy')")
+        else:
+            check("npy: read snapshot .single.npy", False, f"{single_npy.name} missing")
+            cell("snapshot", "npy", False, f"{single_npy.name} missing")
+
+    # ---- 2) convert snapshots to ASCII (solver ASCII format) + read back
+    ft_tool = Path(active_petar_realpath()).parent / (Path(active_petar_realpath()).name + ".format.transfer")
+    if not ft_tool.exists():
+        check("ascii: family format.transfer tool", False, f"not found: {ft_tool.name}")
+    else:
+        cmd_ft = [str(ft_tool), "-b", "-r", snap_list_name]
+        rc, warns = run_cmd(cmd_ft, cwd=scratch, env=env, log_path=log_path, timeout_s=to)
+        if warns:
+            step.setdefault("warnings", []).extend(warns)
+        check("ascii: format.transfer exit", rc == 0, f"rc={rc}", command="$ " + " ".join(cmd_ft))
+        if rc == 0:
+            ascii_first = scratch / first_snap
+            sniffed = petar.detectAsciiFile(str(ascii_first)) if ascii_first.exists() else None
+            check("ascii: snapshot format honored", sniffed is True, f"sniffed={sniffed}")
+            try:
+                ascii_obj = petar.Particle(str(ascii_first))
+                ok = sniffed is True and bin_obj is not None and int(ascii_obj.size) == int(bin_obj.size)
+                check("ascii: snapshot read (Particle(path))", ok, f"ascii={int(ascii_obj.size)} binary={int(bin_obj.size) if bin_obj is not None else '?'} particles", command=f"petar.Particle('{first_snap}')")
+                cell("snapshot", "ascii", ok, f"{int(ascii_obj.size)} particles", command=f"petar.Particle('{first_snap}')")
+            except Exception as exc:  # noqa: BLE001
+                check("ascii: snapshot read (Particle(path))", False, str(exc)[:90], command=f"petar.Particle('{first_snap}')")
+                cell("snapshot", "ascii", False, str(exc)[:90], command=f"petar.Particle('{first_snap}')")
+
+        # ---- 3) data.process: -s ascii -o ascii + read back + cross-format
+        cmd_ascii = ["petar.data.process", "--no-auto-resume", "-p", "fmtascii", "-s", "ascii", "-o", "ascii", *process_args, snap_list_name]
+        rc, warns = run_cmd(cmd_ascii, cwd=scratch, env=env, log_path=log_path, timeout_s=to)
+        if warns:
+            step.setdefault("warnings", []).extend(warns)
+            step.setdefault("_warn_steps", []).append({"step": "format.matrix:ascii", "messages": warns})
+        check("ascii: petar.data.process exit", rc == 0, f"rc={rc}", command="$ " + " ".join(cmd_ascii))
+        if rc == 0:
+            lagr_ascii = scratch / "fmtascii.lagr"
+            core_ascii = scratch / "fmtascii.core"
+            lagr_ascii_time = None
+            for path, ctor, label in ((lagr_ascii, petar.LagrangianMultiple, "fmtascii.lagr"), (core_ascii, petar.Core, "fmtascii.core")):
+                if not path.exists():
+                    check(f"ascii: {label} exists", False, f"{label} missing")
+                    continue
+                sniffed = petar.detectAsciiFile(str(path))
+                try:
+                    obj = ctor(str(path))
+                    ok = sniffed is True and int(obj.size) == n_snapshots
+                    check(f"ascii: read {label}", ok, f"ascii={sniffed}, {int(obj.size)} records", command=f"{ctor.__name__}('{label}')")
+                    cell("lagr" if "lagr" in label else "core", "ascii", ok, f"{int(obj.size)} records", command=f"{ctor.__name__}('{label}')")
+                    if "lagr" in label:
+                        lagr_ascii_time = np.asarray(obj.time, dtype=float)
+                except Exception as exc:  # noqa: BLE001
+                    check(f"ascii: read {label}", False, str(exc)[:90], command=f"{ctor.__name__}('{label}')")
+                    cell("lagr" if "lagr" in label else "core", "ascii", False, str(exc)[:90], command=f"{ctor.__name__}('{label}')")
+            if lagr_npy_time is not None and lagr_ascii_time is not None:
+                same = lagr_npy_time.size == lagr_ascii_time.size and np.allclose(lagr_npy_time, lagr_ascii_time)
+                check("cross-format: lagr time series agrees (npy vs ascii)", same, f"{lagr_npy_time.size} vs {lagr_ascii_time.size} records")
+
+    step["details"]["matrix"] = matrix
+    return step
+
+
 def run_tool_smokes(result: Dict[str, Any], case: Dict[str, Any], case_dir: Path, output_prefix: str, log_path: Path, env: Dict[str, str], t_end: str, run_args: List[str], timeout_s: Optional[float] = None) -> None:
     """Extra per-case tool coverage (matrix key 'tool_smokes').
 
@@ -1955,6 +2295,242 @@ def run_tool_smokes(result: Dict[str, Any], case: Dict[str, Any], case_dir: Path
     if failed:
         result["status"] = "fail"
         result["skip_reason"] = "tool smoke failed: " + ", ".join(s["name"] for s in failed)
+
+
+def append_packed_container_read_check(result: Dict[str, Any], sel_issues: List[str], sel_details: Dict[str, Any], idx_path: Path) -> None:
+    """Mirror the packed-mode.select step into the read-checks table as a
+    'packed:container-read' row, so the container read + selection forms
+    appear next to the packed-extract rows (readback of the extracted
+    standalone files) instead of only in the steps table."""
+    result.setdefault("read_checks", {"checks": [], "failed_checks": [], "warnings": [], "mismatch_warnings": []})
+    idx_name = idx_path.name
+    idx_stem = idx_name[:-len(".pack.idx")] if idx_name.endswith(".pack.idx") else idx_name
+    entry = {
+        "label": "packed:container-read",
+        "file": str(idx_path),
+        "file_note": "index of the packed container; snapshots are seeked out of the %s.pack.<id> VOLUMES via this index (no copy)" % idx_stem,
+        "command": "pack = petar.PackedSnapshots('%s'); pack.readSnapshot(time=/nfile=/row) / pack[i]; petar.pack extract %s --time/--nfile/--last/--all" % (idx_stem, idx_stem),
+        "ok": not sel_issues,
+        "error": "; ".join(sel_issues) if sel_issues else "",
+        "warnings": [],
+        "details": sel_details,
+    }
+    result["read_checks"]["checks"].append(entry)
+    if sel_issues:
+        result["read_checks"]["failed_checks"].append(entry)
+
+
+def packed_selection_checks(pack) -> tuple:
+    """Exercise and document every snapshot-selection form of a
+    ``petar.PackedSnapshots`` container (discover times / by time / by
+    snapshot id / by row / range mask / CLI materialization); returns
+    (issues, details) for a ``packed-mode.select`` step. Every form is
+    actually executed and its exact call form recorded for the report."""
+    import numpy as np
+
+    issues: List[str] = []
+    details: Dict[str, Any] = {}
+    idx = pack.index
+    try:
+        times = np.asarray(idx['time'], dtype=float)
+        shown = [round(float(t), 6) for t in times[:8]]
+        details['discover times'] = 'pack.index["time"] -> %s%s' % (shown, ' ...' if len(times) > 8 else '')
+        t_mid = float(times[1]) if len(times) > 1 else float(times[0])
+        s_time = pack.readSnapshot(time=t_mid)
+        details['by time'] = 'pack.readSnapshot(time=%g) -> first snapshot at/after t: nfile %d, time %g' % (
+            t_mid, int(s_time.header.file_id), float(s_time.header.time))
+        expect_mid = int(idx['nfile'][1]) if len(times) > 1 else int(idx['nfile'][0])
+        if int(s_time.header.file_id) != expect_mid:
+            issues.append('time selection landed on nfile %d, expected %d' % (s_time.header.file_id, expect_mid))
+        s_nfile = pack.readSnapshot(nfile=int(idx['nfile'][-1]))
+        details['by snapshot id'] = 'pack.readSnapshot(nfile=%d) -> nfile %d, time %g' % (
+            int(idx['nfile'][-1]), int(s_nfile.header.file_id), float(s_nfile.header.time))
+        s_last = pack[-1]
+        details['by row'] = 'pack[-1] / pack.readSnapshot(-1) -> nfile %d, time %g' % (
+            int(s_last.header.file_id), float(s_last.header.time))
+        if int(s_nfile.header.file_id) != int(s_last.header.file_id) or abs(float(s_nfile.header.time) - float(s_last.header.time)) > 1e-10:
+            issues.append('nfile selection differs from last-row selection')
+        details['range query'] = 'rows = np.where((pack.index["time"] >= a) & (pack.index["time"] <= b)); [pack.readSnapshot(row=int(r)) for r in rows]'
+        details['materialize (CLI)'] = 'petar.pack extract <prefix> --time <t> | --nfile <n> | --last | --all --snap-lst'
+    except Exception as exc:  # noqa: BLE001
+        issues.append('selection-method error: %r' % (exc,))
+        details['error'] = repr(exc)
+    return issues, details
+
+
+def run_packed_mode_coverage(result: Dict[str, Any], case: Dict[str, Any], case_dir: Path, repo_root: Path, env: Dict[str, str], log_path: Path, dt_out: str, run_args: List[str], require: str, timeout_s: Optional[float] = None) -> None:
+    """Packed-output coverage for every solver mode: a short scratch run with
+    ``-w 4`` under the ``packcov`` prefix (the main case run keeps the default
+    ``-w 1`` single-file output and its readback untouched), index validation,
+    ``petar.pack`` extraction, and the standard paired-read readback on the
+    extracted snapshots - so every interrupt/external column layout also goes
+    through the packed path. Appears in the HTML report as ``packed-mode.*``
+    steps (container seek read + selection forms) and
+    ``packed-extract:``-prefixed read-check rows (readback of the extracted
+    standalone files). The dedicated std-packed
+    case covers the deep restart/trim flow and skips this stage."""
+    scratch_prefix = "packcov"
+    # scratch artifacts from an earlier run must not be re-read
+    for stale in case_dir.glob(f"{scratch_prefix}*"):
+        if stale.is_file():
+            stale.unlink()
+
+    dt_out_f = float(dt_out)
+    t_packed = repr(2 * dt_out_f)
+    expected_records = 3  # t = 0, dt_out, 2*dt_out
+
+    run_cmdline = ["petar", "-u", "1", "-t", t_packed, "-o", dt_out, "-f", scratch_prefix, *run_args, "-w", "4", "input"]
+    rc, warns = run_cmd(run_cmdline, cwd=case_dir, env=env, log_path=log_path, timeout_s=timeout_s)
+    add_step(result, "packed-mode.run (-w 4)", rc, run_cmdline, case_dir, warnings_list=warns,
+             details={"t_end": t_packed, "dt_out": dt_out, "output_prefix": scratch_prefix, "expected_records": expected_records})
+    if rc != 0:
+        result["status"] = "fail"
+        return
+
+    list_cmd = ["petar.pack", "list", scratch_prefix]
+    rc, warns = run_cmd(list_cmd, cwd=case_dir, env=env, log_path=log_path, timeout_s=timeout_s)
+    add_step(result, "packed-mode.index (petar.pack list)", rc, list_cmd, case_dir, warnings_list=warns)
+    if rc != 0:
+        result["status"] = "fail"
+        return
+
+    extract_cmd = ["petar.pack", "extract", scratch_prefix, "--all", "--snap-lst"]
+    rc, warns = run_cmd(extract_cmd, cwd=case_dir, env=env, log_path=log_path, timeout_s=timeout_s)
+    add_step(result, "packed-mode.extract", rc, extract_cmd, case_dir, warnings_list=warns)
+    if rc != 0:
+        result["status"] = "fail"
+        return
+
+    # In-process validation: index shape, per-volume offset contiguity,
+    # record-size consistency, and the direct-seek PackedSnapshots read
+    # against the extracted standalone file.
+    tools_path = repo_root / "tools"
+    if str(tools_path) not in sys.path:
+        sys.path.insert(0, str(tools_path))
+    import analysis as petar  # type: ignore
+    import numpy as np  # type: ignore
+
+    issues: List[str] = []
+    details: Dict[str, Any] = {}
+    try:
+        pack = petar.PackedSnapshots(str(case_dir / scratch_prefix))
+        idx = pack.index
+        details["records"] = int(len(idx))
+        if len(idx) != expected_records:
+            issues.append(f"record count {len(idx)} != expected {expected_records}")
+        if len(idx) and (int(idx["nfile"][0]) != 0 or int(idx["nfile"][-1]) != len(idx) - 1):
+            issues.append("nfile sequence does not start at 0 / is not contiguous")
+        times = np.asarray(idx["time"], dtype=float)
+        if len(times) > 1 and not np.all(np.diff(times) > 0):
+            issues.append("times are not strictly ascending")
+        itemsize = np.dtype(petar.Particle(**pack.kwargs).collectDtype()).itemsize
+        cursor: Dict[int, int] = {}
+        for rec in idx:
+            vol = int(rec["volume"])
+            off = int(rec["offset"])
+            if vol in cursor and off != cursor[vol]:
+                issues.append(f"volume {vol}: offset {off} != contiguous {cursor[vol]}")
+            cursor[vol] = off + int(rec["nbytes"])
+            if int(rec["nbytes"]) != pack.header_size + int(rec["n_body"]) * itemsize:
+                issues.append(f"nfile {int(rec['nfile'])}: nbytes {int(rec['nbytes'])} != header {pack.header_size} + N*{itemsize}")
+        snap_pack = pack.readSnapshot(row=-1)
+        p_pack, h_pack = snap_pack.particle, snap_pack.header
+        last_name = f"{scratch_prefix}.{int(idx['nfile'][-1])}"
+        snap_ref = petar.Snapshot(str(case_dir / last_name))
+        p_ref, h_ref = snap_ref.particle, snap_ref.header
+        same = int(p_pack.size) == int(p_ref.size)
+        for entry in p_pack.keys:
+            m_pack, m_ref = getattr(p_pack, entry[0]), getattr(p_ref, entry[0])
+            if hasattr(m_pack, "keys") or hasattr(m_ref, "keys"):
+                continue  # nested containers: the byte-identical record already covers them
+            same = same and np.array_equal(np.asarray(m_pack), np.asarray(m_ref))
+        same = same and (h_pack.file_id == h_ref.file_id) and (h_pack.n == h_ref.n) \
+            and (abs(h_pack.time - h_ref.time) <= 1e-10 * max(1.0, abs(h_ref.time)))
+        if not same:
+            issues.append("direct pack read differs from the extracted snapshot")
+        details["last_snapshot"] = last_name
+        details["volumes"] = sorted(cursor.keys())
+    except Exception as exc:  # noqa: BLE001 - report as a failed step
+        issues.append(f"python packed validation error: {exc!r}")
+        details["error"] = repr(exc)
+    # Container read row in the READ-CHECKS table (NOT a step: index
+    # validation, the direct-seek read and the selection forms are Python
+    # data-analysis reads, not executed shell commands - they belong next
+    # to the packed-extract rows, not in the command steps). One row carries
+    # the index validation, the direct-read comparison and every selection
+    # form with its exact call form.
+    sel_issues, sel_details = packed_selection_checks(pack)
+    container_details = dict(sel_details)
+    if 'error' in details:
+        container_details['index validation'] = 'failed: %s' % details['error']
+    else:
+        container_details['index validation'] = 'ok: %d records, volumes %s, offsets contiguous, record sizes = header + N*itemsize' % (
+            details.get('records', 0), details.get('volumes', []))
+        container_details['direct read'] = 'pack.readSnapshot(-1) == extracted %s (member-wise identical)' % details.get('last_snapshot', '?')
+    append_packed_container_read_check(result, issues + sel_issues, container_details, case_dir / (scratch_prefix + ".pack.idx"))
+    if issues or sel_issues:
+        result["status"] = "fail"
+        return
+
+    # Standard paired-read readback on the extracted snapshots (the same
+    # machinery as the main chain; labels prefixed for the HTML report).
+    # Packing changes SNAPSHOT storage only - status/escaper/event/profile
+    # streams are written identically to the unpacked mode and are already
+    # covered by the case's main readback - so only snapshot-family and
+    # schema rows are kept in the packed report. (The dedicated std-packed
+    # case runs entirely in packed mode and keeps its full readback.)
+    try:
+        scratch_checks = run_python_output_read_checks(
+            repo_root,
+            case_dir,
+            require,
+            scratch_prefix,
+            interrupt_mode_override=case.get("interrupt_mode", ""),
+        )
+    except RuntimeError as exc:
+        # environment-level failure: record it as a failed read-check row
+        # (Python analysis, not a shell command), then fail the case
+        result.setdefault("read_checks", {"checks": [], "failed_checks": [], "warnings": [], "mismatch_warnings": []})
+        err_entry = {
+            "label": "packed-extract:readback",
+            "file": str(case_dir),
+            "command": "paired reads of extracted packcov.* standalone snapshots",
+            "ok": False,
+            "error": str(exc),
+            "warnings": [],
+            "details": {},
+        }
+        result["read_checks"]["checks"].append(err_entry)
+        result["read_checks"]["failed_checks"].append(err_entry)
+        result["status"] = "fail"
+        return
+    packed_rows = [
+        entry for entry in scratch_checks.get("checks", [])
+        if str(entry.get("label", "")).startswith(("schema:", "snapshot"))
+    ]
+    for entry in packed_rows:
+        # 'packed-extract:' marks readback of the EXTRACTED standalone files
+        # (packcov.N) - the container read itself is the
+        # packed:container-read row above (seek read + selection forms).
+        # Annotate each extracted snapshot with its container origin
+        # (record nfile/time/volume) so the file cell explains what it IS.
+        entry["label"] = "packed-extract:" + str(entry.get("label", ""))
+        base = Path(str(entry.get("file", ""))).name
+        m = re.match(r"^%s\.(\d+)$" % re.escape(scratch_prefix), base)
+        if m:
+            n = int(m.group(1))
+            row = np.where(idx["nfile"] == n)[0]
+            if len(row):
+                rec = idx[int(row[0])]
+                entry["file_note"] = "standalone snapshot extracted from the packed container (petar.pack extract --all) = record nfile %d (t=%g) of %s.pack.%04d" % (
+                    n, float(rec["time"]), scratch_prefix, int(rec["volume"]))
+    merged = result.setdefault("read_checks", {"checks": [], "failed_checks": [], "warnings": [], "mismatch_warnings": []})
+    merged.setdefault("checks", []).extend(packed_rows)
+    merged.setdefault("failed_checks", []).extend([e for e in packed_rows if not e.get("ok")])
+    merged.setdefault("warnings", []).extend(scratch_checks.get("warnings", []))
+    n_failed = sum(1 for e in packed_rows if not e.get("ok"))
+    if n_failed:
+        result["status"] = "fail"
 
 
 def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_root: Path) -> Dict[str, Any]:
@@ -2340,6 +2916,17 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
             result["status"] = "fail"
             return result
 
+        # Packed-output restart hook 1/3: materialize the phase-1 packed
+        # snapshots as standalone files so the shared restart machinery
+        # (snap.lst, data.clear, snapshot picking) works unchanged.
+        if case.get("packed_output"):
+            pack_extract_cmd = ["petar.pack", "extract", output_prefix, "--all", "--snap-lst"]
+            rc, warns = run_cmd(pack_extract_cmd, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
+            add_step(result, "petar.pack.extract", rc, pack_extract_cmd, case_dir, warnings_list=warns)
+            if rc != 0:
+                result["status"] = "fail"
+                return result
+
         pre_stats = stream_stats(clear_t)
 
         clear_cmd = ["petar.data.clear", "-t", str(clear_t), output_prefix]
@@ -2361,6 +2948,17 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         if rc != 0:
             result["status"] = "fail"
             return result
+
+        # Packed-output restart hook 2/3: data.clear trims the extracted
+        # copies; the container itself needs the matching petar.pack trim so
+        # the restart appends without stale trailing records.
+        if case.get("packed_output"):
+            pack_trim_cmd = ["petar.pack", "trim", output_prefix, "-t", str(clear_t)]
+            rc, warns = run_cmd(pack_trim_cmd, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
+            add_step(result, "petar.pack.trim", rc, pack_trim_cmd, case_dir, warnings_list=warns, details={"clear_t": clear_t})
+            if rc != 0:
+                result["status"] = "fail"
+                return result
 
         # Over-deletion / residue check. Reader-parseable streams: kept records
         # (time<=t) must be preserved exactly and beyond-t records removed.
@@ -2423,6 +3021,17 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         if rc != 0:
             result["status"] = "fail"
             return result
+
+        # Packed-output restart hook 3/3: the restarted run appends new packed
+        # records only (snap.lst is not touched in packed mode); re-extract so
+        # the progress/duplicate checks see the full snapshot set.
+        if case.get("packed_output"):
+            pack_extract_cmd = ["petar.pack", "extract", output_prefix, "--all", "--snap-lst"]
+            rc, warns = run_cmd(pack_extract_cmd, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
+            add_step(result, "petar.pack.extract:restart", rc, pack_extract_cmd, case_dir, warnings_list=warns)
+            if rc != 0:
+                result["status"] = "fail"
+                return result
         entries_b = snap_entries()
         restart_details = {
             "t_end": t_end,
@@ -2488,6 +3097,65 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
             result["status"] = "fail"
             return result
 
+    # Packed-output case hook (matrix key 'packed_output', solver -w 4):
+    # materialize the packed snapshots as standalone files (byte-identical to
+    # the -w 1 layout) so the shared downstream pipeline (data.process /
+    # movie / readback checks) exercises them, then verify the container
+    # itself: the Python direct-seek read against the extracted copy.
+    if case.get("packed_output"):
+        tools_path = repo_root / "tools"
+        if str(tools_path) not in sys.path:
+            sys.path.insert(0, str(tools_path))
+        import analysis as petar  # type: ignore
+        import numpy as np  # type: ignore
+        pack_extract_cmd = ["petar.pack", "extract", output_prefix, "--all", "--snap-lst"]
+        rc, warns = run_cmd(pack_extract_cmd, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
+        add_step(result, "petar.pack.extract", rc, pack_extract_cmd, case_dir, warnings_list=warns)
+        if rc != 0:
+            result["status"] = "fail"
+            return result
+        rb_cmd = ["petar.pack", "rebuild", output_prefix]
+        rc, warns = run_cmd(rb_cmd, cwd=case_dir, env=env, log_path=log_path, timeout_s=to)
+        add_step(result, "petar.pack.rebuild", rc, rb_cmd, case_dir, warnings_list=warns)
+        if rc != 0:
+            result["status"] = "fail"
+            return result
+        try:
+            pack_obj = petar.PackedSnapshots(str(case_dir / output_prefix))
+            snap_pack = pack_obj.readSnapshot(row=-1)
+            last_name = f"{output_prefix}.{int(pack_obj.index[-1]['nfile'])}"
+            snap_ref = petar.Snapshot(str(case_dir / last_name))
+            p_pack, h_pack = snap_pack.particle, snap_pack.header
+            p_ref, h_ref = snap_ref.particle, snap_ref.header
+            same = int(p_pack.size) == int(p_ref.size)
+            for entry in p_pack.keys:
+                m_pack, m_ref = getattr(p_pack, entry[0]), getattr(p_ref, entry[0])
+                if hasattr(m_pack, "keys") or hasattr(m_ref, "keys"):
+                    continue  # nested containers: the byte-identical record already covers them
+                same = same and np.array_equal(np.asarray(m_pack), np.asarray(m_ref))
+            same = same and (h_pack.file_id == h_ref.file_id) and (h_pack.n == h_ref.n) \
+                and (abs(h_pack.time - h_ref.time) <= 1e-10 * max(1.0, abs(h_ref.time)))
+            n_idx = len(pack_obj.index)
+        except Exception as exc:  # noqa: BLE001 - report as a failed container-read row
+            result["_pending_packed_container_read"] = ([repr(exc)], {"error": repr(exc)}, case_dir / (output_prefix + ".pack.idx"))
+            result["status"] = "fail"
+            return result
+
+        # container read + selection forms go to the READ-CHECKS table (not
+        # steps: Python analysis reads, not shell commands); stashed because
+        # this hook runs before the main read_checks assignment below
+        sel_issues, sel_details = packed_selection_checks(pack_obj)
+        sel_details["direct read"] = "pack.readSnapshot(-1) == extracted %s (member-wise %s)" % (last_name, "identical" if same else "DIFFERS")
+        sel_details["index validation"] = "ok: %d records (index consistency verified by petar.pack rebuild)" % n_idx
+        result["_pending_packed_container_read"] = (
+            sel_issues + ([] if same else ["direct pack read differs from the extracted snapshot"]),
+            sel_details,
+            case_dir / (output_prefix + ".pack.idx"),
+        )
+        if not same or sel_issues:
+            result["status"] = "fail"
+            return result
+
     # 5) Post-processing pipeline smoke checks.
     snap_list = case_dir / prefixed_name(output_prefix, "snap.lst")
     if not snap_list.exists():
@@ -2537,6 +3205,18 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
             result["status"] = "fail"
             result["skip_reason"] = lagr_variant_step["reason"]
             return result
+
+    # 5b) Output-format coverage matrix: solver snapshots in binary and
+    # ASCII, petar.data.process products in npy / ascii / binary, read back
+    # through the concise constructors (see run_format_matrix_checks).
+    format_matrix_step = run_format_matrix_checks(repo_root, case, case_dir, env, log_path, process_args, snap_list.name, timeout_s=to)
+    result["steps"].append(format_matrix_step)
+    for entry in format_matrix_step.pop("_warn_steps", []):
+        result["warnings"].append(entry)
+    if format_matrix_step["status"] != "pass":
+        result["status"] = "fail"
+        result["skip_reason"] = format_matrix_step["reason"]
+        return result
 
     # 5b) petar.group.dedup smoke on the first binary group file (writes
     # <input>.dedup; input is never modified). The tool's layout validation
@@ -2719,6 +3399,22 @@ def run_case(repo_root: Path, case: Dict[str, Any], matrix: Dict[str, Any], out_
         else:
             result["skip_reason"] = "python read checks failed"
 
+    # the std-packed hook stashed its container-read row before this
+    # assignment - append it to the final read-checks table now
+    pending_container_read = result.pop("_pending_packed_container_read", None)
+    if pending_container_read is not None:
+        append_packed_container_read_check(result, *pending_container_read)
+
+    # 10) Packed-output coverage for every solver mode (matrix-global): a
+    # short -w 4 scratch run under the 'packcov' prefix + extraction + the
+    # standard readback, reported as 'packed-mode.*' steps (container read +
+    # selection forms) and 'packed-extract:' read-check rows (readback of
+    # the extracted standalone files). The main -w 1 chain above is untouched.
+    # The dedicated std-packed case covers the deep restart/trim flow and
+    # skips this stage.
+    if not case.get("packed_output"):
+        run_packed_mode_coverage(result, case, case_dir, repo_root, env, log_path, dt_out, run_args, require, timeout_s=to)
+
     return result
 
 
@@ -2808,9 +3504,28 @@ def run_schema_selftest(repo_root: Path, out_root: Path) -> Dict[str, Any]:
             record("wrong-sidecar-rejected", False, "ValueError not raised")
         except ValueError:
             record("wrong-sidecar-rejected", True)
+        # restore a CORRECT sidecar after check 3 deliberately corrupted
+        # it: later checks validate clean paths (the sidecar itself is now
+        # cross-checked, not just the merged kwargs)
+        write_ascii_table(f_amb, 36)  # bse + spin_3d, no external
+        petar.writeMetaData(str(tdp / "data.meta"), interrupt_mode="bse", external_mode="none", spin_3d=True)
         # 4) explicit-flag precedence in the CLI auto-fill helper
         kw = petar.autoFillKwargs(str(f_amb), {"interrupt_mode": "bse"}, verbose=False)
         record("autofill-explicit-wins", kw.get("interrupt_mode") == "bse", str(kw.get("interrupt_mode")))
+        # 5) an explicit kwarg contradicting BOTH sidecar and structure is
+        #    attributed to the explicit flag (e.g. --spin-1d on 3D-spin
+        #    data), not misreported as a sidecar-from-another-run error
+        write_ascii_table(f_amb, 36)  # bse + spin_3d, no external
+        petar.writeMetaData(str(tdp / "data.meta"), interrupt_mode="bse", external_mode="none", spin_3d=True)
+        try:
+            petar.autoFillKwargs(str(f_amb), {"spin_3d": False}, verbose=False)
+            record("explicit-wrong-kwarg-diagnosed", False, "no error raised")
+        except ValueError as exc:  # noqa: BLE001
+            msg = str(exc)
+            record("explicit-wrong-kwarg-diagnosed", msg.startswith("explicitly given layout parameter") and "spin_3d=False" in msg, msg[:80])
+        # 6) the same file without conflicting flags fills cleanly
+        kw = petar.autoFillKwargs(str(f_amb), {}, verbose=False)
+        record("explicit-clean-fill", kw.get("interrupt_mode") == "bse" and kw.get("spin_3d") is True, str(kw))
 
     return result
 

@@ -159,7 +159,7 @@ if __name__ == '__main__':
                 external_mode = arg
             elif opt in ('-P','--use_mpfrc'):
                 use_mpfrc = True
-            elif opt in ('--spin-1d'):
+            elif opt in ('--spin-1d',):
                 spin_3d = False
             elif opt in ('-s','--snapshot-format'):
                 snapshot_format = arg
@@ -169,7 +169,7 @@ if __name__ == '__main__':
                 cm_mode = arg
             elif opt in ('-C','--core-file'):
                 core_file = arg
-            elif opt in ('--core-format'):
+            elif opt in ('--core-format',):
                 core_format = arg
             else:
                 assert False, "unhandeld option"

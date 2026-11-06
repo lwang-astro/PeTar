@@ -33,7 +33,7 @@ These apply to every particle-composing reader (`Particle`, `Status`, `SingleEsc
 
 Pass these consistently to all readers. **Do not guess them by trial and error** — recover them with auto-detection (next section) and pass explicit kwargs only to override.
 
-### Schema auto-detection (`petar.getDataKwargs` / `petar.readSnapshot`)
+### Schema auto-detection (`petar.getDataKwargs` / `petar.Snapshot`)
 
 The layout kwargs are recoverable from the data itself, in this precedence (highest wins): **explicit kwargs → `<prefix>.meta` sidecar → structure sniffing**.
 
@@ -42,7 +42,7 @@ The layout kwargs are recoverable from the data itself, in this precedence (high
 **`meta=` injection** (concise constructor and `petar.getDataKwargs`): `meta='<path>'` uses an explicit sidecar — the escape hatch for files copied away from their run directory; `meta={...}` passes ready layout kwargs as a group (no detection, no warnings); `meta=False` disables the sidecar (structure/explicit only). Default `'auto'` locates `<prefix>.meta` by the generic prefix walk (successively shorter stems: `data.5.single` → `data.5.meta`, `data.meta`) — no per-file-type name mapping; works for any run prefix and all stream files.
 
 - **`petar.getDataKwargs(path)`** returns the kwargs dict for any run-family file (`data.5`, `data.5.single`, `data.esc_single`, ...). It reads the solver-written sidecar `<prefix>.meta` (petar-meta/1, written next to `data.par`; absent for older runs) and cross-validates it against the file structure — a disagreement raises `ValueError` (the sidecar was likely copied from another run). Without a sidecar it sniffs the structure: ASCII header item count or binary header size (24/72 B; 32/128 B for float128) pins `external_mode`; the column count (ASCII) or bytes-per-record with N from the header (binary) pins the rest.
-- **`petar.readSnapshot(path)`** returns `(particles, header)` for raw snapshots in one call (the concise `petar.Particle(path)` returns particles only).
+- **`petar.Snapshot(path)`** returns an object with `.particle` and `.header` for raw snapshots in one call (the concise `petar.Particle(path)` returns particles only).
 - **CLI tools auto-fill**: `petar.data.process`, `petar.get.object.snap`, `petar.format.transfer.post`, and `petar.movie` detect the schema from the data when `-i`/`-t` (and `--use-mpfrc`/`--spin-1d`) are omitted, print what was detected, and honor explicit flags over detection.
 
 Detection uniqueness (verified over the kwargs space, `external_mode` pinned by the header):
@@ -225,6 +225,18 @@ takes `external_mode=`. ASCII snapshots (`-u`-independent) have a one-line heade
 
 ### Reading particles
 
+**Default read (auto-detected layout, header included)** — the same call the
+functional report shows as the primary method:
+
+```python
+snap = petar.Snapshot("data.1")          # layout from <prefix>.meta sidecar,
+                                          # structure sniff fallback
+particle, header = snap.particle, snap.header
+```
+
+**Legacy explicit read (manual offset, particles only)** — for column subsets
+or pre-sidecar files:
+
 ```python
 particle = petar.Particle(interrupt_mode="<mode>", external_mode="<mode>")
 particle.fromfile("data.1", offset=offset)
@@ -267,6 +279,52 @@ binary = petar.Binary(
 )
 binary.load("data.1.binary.npy")        # .load() not .fromfile()
 ```
+
+## Pattern 6b: Packed Snapshot Container (`data.pack.<id>` + `data.pack.idx`)
+
+Runs with `-w 4` store snapshots as records inside append-only volume files
+(`data.pack.0000`, …) with a line-per-snapshot index (`data.pack.idx`).
+A volume is NOT a standalone snapshot file — the structure sniffing cannot
+identify records in it; always go through `petar.PackedSnapshots`, which
+resolves the layout from the run sidecar (`<prefix>.meta`) and seeks records
+by the index (the record byte range is exact; tail-alignment handling is
+internal — do NOT add `offset=`/`strict_mismatch` yourself).
+
+```python
+import numpy as np
+import petar
+
+pack = petar.PackedSnapshots("data")     # prefix, not a file path
+pack.index["time"]                       # all output times (discovery)
+
+# selection forms (all return a petar.Snapshot: .particle + .header)
+snap = pack.readSnapshot(time=3.0)   # FIRST snapshot at/after t=3.0
+                                     # (falls back to the last row; NOT nearest)
+snap = pack.readSnapshot(nfile=3)    # by snapshot id (== data.3)
+snap = pack[-1]                      # last record; pack[i] by row
+
+# range query: mask the index, then read by row
+rows = np.where((pack.index["time"] >= 2.0) & (pack.index["time"] <= 5.0))[0]
+snaps = [pack.readSnapshot(row=int(r)) for r in rows]
+
+for i in range(len(pack)):          # or iterate all
+    snap = pack[i]
+
+pack.readHeader(row=0)               # header only (fast: 24/72 bytes)
+```
+
+Materialize standalone snapshots for tool chains (`petar.movie`,
+`petar.data.process`) or external software — the extracted files are
+byte-identical records and read with the standard `petar.Snapshot(path)`:
+
+```bash
+petar.pack extract data --last            # or --nfile <N> / --time <t>
+petar.pack extract data --all --snap-lst  # all + data.snap.lst for tools
+```
+
+Restart from a packed run: extract first (see SKILL "Restart/resume" item 8);
+`petar.pack trim <prefix> -t <time>` replaces `petar.data.clear` for the
+container when restarting from an older snapshot.
 
 ## Pattern 7: Object Snapshots (`object.<N>`)
 

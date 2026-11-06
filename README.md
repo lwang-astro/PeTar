@@ -702,7 +702,7 @@ Users have the ability to specify various parameters in the options of the `peta
 
 -  `-b`: Specifies the initial number of binaries. This is crucial for accurate velocity dispersion calculation, which in turn affects the automatic determination of tree time step and changeover radii. Primordial binaries should be listed first in the input data file (two neighbor lines per pair).
 
--  `-w`: Sets the output style. With `-w 2`, all particle data is printed in a single line along with system status information per output time, which can be beneficial for data analysis with small N.
+-  `-w`: Sets the output style. With `-w 2`, all particle data is printed in a single line along with system status information per output time, which can be beneficial for data analysis with small N. With `-w 4`, snapshots (BINARY write format only, i.e. `-i 0`/`-i 2`) are appended to the packed container files `data.pack.<id>` with the line-per-snapshot index `data.pack.idx` instead of one file per output time - this keeps the file count low for long runs and large run grids; `petar.pack extract` materializes the standard `data.<N>` files when needed (see [doc/packed-output_notes.md](doc/packed-output_notes.md)).
 
 -  `-i`: Determines the data format for reading input snapshots and writing runtime outputs. Snapshot files and runtime text/binary streams (including status and escaper outputs) follow the write mode selected by `-i`: `0` for read/write BINARY, `1` for read/write ASCII, `2` for read ASCII and write BINARY, and `3` for read BINARY and write ASCII.
 
@@ -1014,6 +1014,8 @@ In addition to the printed information provided by the `petar` commander, there 
 |                      | Users can reference the definitions of the first line (header) and columns using `petar -h`.                               |
 |                      | [index] denotes the output order, starting from 0 (initial snapshot). It does not correspond to time unless the output interval is set to 1. |
 | data.snap.lst        | Snapshot filename list generated during runtime output (`-w 1`). It is appended transactionally by rank 0 and can be used directly by `petar.data.process` and `petar.movie`. |
+| data.pack.[id]       | Packed snapshot container volumes (`-w 4`, BINARY only): append-only concatenation of standalone snapshot records; `data.pack.0000` is the first volume, rolling to a new one at `--pack-volume-size` GiB (0 = single unlimited volume). See [doc/packed-output_notes.md](doc/packed-output_notes.md). |
+| data.pack.idx        | Packed container index (`-w 4`): one line per packed snapshot (`nfile time n_body volume nbytes offset`). Read snapshots directly with `petar.PackedSnapshots`, or manage the container with `petar.pack` (list/extract/trim/rebuild/hdf5). |
 | data.meta            | Output-schema sidecar (petar-meta/1): records the configure-time modes of the producing binary (interrupt/external mode, MPFR, superparticle-acceleration collection, spin width, version). It is refreshed at every startup (including restarts) and is used by the Python tools to auto-select the reader keyword arguments; see [Checking Reading Consistency](#checking-reading-consistency). |
 | data.[index].randseeds| The random seeds for each OpenMP thread, used for restarting purposes. |
 | data.esc             | Contains information on escaped particles. Runtime temporary files are created per MPI rank and then appended into this shared final file. In ASCII mode, the columns match those in snapshot files with an additional escaped-time column at the beginning. In BINARY mode, each record is stored as one escaped time followed by one particle record in the same binary layout as snapshots. |
@@ -1835,7 +1837,7 @@ When using the Python analysis tool to read data, users must ensure that the key
 
 - **Concise form**: pass the file path to the reader constructor and it auto-reads with the detected schema — `petar.Particle('data.0')`, `petar.Particle('data.0.single')`, `petar.Binary('data.0.binary', G=...)`, `petar.SingleEscaper('data.esc_single')`, `petar.GroupInfo('data.group.n2', N=2)`, `petar.LagrangianMultiple('data.lagr')`. Explicit keyword arguments passed alongside always win over detection, and `.npy`/ASCII/binary formats are dispatched automatically.
 - The solver writes the sidecar `data.meta` (see [Output Files](#output-files)) next to `data.par`, and `petar.getDataKwargs('data.0')` returns the reader keyword arguments from it — or, for runs older than the sidecar, by detecting the schema from the file structure itself (snapshot header width and column/record layout).
-- `petar.readSnapshot('data.0')` additionally returns the snapshot header as `(particles, header)`.
+- `petar.Snapshot('data.0')` additionally reads the snapshot header: the returned object carries `.particle` and `.header`.
 - The command-line tools `petar.data.process`, `petar.get.object.snap`, `petar.format.transfer.post` and `petar.movie` auto-detect the schema when `-i`/`-t` (and `--use-mpfrc`/`--spin-1d`) are omitted, print what was detected, and always honor explicitly given flags.
 
 When the structure alone cannot decide between rare build layouts, detection raises `AmbiguousSchemaError` listing the candidates instead of guessing; passing the explicit keyword arguments (or regenerating `data.meta` from the producing run) resolves it.

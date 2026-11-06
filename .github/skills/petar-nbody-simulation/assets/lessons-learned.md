@@ -441,7 +441,7 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Root cause**: `_detect_petar_binary()` 设计上"优先 KDKDK4 变体"，经 `petar.select --require kdkdk4` 探测——而 petar.select 有重写符号链接的副作用；dry-run 并非无副作用，`--scenario` 的默认变量按 `command -v petar` 解析，可能拿到错误家族。
 
-**Prevention rule**: ① 特定家族场景一律显式 `--var petar_bin_switch=<binary>`（选好之后）或直接用报告脚本 `--run` 入口（内部 `select_or_install_petar` 按家族解析并传 var）；② dry-run 之后要真跑，先 `petar.select` 回目标家族；③ dry-run 重指链接是运行器已知副作用，报告命令前检查 `(binary ...)` 行打印的家族。
+**Prevention rule**: ① 特定家族场景一律显式 `--var petar_bin_switch=<binary>`（选好之后）或直接用报告脚本 `--run` 入口（内部 `select_or_install_petar` 按家族解析并传 var）；② dry-run 之后要真跑，先 `petar.select` 回目标家族；③ dry-run 重指链接是运行器已知副作用，报告命令前检查 `(binary ...)` 行打印的家族；④ 共享 `~/bin/petar` 符号链接在多会话并行时是竞态点——2026-11-06 功能矩阵驱动跑中途被并行修复会话的 select/build 换了家族，bse restart 报 `Cannot open file data.par.galpy`、galpy 读 IC 报列数不匹配，均为伪失败（单独重跑全过）；矩阵/批量验证要么确认无并行会话活动（查 `petar` 符号链接 mtime + `pgrep` 构建/选择进程），要么容忍并复跑可疑用例。
 
 ### 2026-10-24: 近抛物线 TDE 测试 IC——ν 按目标 r0 反解；R_ref 用 BSE 实际 ZAMS 半径而非文献中途值
 
@@ -496,6 +496,14 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: bse 族 IC 需要 `petar.init -s bse -v <scale>` 补齐 SE 列，且任意手造质量/位置分布可能触发真实物理失败；functional 矩阵（test/functional/functional_matrix.json）每 case 的 `ic_case`（make_ic.py）+ `init_args` + `run_args` 是现成的已验证组合。
 
 **Prevention rule**: 求解器侧改动的快速验证，优先复用 functional 矩阵的 IC 生成与 init/run 参数（或直接拷 `test/out/functional_<case>/ic.raw` + 矩阵 init_args 重跑）；手造 IC 只用于纯工具链（petar.init/reader）验证，不当求解器输入。
+
+### 2026-11-06: 【新输出风格不能假设 output() 总在提交窗口内——t=0 初始输出在窗口外，beginWindow 清掉未提交注册】
+
+**Mistake**: 实现 packed 快照输出（-w 4）时把记录 staging 注册进 OutputCommitManager、随窗口提交：std-packed 冒烟稳定出现"索引整体错位一条"（卷首记录丢失、idx 行 0 指向记录 1 的字节）。第一轮修复（共享 staging 文件改为按 nfile 逐记录 staging）无效——同样错位原样复现，浪费一轮完整重建+冒烟循环（且该轮又因 VERSION 跳过重建跑了陈旧二进制，见 2026-10-01 条）。
+
+**Root cause**: 初始 t=0 快照的 output() 调用发生在任何 beginWindow/commitWindow 之外；beginWindow() 开头就 records_.clear()，窗口外注册的 staging 永远等不到提交即被丢弃；而 idx 行写在持续打开的 tmp 流里随下一个窗口正常提交——于是"索引行在、记录字节不在"。-w 1 无此问题是因为它把快照直接写最终文件（output 时刻即完整落盘），不依赖窗口。
+
+**Prevention rule**: 给 PeTar 新增输出风格时，output() 时刻即应完整的载荷（快照记录字节）不要走窗口批量 staging——立即 append 落盘；需要与 status 行同事务的只有"提交记录"语义（packed 的 idx 行：在 registerTransactionalOutputs() 内注册、随窗口 Append 提交），崩溃自愈靠启动时按提交记录截断载体尾部（见 doc/packed-output_notes.md）。判定指纹：idx 与卷内记录头整体错位一条 = 窗口外输出丢了记录。"立即落载体 + 延迟提交记录"的配对还必须双向校验不一致：提交记录引用的载体缺失要中止，反向（载体有字节但无任何提交记录，如崩溃在首次窗口提交前/idx 被删）同样要中止——只堵一边，另一边就是静默错位（1875e 审查发现）。
 
 ## Post-Processing
 
@@ -838,7 +846,7 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 
 **Root cause**: 成员同步只存在于 `collectGroupMemberAdrAndSetMemberParametersIter`（成组时一次性 r_scale_next）；质量变化路径（`correctSoftPotMassChange` 只修能量簿记）无 changeover/r_search 刷新；诊断依赖行号匹配源码但二进制来自 VERSION 缓存。
 
-**Prevention rule**: 源码级 A/B 或回归验证前必须核对运行二进制的 mtime/家族与源码一致（`ls -la` + 断言行号对照），VERSION 不 bump 时安装脚本会静默跳过重建；修复方式：`syncMemberChangeoverScale()`（每个组级 `pcm.changeover.setR` 后把 CM changeover 复制给成员并 floor r_search）+ 硬域入口 `updateWithRScale()` 后 floor `r_search>=r_out`（4 处组初始化位点 + 入口守卫）；成员与 CM 在同一边界一起跳变，与 CM 自身 setR 的即时性对称。已验证：双并合冒烟 IC 连续多轮通过、诊断断言零违例、Pal5 811 dump 回放与修复前逐位一致。
+**Prevention rule**: 源码级 A/B 或回归验证前必须核对运行二进制的 mtime/家族与源码一致（`ls -la` + 断言行号对照），VERSION 不 bump 时安装脚本会静默跳过重建；开发期迭代验证用 `PURGE_OLD_BINARIES=1 ./install_petar_major_versions.sh` 强制全量重建，或先 `strings <binary> | grep <新代码特征串>` 确认修复确实在二进制里（2026-11-06 packed 输出开发再次踩中：两轮"修复无效"实为二进制未更新）；修复方式：`syncMemberChangeoverScale()`（每个组级 `pcm.changeover.setR` 后把 CM changeover 复制给成员并 floor r_search）+ 硬域入口 `updateWithRScale()` 后 floor `r_search>=r_out`（4 处组初始化位点 + 入口守卫）；成员与 CM 在同一边界一起跳变，与 CM 自身 setR 的即时性对称。已验证：双并合冒烟 IC 连续多轮通过、诊断断言零违例、Pal5 811 dump 回放与修复前逐位一致。
 
 ### 2026-10-02: "SE 质量损失"诊断被事件级回放证伪——large_energy 真凶是双曲近遇的组进出注入；修复=事件步重基线
 
@@ -1429,3 +1437,27 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 长期打开的编辑器 tab 持有旧缓冲区,窗口/profile 恢复后按缓冲区时间戳覆盖磁盘,git 未察觉(工作区改动本来就有,`git status` 仍显示 modified,签名不变);会话内两次读取间文件被静默替换。
 
 **Prevention rule**: ① 会话中若同一文件的两次读取出现不可解释的矛盾(内容回退/改动消失),立即 `git diff <历史提交> -- <file>` 逐提交对比定位还原基线(选 diff 最小的提交),不要继续在矛盾状态上编辑;② 恢复方法:`git checkout HEAD -- <file>` 取回已提交内容,再重放已知待提交改动(小改动优于猜测);③ 经历 VS Code 崩溃/profile 恢复后,动手前对全部 modified 文件 `git diff --stat` 与预期改动清单核对;④ 编辑器中打开过但已被外部恢复的文件,先 Revert/关闭 tab 再编辑,防止二次覆盖。
+
+### 2026-11-06: 诊断类报错必须断言"抛的是哪个错"——误归因报错在"raises ValueError"测试下照样绿
+
+**Mistake**: `_verifySidecarAgainstStructure` 用合并后的 kwargs(sidecar∪显式)实例化布局并与结构比对,矛盾时一律报"data.meta disagrees...(sidecar 来自别的运行)"。用户在 3D-spin 数据上误传 `--spin-1d`(spin_3d=False 经 setdefault 存活)→ bse-agama 报 meta=35/structure=37,错误地让用户去删一个**正确**的 data.meta(删了也不会好)。functional 与 selftest 均未拦截:schema 检查只走"正确旗标/无旗标"路径,"显式旗标与结构矛盾"这条用户错误路径无任何覆盖;wrong-sidecar-rejected 只断言 ValueError 类型——误归因消息同样是 ValueError,测试照样绿。
+
+**Root cause**: ① 校验把三个事实源(sidecar、显式 kwargs、结构)合并成一份再比对,丢失归因信息;② 测试把"报错存在"当验收,没把"报错归因"当被测行为;③ 错误路径覆盖只想到"缺失/错误输入",没想到"矛盾显式输入"。
+
+**Prevention rule**: ① 多事实源校验必须逐源诊断:sidecar 单独 vs 结构、显式单独 vs 结构,分别给消息(已修:显式矛盾点名参数与旗标,sidecar 一致时不再被冤枉);② 结构比对须用全体候选形状而非 matches[0](别名时正确 sidecar 不得被误拒);③ 诊断类错误(selftest)断言消息前缀+点名内容,不能只断言异常类型;④ 用户可传的每个兼容旗标(--spin-1d 这类 legacy 开关)至少配一条"与新数据矛盾"的错误路径检查。
+
+### 2026-11-06(更正): 上一条的真正根因是 `opt in ('--spin-1d')` 缺逗号——字符串子串匹配,与用户用法无关
+
+**Mistake**: 前一条把触发归因为"用户传了 --spin-1d"。拿到用户原始命令(无 --spin-1d,有 `-s ascii`)复现后插桩发现:`elif opt in ('--spin-1d')` 括号内无逗号是**字符串**而非元组,`in` 退化为子串匹配,`'-s'` 恰为 `'--spin-1d'` 的子串——任何 `-s`(snapshot-format)都会注入 `spin_3d=False` 并短路真正的 `-s` 处理器(snapshot_format 丢失)。tools 全量排查:同型 102 处(data_process 7、movie 83、external_pot_movie 10、get_object_snapshot 2),多数被更早分支遮挡而"侥幸正确",唯一有害碰撞即 `-s`。已全部改为单元素元组 `('x',)`。
+
+**Root cause**: ① Python 单元素括号是字符串不是元组,`in` 对字符串做子串匹配——静态无告警、运行不报错;② 归因修复(显式矛盾点名 spin_3d=False)恰好把真凶暴露在错误消息里,但第一轮没有它就该直接复现用户命令——**报错排查必须以用户原始命令复现,不能以自造的最小命令代替**(我用 --spin-1d 自造命令复现"成功"反而强化了错误假设)。
+
+**Prevention rule**: ① 单元素成员测试一律写 `('x',)`;提交前 grep `in ('[^',]*')` 清零;② 排查用户报错第一步是拿到并原样运行用户命令;③ CLI 每个选项至少被一次测试真实解析过——全局 lagr 变体已加 `-s binary`,任何 case 都会钉住 `-s` 解析路径。
+
+### 2026-11-06: 成员级 writeAscii 严禁带行尾换行——DSM ASCII 快照每粒子裂成两行的隐形缺陷
+
+**Mistake**: `StarParameter::writeAscii`(disk_star_merger.hpp)的 fprintf 带行尾 `\n`,而它是粒子记录的**中间成员**——每个 dsm 粒子输出成两物理行(100 粒子 200 行、18/12 列交错)。C++ 的 `fscanf` 按空白读取对新旧格式都兼容,所以重启/工具转换"能用";但一切按行/列结构的读取器(np.loadtxt、petar.Particle ascii 路径)全崩。自 2020 引入以来无人发现——functional 只跑 binary 快照,ascii 快照路径零覆盖;format.matrix 补上覆盖后当场暴露(dsm 一例失败,追到求解器原生 ascii 输出同样交错,排除工具嫌疑)。
+
+**Root cause**: ① 成员 writeAscii 违反约定(换行只由记录最外层写者发出——soft_ptcl 的 n_ngb、io.hpp 的单行 header 是合法末尾);② fscanf 的空白容忍让缺陷在 C++ 生态内不可见,只在外部读取器爆炸;③ ASCII 输出路径无测试覆盖。
+
+**Prevention rule**: ① 成员类 writeAscii 一律以空格结尾,不得带 `\n`;新增成员的 writeAscii 后跑一次 `awk '{print NF}' file | sort -u`(单列数=均匀记录);② 输出格式类缺陷要用**非自有读取器**验证(python/loadtxt),自带 fscanf 读得通不代表格式自洽;③ 求解器每个输出格式的每种 data_format 分支至少被一条测试真实走过——format.matrix 现在每 case 覆盖 binary/ascii 快照 × npy/ascii 产物。

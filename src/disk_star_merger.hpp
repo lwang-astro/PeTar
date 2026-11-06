@@ -759,7 +759,11 @@ public:
 
     //! write class data with ASCII format
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld %lld %lld %26.17e %26.17e %26.17e\n", type, n_merger_star, n_merger_bh, last_mass_change_time, last_merger_time, helium_fraction);
+        // no trailing newline: this is a MEMBER of the particle record; a
+        // mid-record \n splits one particle across two physical lines and
+        // breaks every row/column-structured reader (the record-ending \n
+        // is emitted by the particle's outermost writer)
+        fprintf(fp, "%lld %lld %lld %26.17e %26.17e %26.17e ", type, n_merger_star, n_merger_bh, last_mass_change_time, last_merger_time, helium_fraction);
     }
 
     //! read class data with ASCII format

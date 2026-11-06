@@ -1337,178 +1337,178 @@ if __name__ == '__main__':
             if opt in ('-h','--help'):
                 usage()
                 sys.exit(1)
-            elif opt in ('-f'):
+            elif opt in ('-f',):
                 fps = float(arg)
-            elif opt in ('-m'):
+            elif opt in ('-m',):
                 plot_mode_str = arg
                 for i in plot_mode_str.split(','):
                     plot_item.append(['main', i])
                     xname,yname = i.split('-')
                     if (xname in sky_modes) | (yname in sky_modes):
                         kwargs['get_skycoord'] = True
-            elif opt in ('-R'):
+            elif opt in ('-R',):
                 kwargs['boxsize'] = arg
-            elif opt in ('-H'):
+            elif opt in ('-H',):
                 plot_item.append(['plot_HRdiagram'])
-            elif opt in ('-b'):
+            elif opt in ('-b',):
                 plot_item.append(['plot_semi_ecc'])
-            elif opt in ('-o'):
+            elif opt in ('-o',):
                 output_file = arg
-            elif opt in ('-G'):
+            elif opt in ('-G',):
                 kwargs['G'] = float(arg)
-            elif opt in ('-p'):
+            elif opt in ('-p',):
                 kwargs['use_previous'] = True
-            elif opt in ('-l'):
+            elif opt in ('-l',):
                 model_path = arg
-            elif opt in ('-L'):
+            elif opt in ('-L',):
                 plot_item.append(['plot_lagr'])
                 lagr_file = arg
                 read_lagr_data=True
-            elif opt in ('-i'):
+            elif opt in ('-i',):
                 kwargs['interrupt_mode'] = arg
-            elif opt in ('-t'):
+            elif opt in ('-t',):
                 kwargs['external_mode'] = arg
-            elif opt in ('-s'):
+            elif opt in ('-s',):
                 kwargs['snapshot_format'] = arg
-            elif opt in ('-c'):
+            elif opt in ('-c',):
                 kwargs['color_mode'] = arg
-            elif opt in ('--n-cpu'):
+            elif opt in ('--n-cpu',):
                 n_cpu = int(arg)
-            elif opt in ('--x-min'):
+            elif opt in ('--x-min',):
                 kwargs['x_min'] = arg
-            elif opt in ('--x-max'):
+            elif opt in ('--x-max',):
                 kwargs['x_max'] = arg
-            elif opt in ('--y-min'):
+            elif opt in ('--y-min',):
                 kwargs['y_min'] = arg
-            elif opt in ('--y-max'):
+            elif opt in ('--y-max',):
                 kwargs['y_max'] = arg
-            elif opt in ('--lum-min'):
+            elif opt in ('--lum-min',):
                 kwargs['lum_min'] = float(arg)
-            elif opt in ('--lum-max'):
+            elif opt in ('--lum-max',):
                 kwargs['lum_max'] = float(arg)
-            elif opt in ('--temp-min'):
+            elif opt in ('--temp-min',):
                 kwargs['temp_min'] = float(arg)
-            elif opt in ('--temp-max'):
+            elif opt in ('--temp-max',):
                 kwargs['temp_max'] = float(arg)
-            elif opt in ('--semi-min'):
+            elif opt in ('--semi-min',):
                 kwargs['semi_min'] = float(arg)
-            elif opt in ('--semi-max'):
+            elif opt in ('--semi-max',):
                 kwargs['semi_max'] = float(arg)
-            elif opt in ('--ecc-min'):
+            elif opt in ('--ecc-min',):
                 kwargs['ecc_min'] = float(arg)
-            elif opt in ('--ecc-max'):
+            elif opt in ('--ecc-max',):
                 kwargs['ecc_max'] = float(arg)
-            elif opt in ('--bin-rmax'):
+            elif opt in ('--bin-rmax',):
                 kwargs['bin_rmax'] = float(arg)
-            elif opt in ('--bin-rmin'):
+            elif opt in ('--bin-rmin',):
                 kwargs['bin_rmin'] = float(arg)
-            elif opt in ('--bin-color'):
+            elif opt in ('--bin-color',):
                 kwargs['bin_color'] = arg
-            elif opt in ('--bin-cm-mode'):
+            elif opt in ('--bin-cm-mode',):
                 kwargs['bin_cm_mode'] = arg
-            elif opt in ('--bin-cm-boxsize'):
+            elif opt in ('--bin-cm-boxsize',):
                 kwargs['bin_cm_boxsize'] = float(arg)
-            elif opt in ('--ekin-min'):
+            elif opt in ('--ekin-min',):
                 kwargs['ekin_min'] = float(arg)
-            elif opt in ('--ekin-max'):
+            elif opt in ('--ekin-max',):
                 kwargs['ekin_max'] = float(arg)
-            elif opt in ('--pot-min'):
+            elif opt in ('--pot-min',):
                 kwargs['pot_min'] = float(arg)
-            elif opt in ('--pot-max'):
+            elif opt in ('--pot-max',):
                 kwargs['pot_max'] = float(arg)
-            elif opt in ('--etot-min'):
+            elif opt in ('--etot-min',):
                 kwargs['etot_min'] = float(arg)
-            elif opt in ('--etot-max'):
+            elif opt in ('--etot-max',):
                 kwargs['etot_max'] = float(arg)
-            elif opt in ('--rlagr-min'):
+            elif opt in ('--rlagr-min',):
                 kwargs['rlagr_min'] = float(arg)
-            elif opt in ('--rlagr-max'):
+            elif opt in ('--rlagr-max',):
                 kwargs['rlagr_max'] = float(arg)
-            elif opt in ('--time-min'):
+            elif opt in ('--time-min',):
                 kwargs['time_min'] = float(arg)
-            elif opt in ('--time-max'):
+            elif opt in ('--time-max',):
                 kwargs['time_max'] = float(arg)
-            elif opt in ('--rlagr-scale'):
+            elif opt in ('--rlagr-scale',):
                 kwargs['rlagr_scale'] = arg
-            elif opt in ('--lagr-energy'):
+            elif opt in ('--lagr-energy',):
                 kwargs['calc_energy'] = True
-            elif opt in ('--lagr-type'):
+            elif opt in ('--lagr-type',):
                 kwargs['add_star_type'] = [x for x in arg.split(',')]
-            elif opt in ('--lagr-mfrac'):
+            elif opt in ('--lagr-mfrac',):
                 kwargs['mass_fraction'] = np.array([float(x) for x in arg.split(',')])
-            elif opt in ('--lagr-format'):
+            elif opt in ('--lagr-format',):
                 lagr_format = arg
-            elif opt in ('--cm-mode'):
+            elif opt in ('--cm-mode',):
                 kwargs['cm_mode'] = arg
-            elif opt in ('--cm-boxsize'):
+            elif opt in ('--cm-boxsize',):
                 kwargs['cm_boxsize'] = float(arg)
-            elif opt in ('--core-file'):
+            elif opt in ('--core-file',):
                 core_file = arg
-            elif opt in ('--core-format'):
+            elif opt in ('--core-format',):
                 core_format = arg
-            elif opt in ('--unit-length'):
+            elif opt in ('--unit-length',):
                 kwargs['unit_length'] = arg
-            elif opt in ('--unit-vel'):
+            elif opt in ('--unit-vel',):
                 kwargs['unit_vel'] = arg
-            elif opt in ('--format-time'):
+            elif opt in ('--format-time',):
                 kwargs['format_time'] = arg
-            elif opt in ('--skiprows'):
+            elif opt in ('--skiprows',):
                 kwargs['skiprows'] = int(arg)
-            elif opt in ('--snapshot-type'):
+            elif opt in ('--snapshot-type',):
                 kwargs['snapshot_type'] = arg
-            elif opt in ('--plot-ncols'):
+            elif opt in ('--plot-ncols',):
                 ncol = int(arg)
-            elif opt in ('--plot-xsize'):
+            elif opt in ('--plot-xsize',):
                 frame_xsize = float(arg)
-            elif opt in ('--plot-ysize'):
+            elif opt in ('--plot-ysize',):
                 frame_ysize = float(arg)
-            elif opt in ('--n-layer-cross'):
+            elif opt in ('--n-layer-cross',):
                 kwargs['nlayer_cross'] = int(arg)
-            elif opt in ('--n-layer-point'):
+            elif opt in ('--n-layer-point',):
                 kwargs['nlayer_point'] = int(arg)
-            elif opt in ('--layer-alpha'):
+            elif opt in ('--layer-alpha',):
                 kwargs['alpha_amplifier'] = float(arg)
-            elif opt in ('--marker-scale'):
+            elif opt in ('--marker-scale',):
                 kwargs['marker_scale'] = arg
-            elif opt in ('--mass-power'):
+            elif opt in ('--mass-power',):
                 kwargs['mass_power'] = float(arg)
-            elif opt in ('--size-mode'):
+            elif opt in ('--size-mode',):
                 kwargs['size_mode'] = arg
-            elif opt in ('--ext-pot'):
+            elif opt in ('--ext-pot',):
                 kwargs['external_pot'] = True
-            elif opt in ('--ext-pot-dir'):
+            elif opt in ('--ext-pot-dir',):
                 kwargs['external_pot_dir'] = arg
-            elif opt in ('--ext-pot-format'):
+            elif opt in ('--ext-pot-format',):
                 kwargs['external_pot_format'] = arg
-            elif opt in ('--ext-pot-log'):
+            elif opt in ('--ext-pot-log',):
                 kwargs['external_pot_log'] = True
-            elif opt in ('--ext-pot-vmin'):
+            elif opt in ('--ext-pot-vmin',):
                 kwargs['external_pot_vmin'] = float(arg)
-            elif opt in ('--ext-pot-vmax'):
+            elif opt in ('--ext-pot-vmax',):
                 kwargs['external_pot_vmax'] = float(arg)
-            elif opt in ('--ext-pot-alpha'):
+            elif opt in ('--ext-pot-alpha',):
                 kwargs['external_pot_alpha'] = float(arg)
-            elif opt in ('--ext-pot-with-contour'):
+            elif opt in ('--ext-pot-with-contour',):
                 kwargs['external_pot_with_contour'] = True
-            elif opt in ('--ext-pot-xy-prefix'):
+            elif opt in ('--ext-pot-xy-prefix',):
                 kwargs['external_pot_xy_prefix'] = arg
-            elif opt in ('--ext-pot-xz-prefix'):
+            elif opt in ('--ext-pot-xz-prefix',):
                 kwargs['external_pot_xz_prefix'] = arg
-            elif opt in ('--galev-filter'):
+            elif opt in ('--galev-filter',):
                 kwargs['galev_filter'] =  [x for x in arg.split(',')]
-            elif opt in ('--galev-color'):
+            elif opt in ('--galev-color',):
                 kwargs['galev_color'] = [x for x in arg.split(',')]
-            elif opt in ('--galev-mode'):
+            elif opt in ('--galev-mode',):
                 kwargs['galev_mode'] = arg
-            elif opt in ('--galev-mag-range'):
+            elif opt in ('--galev-mag-range',):
                 kwargs['galev_mag_range'] = np.array([float(x) for x in arg.split(',')])
-            elif opt in ('--suppress-images'):
+            elif opt in ('--suppress-images',):
                 plot_images = False
-            elif opt in ('--format-file'):
+            elif opt in ('--format-file',):
                 plot_format = arg
-            elif opt in ('--dpi'):
+            elif opt in ('--dpi',):
                 dpi = float(arg)
-            elif opt in ('--compare-in-column'):
+            elif opt in ('--compare-in-column',):
                 kwargs['compare_in_column'] = True
             else:
                 assert False, "unhandeld option"

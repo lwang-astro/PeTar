@@ -12,7 +12,12 @@ PeTar outputs are deliberately mixed: state-like bulk data (snapshots,
 `data.status/lagr/core`, escapers, group files, `.single/.binary`,
 `object.*`) is BINARY (size/IO); append-only event streams (`data.sse*`,
 `data.bse*`, `data.interrupt`, `data.prof.*`) are ASCII
-(inspectability/append); `data.par*` is ASCII text. The authoritative
+(inspectability/append); `data.par*` is ASCII text. Snapshot bulk data may
+additionally be delivered by the packed container (`-w 4`,
+`[prefix].pack.<id>` + `[prefix].pack.idx`): records are byte-identical
+standalone BINARY snapshots riding the same tmp→commit transactional path,
+so the reader contract is unchanged after `petar.pack extract` (see
+`doc/packed-output_notes.md`). The authoritative
 file → format → reader mapping is the SKILL "File-Type → Reader-Class
 Quick Reference" table plus `assets/data-readback-patterns.md`.
 

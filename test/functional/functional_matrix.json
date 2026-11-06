@@ -24,6 +24,8 @@
       {
         "name": "custom-fractions+mass-range",
         "args": [
+          "-s",
+          "binary",
           "-m",
           "0.05,0.15,0.5,0.95",
           "--add-mass-range",
@@ -87,6 +89,31 @@
           "scratch": true
         }
       ]
+    },
+    {
+      "name": "std-packed",
+      "require": "",
+      "interrupt_mode": "none",
+      "packed_output": true,
+      "init_args": [
+        "-v",
+        "1.022712165045695"
+      ],
+      "run_args": [
+        "-b",
+        "10",
+        "--write-group-info",
+        "2",
+        "-w",
+        "4"
+      ],
+      "process_args": [
+        "-G",
+        "0.00449830997959438"
+      ],
+      "object_snap_args": [],
+      "tool_smokes": [],
+      "lagr_variants": []
     },
     {
       "name": "merger",

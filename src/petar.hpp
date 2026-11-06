@@ -27,6 +27,10 @@
 #include<dirent.h>
 #include<sys/stat.h>
 #include<cstdio>
+#include<cstdlib>
+#include<utility>
+#include<algorithm>
+#include<unistd.h>
 //#include<unistd.h>
 #include<cstring>
 #include<getopt.h>
@@ -128,6 +132,7 @@ public:
     IOParams<PS::F64> dt_snap;
     IOParams<PS::S64> data_format;
     IOParams<PS::S64> write_style;
+    IOParams<PS::F64> pack_volume_size;
     IOParams<PS::S64> append_switcher;
     IOParams<PS::S64> keep_tmp_on_startup;
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
@@ -178,7 +183,8 @@ public:
                      r_escape         (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Object escape radius criterion; < 0: remove objects when r>-r_escape; >= 0: remove objects when r>r_escape and energy>0"),
                      dt_snap          (input_par_store, 1.0,  "o", "Output time interval for particle dataset snapshots"),
                      data_format      (input_par_store, 2,    "i", "Data file reading and writing format; snapshots, status and escaper outputs follow the write mode selected here; 0: read and write in BINARY; 1: read and write in ASCII; 2: read in ASCII, write in BINARY; 3: read in BINARY, write in ASCII"),
-                     write_style      (input_par_store, 1,    "w", "Data file writing style; 0: no output; 1: write all files separately; 2. write snapshots in status files in one line per step (no MPI support); 3. write files except snapshots"),
+                     write_style      (input_par_store, 1,    "w", "Data file writing style; 0: no output; 1: write all files separately; 2. write snapshots in status files in one line per step (no MPI support); 3. write files except snapshots; 4: write snapshots in the packed append-only container [prefix].pack.<id> with the index [prefix].pack.idx (BINARY snapshot write format only, see --pack-volume-size)"),
+                     pack_volume_size (input_par_store, 0.0, "pack-volume-size", "Maximum size (GiB) of one packed snapshot volume file used by the packed output style (-w 4); when the next snapshot record would exceed it, a new volume [prefix].pack.<id> is started; 0: no limit (single volume)"),
                      append_switcher  (input_par_store, 1,    "a", "Data file output mode; 0: overwrite files except object dump files, include header lines; 1: append files except snapshots, no header line"),
                      keep_tmp_on_startup(input_par_store, 0, "keep-tmp-on-startup", "Startup tmp handling for transactional outputs; 0: auto-remove residual tmp files before run (default); 1: keep residual tmp files and only print warning"),
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
@@ -214,6 +220,7 @@ public:
             {r_search_min.key,         required_argument, &petar_flag, 10},
             {r_escape.key,             required_argument, &petar_flag, 11},
             {keep_tmp_on_startup.key,  required_argument, &petar_flag, 15},
+            {pack_volume_size.key,     required_argument, &petar_flag, 16},
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             {domain_weight_mode.key,   required_argument, &petar_flag, 12},
             {domain_nstep.key,        required_argument, &petar_flag, 13},
@@ -248,6 +255,12 @@ public:
                     if(print_flag) keep_tmp_on_startup.print(std::cout);
                     opt_used += 2;
                     assert(keep_tmp_on_startup.value==0 || keep_tmp_on_startup.value==1);
+                    break;
+                case 16:
+                    pack_volume_size.value = atof(optarg);
+                    if(print_flag) pack_volume_size.print(std::cout);
+                    opt_used += 2;
+                    assert(pack_volume_size.value>=0.0);
                     break;
                 case 3:
                     tree_nstep_mklist.value = atoi(optarg);
@@ -590,6 +603,17 @@ public:
     Status stat;
     std::ofstream fstatus;
     std::ofstream fsnaplst;
+    // packed snapshot container state (-w 4): current volume id and the
+    // committed byte count within that volume (rank 0 authoritative)
+    std::ofstream fpackidx;
+    PS::S64 pack_volume_id;
+    PS::S64 pack_volume_bytes;
+    bool pack_state_recovered;
+    // last committed index record seen at recovery (readParameters time);
+    // used by initialParameters for the stale-trailing-records warning after
+    // the restart snapshot header has actually been read
+    PS::S64 pack_idx_last_nfile;
+    PS::F64 pack_idx_last_time;
     PS::F64 time_kick;
     OutputCommitManager output_commit_manager;
 
@@ -672,6 +696,98 @@ public:
 
     static std::string makeTmpPath(const std::string& path) {
         return path + ".tmp";
+    }
+
+    //! packed-container volume filename ([prefix].pack.<zero-padded id>)
+    std::string packVolumePath(const PS::S64 _volume_id) const {
+        char suffix[32];
+        std::snprintf(suffix, sizeof(suffix), ".pack.%04lld", (long long)_volume_id);
+        return input_parameters.fname_snp.value + std::string(suffix);
+    }
+
+    //! discover packed-container volume files ([prefix].pack.<digits>),
+    //! supporting a directory component in the prefix; returns (volume id,
+    //! path) pairs sorted by id
+    static std::vector<std::pair<PS::S64,std::string>> listPackedVolumes(const std::string& _prefix) {
+        std::string dir_part = ".";
+        std::string base = _prefix;
+        const auto pos = _prefix.find_last_of('/');
+        if (pos != std::string::npos) {
+            dir_part = (pos==0) ? std::string("/") : _prefix.substr(0, pos);
+            base = _prefix.substr(pos+1);
+        }
+        const std::string volume_prefix = base + ".pack.";
+        std::vector<std::pair<PS::S64,std::string>> vols;
+        DIR* dir = opendir(dir_part.c_str());
+        if (dir==NULL) return vols;
+        struct dirent* ent = NULL;
+        while ((ent = readdir(dir)) != NULL) {
+            const std::string name = ent->d_name;
+            if (!hasPrefix(name, volume_prefix)) continue;
+            const std::string tail = name.substr(volume_prefix.size());
+            if (tail.empty()) continue;
+            bool digits = true;
+            for (const char c: tail) {
+                if (c<'0' || c>'9') { digits = false; break; }
+            }
+            if (!digits) continue;
+            char* end = NULL;
+            const long long int vol = std::strtoll(tail.c_str(), &end, 10);
+            if (end==tail.c_str()) continue;
+            vols.push_back(std::make_pair((PS::S64)vol,
+                          dir_part==std::string(".") ? name : dir_part+"/"+name));
+        }
+        closedir(dir);
+        std::sort(vols.begin(), vols.end());
+        return vols;
+    }
+
+    //! remove all packed-container volume files ([prefix].pack.<digits>);
+    //! the index file ([prefix].pack.idx) is removed separately
+    void removePackedVolumes() const {
+        for (const auto& item: listPackedVolumes(input_parameters.fname_snp.value)) {
+            std::remove(item.second.c_str());
+        }
+    }
+
+    //! recover the packed-volume rolling state from the last committed index
+    //! line; warn when the index carries records beyond the restart snapshot
+    //! (trailing packed records are stale until petar.pack trim is used).
+    //! \return true when the index existed and provided at least one record
+    bool recoverPackStateFromIndex(const std::string& _idx_final) {
+        pack_volume_id = 0;
+        pack_volume_bytes = 0;
+        pack_idx_last_nfile = -1;
+        pack_idx_last_time = 0.0;
+        std::FILE* fin = std::fopen(_idx_final.c_str(), "r");
+        if (fin==NULL) {
+            // append restart without an existing container: the pack starts
+            // empty; snapshot numbering continues from the restart header
+            return false;
+        }
+        char line[512];
+        long long int last_nfile = -1;
+        long long int last_volume = 0;
+        long long int last_offset = 0;
+        long long int last_nbytes = 0;
+        double last_time = 0.0;
+        while (std::fgets(line, sizeof(line), fin) != NULL) {
+            long long int nfile, n_body, volume, nbytes, offset;
+            double time;
+            if (std::sscanf(line, "%lld %lf %lld %lld %lld %lld", &nfile, &time, &n_body, &volume, &nbytes, &offset)==6) {
+                last_nfile = nfile; last_time = time;
+                last_volume = volume; last_nbytes = nbytes; last_offset = offset;
+            }
+        }
+        std::fclose(fin);
+        if (last_nfile>=0) {
+            pack_volume_id = last_volume;
+            pack_volume_bytes = last_offset + last_nbytes;
+            pack_idx_last_nfile = last_nfile;
+            pack_idx_last_time = last_time;
+            return true;
+        }
+        return false;
     }
 
     static bool hasPrefix(const std::string& text, const std::string& prefix) {
@@ -810,6 +926,15 @@ public:
             output_commit_manager.registerTmp("snap_list", my_rank, makeTmpPath(snaplst_final), snaplst_final, OutputCommitManager::CommitMode::Append);
         }
 
+        if (write_style==4 && my_rank==0) {
+            // the packed index tmp accumulates index lines (including the
+            // window-less initial t=0 output) and is committed with the
+            // window: the index line is the commit record of a packed
+            // snapshot (record bytes are appended at output time)
+            const std::string pack_idx_final = fname_snp + ".pack.idx";
+            output_commit_manager.registerTmp("pack_index", my_rank, makeTmpPath(pack_idx_final), pack_idx_final, OutputCommitManager::CommitMode::Append);
+        }
+
 #ifdef PROFILE
     if (write_style>0) {
             const std::string profile_final = fname_snp + ".prof.rank." + std::to_string(my_rank);
@@ -920,6 +1045,13 @@ public:
             fsnaplst.open(makeTmpPath(input_parameters.fname_snp.value + ".snap.lst").c_str(), std::ofstream::out);
         }
 
+        if (write_style==4 && my_rank==0) {
+            // truncate the index staging buffer for the next output window
+            if (fpackidx.is_open()) fpackidx.close();
+            fpackidx.open(makeTmpPath(input_parameters.fname_snp.value + ".pack.idx").c_str(), std::ofstream::out);
+            fpackidx<<std::setprecision(WRITE_PRECISION);
+        }
+
 #ifdef PROFILE
         if (write_style>0) {
             const std::string fproname = fname_snp + ".prof.rank." + std::to_string(my_rank);
@@ -996,6 +1128,7 @@ public:
             if (fesc.is_open()) fesc.close();
             if (fsnaplst.is_open()) fsnaplst.close();
         }
+        if (write_style==4 && fpackidx.is_open()) fpackidx.close();
 
 #ifdef PROFILE
         if (write_style>0 && fprofile.is_open()) fprofile.close();
@@ -1046,7 +1179,7 @@ public:
         // profile
         dn_loop(0), profile(), n_count(), n_count_sum(), tree_soft_profile(), fprofile(), 
 #endif
-    stat(), fstatus(), time_kick(0.0), output_commit_manager(),
+    stat(), fstatus(), fpackidx(), pack_volume_id(0), pack_volume_bytes(0), pack_state_recovered(false), pack_idx_last_nfile(-1), pack_idx_last_time(0.0), time_kick(0.0), output_commit_manager(),
         escaper(), fesc(),
         file_header(), system_soft(), id_adr_map(),
         n_loop(0), domain_decompose_weight(1.0), dinfo(), pos_domain(NULL), 
@@ -2307,6 +2440,92 @@ public:
             rand_manager.writeRandSeeds(fname_seed.c_str());
 #endif
         }
+        // packed snapshot container (-w 4): stage the complete snapshot
+        // record (header + particles, BINARY) in a tmp file, then commit it
+        // by append to the pack volume plus one index line; see
+        // doc/packed-output_notes.md for the container/index layout
+        else if(write_style==4) {
+            // data output
+            file_header.n_body = stat.n_real_glb;
+            file_header.time = stat.time;
+            file_header.nfile++;
+#ifdef RECORD_CM_IN_HEADER
+            file_header.pos_offset = stat.pcm.pos;
+            file_header.vel_offset = stat.pcm.vel;
+#endif
+#ifdef PETAR_DEBUG
+            assert(system_soft.getNumberOfParticleLocal()== stat.n_all_loc);
+#endif
+            // stage the snapshot record; the FDPS writer gathers particles
+            // to rank 0 (MPI) and writes a complete standalone-record file.
+            // One staging file PER RECORD (keyed by nfile): the initial
+            // t=0 output() call happens outside a commit window, so a
+            // shared staging file would be truncated by the next record
+            // before its commit; per-record staging appends in call order.
+            const std::string staging_base = input_parameters.fname_snp.value + ".pack.staging." + std::to_string(file_header.nfile);
+            const std::string staging_tmp = makeTmpPath(staging_base);
+            system_soft.setNumberOfParticleLocal(stat.n_real_loc);
+            system_soft.writeParticleBinary(staging_tmp.c_str(), file_header);
+            system_soft.setNumberOfParticleLocal(stat.n_all_loc);
+
+            if(my_rank==0) {
+                // measure the staged record; roll the volume when the size
+                // limit would be exceeded (0: single unlimited volume)
+                struct stat stage_st;
+                if (::stat(staging_tmp.c_str(), &stage_st)!=0) {
+                    std::cerr<<"Error: cannot stat the packed snapshot staging file "<<staging_tmp<<".\n";
+                    abort();
+                }
+                const PS::S64 nbytes = stage_st.st_size;
+                const double limit_bytes = input_parameters.pack_volume_size.value*1024.0*1024.0*1024.0;
+                if (pack_volume_bytes>0 && limit_bytes>0.0
+                    && static_cast<double>(pack_volume_bytes)+static_cast<double>(nbytes) > limit_bytes) {
+                    pack_volume_id++;
+                    pack_volume_bytes = 0;
+                }
+                const PS::S64 offset = pack_volume_bytes;
+                const std::string volume_final = packVolumePath(pack_volume_id);
+                // Append the record bytes to the volume IMMEDIATELY. The
+                // initial t=0 output() runs outside a commit window, and
+                // beginWindow() discards uncommitted registrations, so a
+                // batched staging file would be silently dropped (observed:
+                // every index row misaligned by one). Instead the index line
+                // is the commit record: it rides the windowed tmp commit
+                // together with the status row, and the startup truncation
+                // (see initialParameters) drops any volume tail beyond the
+                // last committed index record.
+                if (!OutputCommitManager::appendFile(staging_tmp, volume_final)) {
+                    std::cerr<<"Error: cannot append the packed snapshot record to "<<volume_final<<".\n";
+                    abort();
+                }
+                OutputCommitManager::removeFileSafe(staging_tmp);
+                fpackidx<<file_header.nfile<<" "<<file_header.time<<" "<<file_header.n_body<<" "
+                        <<pack_volume_id<<" "<<nbytes<<" "<<offset<<std::endl;
+                pack_volume_bytes = offset + nbytes;
+
+                // status output (same cadence as the separate-file style)
+                if (output_binary_flag) {
+                    stat.printColumnBinary(fstatus);
+                }
+                else {
+                    stat.printColumnAscii(fstatus, WRITE_WIDTH);
+                    fstatus<<std::endl;
+                }
+
+#ifdef GALPY
+                // external-potential parameters stay per-snapshot sidecar
+                // files (not packed); the name matches the separate-file style
+                const std::string fname_side = input_parameters.fname_snp.value+"."+std::to_string(file_header.nfile);
+                galpy_manager.writePotentialPars(fname_side+".galpy", stat.time);
+#endif
+            }
+#if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
+            // random seeds stay per-snapshot sidecar files (restart RNG
+            // continuity); not packed
+            const std::string fname_seed = input_parameters.fname_snp.value+"."+std::to_string(file_header.nfile)+".randseeds";
+            rand_manager.writeRandSeeds(fname_seed.c_str());
+#endif
+        }
         // write all information in to fstatus
         else if(write_style==2&&my_rank==0) {
             // write snapshot with one line
@@ -3179,6 +3398,69 @@ public:
             }
         }
 
+        // packed snapshot container (-w 4): validate the write format, then
+        // recover or reset the pack index state and open the index staging
+        // stream (rank 0)
+        if(write_style==4) {
+            if (!isOutputBinary()) {
+                if (my_rank==0) {
+                    std::cerr<<"Error: the packed snapshot output style (-w 4) requires a BINARY snapshot write format (-i 0 or -i 2).\n";
+                }
+                abort();
+            }
+            if (my_rank==0) {
+                const std::string pack_idx_final = fname_snp + ".pack.idx";
+                if (input_parameters.append_switcher.value!=1) {
+                    // fresh start: drop any previous container volumes + index
+                    std::remove(pack_idx_final.c_str());
+                    removePackedVolumes();
+                    pack_volume_id = 0;
+                    pack_volume_bytes = 0;
+                    pack_state_recovered = false;
+                }
+                else {
+                    pack_state_recovered = recoverPackStateFromIndex(pack_idx_final);
+                }
+                if (!pack_state_recovered) {
+                    // no committed index line exists, so no byte in any volume
+                    // is referenced; leftover volume data would be orphaned
+                    // and silently misalign every appended record (offsets
+                    // would restart at 0 while the file keeps its tail).
+                    // Refuse loudly: rebuild the index or drop the container.
+                    for (const auto& item: listPackedVolumes(input_parameters.fname_snp.value)) {
+                        struct stat vst;
+                        if (::stat(item.second.c_str(), &vst)==0 && vst.st_size>0) {
+                            std::cerr<<"Error: the packed volume "<<item.second<<" contains data but "<<pack_idx_final<<" has no committed record (index missing or empty).\n"
+                                     <<"       The container state is inconsistent: recover with `petar.pack rebuild "<<input_parameters.fname_snp.value<<"` or remove the container files, then restart.\n";
+                            abort();
+                        }
+                    }
+                }
+                // Crash healing: the index is the commit record; drop any
+                // volume tail beyond the last committed record (a partial
+                // append from an interrupted run would otherwise corrupt
+                // every later record offset).
+                if (pack_state_recovered) {
+                    const std::string vol_path = packVolumePath(pack_volume_id);
+                    struct stat vst;
+                    if (::stat(vol_path.c_str(), &vst)!=0) {
+                        std::cerr<<"Error: the packed volume "<<vol_path<<" referenced by "<<pack_idx_final<<" does not exist; the container is inconsistent.\n"
+                                 <<"       Recover with petar.pack rebuild/extract or remove the container files before restarting.\n";
+                        abort();
+                    }
+                    if (vst.st_size > pack_volume_bytes) {
+                        if (::truncate(vol_path.c_str(), (off_t)pack_volume_bytes)!=0) {
+                            std::cerr<<"Error: cannot truncate the packed volume tail "<<vol_path<<" to "<<pack_volume_bytes<<" bytes.\n";
+                            abort();
+                        }
+                        std::cerr<<"Info: truncated the uncommitted packed volume tail: "<<vol_path<<" -> "<<pack_volume_bytes<<" bytes.\n";
+                    }
+                }
+                fpackidx.open(makeTmpPath(pack_idx_final).c_str(), std::ofstream::out);
+                fpackidx<<std::setprecision(WRITE_PRECISION);
+            }
+        }
+
         if(write_style>0) {
             // open escaper file
             std::string my_rank_str = std::to_string(my_rank);
@@ -3587,6 +3869,15 @@ public:
         // ensure data is read
         assert(read_data_flag);
         assert(stat.n_real_glb>0);
+
+        // packed container (-w 4): the restart snapshot header is valid only
+        // here (recovery ran in readParameters, before readDataFromFile)
+        if (input_parameters.write_style.value==4 && my_rank==0
+            && pack_state_recovered && pack_idx_last_nfile > file_header.nfile) {
+            std::cerr<<"Warning! the packed snapshot index "<<input_parameters.fname_snp.value<<".pack.idx carries records beyond the restart snapshot (index nfile "<<pack_idx_last_nfile
+                     <<" at time "<<pack_idx_last_time<<" > restart nfile "<<file_header.nfile<<"); the trailing packed records are stale.\n"
+                     <<"         Trim the container before restarting: petar.pack trim "<<input_parameters.fname_snp.value<<" -t <restart time>\n";
+        }
 
         bool print_flag = input_parameters.print_flag;
         int write_style = input_parameters.write_style.value;
@@ -4122,7 +4413,8 @@ public:
             // rewritten on restart so a resumed run refreshes it with the current binary
             writeOutputMeta(input_parameters.fname_snp.value,
                             input_parameters.data_format.value,
-                            GetVersion());
+                            GetVersion(),
+                            input_parameters.write_style.value);
         }
 
         if (print_flag) std::cout<<"-----  Finish parameter initialization -----"<<std::endl;
@@ -4729,6 +5021,7 @@ public:
         if (fstatus.is_open()) fstatus.close();
         if (fesc.is_open()) fesc.close();
         if (fsnaplst.is_open()) fsnaplst.close();
+        if (fpackidx.is_open()) fpackidx.close();
 #ifdef PROFILE
         if (fprofile.is_open()) fprofile.close();
 #endif

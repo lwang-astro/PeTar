@@ -24,6 +24,7 @@ This file is the root entry point for agents working in this repository. Keep it
 
 - [doc/output-format-contract_notes.md](doc/output-format-contract_notes.md) — reference note: output-format contract (bulk BINARY vs event-stream ASCII), its reader/test enforcement (2026-10-19), and the shelved P2-lite/P3 decisions with revival preconditions.
 - [doc/tidal-tensor-design_notes.md](doc/tidal-tensor-design_notes.md) — reference note: tidal-tensor (TT) method design principles (Wang et al. 2020 §6.4) mapped to the PeTar implementation — measure points, fit, freeze cadence, counterforce, design invariants; includes the 2026-10-27 TT fix mechanism (KDKDK_4TH acorr guard, member-mean application, 1795e revert); the investigation plan is closed with open scenario-hardening items only.
+- [doc/packed-output_notes.md](doc/packed-output_notes.md) — reference note: packed snapshot container (`-w 4`) mechanism — append-only volumes + `pack.idx`, per-record staging through the OutputCommitManager append commit, restart/trim semantics, `petar.pack` tool family and `PackedSnapshots` reader; HDF5 stays an offline conversion (`petar.pack hdf5`).
 
 ## Scope Split
 

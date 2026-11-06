@@ -484,12 +484,17 @@ class ParticleRecordLayoutMixin:
         return kw
 
     @classmethod
-    def _verifySidecarAgainstStructure(cls, path, kwargs):
+    def _verifySidecarAgainstStructure(cls, path, kwargs, sidecar_layout=None):
         """ Cross-validate sidecar-provided layout kwargs with the file
-        structure; a disagreement means the sidecar was likely copied from
-        another run and raises ValueError. Generic: the sidecar layout is
-        instantiated with THIS class and its measured shape (column count /
-        record size) must agree with the structure; header-pinned facts are
+        structure, with distinct diagnoses: (a) the SIDECAR-declared layout
+        is not among the structure candidates -> the sidecar was likely
+        copied from another run (ValueError); (b) the sidecar agrees with
+        the structure but explicitly given kwargs contradict both -> the
+        error names the offending explicit parameter(s) (e.g. --spin-1d on
+        3D-spin data) instead of blaming the sidecar. Generic shape check:
+        the layout instantiated with THIS class must match one of the
+        measured candidate shapes (ALL raw candidates - aliasing must not
+        refute a sidecar that is among them); header-pinned facts are
         checked through HEADER_PINNED_PARAMS. Weak (headerless) evidence
         cannot refute. Skipped when the structure cannot refute. """
         import os
@@ -499,45 +504,74 @@ class ParticleRecordLayoutMixin:
             return
         if (not matches) or facts.startswith('headerless'):
             return
-        side_kwargs = {k: v for k, v in kwargs.items() if k in cls.LAYOUT_PARAMS}
-        if not side_kwargs:
+        ascii_file = detectAsciiFile(str(path))
+
+        def shape_of(layout_kwargs):
+            try:
+                obj = cls(**dict(layout_kwargs))
+            except Exception:
+                return None
+            if ascii_file:
+                return obj.ncols
+            return np.dtype(obj.collectDtype()).itemsize
+
+        ref_shapes = set()
+        for m in matches:
+            s = shape_of({k: v for k, v in m.items() if k in cls.LAYOUT_PARAMS})
+            if s is not None:
+                ref_shapes.add(s)
+        if not ref_shapes:
             return
-        try:
-            side_obj = cls(**dict(side_kwargs))
-        except Exception:
+
+        sidecar_kwargs = {k: v for k, v in (sidecar_layout or {}).items() if k in cls.LAYOUT_PARAMS}
+        merged_kwargs = {k: v for k, v in kwargs.items() if k in cls.LAYOUT_PARAMS}
+        if not sidecar_kwargs:
             return
-        # the sidecar layout must be among the structure candidates: equal
-        # declared shape (columns for ASCII / record size for binary)
-        try:
-            ref = cls(**dict(matches[0]))
-        except Exception:
-            return
+        # kwargs at this point = explicit values with sidecar values merged
+        # via setdefault: anything differing from (or absent in) the sidecar
+        # came from the caller (CLI flags)
+        explicit_conflicts = {
+            k: v for k, v in merged_kwargs.items()
+            if k not in sidecar_kwargs or sidecar_kwargs[k] != v
+        }
+
         def reject(key, meta_value, struct_value):
             raise ValueError(
                 'data.meta disagrees with the file structure of %s (%s: meta=%s, structure=%s). '
                 'The sidecar was likely produced by a different run; remove or regenerate it.'
                 % (path, key, meta_value, struct_value))
-        if detectAsciiFile(str(path)):
-            if side_obj.ncols != ref.ncols:
-                reject('layout columns', side_obj.ncols, ref.ncols)
-        else:
-            if np.dtype(side_obj.collectDtype()).itemsize != np.dtype(ref.collectDtype()).itemsize:
-                reject('layout record size',
-                       np.dtype(side_obj.collectDtype()).itemsize,
-                       np.dtype(ref.collectDtype()).itemsize)
+
+        def reject_explicit(key, explicit_value, struct_value):
+            raise ValueError(
+                'explicitly given layout parameter(s) disagree with the file structure of %s '
+                '(%s: explicit=%s, structure=%s). Check flags like --spin-1d / -i (--interrupt-mode) '
+                '/ -t (--external-mode) / --use-mpfrc against the data.'
+                % (path, key, explicit_value, struct_value))
+
+        side_shape = shape_of(sidecar_kwargs)
+        merged_shape = shape_of(merged_kwargs)
+        shape_key = 'layout columns' if ascii_file else 'layout record size'
+        if side_shape not in ref_shapes:
+            reject(shape_key, side_shape, sorted(ref_shapes))
+        if (merged_shape not in ref_shapes) and explicit_conflicts:
+            reject_explicit(shape_key + ' ' + ', '.join('%s=%r' % kv for kv in explicit_conflicts.items()), merged_shape, sorted(ref_shapes))
+
         for fact, value in pinned.items():
             param = cls.HEADER_PINNED_PARAMS.get(fact)
-            if param is None or param not in side_kwargs:
+            if param is None or param not in sidecar_kwargs or param not in merged_kwargs:
                 continue
             if fact == 'cm':
-                side_on = side_kwargs[param] != cls.LAYOUT_PARAMS[param][0]
+                side_on = sidecar_kwargs[param] != cls.LAYOUT_PARAMS[param][0]
+                merged_on = merged_kwargs[param] != cls.LAYOUT_PARAMS[param][0]
                 if side_on != value:
-                    reject(param, side_kwargs[param],
-                           'external' if value else cls.LAYOUT_PARAMS[param][0])
+                    reject(param, sidecar_kwargs[param], 'external' if value else cls.LAYOUT_PARAMS[param][0])
+                if merged_on != value and param in explicit_conflicts:
+                    reject_explicit(param, merged_kwargs[param], 'external' if value else cls.LAYOUT_PARAMS[param][0])
             elif fact == 'float128':
-                if (side_kwargs[param] == np.float128) != value:
-                    reject(param, side_kwargs[param],
-                           np.float128 if value else np.float64)
+                if (sidecar_kwargs[param] == np.float128) != value:
+                    reject(param, sidecar_kwargs[param], np.float128 if value else np.float64)
+                if (merged_kwargs[param] == np.float128) != value and param in explicit_conflicts:
+                    reject_explicit(param, merged_kwargs[param], np.float128 if value else np.float64)
 
     @classmethod
     def resolvePathInput(cls, _dat, kwargs):
@@ -578,7 +612,7 @@ class ParticleRecordLayoutMixin:
                     # the modes explicit for CLI auto-fill
                     for name, value in layout.items():
                         kwargs.setdefault(name, value)
-                    cls._verifySidecarAgainstStructure(path, kwargs)
+                    cls._verifySidecarAgainstStructure(path, kwargs, sidecar_layout=layout)
                     return None, kwargs, path
         try:
             detected = cls._detectSnapshotLayout(path)
@@ -1223,12 +1257,216 @@ class Snapshot:
                                       external_mode=external,
                                       float_type=self.particle.initargs.get('float_type', np.float64))
 
+    @classmethod
+    def fromRecord(cls, particle, header):
+        """ Construct a Snapshot from an already-read particle array and
+        header - the entry point used by the packed-container reader
+        (``PackedSnapshots.readSnapshot``), which seeks one record out of a
+        volume file instead of reading a standalone snapshot file. The
+        result is indistinguishable from ``Snapshot(path)`` of the
+        extracted record. """
+        snap = cls()
+        snap.particle = particle
+        snap.header = header
+        return snap
 
-def readSnapshot(path, **kwargs):
-    """ Compatibility alias for ``Snapshot(path, **kwargs)``; returns
-    (particle, header). """
-    snap = Snapshot(path, **kwargs)
-    return snap.particle, snap.header
+
+def packVolumePath(prefix, volume):
+    """ Volume filename of the packed snapshot container: ``[prefix].pack.<id>``
+    (solver option ``-w 4``). """
+    return '%s.pack.%04d' % (str(prefix), int(volume))
+
+
+def readPackIndex(path):
+    """ Read the packed-container index (``[prefix].pack.idx``) into a numpy
+    structured array: one row per packed snapshot record with columns
+    (nfile, time, n_body, volume, nbytes, offset), ordered by nfile. """
+    path = str(path)
+    if not path.endswith('.pack.idx'):
+        path = path + '.pack.idx'
+    dtype = [('nfile', np.int64), ('time', np.float64), ('n_body', np.int64),
+             ('volume', np.int64), ('nbytes', np.int64), ('offset', np.int64)]
+    rows = []
+    with open(path) as fp:
+        for lineno, line in enumerate(fp, 1):
+            line = line.strip()
+            if (not line) or line.startswith('#'):
+                continue
+            parts = line.split()
+            if len(parts) != 6:
+                raise ValueError('%s line %d: expected 6 columns (nfile time n_body volume nbytes offset), got %d: %r'
+                                 % (path, lineno, len(parts), line))
+            try:
+                rows.append((int(parts[0]), float(parts[1]), int(parts[2]),
+                             int(parts[3]), int(parts[4]), int(parts[5])))
+            except ValueError:
+                raise ValueError('%s line %d: non-numeric field in %r' % (path, lineno, line)) from None
+    if not rows:
+        return np.array([], dtype=dtype)
+    return np.array(rows, dtype=dtype)
+
+
+class PackedSnapshots:
+    """ Reader front-end for the packed snapshot container (solver option
+    ``-w 4``): append-only volume files ``[prefix].pack.<id>`` holding
+    standalone BINARY snapshot records, plus the index
+    ``[prefix].pack.idx`` (see ``readPackIndex``).
+
+    The reader layout is resolved from the run sidecar (``[prefix].meta``)
+    via ``petar.getDataKwargs`` or from explicit keyword arguments, then
+    snapshots are read by seek without unpacking::
+
+        pack = petar.PackedSnapshots('data')
+        snap = pack.readSnapshot(-1)       # last snapshot (petar.Snapshot)
+        snap = pack.readSnapshot(nfile=3)  # by snapshot id
+        snap = pack[0]                     # by row index
+        snap.particle, snap.header         # like petar.Snapshot(path)
+    """
+
+    IDX_DTYPE = [('nfile', np.int64), ('time', np.float64), ('n_body', np.int64),
+                 ('volume', np.int64), ('nbytes', np.int64), ('offset', np.int64)]
+
+    def __init__(self, prefix, **kwargs):
+        prefix = str(prefix)
+        if prefix.endswith('.pack.idx'):
+            prefix = prefix[:-len('.pack.idx')]
+        self.prefix = prefix
+        self.index = readPackIndex(prefix)
+        merged = dict(kwargs)
+        if not all(p in merged for p in ('interrupt_mode', 'external_mode', 'float_type')):
+            # Resolve the layout from the run sidecar. getDataKwargs needs a
+            # real file path and the bare prefix is not one, so read the
+            # sidecar directly; fall back to the index file path (whose
+            # generic prefix walk locates the sidecar).
+            meta = None
+            try:
+                meta = readMetaData(prefix + '.meta')
+            except Exception:
+                meta = None
+            if meta:
+                if meta.get('layout.interrupt_mode'):
+                    merged.setdefault('interrupt_mode', meta['layout.interrupt_mode'])
+                if meta.get('layout.external_mode'):
+                    merged.setdefault('external_mode', meta['layout.external_mode'])
+                for key in ('use_mpfrc', 'collect_sp_acc', 'spin_3d'):
+                    tag = 'layout.' + key
+                    if tag in meta:
+                        merged.setdefault(key, meta[tag] in ('1', 'true', 'True'))
+                if meta.get('layout.float_type') == 'float128':
+                    merged.setdefault('float_type', np.float128)
+            else:
+                try:
+                    detected = getDataKwargs(prefix + '.pack.idx')
+                    for k, v in detected.items():
+                        merged.setdefault(k, v)
+                except Exception:
+                    pass
+        self.kwargs = merged
+        self.header_size, self.header_dtype = self._headerLayout(merged)
+
+    @staticmethod
+    def _headerLayout(kwargs):
+        """ (header bytes, header dtype) for the record header variant pinned
+        by the layout kwargs (c.m. offsets present iff external_mode is not
+        none; float128 time when use_mpfrc). """
+        ft = kwargs.get('float_type', np.float64)
+        cm = kwargs.get('external_mode', 'none') != 'none'
+        if ft == np.float128:
+            hsize = HEADER_OFFSET_WITH_CM_F128 if cm else HEADER_OFFSET_F128
+        else:
+            hsize = HEADER_OFFSET_WITH_CM if cm else HEADER_OFFSET
+        fields = [('nfile', np.int64), ('n_body', np.int64), ('time', ft)]
+        if cm:
+            fields += [('pos_offset', ft, (3,)), ('vel_offset', ft, (3,))]
+        return hsize, np.dtype(fields)
+
+    def __len__(self):
+        return len(self.index)
+
+    def volumePath(self, volume):
+        return packVolumePath(self.prefix, volume)
+
+    def _rowIndex(self, row):
+        row = int(row)
+        if row < 0:
+            row += len(self.index)
+        if not (0 <= row < len(self.index)):
+            raise IndexError('packed index row %d out of range (0..%d)' % (row, len(self.index) - 1))
+        return row
+
+    def readHeader(self, row):
+        """ Snapshot header of index row ``row`` (petar.PeTarDataHeader). """
+        row = self._rowIndex(row)
+        rec = self.index[row]
+        with open(self.volumePath(rec['volume']), 'rb') as fp:
+            fp.seek(int(rec['offset']))
+            buf = fp.read(self.header_size)
+        if len(buf) != self.header_size:
+            raise IOError('truncated packed record header: volume %s offset %d'
+                          % (rec['volume'], rec['offset']))
+        vals = np.frombuffer(buf, dtype=self.header_dtype)[0]
+        header = PeTarDataHeader()
+        header.file_id = int(vals['nfile'])
+        header.n = int(vals['n_body'])
+        header.time = float(vals['time'])
+        if 'pos_offset' in self.header_dtype.names:
+            header.pos_offset = [float(x) for x in vals['pos_offset']]
+            header.vel_offset = [float(x) for x in vals['vel_offset']]
+            header.offset_flag = True
+        return header
+
+    def _selectRow(self, row, nfile, time):
+        """ Resolve the selection arguments (row index / snapshot id /
+        first row at-or-after a time) to an index row. """
+        if len(self.index) == 0:
+            raise ValueError('the packed container index is empty')
+        if nfile is not None:
+            sel = np.where(self.index['nfile'] == int(nfile))[0]
+            if len(sel) == 0:
+                raise ValueError('nfile %d not found in the packed index' % nfile)
+            row = int(sel[0])
+        elif time is not None:
+            sel = np.where(self.index['time'] >= float(time))[0]
+            row = int(sel[0]) if len(sel) > 0 else len(self.index) - 1
+        elif row is None:
+            raise ValueError('one of row/nfile/time is required')
+        return self._rowIndex(row)
+
+    def readSnapshot(self, row=None, nfile=None, time=None):
+        """ Read one packed snapshot as a ``petar.Snapshot`` object - the
+        same type ``petar.Snapshot(path)`` returns for a standalone
+        snapshot file. The record header and the particle block are seeked
+        out of the volume file by the index (layout resolved from the run
+        sidecar; no unpacking). Selection: row index (negative counts from
+        the end), snapshot id (``nfile``), or the first row with ``time``
+        >= the given time (falls back to the last row). """
+        r = self._selectRow(row, nfile, time)
+        rec = self.index[r]
+        header = self.readHeader(r)
+        particle = Particle(**self.kwargs)
+        # the volume tail beyond this record consists of LATER records, so
+        # the file tail past offset+count is never itemsize-aligned for
+        # non-last records; the index pins the exact byte range
+        # (strict_mismatch=False), and the associated generic
+        # misalignment/truncation notice is suppressed for this call only
+        import warnings as _w
+        with _w.catch_warnings():
+            _w.filterwarnings('ignore', message=r'Reading \S+: binary file size .* not aligned.*')
+            particle.fromfile(self.volumePath(rec['volume']),
+                              offset=int(rec['offset']) + self.header_size,
+                              count=int(rec['n_body']),
+                              strict_mismatch=False)
+        return Snapshot.fromRecord(particle, header)
+
+    def read(self, row=None, nfile=None, time=None):
+        """ Tuple form returning (particle, header); prefer ``readSnapshot``
+        (or indexing ``pack[i]``), which returns the ``petar.Snapshot``
+        object. """
+        snap = self.readSnapshot(row=row, nfile=nfile, time=time)
+        return snap.particle, snap.header
+
+    def __getitem__(self, row):
+        return self.readSnapshot(row=row)
 
 
 def getDataKwargs(path, return_provenance=False, meta='auto'):

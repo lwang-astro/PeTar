@@ -378,14 +378,14 @@ if __name__ == '__main__':
                 kwargs['external_mode'] = arg
             elif opt in ('-P','--use_mpfrc'):
                 kwargs['use_mpfrc'] = True
-            elif opt in ('--spin-1d'):
+            elif opt in ('--spin-1d',):
                 kwargs['spin_3d'] = False
             elif opt in ('-s','--snapshot-format'):
                 kwargs['snapshot_format'] = arg
                 if (not 'esc_snapshot_format' in kwargs.keys()):
                     kwargs['esc_snapshot_format'] = arg
                     esc_snapshot_format = arg
-            elif opt in ('--esc-snapshot-format'):
+            elif opt in ('--esc-snapshot-format',):
                 kwargs['esc_snapshot_format'] = arg
                 esc_snapshot_format = arg
             elif opt in ('-o','--output-format'):
@@ -395,18 +395,18 @@ if __name__ == '__main__':
                 kwargs['read_flag'] = True
             elif opt in ('-c','--calc-multi-rc'):
                 kwargs['calc_multi_rc']=True
-            elif opt in ('--r-escape'):
+            elif opt in ('--r-escape',):
                 if (arg=='tidal'): 
                     kwargs['r_escape'] = arg
                     ftid_file_flag = True
                 else: kwargs['r_escape'] = float(arg)
-            elif opt in ('--e-escape'):
+            elif opt in ('--e-escape',):
                 kwargs['e_escape'] = arg
-            elif opt in ('--m-ext'):
+            elif opt in ('--m-ext',):
                 kwargs['read_m_ext'] = arg
-            elif opt in ('--add-star-type'):
+            elif opt in ('--add-star-type',):
                 kwargs['add_star_type'] = [x for x in arg.split(',')]
-            elif opt in ('--add-mass-range'):
+            elif opt in ('--add-mass-range',):
                 kwargs['add_mass_range'] = [x for x in arg.split(',')]
             elif opt == '--recover-parallel-only':
                 recover_parallel_only = True

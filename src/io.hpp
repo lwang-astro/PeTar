@@ -54,10 +54,7 @@ inline const char* getExternalModeName() {
 #endif
 }
 
-//! write the output-schema sidecar (<prefix>.meta, output-meta/1) next to the
-//! parameter files; the Python readers (petar.getDataKwargs) use it to select
-//! the reader keyword arguments without guessing from the file structure.
-inline void writeOutputMeta(const std::string& _prefix, const int _data_format, const std::string& _version) {
+inline void writeOutputMeta(const std::string& _prefix, const int _data_format, const std::string& _version, const int _write_style = 1) {
     const char* interrupt = getInterruptModeName();
     const char* external = getExternalModeName();
     std::string family = std::string("petar");
@@ -74,6 +71,7 @@ inline void writeOutputMeta(const std::string& _prefix, const int _data_format, 
     fprintf(fmeta, "petar_version = %s\n", _version.c_str());
     fprintf(fmeta, "binary_family = %s\n", family.c_str());
     fprintf(fmeta, "snapshot_format = %s\n", (_data_format == 1 || _data_format == 3) ? "ascii" : "binary");
+    fprintf(fmeta, "snapshot_container = %s\n", (_write_style == 4) ? "pack" : "file");
     fprintf(fmeta, "layout.interrupt_mode = %s\n", interrupt);
     fprintf(fmeta, "layout.external_mode = %s\n", external);
     fprintf(fmeta, "layout.use_mpfrc = %d\n",

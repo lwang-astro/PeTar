@@ -109,25 +109,25 @@ if __name__ == '__main__':
             if opt in ('-h','--help'):
                 usage()
                 sys.exit(1)
-            elif opt in ('-f'):
+            elif opt in ('-f',):
                 fps = float(arg)
-            elif opt in ('-o'):
+            elif opt in ('-o',):
                 output_file = arg
-            elif opt in ('-A'):
+            elif opt in ('-A',):
                 read_binary = False
-            elif opt in ('--vmin'):
+            elif opt in ('--vmin',):
                 kwargs['vmin'] = float(arg)
-            elif opt in ('--vmax'):
+            elif opt in ('--vmax',):
                 kwargs['vmax'] = float(arg)
-            elif opt in ('--format'):
+            elif opt in ('--format',):
                 plot_format = arg
-            elif opt in ('--with-contour'):
+            elif opt in ('--with-contour',):
                 with_contour = True
-            elif opt in ('--only-xy'):
+            elif opt in ('--only-xy',):
                 only_xy = True
-            elif opt in ('--n-cpu'):
+            elif opt in ('--n-cpu',):
                 n_cpu = int(arg)
-            elif opt in ('--log'):
+            elif opt in ('--log',):
                 log_flag = True
             else:
                 assert False, "unhandeld option"

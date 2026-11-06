@@ -13,7 +13,7 @@ Goals:
    CLI auto-fill path fills the same reader kwargs (see
    `doc/output-schema-tagging-plan.md`). Snapshot-family readbacks
    (`snapshot*` rows) are paired reads: the legacy explicit-kwargs command
-   and the auto-detection command (`petar.readSnapshot(path)` /
+   and the auto-detection command (`petar.Snapshot(path)` /
    `**petar.getDataKwargs(path)`) each read the same file, and the check
    details carry a member-wise comparison (detected kwargs source, record
    counts, identical/differ).
@@ -71,12 +71,16 @@ Binary analysis coverage is distributed per mode instead of a dedicated case: th
 
 Core chain, every case: `petar.init` → `petar.select` → `petar` → `petar.data.process` → `petar.group.dedup` (when group files exist) → `petar.get.object.snap` → `petar.format.transfer.post` → `petar.movie`, plus mode-correct Python readback (including `GroupInfo`).
 
+Packed-output coverage, every case: the main run keeps the default `-w 1` single-file snapshots; afterwards each case additionally performs a short `-w 4` scratch run under the `packcov` prefix (`packed-mode.run/index/extract` steps - real shell commands only) and validates the container in the read-checks table: the `packed:container-read` row carries the index validation, the direct-seek read comparison against the extracted snapshot, and every selection form (`readSnapshot(time=/nfile=/row)`, `pack[i]`, index time query, `petar.pack extract` CLI) with its exact call form; the `packed-extract:`-prefixed rows are the standard three-method readback of the extracted standalone files. The dedicated `std-packed` case additionally covers the deep two-phase restart flow (extract → `petar.data.clear` → `petar.pack trim` → restart → append) and skips the scratch stage.
+
 Lagrangian variants (matrix key `lagr_variants`): beyond the default run, `petar.data.process` re-runs under scratch `lagrvar<N>` prefixes with non-default `--mass-fraction` / `--add-star-type` / `--add-mass-range` / `--calc-energy` / `-o ascii` (case mode flags inherited from `process_args`; output-format-changing variants run on a scratch copy of the snapshots — matrix flag `scratch` — because `data.process` rewrites the derived `.single/.binary` files in place). **Every case** runs the matrix-global default variant (custom fractions + mass range + calc-energy); stellar-evolution cases (`bse`, `sevn`, `bse-galpy`, `bse-galpy-gasdrag`, `bse-agama`) add a star-type/cross-group variant; `std` adds the same-shape mislabel, no-0.5 guard, and ASCII probes. Case entries override global ones by name. Each variant checks:
 
 - the tool run itself, or the expected loud failure (`expect_fail`; the auto escape-radius guard when `--mass-fraction` lacks `0.5` and no `--r-escape` is given);
 - the physical output format matches the requested one (`-o ascii` vs binary);
 - the zero-warning auto read `petar.LagrangianMultiple(path)` recovering the exact per-run labels (mass fractions, star-type/mass-range groups incl. `A__in__B` cross groups, `calc_energy`, external mode) from the `<prefix>.lagr.meta` sidecar, agreeing with an explicit-kwargs read, and the `meta='<sidecar>'` injection behaving like the auto walk;
 - the legacy read of the bare table without its sidecar: a shape mismatch (different fraction count, or extra star-type/mass-range groups) must raise with the no-sidecar guidance warning; a same-shape/different-value table must read but warn (labels silently fall back to the defaults; `meta=False` opts out silently).
+
+Format coverage matrix (every case, step `format.matrix`): on a scratch copy of the snapshots — a `petar.data.process -s binary -o npy` run (`.lagr.npy` / `.core.npy` / per-snapshot `.single.npy` products, all read back through the concise constructors), the snapshots converted to ASCII with the family `petar.<family>.format.transfer` tool (solver ASCII snapshot format, read back with `petar.Particle(path)` and compared to the binary record count), a `petar.data.process -s ascii -o ascii` run (ASCII lagr/core read back), and a cross-format check that the npy and ASCII lagr time series agree. This also pins the `-s` option parsing in every case (the `-s`-misparsed-as-`--spin-1d` bug, entry 137, lived on this uncovered path).
 
 Per-case extra tools (matrix key `tool_smokes`; mutating tools run on scratch copies):
 
