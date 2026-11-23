@@ -967,6 +967,24 @@ public:
             double dt_miss = bse_manager.getDTMiss(output);
             _p.time_record += dt-dt_miss;
 
+            // Re-anchor the stellar clock to the record time (source fix for the
+            // ar_interaction.hpp dynamic-merge tphys abort): evolv1 advances
+            // tphys by internal accumulation (dtm loop), so tphys drifts away from
+            // time_record*tscale at the rounding level even with dtmiss accounted.
+            // Stars that evolved independently as singles (e.g. before their AR
+            // group forms dynamically) then never share bit-identical tphys, and
+            // the exact-equality check on binary components in the merge handling
+            // aborts for colliding pairs that never called BSE before. Snapping
+            // keeps tphys == time_record*tscale an exact invariant, so equal
+            // records imply equal tphys. The guard only tolerates numerical drift
+            // (ulp-level per call; historical lag of pre-fix snapshots ~1e-11 Myr);
+            // a larger mismatch is a real bookkeeping desync and must abort rather
+            // than be silently corrected. 1e-8 Myr (~3.6 days) is far below any
+            // stellar-evolution timescale BSE resolves.
+            const Float tphys_anchor = _p.time_record*bse_manager.tscale;
+            ASSERT(std::fabs(tphys_anchor - _p.star.tphys) < 1e-8);
+            _p.star.tphys = tphys_anchor;
+
             // estimate next time to check
             // the effective maximum interrupt time should never be earlier than the evolution ending
             // time, otherwise time_interrupt could be set earlier than time_record when _time_end
@@ -1127,6 +1145,16 @@ public:
                 modify_return = 2;
                 p1->time_record = _bin_interrupt.time_now - bse_manager.getDTMiss(out[0]);
                 p2->time_record = _bin_interrupt.time_now - bse_manager.getDTMiss(out[1]);
+                // re-anchor both stellar clocks to the just-updated record times;
+                // same rationale and tolerance as modifyOneParticle: keeps
+                // tphys == time_record*tscale exact so binary components share
+                // bit-identical tphys whenever their records are synced
+                const Float tphys_anchor1 = p1->time_record*bse_manager.tscale;
+                const Float tphys_anchor2 = p2->time_record*bse_manager.tscale;
+                ASSERT(std::fabs(tphys_anchor1 - p1->star.tphys) < 1e-8);
+                ASSERT(std::fabs(tphys_anchor2 - p2->star.tphys) < 1e-8);
+                p1->star.tphys = tphys_anchor1;
+                p2->star.tphys = tphys_anchor2;
                 // estimate next time to check
                 p1->time_interrupt = std::min(p1->time_record + bse_manager.getTimeStepBinary(p1->star, p2->star, semi, ecc, binary_type_final), time_interrupt_max);
                 p2->time_interrupt = p1->time_interrupt;

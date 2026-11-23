@@ -142,6 +142,7 @@
 138. (1875e) Remove petar.readSnapshot: use petar.Snapshot(path) (.particle/.header), consistent with the other reader classes.
 139. (1875e) Fix CLI parsing: -s was misparsed as --spin-1d in petar.data.process (string membership test); same fix in all tools.
 140. (1875e) Fix DSM ASCII snapshots: a stray newline in the star-member writer split every particle across two lines.
+141. (1876e) Fix stellar-clock desync: re-anchor tphys to time_record after each stellar evolution (dyn-merge tphys assertion abort). [major]
 
 **Existing issues (consolidated, live list — historical sections below no longer repeat their issues)**
 

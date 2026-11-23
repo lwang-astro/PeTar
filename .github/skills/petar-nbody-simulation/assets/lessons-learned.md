@@ -126,6 +126,14 @@ Periodically reviewed → verified entries are elevated to `SKILL.md` as hard ru
 
 **Prevention rule**: 升级 FDPS 等上游依赖后，restart/replay 旧参数文件必须 grep `Warning: parameter name key`——出现即整数 tag 断层、参数已静默落默认；跨机器交换 dump/par 时两端 FDPS 主版本不一致即触发。
 
+### 2026-11-21: `--with-sdar-prefix` 换源后 make 静默装陈旧二进制——prerequisite 仍盯 `../SDAR`，Build 横幅也不反映换源
+
+**Mistake**: 为复现生产 dump（SDAR 482e 产出），`git worktree` 检出 2c79c46 到 /tmp 并 `./configure --with-sdar-prefix=/tmp/sdar-482e` 重建 hard.debug：`make install` 正常退出，但装出的二进制 `strings` 仍含未提交 SDAR 修改的特征串（`peri_guard_nsub`）——即换源根本没编译进去；Build 横幅照旧显示 `SDAR 485e (018116f-dirty)`，两个信号都不能据此发现。
+
+**Root cause**: ① Makefile 的 `SDAR_SRC` prerequisite glob 硬编码 `../SDAR/src/**`，与 `--with-sdar-prefix` 无关——`../SDAR` 的头早于上次构建，make 判定目标 up-to-date，直接把 build/ 里的陈旧目标 install 出去；② `build_info.hpp` 的 cmp 守卫使横幅内容（SDAR 版本、flags）停在旧值，且横幅本就不含 per-target 特性 flags（BSEEMP/GALPY/GAS_DRAG 等都不在里面）。
+
+**Prevention rule**: `--with-sdar-prefix`（或任何换 include 源）后必须强制重建目标（`rm build/<target>` 或 `make clean` 再装），并用**内容证据**验证换源生效：`grep -m1 '<target>.cxx' <build-log> | tr ' ' '\n' | grep <prefix>` 看编译行 `-I`，`strings <binary> | grep <旧源特征串>` 应为空；横幅只作参考不作判据。
+
 ---
 
 ## Binary Selection
@@ -504,6 +512,22 @@ comparisons, sorted-cck assumptions, ds-floor landing kills — moved to
 **Root cause**: 初始 t=0 快照的 output() 调用发生在任何 beginWindow/commitWindow 之外；beginWindow() 开头就 records_.clear()，窗口外注册的 staging 永远等不到提交即被丢弃；而 idx 行写在持续打开的 tmp 流里随下一个窗口正常提交——于是"索引行在、记录字节不在"。-w 1 无此问题是因为它把快照直接写最终文件（output 时刻即完整落盘），不依赖窗口。
 
 **Prevention rule**: 给 PeTar 新增输出风格时，output() 时刻即应完整的载荷（快照记录字节）不要走窗口批量 staging——立即 append 落盘；需要与 status 行同事务的只有"提交记录"语义（packed 的 idx 行：在 registerTransactionalOutputs() 内注册、随窗口 Append 提交），崩溃自愈靠启动时按提交记录截断载体尾部（见 doc/packed-output_notes.md）。判定指纹：idx 与卷内记录头整体错位一条 = 窗口外输出丢了记录。"立即落载体 + 延迟提交记录"的配对还必须双向校验不一致：提交记录引用的载体缺失要中止，反向（载体有字节但无任何提交记录，如崩溃在首次窗口提交前/idx 被删）同样要中止——只堵一边，另一边就是静默错位（1875e 审查发现）。
+
+### 2026-11-21: h4 日志是 append 模式——同目录重复 replay/gdb 拼接多轮，跨构建比对前先数行数/查整倍尺寸
+
+**Mistake**: 复现 bseEmp+galpy+gasdrag 生产断言（`ar_interaction.hpp:1550` tphys 断言，根因见 2026-11-21 交接）时，为验证"当前 SDAR 修改是否影响结果"而比对 h4 日志 md5：同一目录跑了 1 次普通 replay + 3 次 gdb 会话后文件变成 4×19951197 字节/1596 行，与参考单轮日志（399 行）"处处不同"且 Hermite 计数列 123≠128，一度误判"SDAR 482e↔485e+dirty 轨迹发散"；按轮拆分比对后，两版构建首轮 399 行逐位一致，差异全是拼接伪影。
+
+**Root cause**: hard_debug 的 `<dump>_h4_<n>_<g>.log` 以 append 打开，进程 abort 不截断文件，同目录每次运行（含 gdb batch 会话）追加一整轮或半轮；计数列每轮重置，整文件 md5/逐行 diff 不分轮必误读。另：参考日志（产线机器 Intel MPI/gcc-14 工具链重放）与本地构建仅在计数列（123 vs 128）不同——跨工具链计数路径差异，不是 SDAR 版本影响。
+
+**Prevention rule**: ① 跨构建/版本比对 h4 日志前先 `wc -l -c`，尺寸不是单轮整倍即换干净目录重放单轮再比；② gdb 调试会话也应在干净目录跑；③ 判定"SDAR/依赖版本是否影响轨迹"以单轮逐位一致为准，先排除轮次拼接再归因版本。
+
+### 2026-11-21: bseEmp hard.debug 重放需要 `./ffgeneva`（trackmode=1 则 `./ffbonn`）在 CWD——empfuncs 相对路径 fopen，缺文件死在裸 assert
+
+**Mistake**: 在 scratch 目录首次 `-m 2` 静态读回即 `empfuncs.cpp:369: Assertion 'fp' failed` 中止，一度以为构建缺数据文件。
+
+**Root cause**: EMP 轨迹插值数据以 `./ffgeneva/metal*.dat` 相对 **CWD** 打开（`bse-interface/bseEmp/emptrack/empfuncs.cpp` `setMetallicityInterpolation`），与仓库/二进制位置无关；par 文件不记录该路径，scratch 目录缺 `ffgeneva/` 即裸 assert。
+
+**Prevention rule**: bseEmp（trackmode=2）/ffbonn（=1）的 hard.debug 重放与生产 restart 目录迁移，必须在工作目录放 `ffgeneva/`（或 `ffbonn/`）软链/副本；dump 源目录常已带一份，拷 par 时一并链接。
 
 ## Post-Processing
 
